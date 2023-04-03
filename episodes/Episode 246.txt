@@ -1,0 +1,405 @@
+Anna Rose (00:00:05):
+Welcome to zero knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:00:27):
+This week, Tarun and I chat with Florian Tramèr Assistant Professor at ETH Zurich. We talk about his earlier work focused on side channel attacks on privacy blockchains, and then quickly shift the conversation over to machine learning and adversarial research. In that field, we defined some key machine learning terms, tease out some of the nuances of ML training and models, chat, ZK, ML, and other privacy environments, where ML could be trained and look at why security around machine learning will be incredibly important as these models become increasingly used in our everyday lives. This was one of the first episodes I've done looking at machine learning, and it was a really great way to kick it off. If you do wanna hear more of these do let us know. Now, before we start in, I wanna remind you to check out the zkWhiteboard sessions produced by zkHack and powered by Polygon.
+
+Anna Rose (00:01:13):
+This is a new series of educational videos that will help you get onboarded into the concepts and terms that we talk about on the zk front. It's a great place to start, and you may also wanna join the zkHack discord to keep up with other members of the community, going through these and other learning resources. I also wanna just share there's a new batch of job ads on the zk jobs board, check out open roles at zk and cryptography focus projects like Alea, Anoma and the Web3 Foundation, the zk jobs board is a great place to learn about relevant projects and types of roles that teams are looking for. This could be your next opportunity to work in the space. I've added the link to both of these in the show notes. Now I'll ask Tanya to share a little bit about this week's sponsor.
+
+Tanya (00:01:55):
+Today's episode is sponsored by Mina Protocol with Mina's zero knowledge smart contracts or zAapps. Developers can create apps that offer privacy security and verifiability for their users leverage Mina on zero knowledge tech to bridge the gap between the real world and crypto bring online data easily on chain and access zk properties from other chains and devices. Since zkApps are written in type script, developers can easily get started without learning a custom programming language like other zk protocols had Mina protocol.com/zkpodcast to learn more about their developer boot camps and open grants. That's Mina protocol.com/zkpodcast. So thanks again, Mina Protocol. Now here is Anna and Tarun's interview with Florian Tramèr.
+
+Anna Rose (00:02:41):
+So today Tarun and I are here with Florian Tramèr, Assistant Professor at ETH Zurich, formerly PhD student with Dan Boneh, who also spent one year at Google research. Welcome to the show Florian.
+
+Florian Tramèr (00:02:54):
+Yeah, thanks for having me.
+
+Anna Rose (00:02:54):
+And welcome back Tarun.
+
+Tarun Chitra (00:02:56):
+Excited to be back as usual.
+
+Anna Rose (00:02:57):
+Cool. So this episode was inspired by an earlier episode that we did at, Devconnect in Amsterdam back in April. So in that conversation we were talking about, I mean, we were talking about a lot of things I'll link to that in the show notes, but one of the ideas we came up with was like using adversarial modeling in things like peer review or trying to get a more adversarial and dynamic environment in things like science, biology, places where maybe there's not as much adversaries in cryptography. And when you think about it, like in cryptography, that adversaries actually push systems to be better. And so, yeah, we were talking about that. So we put that out there as an episode, and then Pratyush picked it up and tweeted at us basically that we should invite you on Florian to talk about adversarial modeling, adversarial research and what that looks like. And I know your focus has been much more on machine learning and I think that's what most of this episode's gonna be about, but why don't we start in a little bit about you?
+
+Florian Tramèr (00:03:56):
+Sure. Yeah. During my computer science studies, I got very, very interested in cryptography and security. They were sort of the first areas that I was really interested in doing research in and was ultimately then also what I started off with my PhD with Dan at Stanford and kind of a bit at random actually, I had met Dan at a security conference a few months before starting my PhD, where I was actually presenting a paper that had to do with machine learning security, which was sort of a, kind of a one-off project. I thought at the time that I had worked on before starting, my PhD and talking with Dan was kind of like, oh, do you wanna continue doing work on, this field for your PhD? And I was kind of like, okay, sure.
+
+Florian Tramèr (00:04:46):
+And then we kind of got started on this. And there was a, it was a pretty exciting time to start working in this area because very, very few people were already doing this in the security community. Actually, I think that were maybe two people who, who got a PhD or maybe three people who got a PhD on, on machine learning security before me. So I was kind of, very nice to, to be kind of at the forefront of, of this field for a while. And then actually in, in times during my PhD where I got a bit bored with, with machine learning and wanted to do something else, cryptocurrency security was, was often my sort of guilty pleasure, um, building off on earlier collaborations I had from before my PhD in particular with Ari Juels at Cornell. And so we would often just every couple of months reconnect and figure out something we could do in the cryptocurrency space.
+
+Florian Tramèr (00:05:39):
+And so we had some projects there on bug bounty systems for Ethereum, gas token is something we worked on at some point as kind of a fun little project. Oh yeah. With Phil Daian and Lorenz. And then yeah, they sort of went on and off over the years. And, maybe the last big project I did in this space couple of years ago, was looking at security vulnerabilities in anonymous cryptocurrencies. So in Zcash, Monero in particular, and this is actually how I first started collaborating also with, uh, with people at, um, at ETH Zurich where I, that I've now joined as a professor a few months ago, one month ago actually to be precise. It's all very new.
+
+Anna Rose (00:06:23):
+Congrats.
+
+Florian Tramèr (00:06:24):
+Thanks. And so for the moment I've kind of, I've left cryptocurrency research a little bit behind for, for the time being, and focusing primarily again on, on machine learning security and privacy in the space. And yeah, that's kind of what my research group does at the moment.
+
+Anna Rose (00:06:41):
+Very cool. I wanna actually explore a little bit of that work you had done on the side channel attacks and privacy tokens. And then I want to dive more into the machine learning side of things. So can you walk us through that work?
+
+Florian Tramèr (00:06:55):
+Yeah. So the, the background there was, at some point I was just thinking, you know, there's, there's all this new cryptography that, people are excited about and trying to implement. And then there, it's very complicated stuff. Like some people are calling it like 'Moon Math'. And I was just kind of thinking like, we, we can't get very simple cryptography, right? Like people are breaking, you know, like TLS implementations every couple of years there must be like things lurking lurking here. And so I spent kind of a summer just learning a bit how, how Zcash primarily, works and sort of trying to look a bit that whether there could be flaws in the cryptography itself and kind of coming short on that and that I think they actually did a tremendously good job at, sort of designing and implementing the cryptography parts of the protocol.
+
+Florian Tramèr (00:07:46):
+And then at some point we kind of got interested in, in looking and sort of broader security issues that, that one could find in a, in a system of, of the scale of the cryptocurrency. And so this got us interested in looking for, for site channel attacks. And, the point here is basically to, to not try to, to break the cryptography directly, but to, sort of look for signals that are somewhat outside the threat model, that one usually considers from a cryptographic perspective. So things like, how long do messages take to propagate through the network? How long does it take for a node to decrypt certain messages, process certain messages and so on. And here suddenly this was kind of like a, treasure trove where as soon as you started looking at the system, from this perspective, there were a bunch of, flaws that became apparent very quickly. What was interesting was that the, the reason a lot of those flaws existed in particular, in the case of Zcash was kind of due to the fact that they had just built on the original Bitcoin design, which was not meant to be an anonymous cryptocurrency.
+
+Anna Rose (00:08:52):
+Or like a private setting.
+
+Florian Tramèr (00:08:54):
+Exactly. And so they, yeah, pseudonymous is definitely something that Bitcoin was striving to do, but they definitely had a much weaker sort of privacy threat model than Zcash. Yeah. And so there were a lot of things that Bitcoin nodes do that are perfectly fine within the threat model of Bitcoin, but suddenly not fine at all Uh, once you are moving to, to Zcash. And so concretely one, one attack we, we discovered was that, um, so in Zcash, when you, when I wanna send you a transaction, I'm essentially gonna encrypt this transaction in such a way that only you can decrypt it and sort of find the coin that is spent, uh, what that means is that I'm just gonna send this transaction to everyone in the peer-to-peer network. And so everyone has to kind of decrypt this transac-, or sort of try to decrypt this transaction to see if the coin was actually meant for you.
+
+Florian Tramèr (00:09:45):
+And then if it is meant for you, you're sort of gonna do a whole bunch of, of extra work just to make sure that the coin is actually spendable and so on. Um, and so what that means is that if you are the recipient of a transaction, you're gonna be doing more work than if you're not the recipient of a transaction. That's kind of point number one point number two is that the Bitcoin client processes transactions one after the other in a single thread of execution, and this is essentially all you need for the attack. So what that means is that I can send, if I find some transaction in the network, and I wanna know if it's for Anna, um, I send this, this transaction to Anna's, uh, node. And I also send her like some, I don't know, some ping message.
+
+Florian Tramèr (00:10:28):
+And then I just wait to see how long it takes for Anna's node to respond to this ping message and if Anna was not the recipient of this transaction, she's gonna process the transaction extremely quickly and respond to the ping right after. And if she was the recipient of this transaction, then it's gonna take her like about a half a second longer to process this transaction. And only after that, is she finally gonna respond to my message. And so this is something that's quite easily detectable, even across a network. And so these were the type of attacks that we discovered there. And, um, we then extended this to, to Monero, which has a, quite a bit of a different system design, but we found similar vulnerabilities, uh, there, where you could also just sort of time networked packets and sort of figure out from this, uh, kind of what, what a node was doing with incoming transactions.
+
+Anna Rose (00:11:20):
+This model, like the attack here is it only working because in Zcash at the time, perhaps there was like the people who are actually running, like to, to have an account you had to at least have, I think, a light client, like you can't, you're not borrowing services from anyone else. So like the node runner and the address holder could be one and the same.
+
+Florian Tramèr (00:11:43):
+Exactly.
+
+Anna Rose (00:11:43):
+Because that's what that sounds like
+
+Florian Tramèr (00:11:45):
+You were basically running your, your node, your peer-to-peer node and your wallet were essentially part of the same of the same process. And so there's very clear sort of concurrency issues between those two very distinct parts of the protocol. And that's essentially the vulnerability here. This is what Zcash then fixed this as part of our vulnerability disclosure. And I think since then, they've also been, been sort of striving to completely redesign this architecture to actually really isolate the peer-to-peer node as much as possible from sort of the much more sensitive wallet component of the client
+
+Anna Rose (00:12:24):
+Had any sort of side channel attacks been explored in crypto before, or were they sort of ignored because everything is transparent and it's fine if things leak except for in these kind of like private systems.
+
+Florian Tramèr (00:12:37):
+Yeah. That's a very good question. From, from what I recall, I mean, we had sort of looked through the literature to see if things like this had been, had been talked about before. I remember there was a sort of an early Bitcoin discussion at some point about some similar attacks to this. And in the case of Bitcoin, this is maybe less, I mean, it's still an attack in that you might know, someone's say Bitcoin address, uh, but you don't know physically who this address belongs to. And so you could use the same attack in Bitcoin to essentially connect a, uh, Bitcoin address to an IP address. This is something that people had talked about at some point in Bitcoin. And because of this also kind of decided that, hey, we should really separate the peer-to-peer and wallet component. And so I think by the time that we looked at this, this wasn't a vulnerability in Bitcoin anymore. It just turned out that Zcash was using as a earlier version of the Bitcoin client that was sort of before the discovery of this issue. And yeah, it was kind of the, the problem when you, yeah, when you then have fixes on sort of, um, a client, but kind of for legacy purposes, this hadn't been integrated into Zcash.
+
+Tarun Chitra (00:14:00):
+So actually I think this is actually more of an issue in proof of stake right now. Um, because the validators are selected in advance of them actually being the person validating a block, right? So like in ETH and ETH2 I think it's like you have two to four, sorry, six minute window where, you know, basically the next validators for the next six minutes, you know, things like Tezos, you know, for like forever the whole epoch. So there's basically this thing where in proof of work, you have this like, uh, adaptivity property, which basically means you don't actually know the identity of the, you don't know the probability distribution you're sampling from like people can drop out and join in proof of stake. You always know the probability distribution for a certain amount of time. So basically you always sort of know the next, like some number of validators.
+
+Tarun Chitra (00:14:53):
+And basically if you could figure out from their Coinbase transactions and the addresses, they're sending them to what their IP is. You can DDoS them, cause them to be griefed. I don't think anyone has, you know, most of the ways this has been taken advantage of is not actually for DDoS-ing it's usually for bribing the validator. So like in Avalanche and Solana people definitely pay a validator directly for front running. And most of the reason is because they know who, which validators at which block in the future. So it hasn't been done. I wouldn't be surprised if basically the same type of thing ends up happening there because people haven't separated these two things.
+
+Florian Tramèr (00:15:32):
+Yeah. This is, I think sort of generally a problem, as soon as the entities that are kind of in charge for the consensus mechanism are sort of easy to know. Or you can somewhat guess, guess who is gonna be a validator yeah you run the risk that if those entities are kind of de-anonymized, then yeah, you have these attack vectors. I know that actually Dan and one of his former PhD students, one of my lab mates, Saba [Eskandarian], they had, I think this was because of this issue that had worked on this, on this problem that they called a secret leader election, which was essentially about selecting validators in a way that couldn't reveal who they were.
+
+Tarun Chitra (00:16:15):
+Yeah if it didn't need threshold fully Homomorphic encryption. I think it would've been implemented. Like people have made like proof of concepts of it but yeah, I think none of the production networks unfortunately, are very close to implementing it. Not because they don't know about this, they just don't really have any other options.
+
+Florian Tramèr (00:16:34):
+This is something we can get back to when we talk about machine learning where it's, unfortunately this is something that's kind of a recurrent theme at the moment that many things would be cool to have, but are essentially just unimplementable at the moment because the cryptography is still too slow.
+
+Anna Rose (00:16:55):
+It's just interesting talking about security in this context because like whenever I feel like whenever we talk about security on the show, we are almost always talking about the cryptographic security or the engineering security we're almost never talking about the side channel security or these like externalities. It kind of made me think, like you mentioned sort of the IP address. I know, I know you've switched focus. So I don't know if you're following this, but like have there been other, I don't know, inquiries into whether or not IP can be revealed. Like I do vaguely remember last year I think there was something around like NFTs the image pulling to like, if you had
+
+Tarun Chitra (00:17:35):
+there's definitely malware that took advantage of people signing transactions without paying attention to who or what they were signing, which then would eventually transfer your sh*tty board ape to someone else
+
+Anna Rose (00:17:48):
+No, no, but this one was more about like where they were pulling the image from revealed your IP address and you could be doing that from multiple accounts and it would like link your accounts to each other. I think that was what I, and it was like not all
+
+Tarun Chitra (00:18:03):
+And then did it DDoS you or what was sort of the
+
+Anna Rose (00:18:05):
+No, no, I think it was just linking. It was like, basically you have two different accounts with two different images or whatever, two different JPEGs, two different, but because you're using it on the same, uh, device, it would just link those two together.
+
+Tarun Chitra (00:18:18):
+I mean, you know, people like Chainalysis and TRM, 50% of their modeling is not purely on chain stuff. It's external metadata. They attach to an address. A lot of it IP is that basically like, you know, if you are a user who goes to Coinbase or to Binance, when they use Chainalysis, the sort of agreement they have with Chainalysis is that they give them the IP that you logged in from. So like, let's say I go to Binance, I say, withdraw to X then Binance in order to do KYC using Chainalysis is like, hey, we'll sell you the IP data. So this already exists. It's just not, you don't even have to be very sophisticated to get it. So from that, from the perspective of like, how are we catching these hackers? You know, like the Ronin Bridge hack, right. We recovered 30 million yesterday. Where do you think that came from? Like that came from like someone basically going to an exchange and doxxing themselves.
+
+Anna Rose (00:19:14):
+Crazy.
+
+Florian Tramèr (00:19:15):
+Yeah, and I guess you could imagine that people would want to use anonymity tools for things like this or something like connecting to the cryptocurrency network, say over Tor, which I remember that when we worked on this project with Zcash, this was actually something we were interested in looking at is like, do most Zcash users just connect over Tor? Because this would mean that a lot of these attacks would not be as useful. But I remember that at the time, this was actually not easy to do. There was some technical reason. I don't remember what it was that actually made it hard to combine Zcash and the Tor network, uh, I don't know if this has been fixed since, but this is, this is sort of where, yeah, where you have sort of very, very different security models that, that kind of end up clashing with each other, where you have extremely strong cryptographic protections on one hand that give you sort of near perfect sort of privacy within the transaction pool, but then the sort of system side, uh, privacy is, uh, is a different matter.
+
+Anna Rose (00:20:16):
+Interesting, back then were very few people using the Tor set up together with Zcash? It sounds like.
+
+Florian Tramèr (00:20:23):
+Yeah, I remember that there was, it was essentially not sort of recommended that people do this, yeah
+
+Anna Rose (00:20:30):
+Crazy. I want to now, like, I think we should move the conversation a little bit over to machine learning and the work that you're doing now, you mentioned to me before we started, that you had spent a year at Google Research when you did that, were you focused on like adversarial machine learning research or something else?
+
+Florian Tramèr (00:20:46):
+Yeah, it was really sort of a continuation of the research I had been doing during my PhD at which point I had actually started collaborating with a bunch of people at Google already. I was actually in a research team there that within Google is maybe a little unusual in that it's a very, it really feels like a sort of an academic environment in that the sort of the main thing we were doing was really just sort of basic research without necessarily a Google product or Google data coming into play. So it was a very, very close to what I was doing before and, uh, yeah, quite a, quite an exciting year, just because, well, you get access to a bit more resources than you would as a, in, in your average academic lab, for sure.
+
+Anna Rose (00:21:33):
+Cool.
+
+Tarun Chitra (00:21:34):
+Yeah. I remember, I actually had first heard about you doing this stuff right at the beginning of the pandemic, like after SBC, uh, 2020, where, where there's this like Arora paper and like you and Thomas Steinke were like posting something on Twitter about it.
+
+Florian Tramèr (00:21:49):
+Oh yes. In InstaHide. Yeah. Let's not go there. <laugh>
+
+Tarun Chitra (00:21:55):
+<laugh> that was a pretty funny online, uh, kind of thing. Were you at Google then? Or were you still
+
+Florian Tramèr (00:22:02):
+No, that was before, that was my last, my last year of PhD. Yeah. But was one of the projects I did then in collaboration with people like Google sort of yeah. Looking at the privacy of this, of this scheme and sort of breaking some of the privacy guarantees of it.
+
+Tarun Chitra (00:22:18):
+Yeah, so the high level thing, I guess, sorry for listeners who haven't heard about this stuff, is that there's kind of this idea that people wanted to use very core screened, "cryptography". I wouldn't call it, it's definitely not cryptography. It doesn't really give you any of those guarantees but people would be like, oh, like I did, I ran this sort of like hash of like the machine learning weights. You can't really figure out, reverse engineer, you know, something about the model or something about the input data I was trained on and that turned out to not be true. Uh, and so I think maybe that's the theme, a lot of the theme of some of the things you've worked on.
+
+Florian Tramèr (00:22:59):
+Yeah, and that it's kind of, there's a lot of hope, I guess, in this space that that one would be able to somehow bring ideas from cryptography or sort of the rigor of, of some of cryptography, uh, to problems in machine learning security or privacy. And this has so far just proved to be extremely hard to do. And I think there, there's sort of a fundamental reason for this is that in, in cryptography, we kind of deal with very abstract concepts. We're just sort of trying to, you know, encrypt a bunch of numbers, a bunch of zeros and ones. And, um, and that's about it, machine learning is sort of, there's actually sort of an underlying natural phenomenon that we're trying to capture, and this just doesn't play very well with cryptography in general
+
+Anna Rose (00:23:52):
+I wanted to actually explore a little bit more about how machine learning training works and then talk about this adversarial research. I think this is one of the first times that we actually are talking machine learning on the show. We obviously we've mentioned it here and there, but tell us a little bit about like how these systems are trained.
+
+Florian Tramèr (00:24:12):
+Yeah. I guess one way to say, would be to say that no one knows.
+
+Anna Rose (00:24:17):
+And that's the point, right? You're not supposed to know how they're trained, because if you did, that would be bad, I guess.
+
+Florian Tramèr (00:24:23):
+No, I mean more that we don't necessarily know that well, why they work but the sort of the gist is you take a huge amount of data and nowadays this literally means sort of going to every corner of the internet you can find and just downloading troves and troves of data. And then just having a huge model, which is essentially just a function essentially that you're trying to fit to this data. And so for example, the big rage at the moment is to train language models. So there, what people literally do is just download, yeah, terabytes or petabytes of data and train a function that sort of given the beginning of a sentence can sort of predict what's the next word that's gonna come and that's kind of a statistically, this is a well defined problem somewhat.
+
+Florian Tramèr (00:25:14):
+And it turns out that yeah, if you have a function that's kind of big enough that you represent with enough kind of learnable parameters and you have enough data and you have enough GPUs to sort of optimize this function for like a couple of months, you end up with a model that's incredibly good at sort of predicting what is the next word that comes in a sentence. And if you then just run this model over and over again, it starts generating text that looks somewhat reasonable to humans. I think what's most incredible about these machine learning models we use today about deep learning models is that you train these models to do this sort of one specific task. That's kind of maybe a bit boring, but then somehow by doing this, the model needs to learn some representation of, or internal representation of what text means, what different words mean and so on.
+
+Florian Tramèr (00:26:10):
+And this isn't, this is really not something that we optimize the model to do. Literally all we tell the model to do is predict the next word but by doing this, the model somehow learns that the word dog and the word cat are similar to each other, or man and woman are similar concepts in some context and the opposites in others and so on and so forth. And this then means that you can just take one of these models and then very easily, uh, repurpose it for a whole bunch of more specific things you might want to do with it. So teach it to become customer service dialogue agent or to write poetry or to generate dialogue for an online game and all these things. And so this is kind of where the field is at the moment.
+
+Florian Tramèr (00:26:59):
+This is kind of the paradigm that's been very, very successful in the past few years is that some people train these gigantic models, usually on some task that isn't particularly interesting on its own and these models are always trained by some very, usually some pretty big company that just happens to have the resources to do this. And then people sort of build on top of this, uh, and find all kinds of, sort of cool applications that they can build on top of some of these models. And, um, yeah, now we, we have models that can generate sort of very realistic art, uh, where again, the sort of way these models are trained has in a sense, nothing to do with, with how people use these models in the end, all these models are really trained to do is just to take an image to which we've added a bunch of noise, a bunch of Gaussian noise and remove the noise. It turns out if you do this long enough, the model kind of just also learns that if you give it only noise, it's gonna generate an image and so kind of, we end up sometimes with these somewhat fascinating and even surprising behaviors that emerge from something we really didn't optimize these models to do, uh, all just because they were optimized on billions and billions of data points to sort of just learn, to try and to understand some of the internal statistics of these data sets. Yeah.
+
+Anna Rose (00:28:25):
+I think like everything you just described though sounds real great. So what is the, what's the problem with that? Like, what's the breaking point of this?
+
+Florian Tramèr (00:28:34):
+Yeah, so the issue is essentially that these models end up being very good, somewhat on average and then every once in a while, they'll just make incredibly stupid mistakes or sort of things that, that are completely wrong, according to sort of the way we see the world. And then very often we don't really have a good idea or good sense for why these mistakes occur and how to fix them. And so, as an example, this is sort of something that's been observed now about six, seven years ago, and kind of gave rise to this field that we now call adversarial examples in machine learning was this realization that we could train these models in this case, this was for classifying images, so we were training these big machine learning models where we would just give them pairs of images with a label.
+
+Florian Tramèr (00:29:27):
+So we'd say, this is an image of a dog. This is an image of a cat. This is an image of a train. And after doing this a billion times, you actually end up with a model, a function that you can give some new image, and it's gonna be very, very likely to give you sort of a correct or a reasonable labeling of what this image represents and what, uh, what some researchers at Google at the time then discovered is you can take some image that say the model, uh, will say, well, this is an image of a cat and the model is correct. And then you change sort of the high order bits of every pixel in this image, uh, in a way that is like physically impossible for us to even notice, like that, that the image has changed.
+
+Florian Tramèr (00:30:11):
+Um, and you give this, this new image to the model and the model will now tell you, this is absolutely a picture of guacamole or of an airplane or of a fridge or of anything you want, essentially. And it is kind of this super surprising phenomenon that people have sort of worked very hard to understand over the years and I think we're not quite there yet. There's a bunch of sort of competing theories as to why this problem exists and even some, some theories that suggest that this problem might just be inherent of sort of learning from very high dimensional data.
+
+Tarun Chitra (00:30:51):
+What's your view from a theoretical end of like, cryptography right is focused on taking arbitrary input stream, generates something that's epsilon close to the uniform distribution, right? Like the entire world is just this little epsilon ball around the centroid of a probability, but machine learning's the opposite. Right? You want to learn this structure. That's like extremely non-uniform and like certain parts of the space are sampled significantly more, certain parts are zero and obviously as dimension goes up, it's even sparser. Right. So do you view it as, this sort of the thing you're just saying, like, is there a theoretical limit to how well you could ever possibly encrypt such processes for learning, not just the output and input, but like the actual like mechanics or not, because, you know, I think in the zero knowledge space right now, there's certainly a ton of people trying to be like, oh, we're gonna do zk ML. I'm not convinced that a lot of these things actually, don't also leak a metric fuck ton of side channel information. And so I'm just curious, like, what's your, what's your gut feeling on like, sort of, is this like an impossibility theorem lurking around? Or is there sort of some like, hey, maybe, maybe we can get away with it?
+
+Florian Tramèr (00:32:02):
+Yeah. I think it depends on what you want to achieve is, if what you're aiming for is some notion of confidentiality, kind of the thing that cryptography is best used for, then we do have theoretical, barely practical is maybe the better word things like, like fully Homomorphic encryption, multi-party computation, zero knowledge proofs and so on that you can of course apply to any algorithm and so you can apply them to a machine learning algorithm and so in particular, what this means is you could very well say, I want to train my machine learning model on this data set that is sensitive and so I wanna do this in a way where I first encrypt all my data, and then I do my entire training with fully Homomorphic encryption and end up with a, with an encrypted model and in a way that I've never actually seen the data in the clear, uh, that is sort of in principle, something you could do, um, in practice very, very far from feasible, I would say at the moment, especially, for sort of very large models that people might be interested in using today.
+
+Tarun Chitra (00:33:06):
+I guess not even just that though, right? Like in theory, even if I did do that, but then I could take the, I could run, imagine I could run inference sort of privately so I like have some model. I can run the steps of model in a private manner. You give me a ZKP at the end or FHE. The problem is I have the input-output pairs. If I have any information about the input-output pairs that is correlated to something with the execution traits of the model. So the question to me is like, will we ever actually get to the point where there's a set of models that it's known that somehow knowing enough the amount, the number of input output pairs you need is just large enough, just like the model's dimensionality or not, because like, somehow that seems to be crucial to like ever ensuring privacy in these things.
+
+Florian Tramèr (00:33:52):
+So you mean here kind of privacy of the model itself?
+
+Tarun Chitra (00:33:55):
+Yes of the model itself.
+
+Florian Tramèr (00:33:56):
+Yeah, so this was actually this project I mentioned, uh, the first machine learning project I ever worked on before starting my PhD was on this very topic, which we call model stealing attacks where the point there is to say, yeah, that if you have a model that's, you know, sitting somewhere behind the cloud API and you want this model to stay private, maybe because it uses proprietary information, or you wanna charge people for using it, then the fact that you let people query this model is inherently leaking information and at some point with enough queries, you can probably reconstruct a local model. That's kind of similar to the one that is supposed to be hidden. And this is inherent because the model is learnable and so, because the model was learned in the first place, well, it has to kind of be learnable when interacting with it as well.
+
+Florian Tramèr (00:34:52):
+Or at least we sort of don't know how to make a machine learning model into something that cannot be then learned also by someone who interacts with it. Um, whether this is feasible in practice, depends a lot on the size of the model. So for somewhat simple model sizes, this is feasible and usually not particularly expensive for sort of the very large models that people use nowadays. So like, I don't know, OpenAI's GPT-3 model, which they actually, this is actually behind, uh, an API and people pay for it most likely trying to steal this model and sort of reconstruct the similar model locally by querying the API is gonna be way more expensive than just reading OpenAI's paper that describes how they train this model and sort of spending, you know, a couple tens of millions of dollars to do that instead
+
+Anna Rose (00:35:47):
+Just to clarify because it sounds like what you've just talked about is when you talk about zk ML, you're basically talking about either using zk to protect the data set or using zk to protect the actual model. But can you define, when you say the model, like is the model predefined, is the model something that the researchers are doing or is the model the output of all the data?
+
+Florian Tramèr (00:36:10):
+Ah, yeah, sorry, that's kind of an issue of terminology, which I must say probably also caused some confusion in the original Twitter thread you mentioned, uh, that kind of led to this where I would say in most of science when people say model or modeling, yeah they kind of mean a process of kind of, I don't know, like learning information about the world or whatever, or process of doing science or something. Whereas in machine learning, when we say model, we mean like, uh, a function like, or a program that, you can run that was, uh, yeah. So it's kind of the, output of the training process, people will call a model.
+
+Anna Rose (00:36:46):
+I see.
+
+Florian Tramèr (00:36:47):
+And this is kind of an unfortunate naming scheme that I know that people have complained about quite a bit because it actually causes confusion when then going to people in other scientific domains and talking about models. But yeah, for lack of a better word, that's what we use in
+
+Tarun Chitra (00:37:04):
+This gets back to, this is more a philosophical question about the notion of epistemology of like, do you actually have to put in the features of the thing you want before you try to infer whether reality obeys it, or do you just say here's what reality does, can I go backwards? And the forwards and backwards thing is sort of the main problem in philosophy of science. So I would say that it's not exactly solved.
+
+Florian Tramèr (00:37:28):
+Most likely when we hear about sort of adversarial models or something like that, we think of machine learning, but it could actually mean something a bit broader, which I guess is something we'll come back to later.
+
+Anna Rose (00:37:38):
+It's funny, because I guess for me, when I was hearing about sort of the adversarial approach, I mean, and at least the context of this podcast, it was actually that crypto itself is so adversarial all the time. Partly also the economic incentives. Yes, if there's the security break, but like if you find a hack or you find a bug there's like true like treasure at the end of the road. So there's a lot of motivation for it. In the case of ML, is there motivation in the same way to break them? Like what you just described, even with the photos it's like, who cares if the photo thought it was a cat and then it thinks it's a fridge.
+
+Tarun Chitra (00:38:14):
+He just gave you the greatest example, which was the OpenAI API, right? Like, I mean, people have made sort of versions of that model because it's, you know, that's the crown jewel for OpenAI. That, that is
+
+Florian Tramèr (00:38:27):
+This is, yeah, this isn't an application of sort of stealing a model, but for sort of evading a model or sort of making it give bad decisions. The sort of cats to guacamole examples are cute, but ultimately not very security relevant and this has been a bit of a pet peeve of mine with this field for a few years that people sort of always kind of say that, oh, this is a security concern. But they never actually go and look at at real security, systems where machine learning is used. And, uh, the reason is that, uh, I mean, I'm sure there are many of them is just that a lot of them are kind of hidden. So like a, as an example, online content moderation is something where machine learning is gonna be used a lot. Like every time you upload say a picture to Facebook or Twitter or whatever, I'm sure there's a bunch of machine learning models in the background that are gonna take a look at this and to flag it if it's inappropriate.
+
+Anna Rose (00:39:24):
+And it's already happening. I mean, there's that big example with Apple, right? I think it was, they, they had a flag.
+
+Florian Tramèr (00:39:30):
+Yeah, exactly.
+
+Anna Rose (00:39:31):
+They had actually seen, I think a photo, but it was the context was missing and flagged it. Yeah.
+
+Florian Tramèr (00:39:37):
+And then of course everything that's on the side of malware detection, spam detection, intrusion detection, all these things have been using and they're using more and more machine learning in them every day and so here, of course there's a very clear adversarial setting and very clear incentives for attackers to try and evade these systems. Actually the online content moderation setting is the one that I think best illustrates, the sort of, an attack vector for something like an adversarial example, because here the end goal is always to show content to a human, right? When you post something online, you essentially, you want it to be seen by many, many people and so here, what you really want is to make sure that you can post say something offensive and that will look offensive to humans, but that the machine learning model is gonna say, oh, this is perfectly fine, it's a picture of a fluffy dog or something.
+
+Anna Rose (00:40:33):
+Yeah.
+
+Florian Tramèr (00:40:34):
+And so this, this is kind of the, on the image side, maybe an easy attack scenario to describe the sort of adversarial setting in machine learning today that I would say I'm most concerned about. And I think has the most potential for harm is more on the side of attacks on the training data. This is what we call a poisoning attack again, with sort of nice, nice illustrative terms, I guess in this field, people like naming things and the concern here would be something like, you know, uh, someone training a model like GitHub's Copilot that helps to write code and by tampering with the training data, you sort of make sure that the model is just gonna write insecure code or something. This is actually, there was a research project from some people at Cornell a few years ago that, uh, that showed that you could do something like this.
+
+Florian Tramèr (00:41:28):
+It's pretty cool. Or even, even just as sort of a trolling attempt, right? Like these models cost tens of millions of dollars to train and you can imagine the PR nightmare, it would be if like, I don't know, Google spent tens of millions of dollars to train one of these say language models. And then once the model is trained, it turns out that if you ask it, which is the most evil company on earth, it tells you Google because somehow someone managed to put all of these training examples, somewhere in the training set. And so this is, I think, a type of attack that I think we're gonna start seeing more of in the future, just because there, there are sort of incentives to do these kind of things for, for bad actors. And it's probably not that hard to pull off because these models are just trained by literally pulling sort of terabytes of data from everywhere across the web.
+
+Anna Rose (00:42:24):
+I'm now so curious what your research is because this, like, what do you do? Like, are you trying to break them?
+
+Anna Rose (00:42:32):
+Or what are you doing?
+
+Florian Tramèr (00:42:33):
+A lot of my research has been kind of attack focused with sort of the end goal in mind of really trying to figure out what, what real attack vectors, uh, look like. And whether some of these kind of generic attacks that, that people have been thinking about for machine learning models for like the past 10 years or so, whether they are actually practical, whether this is something that someone could reasonably pull off. The end goal obviously, being that we could also come up with with some reasonable defense ideas. But, uh, it seems like right now you can sort of either look at machine learning models in the absolute worst case and sort of say like, yeah, if I give you my machine learning model, I tell you exactly how it works.
+
+Florian Tramèr (00:43:19):
+It's like trivial to attack. Can you find a defense? And this is just it seems as of now a hopelessly unsolvable problem, unfortunately,
+
+Anna Rose (00:43:29):
+Whoa
+
+Florian Tramèr (00:43:30):
+And so you could think well, but then why don't we see Twitter and Facebook and so on, like constantly under attack and I think the reason is that while these systems are not open, they're hidden from you. They're not that easy to interact with. There's probably a lot of security through obscurity at play here, but it actually, it actually works. And so I think there's a bit of something we don't fully understand yet, at least from kind of the academic research side is like, how hard is it actually to attack some of these models that people really use in production and what are kind of, you know, like pragmatic, maybe security things we can do to kind of limit the attack surface of these models.
+
+Florian Tramèr (00:44:14):
+That's kind of one thing I'm on the side of security of machine learning that I'm really interested in. The other thing which we talked about a bit previously is all that has to do with kind of the privacy of training data, where there, the big issue actually with these models that people train today is that they're very large. And so the models tends to have a very annoying tendency to sometimes just memorize some of the training data that they saw. This is again, somewhat annoying, because this is not something even that cryptography can solve for you. Like even if all your data was encrypted and you did fully Homomorphic encryption or multiparty computation or whatever, if like the output of your computation, which is like a machine learning model itself, leaks the data that it was trained on.
+
+Florian Tramèr (00:45:02):
+Well, cryptography sort of says, well, that's fine, that's part of the game but with machine learning this actually happens. So we had a project two years ago where we looked at OpenAI's GPT-2 model. This was the precursor to GPT-3, which is actually a fairly small language model by modern standards and we just found that if you sort of let this model generate text in some rare instances, it's just gonna generate, you know, someone's phone number, email address or fax number. We actually, we had one example we found where it really like there was a specific person whose entire contact information appeared like two or three times on the internet in like some random patent documents or something and the model just knows this person by heart and it's very strange because it's really some random person, uh, not someone famous at all.
+
+Anna Rose (00:45:57):
+And I guess what that gives away is that that data was used in the creation of this model.
+
+Florian Tramèr (00:46:02):
+Yes, and you could argue, well, this is data that's from the internet. It was already sort of publicly available, but I think this is a can of worms. That's about to explode at some point that, um, we've been all putting like a bunch of data on the internet and without any consent that this is ever gonna be used by a machine learning model and there's now just a bunch of companies that just sort of go and scrape all this information and just say, oh, it's public information.
+
+Tarun Chitra (00:46:28):
+Well also they sell it. I mean,
+
+Anna Rose (00:46:30):
+It's terrifying.
+
+Florian Tramèr (00:46:30):
+And then they sell the model and so then there's questions of copyright infringement that are interesting as well. So yeah, these I think are kind of interesting and somewhat worrying, also legal questions that are gonna pop up in the, in the coming years. Yeah,
+
+Tarun Chitra (00:46:45):
+Actually, so I guess maybe a more sort of theoretical question is, you know, I guess in the last, maybe few years more on the theoretical side, people have really cared about what, I guess people call ML fairness. I feel like it has 5 million definitions that are in equivalent and I get that people are winning prizes and like best thesis of the year or whatever for it. But like, I generally read the papers and I'm not particularly, uh, convinced that there's something there, but there is this trade-off between whatever notion of ML fairness you have and sort of some notion of privacy. Do you ever see those getting united? Because like, there is sort of clearly some connection between privacy and resistance to adversarial models as well and fairness, and there's sort of this triangle between the three of them. We don't know the space of that. Do you ever see those sort of merging? And I guess we could start by trying to define fairness, but like half the definitions I've seen that actually don't are in equivalent. So I like not, it's not like differential privacy where we cohered on one definition
+
+Florian Tramèr (00:47:49):
+That's the main issue. Right? Yeah. As you said, sort of in privacy, we have a definition, differential privacy, which sort of mathematically very, very nice. I think there's settings where it doesn't really capture everything you want under sort of a privacy label, but it's sort of a very specific notion of privacy essentially says whether you yourself contribute your data or not, doesn't really make a difference, which is sort of very nice to have. And then there's other things we care about in machine learning, like fairness, as you mentioned, and actually robustness, which is the thing we talked about earlier sort of perturbations to inputs and so on. These are things that are extremely hard to define what we really want. What sort of our ideal looks like, like in the fairness case, it sort of, well, we want the model that's fair, but probably if you go and ask, uh, 20 different people and 20 different judges, what that means you're gonna get 40 different definitions.
+
+Florian Tramèr (00:48:47):
+And that's kind of the issue is that if you fix a definition, some mathematical definition of what you might mean by fairness, then you can maybe optimize your model to try and satisfy this definition. This is something that people have done, but then someone else might come around and say, well, my definition of fairness is actually different. And by sort of optimizing for your definition of fairness, you've made my definition of fairness worse. And this actually happens and robustness is, of these models has the same issue, is that when, when we sort of say, we want say, uh, an image model that is robust to sort of small changes of its inputs, we also don't know what that means to say small changes. Like ideally what we would maybe want to say is something like anything that a human would consider as small, but this isn't something that we can mathematically define. And so instead people say, well, I'm gonna define a metric that says I can only change every pixel by so and so, uh, such a small amount. And then you can optimize your model to sort of try to be robust for this specific definition of robustness
+
+Tarun Chitra (00:49:55):
+To be fair differential privacy still has a metric too, for like adjacency
+
+Florian Tramèr (00:50:00):
+Yes, but which I would say is more, yeah,
+
+Tarun Chitra (00:50:03):
+Discreet, it's more discreet usually. So there's usually some like minimum distance that's natural in your problem versus fairness.
+
+Florian Tramèr (00:50:11):
+Yeah, and this is maybe just more in line with something that we really want from a privacy definition. And, uh, yeah, but I agree. I mean, I've actually written at least two papers recently that sort of call into question whether differential privacy is really sort of the right definition of privacy when it comes to training some of these language, uh, machine learning models.
+
+Tarun Chitra (00:50:33):
+Right, right. I guess my question is like, somehow I feel like there's some sort of, maybe this is just because I have been in crypto too long, but like some type of, sort of like impossibility theorem, where like you, you have fairness, robustness, privacy, you get two out of three or like there's like some way you can't get all of them.
+
+Anna Rose (00:50:49):
+You can never get three
+
+Tarun Chitra (00:50:51):
+or like you, you know, like if you get all three, it says something about your model's predictive power, like your model's predictive power goes down or something. Right.
+
+Florian Tramèr (00:50:59):
+I think between privacy and fairness, there's certainly, there's certainly trade offs there. This is something that people have already explored even empirically also theoretically, where it's kind of inherent. Yeah, that if you, if you want a model that's private in the sense that it can't, uh, depend sort of too much on the data of any particular individual. And then on top of that, you might want the notion of fairness. That's sort of very tailored to individuals while those are clearly at odds and it's kind of impossible to satisfy both of these at the same time, more kind of empirically what people have found is that when you enforce privacy of these models, which you're essentially forcing the model to do, yes that any time it sort of finds a very small subgroup in the data so some, some kind of outlier data you have to ignore or the model has to sort of ignore this data or it can't possibly be private.
+
+Florian Tramèr (00:51:56):
+And then yeah, when you then use this model, after the fact you find that its performance on some very, very small subsets of the population, uh, of the data population can be much worse than if you hadn't tried to make the model private. And so those things are, are clearly at odds. Yeah, and so this is something that at some point is is a matter of policy of sort of public perception of sort of which values, which public or societal values we want to try and enforce in these more models. And this is a very, very hard question because on the one hand, first of all, we need to agree on sort of what those societal values are. And that's kind of a very hard problem on its own. And then once we agree on what the values are, we sort of have to find a way to formalize this into mathematics or into code so that we can actually train a machine learning model or write software that sort of abides by these rules.
+
+Tarun Chitra (00:52:53):
+Another way of saying is I don't want the British Parliament voting on whether, what definition of fairness, I'm legally obligated to optimize in my objective function in some way. Like you just don't really want that in some ways, but then at the same time, there's this like intrinsic sort of weirdness about the fact that some of these models probably should have some notion of being like less biased, but like I'm not sure exactly where and how that'll go.
+
+Florian Tramèr (00:53:23):
+I think a lot of this also just comes from the fact that these data sets that people currently collect to train these models are for a lack of better word, just complete sh*t in that they just really go and just collect whatever data they can find online, because it's really sort of the more data the better and I mean, if you've spent any time on the internet, well, you know, that whatever you can find on the internet is
+
+Tarun Chitra (00:53:50):
+Look, GPT-3 trained on 4Chan sounds like a way to like kill all humans.
+
+Florian Tramèr (00:53:58):
+On average, it's not particularly good data, I would say. And there's definitely, yeah, entire portions of the population that are gonna be absent or underrepresented in this data. And so this is a concern and one that I think requires a lot more work on a lot more research and sort of finding good ways to curate some of these data sets that people collect and sort of figure out how to work with yeah, with issues of consent of whose data you, include of trustworthiness, like from which sources are you actually gonna pull data so that you don't, your model doesn't just end up being poisoned very easily. And then yeah, sort of whether the data is representative of kind of the world you're trying to learn about.
+
+Tarun Chitra (00:54:42):
+Yeah, I think like these are the questions that people in crypto who are like, oh, we're just gonna like bolt on FHE or ZK to ML, don't ask themselves because I think it's more important to solve these first before you even like, just throw otherwise, you're just like, I have a bazooka, let me go kill a bunch of squirrels. And you're like, well, why, like maybe that's not, maybe you should ask yourself why you built the bazooka.
+
+Anna Rose (00:55:03):
+Yeah, and actually doing it in a private setting. It means like it's even less understandable in a weird way, like by starting in the transparent one, at least maybe you can explore it a little bit more clearly.
+
+Anna Rose (00:55:14):
+Right, although technically none of these are really like, none of the models use in production, like GitHub or OpenAI or particularly transparent. I think that's why Stable Diffusion is like such a - sorry, Stable Diffusion is this open source version of sort of DALL-E. You could think of it as like open source version. And like, the reason that's just like caught fire is because just like all these people who are like MLs too inaccessible were suddenly like, oh, actually I can use it but I always hear like a lot of vitriol from people in crypto who are like, oh, like if we just did like all this machine learning sh*t in FHE, like we just solve all these problems, like f*ck the big companies. And it's like, sure, but at the same time, I don't really see how you've eliminated any of the inherent biases in these things. Right, like, and the biases are probably even worse than the strictly, like whether I can infer the model weights, like yeah, sure, like inferring the model weights is probably like a version of like, hey, I can figure out this person was in this data set, but there there's sort of some like missing thing there. And like cryptographers are just like, they love to be vitriolic about big companies, but like, I feel like they're missing the fact that like just throwing cryptography at the problem doesn't like help you.
+
+Florian Tramèr (00:56:26):
+It's all sort of one specific part of the problem, which if you consider it a problem, which, which can be yeah, sort of centralization of data and the fact that people don't have control over their own data and how they want to release it to the world. And so on, which yeah, you can argue is one of the big problems with the way that we do machine learning today. But yeah, it is ultimately a sort of a small part of the privacy and security issues that you're gonna have with machine learning models today. And so we'd love to use to be able to leverage cryptography more, so kind of a really fascinating open problem in the space that I thought about for quite a while. I'm sure others have as well. And so far there just hasn't been any progress would be to say, can we build a model that is more robust to attacks?
+
+Florian Tramèr (00:57:21):
+Um, but only against the attacks that are, you know, like computationally bounded sort of the way we think about attacks in cryptography and in cryptography, that's always what we do. We know that sort of information theoretically, there's extremely little we can do. So we have to think about computationally bounded attackers, and we have a lot of cool techniques that allow us to do that in machine learning for sort of all these attacks we're talking about here. Like things like data poisoning or perturbing inputs to evade the model. And so on, we're always just thinking of these things in information theoretic terms of like the model is kind of either it resists all attacks or it's broken and we, we don't really know how to find sort of something in between where we can say the model is not inherently, absolutely robust, but sort of finding a way to attack it is hard and expensive. And this would be very, very cool if we could do something like this, but we, we have no idea how.
+
+Anna Rose (00:58:21):
+So I sort of wanna bring this back to what it kind of originally prompted this interview, which was this idea of using more adversarial testing or adversarial like modeling for things in science. And the one example that we had been exploring was like, could peer review be fixed by creating an adversarial motivated kind of system of, and this is not so much the research, this is like creating adversary, like basically market testing it to get the better, you know, results. So peer review currently being done in universities, by people who, you know, may have their own like research that they sort of wanna push through becoming reviewers is what we talked about in that last episode. So, yeah. I don't know, is there any sort of research spaces or ways that you're thinking about like changing other parts of science or that you think these adversarial-like setups could actually help?
+
+Florian Tramèr (00:59:18):
+Yeah, if anything, I would say our current peer review system in particular in computer security is already way too adversarial.
+
+Anna Rose (00:59:26):
+Oh, really? It's too adversarial.
+
+Florian Tramèr (00:59:28):
+Yeah. It's one of those areas where I think because people just have a bit, this adversarial mindset of like, oh, everything is broken or can be broken that people's prior on any paper that they're gonna read is like, this is bad and this is broken. And so overall it's actually, it's sometimes refreshing when you go and publish in a field other than computer security, because suddenly people are a lot, a lot nicer and more encouraging and yeah.
+
+Anna Rose (00:59:55):
+But does it make for more rigorous, like results? Like, does it, doesn't it, isn't it sort of like good to be challenged in every way?
+
+Florian Tramèr (01:00:03):
+Yeah. So I think this is certainly something that in, in cryptography and computer security is, is kind of nice that attacks and defenses are both kind of first class citizens when it comes to research. And so you, have this kind of back and forth anyhow. And it also means that if you want to do research that kind of challenges, other research it's publishable, you just, you call it an attack and you publish it. Whereas my guess is if you go into other fields, like if you go into biology, medicine, physics, and so on writing a sort of a negative result is much, much harder where you sort of go and say, oh, these other things that people have published in the past don't actually work. And so this is certainly something that is I think, very good to have and it's very healthy that we have this in our community. It does, yeah, it sometimes creates a bit adversarial settings also, where you have to be a little bit careful not to make people angry when, or to be angry yourself when someone comes along and says, oh, I broke your work from, from like a few years ago. So it's,
+
+Tarun Chitra (01:01:11):
+Uh, but then on the other hand, you have the problem in biology where you have these kind of like the Alzheimer's stuff, where it took, you know, it took like 20 years to disprove something, but 20 years and you know, a hundred billion dollars of investment into trying to make drugs. So for the wrong thesis.
+
+Florian Tramèr (01:01:27):
+Right, no and so definitely I think this, this should be encouraged that people sort of do this type of research in any field that sort of goes and questions, kind of other research that's already been done and sort of reevaluates, things. Um, this has been actually particularly hard in machine learning so far because everything is very empirical. And so usually what happens is someone, someone will write a paper saying, oh, we have a new method that is, uh, more robust, more secure, whatever. And then a few months later, someone comes along and writes a paper saying, no, actually here's a new attack or here's a better way to evaluate things and everything is completely broken. And so it's a bit like sometimes people say it's a bit like symmetric cryptography in the nineties that like everything gets broken left and right and we have sort of no idea what we're doing, but it's still, it's kind of, because of this sort of healthy back and forth, uh, we do now also have a much, much better understanding of which things do not work and clearly do not work, which things seem promising and sort of how we should evaluate, uh, things more rigorously. And so, yeah, I think that in that sense, having, having this adversarial mindset and this adversarial back and forth is definitely something that's useful in, in science.
+
+Tarun Chitra (01:02:47):
+Yeah, I think the other question that we talked about in the last podcast was really about like, how do you incentivize bad results? And in computer security, there's the natural incentive it's like, it is viewed as a form of advancement that you've broke something. Right, but in like machine learning or biology, there's always this thing of like, oh, there's like too many people who've like staked to their career on like this thing working and we'll do everything possible to make sure that the gravy train keeps rolling. And so I guess the question was like, how do you kind of bridge that gap where you can like, find a nice middle ground between those and maybe it doesn't exist, but I think that was sort of the pipe dream
+
+Florian Tramèr (01:03:33):
+Yeah. It's a good question. I think it connects a lot with just debates people have been having for years and decades about how we should be measuring impact in science as a whole, right. Like people have these, have these debates all the time about sort of saying, oh, we really shouldn't be measuring citation counts or a number of papers or h-index or whatever, because each of them is fundamentally flawed and in the end, we just, I agree, uh, each of these as a metric is just not particularly good, but if we had sort of a gold metric of what it means to do impactful science, and we could just focus on maximizing that and then sort of, This would make things easier because then whenever a new paper comes out, uh, whether it's a positive or a negative result, we could sort of try to answer the question like, does it contribute to, to the advancement of science to impactful science? And this is just a very, very difficult question to answer, even when it comes to positive results. I mean, we have so many examples in cryptography and in machine learning and in probably every other field of extremely impactful papers, the original zero knowledge paper being a prime example that have just been rejected, uh, like three, four times before being accepted.
+
+Tarun Chitra (01:04:49):
+I mean, the greatest example in distributed systems, I guess, is, you know, Lamport's Part-Time Parliament, which was the thing that described Byzantine Fault Tolerance fully, but he wrote it as this paper that was sort of a huge troll. He wrote it as if he was an archeologist who found this Ancient Greek civilization whose parliament used, uh, sort of like a BFT mechanism for voting and so like basically every CSRO rejected it for 10 years until it had like a thousand citations as like unpublished work and then eventually kind of got accepted.
+
+Anna Rose (01:05:24):
+Wow, cool example.
+
+Florian Tramèr (01:05:25):
+Which at that point you could say, well, that that's ultimately the metric people care about. So it doesn't really matter whether, probably the paper could have been never published. I mean, I don't think Satoshi's Bitcoin paper was ever published and I think no academic venue would publish it because it's sort of, it's not written in the way that we expect papers to be written. The technical things it describes are somewhat vague but in the end you can't deny the huge impact it's had. And so, yeah, it clearly shows that there's many different ways to measure impact, and peer review, I think just in general is not particularly good at finding this, yeah.
+
+Anna Rose (01:06:06):
+Cool. Florian, thank you so much for coming on the show, sharing with us, your kind of story, some of your work you were doing in cryptography and with privacy tokens all the way to the machine learning stuff. So thanks a lot.
+
+Florian Tramèr (01:06:18):
+Yeah. Thanks a lot for the very fun discussion. This was a great time. Yeah.
+
+Anna Rose (01:06:23):
+And yeah, thanks for introducing my audience and me to kind of some of the work that is happening over there. This is the, I think the first time we dig into it, so very cool. I wanna say thank you to the ZK podcast team Henrik, Tanya, Rachel, and Ari, who helped on research this time around and to our listeners, thanks for listening.
+

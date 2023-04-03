@@ -1,0 +1,438 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week, Kobi and I chat with Dmitry Khovratovich, researcher at Ethereum Foundation, Dusk Network, and ABDK Consulting and JP Aumasson CSO at Taurus. We compare symmetric and asymmetric cryptography and then dive into hash functions. We discuss the process of developing and improving hash functions and explore what it means for a hash function to be ZK friendly. Now, before we start in, I wanna share that one of our CK Summit partners, Aleo, are currently in their third incentivized testnet phase. Aleo allows for programmable privacy, and with this testnet, developers can now build their own private and scalable applications. If you wanna try it out, check out their repo at github.com/aleohq. Look for Snark OS. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:15):
+Today's episode is sponsored by Anoma. Anoma is a set of protocols that enables self sovereign coordination. Their unique architecture facilitates the simplest forms of economic coordination, such as two parties transferring an asset to each other, as well as more sophisticated ones, like an asset agnostic bartering system involving multiple parties without direct coincidence of wants, or even more complex ones, such as end party. Collective commitments to solve multipolar traps where any interaction can be performed with an adjustable zero knowledge, privacy Anoma's first fractal instance
+
+(00:01:46):
+Namada is planned for later in 2022, and it focuses on enabling shielded transfers for any assets with a few second transaction latency and near zero fees, visit anoma.net for more information. So thanks again, Anoma. Now here is a dive into hash functions with JP and Dmitry.
+
+Anna Rose (00:02:06):
+Today Kobi and I are here with JP Aumasson CSO at Taurus, and Dmitry Khovratovich, researcher at Ethereum Foundation, Dusk Network, and A B D K consulting. We're gonna be talking all about hash functions, so welcome to the show.
+
+JP Aumasson (00:02:20):
+Hello. Thank you for having us.
+
+Dmitry Khovratovich (00:02:21):
+Hi, Anna, great to be here.
+
+Anna Rose (00:02:24):
+And hi again, Kobi thank you for joining me on this episode. I know we're gonna go deep into the tech, so I'm very glad that you're here with us.
+
+Kobi (00:02:30):
+Happy to be here.
+
+Anna Rose (00:02:32):
+Okay, I wanna get to know both of you. Let's start with you, JP, you are CSO at Taurus. Tell us a little bit about what you've been doing, what you've been working on, and what led you to work on hash functions.
+
+JP Aumasson (00:02:44):
+Sure, so I've been doing cryptography for maybe 15 years. So way before blockchain, way before ZK proofs were practical and I was not much interested in ZK proofs at the time. 10 years ago, I was most interested in symmetry crypto, and in particular hashing. So I started doing hash function work during my PhD between 2006 and 2009, where I submitted a hash function called BLAKE to the SHA-3 Competition. So maybe you're familiar with hash function, BLAKE2 and BLAKE3. So these two come from the actual BLAKE design. I also design other hash functions. Maybe the best known is also SipHash, which is ironically not a hash strictly speaking and I also work together with Dmitry, who is here, on hash functions optimized for passwords, what we call password base hashing, and this led to the design called Argon2. So fast forward to today, I'm CSO, so Chief Security Officer of a company called Taurus. It's a Swiss FinTech. So essentially what we do is a technology software and hardware that banks are using to manage digital assets. So cryptocurrency, stable coin, token securities and the like. So I'm not doing purely crypto, also a lot of personal security, but I keep, you know, a foot in the crypto research. I keep attending conferences, doing research, giving talks and podcasts like this one.
+
+Anna Rose (00:04:15):
+Cool and actually we met for the first time when you, I got to know your work when you spoke at zkSummit7, there you were talking about like auditing ZK systems and stuff. Would you say part of your work is audits?
+
+JP Aumasson (00:04:29):
+Sure. I've been doing a lot of security consulting and in particular vulnerability research, code audits, code reviews, and since maybe 2014/2015, a lot of security audits, security assessment for blockchain applications. So while that consensus protocols new site first, you name it, and the last year or two I've been working on auditing ZK proof systems, which was like I mentioned, it might talk the most interesting and the most challenging topic. So, you know, when you have all these crypto components walking together, hash function, cipher polynomial commitments, pairings, and the like, it's so complex, but super interesting.
+
+Anna Rose (00:05:14):
+Cool. Dmitry, tell us a little bit about your journey and what you've been working on.
+
+Dmitry Khovratovich (00:05:19):
+Sure. Well, I hate to say that, but my journey is pretty similar to that of JP. I did my PhD at about the same time and it was devoted to pretty much the same topic with a little bit difference that I did symmetric cryptography at that time as well, but I was not that much on the design side. I was on the easier side. I was at the side of breaking things, so called crypto analysis. And I, with my PhD co-authors and with my supervisor, we broke a number of ciphers and hash functions and we didn't participate in the SHA-3 competition, but we continued working on the analysis and then we started a little bit of the design and that's how we designed first this winner of the password hashing competition that JP hosted at that time that the winner was Argon-2.
+
+(00:06:11):
+And it's now used in many different applications of password hashing. Then at pretty much about the same time, at about 2013, we started looking at Bitcoin, what was well, like well before Ethereum started to exist and we started with the anonymity properties of Bitcoin. And then I did like more and more research in the area of blockchain and, well, this was not like much about zero knowledge, I think up to the year 2018 when I was still doing design and analysis of symmetric primitives and I was just found paper about zk STARKS and in this paper about zk STARKS elements with coauthors they suggested using a hash function based on block cypher AES. And what was really nice about this hash function is that it was the design that I broke exactly 10 years ago, and this paper wasn't published because it was not so interesting.
+
+(00:07:16):
+So people said, well, who would like decide to use hash function based on AES if we have like much better hash function? So this result was not published in 2008 but it became useful in 2018 and since then I started to look into zero knowledge space and on the wave of this interest I joined Ethereum Foundation as a researcher. And yeah, we do a tremendous amount of cryptography research at the frontier of crypto Ethereum. And I do a little like more practical stuff at Dusk Network where I develop some concrete protocols that use zero knowledge on a daily basis because it's privacy oriented blockchain. And I also do consulting in my own company, ABDK Consulting, which we founded with my wife in 2016. And working also with my friend Mikhail there. So we indeed do audits of a lot of things including zero knowledge protocols and circuits. So it's kind of, we design things at my first work and then audit the implementation of this thing at my kind of second and third work that's kind of pretty amazing. You do kind of, you get money twice for pretty much the same job.
+
+JP Aumasson (00:08:32):
+And maybe one thing you did not mention maybe the pinnacle of our careers or biggest achievement is when Dmitry and I collaborated on attacking Keccak, which is now known as SHA3, and there was a cryptographic competition just to break Keccak. We did not break it, but we had the best attack and we wanna crate of Belgium Trappist beers.
+
+Anna Rose (00:08:55):
+Okay.
+
+JP Aumasson (00:08:56):
+ which was very, very fun, by the way
+
+Anna Rose (00:08:58):
+I wanna double check something. You had just mentioned that in the STARK paper they were using a type of hash function that you had already broken or you had like figured out the vulnerability of. So did that force them to change it?
+
+Dmitry Khovratovich (00:09:14):
+Yes. So what actually happened is that they did designed a STARK for nontraditional field. It's not like a big prime field we're still using now, but they looked into smaller binary field and they selected as a hash function kind of tailored for this field hash function based on the block cipher AES. Block ciphers and hash functions are somewhat similar, but they also different in security properties, block ciphers are somewhat smaller. And in order to not to fall into the trap of small security level, you have to make sure that this smaller state doesn't pose extra vulnerability. And what the STARK paper did, they made it into hash function in the most straightforward way and this straightforward way was insecure because it added degrees of freedom, I would say that can be exploited by an adversary in order to mount, for example, a collision attack.
+
+(00:10:15):
+So these degrees of freedom are unavailable in a block cipher setting because basically what they did, they said, okay, so in the block cipher there is a key which is secret, and there is a message you encrypted. And they say, okay, let's be both message that you hash key and the message, and it gives you kind of the freedom in the key that you didn't have in the cipher setting. And because of that, this result and function becomes really vulnerable. And we found this property back in 2008 when we tried to attack AES and related designs. And I was reading the paper like late nights and I immediately pretty much the same night wrote to Eli and said, well guys, you're doing something really wrong, so you should have used a different hash function. And Eli replied, well, if you think we should use a different hash function.
+
+(00:11:08):
+Couldn't you suggest a different hash function? And I said, yes. So we certainly can do it and I have a team, we can do the job. Yes, it was the year of 2018. So it turned out that already at the time Eli collaborated with another team from Belgium who designed a different hash function for them. It's called, was called Friday. And they presented it around DefCon in Prague. And the thing is, pretty much the second day after this design was present, me and colleagues of mine from Oslo and from Great Britain, we found some real good vulnerability in this hash function.
+
+Anna Rose (00:11:52):
+This is such an interesting way to do business development. I feel like that's the job of the auditor. Like you break stuff, you're just like, are you sure you wanna work with them? You sure you don't wanna work with us? Broken
+
+Dmitry Khovratovich (00:12:03):
+Right. So we did find the vulnerability and published a paper about it, and that's made the STARK team to switch from this Friday setting to something new. They actually decided to run a competition in around 2019
+
+Anna Rose (00:12:20):
+I remember that.
+
+Dmitry Khovratovich (00:12:20):
+Yea, and our new hash function Poseidon was one of the entrance to this competition and the set news, like the one year later they told us, well there was like third parts of Cryptoanalysis from France and the French guys decided that your Poseidon is not really the best one. So this second design from Belgian is better. So we decided to use, not Poseidon, but the rescue hash function. So we said, why so? It's like thousand times slower and yeah and just two years ago we were kind of devastated, we invested huge amount of time into designing Poseidon and optimizing it here and there and then they said, well, of course you did a great job, but we are selecting Rescue. But it turned out they, they did select Rescue, but they are kind of unselecting it right now, I think.
+
+Anna Rose (00:13:12):
+Oh, gossip
+
+Kobi (00:13:13):
+I mean, a lot of people use Poseidon today, right?
+
+Dmitry Khovratovich (00:13:18):
+So, yeah, well they couldn't tolerate the slow of rescue. So from the security standpoint, it was somewhat like a little bit better, but not like tremendously better but from the plain performance ratio so Poseidon couldn't be beaten at that moment and I think this made people using it.
+
+Anna Rose (00:13:39):
+I wanna take one step back into something both of you said. You talked about symmetric cryptography versus, and I'm guessing versus asymmetric. Can you actually define that for us? What's symmetric cryptography and what falls under that?
+
+JP Aumasson (00:13:54):
+So symmetric is all the crypto primitives because we talk of primitives as the core building blocks as opposed to protocols. So symmetric is everything that is not asymmetric, and asymmetric is also called public key. So as soon as we have a public key in a private key whereby you can generate the public key from the private key, but not the other way, you're in the realm of public key aka asymmetric crypto. And typically this involves, you know, mathematics, security proofs and relatively slow operations. So RSA Diffie Hellman Elliptic Curve, this is all the asymmetric whereas block cipher, swim ciphers, hash function, PRF, it's symmetric and fast.
+
+Anna Rose (00:14:41):
+And I guess ZK falls in asymmetric as well?
+
+JP Aumasson (00:14:45):
+Actually both, both components so a lot of ZK proofs rely under harness of problems such as as DLP. So this cryptographic problem, which is at the core of many public crypto systems, but at the same time, you have a lot of hash functions and hash function like algorithms in ZK proofs and typically you have people like me and Dmitry. We are more in the symmetric crypto world because it's a different set of techniques, maybe different skills, different communities. So there's this separation between the public key and the secret key or symmetry community. It doesn't mean we don't know anything about public key, but that we are more specialized in in symmetric stuff.
+
+Anna Rose (00:15:28):
+Cool.
+
+Kobi (00:15:29):
+It's also different about how the field approaches into adopting new schemes and protocols, right? Like you mentioned all the time, the competition that you have for new hash function, right? For BLAKE2 when, when it was in the competition for SHA-3 and this competition for the new hash function that would be used for STARK and so on. So for example, why was there even competition for SHA-3? Like, well, what's wrong with SHA-2?
+
+JP Aumasson (00:15:57):
+Right, well, the history of this is the following. So just for the background, maybe not everybody knows this concept of crypto competition. So it's like a decryption derby, you send in your algorithm and you try to break other people's algorithm without breaking yours and it's organized by the US CRSC NIST. So National Institute of Standards and Technology is the agency in charge of doing US federal standards. But what happens in practice is that what needs standardizing becomes a worldwide defacto standard, so except for national standard and NIST organized this for the AES block cipher to superceed the ciper in 1998 and the reason why they organized a SHA-3 competition is because SHA-2 was not broken. But the fact that SHA-1 was broken and SHA-2 was very similar to SHA-1 in terms of design, in terms of operations, in terms of the people who designed it, it made a lot of people nervous. Like, you know, what if, what if it gets broken? So it's like an insurance and it was also as a byproduct, we got better original faster designs. Like if you look at BLAKE2, I'd like to, was not strictly speaking a competitor. I designed it after because I was a bit pissed that BLAKE lost. I was like, okay, fuck it. Oh, I will do BLAKE2, which I believe is superior to Keccak in terms of engineering. Then people started to use it. But yeah, that's the short story
+
+Anna Rose (00:17:28):
+That I actually didn't understand from your original story that you, you are behind BLAKE and BLAKE2, not just BLAKE. And then, is there a BLAKE3? Like at what point do you stop? Is it because of the competition like, oh, we're winning right now so we don't need to go further? Or like yeah, what defines how far you go?
+
+JP Aumasson (00:17:47):
+Well, you know, the thing with hash functions is it's the simplest crypto algorithm to design ever, it's relatively easy to design a secure hash function and I could teach you in 10 minutes how to do it and you would design a very secure, hash function. What is hard is to design something that is secure, but as fast as possible because the faster you go, the fewer operations you make so the less 'security' you have. So the game is to find the right trade off between security assurance and the confidence in security because as some people say attacks always get better so between security assurance and speed for different notions of speed, it can be speed on software, speed in hardware and speed as a circuit, as a circuit, which is the reason why we have these different families of hash functions so Poseidon and Rescue, which are acerbic, which are, you know, ZK circuit oriented hash functions, very different from SHA-3 and BLAKE and the like
+
+Dmitry Khovratovich (00:18:52):
+I would actually add that this landscape of hash function usage and this performance competition, it has changed significantly with introduction of vector instructions in modern CPUs because the designs of hashes that came in the late 90s and in the early 00s, they were like sequential. They didn't make use of parallel or vector instructions. They couldn't work on really long memory words like 128 or 256 bit and at some point it was difficult to compete if you are a sequential design, but if you start designing something which can be easily paralyzed or vectorized like JP's design BLAKE2 and BLAKE3, you easily beat this old stuff by I think factor of 10 or even more and you so quickly become much faster. You so quickly become not a bottleneck anymore in any application that would potentially use a hash function that you could use your hash function slower than it could be, but much more secure.
+
+(00:20:00):
+This kind of means that instead of like making it like 10 times faster, you make it only five times as fast, but twice more secure and the security margin which you have in your hash function between like the best possible attacks and the actual design is so big that people even don't start bothering trying to attack it. So because of that, we seek quite little progress in cryptoanalysis of traditional hash function that they become kind of so fast that we can in introduce much bigger security margin, enter them and they are not a bottleneck.
+
+JP Aumasson (00:20:37):
+Yeah, that's a great point and this leads me to the answer to an ask question. Why BLAKE3? So the difference between BLAKE2 and BLAKE3 is that BLAKE2 is employing this, you know, paradism CPU core level paradism whereby you do sever instructions at the same time, in the same CPU core potentially where you have different arithmatic needs or you have vectorized instructions. BLAKE3 goes one step further, it exploits multi core computing. So you have a paradism instead of in the sense of using multiple cores at the same time. The more cores you have, the faster you can be. And it's also acceptably fast if you have a single core.
+
+Anna Rose (00:21:19):
+I wanna ask you a question about like ZKPs and hash functions because you talk about like ZK friendly hash functions, but I'm just realizing that like I'm not entirely clear where they work together. Is it in the engineering using ZKPs or is it in the like in the circuits themselves where this, these hash functions are actually being used?
+
+Dmitry Khovratovich (00:21:41):
+I think, well, we can simply say they used in in two capacities. So one usage is directly in circuits, something like you design a protocol, an algorithm that uses a hash function, and then you build a circuit of it and you prove that the algorithm works correctly and at some place inside the protocol there is a hash function. For example you prove a set membership in the Merkle tree, you prove that you know a leaf in the Merkle tree and you prove that there is a path from a leaf to the root in this Merkle tree and this is used for some kind of set membership. For example, you prove that you are in the white list of possible traders of some crypto assets or you prove like in Zcash that you own a coin in some tree.
+
+(00:22:36):
+And this coin has not been spent yet. So here, hash function is just part of the algorithm, part of a circuit. Recently emerged another usage, and this one in recursive, I would say simply recursive SNARKs in incrementally verifiable computation schemes which have based on recursive, that apply in zk-SNARK to parts, the chunks of a computation and inevitably you have to use a hash function at every step because, well, what happens is that you have to construct some challenges in order to compress the chunks into kind of a single piece of a computation that you verify succinctly you compress and in order to prove that you have compressed correctly, you have to use a challenge and in order to generate a challenge, you have to use a hash function and you have to have all of it inside your circuit because you do it recursively and because of that, hash function started being used as part of cursive SNARK proof. Again, this is can be be in a form of Merkle tree, but it doesn't have to be the Merkle tree. It can be like anything that helps you to generate a challenge or to prove that you open the commitment. If your commitment is based on Merkle trees, then you use a Merkle tree circuit, but it does have to be based on it
+
+JP Aumasson (00:24:01):
+Based on that grid overview. Concretely, what it means for the hash functions. Why do we need to use different hash functions for these applications? So I would say there's maybe two main aspects from a technical perspective. So Dmitry mentioned that you have hash functions in a circuit. So you have a program and you express this program as a circuit. So you want a hash function that is small in the sense of having very few elements of the circuits. So typically constraints, that's one thing. So if you take SHA-3 or BLAKE2 or Keecak, they're not designed to minimize the number of constraints. They're designed to be fast on software, so they will not be optimal for that circuit use case and the second aspect is that oftentimes we walk with you know, mathematical structures, typically finite fields and we process elements of finite fields. So if you look at the general hash function, it just works with bites. So you would have to translate finite field elements into bites. And the other way, which in itself is also a prone and a bit costly. So ideally want hash functions that rely on field element because field element is the native language of many proof systems.
+
+Anna Rose (00:25:19):
+Just to check that, like, so are you saying that if you're using hash functions in recursion versus using hash functions within a circuit, you would actually use different ones? Like you wouldn't use the same one for both because they don't have the same properties.
+
+Dmitry Khovratovich (00:25:32):
+You may use a different one for recursion, for example, if your recursion implies you have to compute a whole Merkle tree and proof valve formation of this Merkle tree in the recursion. So not just, so your circuit that you prove in the recursion consists not of like a single path in a tree, but of a tree, a full tree and this also means you have to compute this tree while making a proof. So in applications like set membership, you compute this Merkle tree like in zCash as you compute it like incrementally. But if you, for example, decide to compute a Merkle tree for like for several million of transactions instantly, they'll take you quite some time and in recursion if you're supposed to compute a Merkle tree over quite big number of data blobs like hundreds of thousands or something, then it becomes a bottleneck by itself.
+
+(00:26:40):
+So not like, not just the proof time, but the moment where you have to compute the Merkle tree first before you even open some elements in this. And when you face the problem of computing the Merkle tree fast, then your hash function must be fast enough for your approver to sustain. For example, this happened in this fractal recursion scheme where they computed a full Merkle tree at every recursion step so they used Poseidon and because they later proved Merkle paths in this tree so they wanted that proof of Merkle path is compact, has few constraints, but the fact that they had to compute this Merkle tree first made a big overhead. So they, they spent at the very beginning, they spent 99% of time just computing this tree before they even proven anything about it and this of course emphasizes that Poseidon as a hash function, which you just compute on a CPU, is quite slow. So this 99% would never happen if they used a SHA-256 for example, or BLAKE2 or 3, of course.
+
+Kobi (00:27:59):
+Yeah, I think this is a good time to maybe talk a bit about the requirements from hash functions because we talk about a few different ones right now and let's say what are the requirements in different environments, but let's see, maybe what is their usefulness in different places? So we talked about the ZK issues with it, right? One day we were using from cell membership with the Merkle tree and if we recall like in 2016 before Poseidon existed and all that, that that was most of their proof. It was like 40 seconds and most of it was computing shut to hashes and basically one of the biggest breakthroughs that they had was when they moved to Sapling was switching it to a Pederson hash and which is interesting because that's construction is actually not really symmetry crypto anymore. So what's like the basic difference between them? Like why wouldn't you use that one everywhere?
+
+Dmitry Khovratovich (00:29:10):
+Right. I think they faced quite a complicated trade off. So one, a clear requirement that you have there is of course a security of a hash function. So you, you must not be able to find the collision or worse not pre-image faster than for example 2 to the 128 operations if you declare a security level of 120 bits. And this security requirement is actually quite well defined. So you don't have to think about a particular zero knowledge proof system or a specific usage of a hash function or to figure out if your hash function is secure or not. So it actually even doesn't matter much in which hardware you compute your hash function because okay, there is a difference of like maybe even a factor of thousand, but it's clear that doesn't affect the security if we talk about 2 to the 128 operations or something like this.
+
+(00:30:10):
+So the security is like very well defined and one clear requirement is that the hash function must be secure. So one reason why zCash selected the so-called Pederson hash that the security of this design, it stems from a number theory problem of the security of the logarithm and this is in some sense better than the security of a regular hash function, which we don't reduce to any like popular assumption, but the security for popular hash function stems from how we call it public scrutiny, that inability of the entire world of cryptoanalysts to break it for a long period of time but other requirements are kind of more subtle. So the second requirement that that came into application was clearly succinctness in circuits so that your hash function must be short enough that it should have a few constraints you would say so, but even this is not really well defined because what people really wanted is small prover time.
+
+(00:31:19):
+But the prover time is not by itself really well defined because it somewhat depends on the number of constraints, but it also involves some other characteristics. In particular when we talk about not proof systems like Growth 16, but some more sophisticated like PLonK than you have to take into account gates, algebraic degree of polynominals that are involved, the number of columns and so on and so forth. So the performance of approver is really, really difficult to quantify here. So when we, for example, from the design standpoint, it's actually very difficult because on one hand you want to design a hash function that could be used in many applications with many proof systems. But on the other hand, it turns out that hash function that is good for one proof system is not that good at the other proof system. So for like, for the design point of view, it's both good and bad. If you design a hash function just for a single proof system, it doesn't allow you to publish your hash function at a really top conference because people will be less interested
+
+JP Aumasson (00:32:25):
+Right? That's a trade off of optimization. As soon as you optimize for something, then you optimize for one use case and not for the others. But yet, what could be mentioned. It's funny if you take someone from the, you know, symmetry community and you ask them, give me the name of a one way function, they would think one way hash function, they would say Keccak, BLAKE, whatnot. If you take someone from the public key community, from the academic public key, they will think one way function? Well this crypto <inaudible>, something like and Pedersen hash because initially if you look at the foundations of crypto, the concept of one way function was defined very theoretically and is instantiated by things like discrete logarithm to function and I had discussions with people from that community telling me, oh, you know, I don't trust AES because there's no security proof.
+
+Kobi (00:33:21):
+No.
+
+JP Aumasson (00:33:22):
+And likewise say, ah, we can trust SHA-3 because look at all this mess of bits and bike shuffling doesn't look secure to me. But I think it does. One message for the audience here is that you don't need to worry too much. It's not that there is no proof, but that it might be insecure. It's just that the construction doesn't lend itself, so we cannot proof we know today how to design
+
+Kobi (00:33:48):
+In some sense. It's nice that you have like the biggest let's say bug bounty the other right, for these hash functions in the form of cryptocurrencies, right
+
+JP Aumasson (00:33:57):
+Exactly. The proof is in the pudding, you know?
+
+Kobi (00:33:59):
+Teah and there's also the topic of let's say quantum resistance that maybe some hash functions at least are plausibly should stand better against.
+
+JP Aumasson (00:34:10):
+And that's a good question because when it comes to signatures only, you can always wait for the hypothetical day when we have a quantum computer and just switch to post quantum signatures. But in the case of privacy preserving proof systems, it's different because you might be able to open the private transactions the day you have a quantum computer. So it might be a more person use case for post quantum. So if you take things like stocks there, post quantum mostly.
+
+Anna Rose (00:34:42):
+Can you tell me like currently what hash functions are primarily used? Youmentioned a few of them, like the SHA-256, like in ZK systems, are there some standards that people seem to gravitate around that they do feel like they can trust them, they have the right properties? What would you say like today with the new systems, like what is the most common hash function being used?
+
+JP Aumasson (00:35:06):
+From my perspective, having seen a lot of projects, lot of cut bases, lot of artists that I did, Poseidon is the clear winner here. What Poseidon is, is not one single hash like BLAKE2, it's a family, a framework to design hash functions. You can tweak the number of rounds, change the finite field, but ultimately the same design family. Yeah, actually Poseidon is the main hash function today in terms of implementation, in terms of deployment but
+
+Anna Rose (00:35:34):
+Cool, you were just talking though about like how they're battle tested. You're sort of like, you put them out there it seems like, and you're waiting for someone to break them, but are you doing some sort of formal check? Are you sending it to peers being like, please break? Like, I'm just curious, like when you put it out there, it seems really scary because you're like, it's good until it's not. Why would people trust it?
+
+JP Aumasson (00:35:58):
+Yeah, that trust is important. Trust, you know, takes number of signals starting with who designed it, starting with how does specs look but there is no, you know, when we talk about symmetric crypto or hash functions, the ones we're discussing today, we don't have complete security proof because the question is what is security? This collision resistance or the randomness and distinguishability second premise resistance. So it's very hard to have, you know, a comprehensive proof. However, what we do have is proofs for specific classes of attacks and in particular bounds, complexity bounds on the harness of doing certain types of attacks, such as certain classes of differential attacks and if you look at the Poseidon paper, I think most of the paper is devoted to explaining, arguing why the design is not vulnerable to certain types of attacks, including the algebraic attacks, which are maybe the most relevant for Poseidon.
+
+(00:36:52):
+And once you have this kind of assurance that let's say now four rounds of your function will be safe, then you add some additional computation, what we call security margin in case someone finds a much better attack. But that's if your function is completely new, if 10 years later there is no single attack, no single increment in improvement, maybe it means that function is not too bad, but the problem is that people are reluctant to reduce a number of rounds. And that's where I did this paper called Too Much Crypto where I said that, you know, we could save a lot of energy in this planet if instead of doing 20 rounds of ChaCha, we did half of it.
+
+Anna Rose (00:37:34):
+But it's almost like the case of like flight and airplanes where it's like you have to have so many redundancies, you have to have so many backups, you have to have so many things in those odd cases that like someone finds a way to get through some of these barriers.
+
+JP Aumasson (00:37:49):
+Yes, defense in deaths, security controls and what scared me initially with, you know, the blockchain world is that people design a new proof system, they cut and the day after it's deployed and tons of value is based on it and it makes people from academia, you know, crazy because in academia historically we would have to wait maybe 10 years and have many papers, many conferences about cipher before using it. And now it's like, yeah, the proof is in the pudding, it's we deploy it and just hope for the best.
+
+Anna Rose (00:38:24):
+It's very cowboy territory feels like.
+
+JP Aumasson (00:38:27):
+Yeah, I like it because, you know, it's the ultimate test. There might not be academic papers at Europcrypt but you know that if people break it, they can steal $1 billion.
+
+Anna Rose (00:38:39):
+Like Kobi said, the best bounties in the world in a way.
+
+JP Aumasson (00:38:42):
+Exactly.
+
+Anna Rose (00:38:43):
+You talked also Dmitry about like breaking some of these yourself. So like in the design of these, do you learn how to do them mostly from breaking the other ones?
+
+Dmitry Khovratovich (00:38:53):
+Yes.
+
+Anna Rose (00:38:54):
+Like is that part of the process of building hash functions?
+
+Dmitry Khovratovich (00:38:57):
+Yes, sort of. So, well some people are born with the capacity of design and good things, but most of others they actually learn from breaking so you kind of supposed to break things several times before you learn how to design a good one and indeed after you participated in a few cryptoanalysis paper, you can try to design something, something good and of course there's competitions they play really a major role as only the very best designs survive. Actually, I would like to add to the previous comment by JP about also too much crypto. Indeed some cryptographers a scared of not only of modern hash functions, but also of older hash function that they don't have a security proof but here we would add that this hash functions are usually, should not be considered just as black box.
+
+(00:40:01):
+So they when we mention some number of rounds, this rounds means that the hash function is built as a sequence of more or less identical components and the history of design and analysis, it's shows us that usually how attacks progress you break like more and more of this number of rounds until you reach the full hash function. So this kind of playing with the number of rounds is not exactly what you have like an airplanes, but it's more like selecting, for example a width of a wall when you design a skyscraper. So it was figured out like 150 years ago how much concrete you should put into a wall, if you build like a hundred meter up skyscraper and you know that there is some kind of security margin there like you, you could have like 20% less and I'm pretty sure it'll stand because there must be security margin there.
+
+JP Aumasson (00:41:06):
+Yeah, but is it normal concrete or reinforcement?
+
+Anna Rose (00:41:09):
+Exactly
+
+Dmitry Khovratovich (00:41:10):
+Yeah, reinforcement
+
+Anna Rose (00:41:12):
+I'm just realizing where you're getting that name from we will talk about that shortly. The Reinforced Concrete, which is,
+
+Kobi (00:41:19):
+I'm actually curious about when you talk about this, this kind of lineage of, you know, how the design has functions, you've designed Poseidon, right? Like you're talking about the kind of properties and the kind of analysis that you've made and the attacks that you've shown that you're not vulnerable, JP you've mentioned like that Dmitry in the paper has shown that a list of attacks are basically not applicable to Poseidon or to the family of functions, let's say and I'm curious because Dmitry, you mentioned that even the hash function that was this AES based one that the STARK paper worked on. Weren't they doing the same analysis or even in the short time where algebraic hash function functions were worked on, there were even some of those that were broken. We saw that in your talk in zkSummit 8 right? So weren't they doing the same analysis or were you coming up with new attacks or how did that work?
+
+Dmitry Khovratovich (00:42:23):
+Well in some, in some cases they indeed did not do pretty much the same analysis but also in some other, in some other cases, like when you break things, usually you break something that has not been broken before. So you seek as a cryptanalyst to seek for a place which is like the most novel, the least explored and to try to find the bug there, you try to find a mistake like people decided to use something new, so they kind of, they design a new hash function. There must be something new there so it depends. You can use like 90% of old and 10% of the new, and then as a designer you concentrate your kind of analysis of this new 10% and this of course makes the cryptoanalyst's job much harder because like much, much smaller attack field.
+
+(00:43:18):
+But what was in the STARK paper and with some early algebraic hedge designs that they had to do something almost completely new, they had very little to rely upon and because of that we had like quite a few places where you could, you could try to find a problem with and because of that kind of breaking them was kind of somewhat easier. So it still requires a little bit of art, like intuition where you can, where you should expect a problem. But when you design something completely new, there's of course very big room for bugs. Like when people started building like regular road bridges, they fell like every second year because it's like something completing new, you never built a bridge for such a heavy thing like a train but since then, people have learned, and now we can design algebra hash functions like improving upon Poseidon and we, we can build upon its' security so that like we can introduce like yet another component, which can be the only novel thing compared to the previous designs, and then we can concentrate our own analysis on this component.
+
+(00:44:29):
+And then cryptoanalysts will concentrate an analysis on this component because they know it'll be very hard to find some problem in the parts that have been battle tested.
+
+Kobi (00:44:39):
+Yeah. So like when you write Poseidon, you say, you know, I covered all that exits I know about and that all the community knows about, but that should give you this much confidence, like you should still work really, really hard to attack this.
+
+JP Aumasson (00:44:55):
+So I think there are two reasons, if I'm the devil's advocate here, maybe two reasons that make people nervous, for getting algebraic hashes. The first one is that all cryptoanalysis is based on finding patterns, finding structure like mathematical structures or behavior that we're not aware of as a designer. Because your goal as a designer is to break any correlation, any mathematical structure, any symmetry in the input or in a set of inputs so that the outputs all look around and correlated for whatever type of correlation. And the challenge is that if you use algebraic hash functions, if you use algebraic groups, use algebra, use math, use structures and the question is, could we leverage some of this very structure to, to break the hash? And which brings me to the second point that there's a class of methods called equation solving and specifically with the criminal basis techniques and these are classes of methods where it's very hard to predict the complexity of the competition. You're like, okay, I have a bunch of questions and if I want to break the hearts, I just have to solve these equations but you don't get directly an estimate like you need to do the 1,000 operations or whatnot. It's mostly empirical. So as soon as there is uncertainty, people can speculate and say, oh, what if? Yeah, but you know what if we find some solvable questions and all the challenges to demonstrate that these attacks will not work.
+
+Anna Rose (00:46:24):
+Cool.
+
+JP Aumasson (00:46:25):
+Dmitry, do you agree?
+
+Dmitry Khovratovich (00:46:27):
+Yes, I certainly agree. So there's indeed this problem that the best of your algebraic attacks, while they kind of fall into two categories that are like more known attacks like interpolation, without going into details, it just basically a solving of an equation with one variable and we kind of know how to solve equations with just one variable. So all the algorithm of solving the nominal one, one variable equations are well known. Their complexity are well known but when I'm talking about multiple variables, then the best algorithms are much less understood, they're very ad hoc. So the best algorithms for a Gröbner basis, they are not described as like compact algorithms. They described a series of papers, or worse enough, they exist only as pieces of code in proprietary systems like Magma and because of that, of course, it's difficult to trust that they will not improve significantly.
+
+(00:47:28):
+So I think think from that theoretical point of view, all this equation solving can become complete and you can't have like a generic solver, which is super fast. But in a particular case, it may be super fast a the fact that we don't understand the algebra Gröbner basis algorithms really well, and we don't have good mathematical machinery to estimate their complexity. It makes people somewhat nervous that we rely, when we select this number of rounds, we rely on complexity estimates that maybe off in any direction so they can be off in like, actually they are worse. The complexity is much higher, which essentially means that your hash function can do faster or worse. The complexity is lower, and this means that your hash function is less secure while kind of evidence now, and like there is consensus that the complexity of this algebraic attacka is underestimated. That their real attacks are more expansive, they require more memory not only like computation time, but they're also like memory heart this attacks so that the actual complexity is probably higher than they expect. And this gives the like extra confidence but this of course is not like the level of confidence we had in the designs from the past, like SHA-2 or AES.
+
+JP Aumasson (00:48:56):
+And you remember the attack that broke AES in 2002. Some guy came up with this paper like AES is broken and it's the end of the world, you know, repent because AES, the AES block cipher is moderately algebraic and this guy, he had this paper, he was very optimistic and said I could break AES by solving equations, but he had no evidence, no proof of concept. He tried to publish the paper and that a lot of people, you know, demonstrated that it was very optimistic to be polite but there were a line of attacks on the AES that use what Dmitry mentioned, linearization, algebraic attacks, Gerne basis, but it didn't go anywhere. It's like, oh, we just have these equations, we just have to solve the equations. Oh, but it's harder than unexpected
+
+(00:49:46):
+Because everything can be, you know, expressed as equations.
+
+Kobi (00:49:50):
+So if it's good to start describing how algebraic functions or algebraic hash functions look like because we understand that, that they're so much more efficient for ZKPs, but what's so special about them? Like what their structure looks like and what's interesting about them.
+
+Dmitry Khovratovich (00:50:07):
+Okay, maybe I should try explaining a little bit how Poseidon works without drawing anything, without involving any math. So the idea is that there is an input message that you want to hash and how it works is you interpret this message as a series of field elements if you are working in the prime field so suppose like there are two field elements you want to hash and get one field element as an output. So basically you compress two into one
+
+Kobi (00:50:43):
+Like a Merkel tree, let's say
+
+Dmitry Khovratovich (00:50:44):
+Like a Merkel tree, exactly. So how you do it, you, to prevent one specific attack, you can construct the state not of two elements, but of three elements and you said that third element to be equal to zero then what you do is that you apply very simple transformations to this state
+
+(00:51:07):
+So you have like three field elements so what you can do with field elements, you can for example, add one to another, you can multiply one by constant, you can exponentiate one to some power and of course exponentiation is expensive in both circuits and plain performance. So what we do, we just to something which is invertible, because clearly if you exponentiate and this transformation has collisions, then the full hash function will have collisions. So what you do, for example, you exponentiate to the power of five, because five is usually co prime with the field size minus one. So what you do is that you permanently mix elements of the state. You just add one element to another with some coefficient. You basically, if you like thinking about it as vectors and mattresses, then your state is a vector.
+
+(00:52:06):
+You multiply it by metrics of coefficients, you multiply it biometric coefficient and then you exponentiate, you don't actually have to exponentiate all of them into some power. You exponentiate just one of them into some power. Just take one element and to compute the fifth power of it. So you multiply the state biometrics, you take a fifth exponent of one element multiply by state biometrics. You exponentiate one element to the power of five. So what you get eventually is after making the sufficient number of rounds is that you still get a function and of the result in state, you take one element, doesn't matter which one suppose you can take first, then you cannot really invert it because you cannot figure out what the rest of elements are and you cannot make them just arbitrary elements because when you invert it back you will not face a single zero element that you have put in the state in the very first iteration.
+
+(00:53:14):
+and the property that we want for this to be secure is that the result in function has so-called high algebraic degree and what actually happens is that if you take one element and compute the power of five then you have like X to the five, then you mix it with other elements and if you compute again if you exponentiate it to the five, then you will have an equation of degree five times five, 25. After doing it one more time, you have an equation of degree 125 and so on. So you just make it grow until the time when you can't possibly solve. So because if you want to find the collision or a pre image to the fresh function, what you just have to do is to solve a polynominal equation and you just make it grow to the threshold where you know, you can't solve a polynominal equation of this big degree.
+
+(00:54:12):
+And this degree is something like again to the 128 and from this since degree grows more or less by the factor of five, every time you can easily calculate how many rounds you need Gröbner basis attacks. They come from interpretation of this process separately like you look into individual rounds, they all of you say it like polynominal describing there all of degree five and then you make this system of equations of degree five into a single system. And then you try to find the so called Gröbner basis. Well that's better not to talk what exactly Gröbner basis is, some kind of a set of polynominals that kind of divide every polynominal from a system but what's important there is that as the number of rounds grows, it also increases the complexity of this Gröbner basis attacks because what happens is you have to solve bigger and bigger sets of equations. And this makes at some point, again, this Gröbner based attacks inapplicable. So when you design a hash function, then you select a number of rounds, what you simply do, you just increase this number of rounds till the point where both the degree is very high and the estimated Gröbner base attacks are also of high complexity because like too many equations.
+
+JP Aumasson (00:55:32):
+And it's actually the same because people say there's algebra caches and non-algebraic, but if you look at SHA-2 and the like, they work with bits, they work with GF2 finite fit elements and you can describe Poseidon in terms of GF2 elements. You can describe SHA-256 in terms of any finite field element because of the universality of equations, you just end up with more equations. So it's not that you obtain a strange, presumably less secure function with one technique or the other is that the presentation that we use to, with respect to c is different and has to be succinct because the underlying questions are exponentially not.
+
+Anna Rose (00:56:13):
+This is interesting. What like, or I think it's starting to answer a question I've had for a little while since you've been speaking, which is sort of the rounds. We didn't really explore rounds that deeply, like you've mentioned them a few times, I have a question about them, like are they all the same, like every time you're doing it, are you always doing the same thing or are you doing a different thing in different rounds?
+
+Dmitry Khovratovich (00:56:32):
+Well they are a little bit different so, and this kind of little bit different is sort of a protection against certain types of attacks. So they're like, there is one class of attacks that exploits the fact if all rounds are exactly the same basically the exploitation is pretty much similar that you can like apply one round to the input and you apply one round to the output and then you still get like a valid transformation that's so called slide attacks.
+
+Anna Rose (00:57:04):
+What you're saying is like every round can be slightly different and you have these techniques to attack it and you're adding extra rounds so that it just sort of gets out of the range of that attack technique, but I do wonder like our new techniques always being introduced as well, new attack techniques that can like handle more rounds. Like it seems like there's sort of two races, like how secure can you make this? How many rounds can you add or how well can you add variety into the rounds? So it's super hard to track versus these attacks that, like you mentioned one repeatedly, but like could there be another one that's like in development right now?
+
+JP Aumasson (00:57:42):
+So there are some classes of attacks that Dmitry knows very well is the attacks that try to walk around the number of rounds, for example, what we call meet in the middle or rebound attack. We exploit the round structure. You kind of bypass, so to speak certain rounds, but ultimately the more rounds you have the more security. So if you have like an infinite number of rounds, it should be fine unless you have a attacks like the slide attack that Dmitry mentioned. Unless you have a structural weakness, but then you have a different design paradigm, which is what Reinforced Concrete is doing. You have two main components of round and you have one very different type of friend that provides another property because we don't design runs randomly. There are different properties we want to achieve that's what we call vertical security and horizontal security also called confusion and and diffusion because you can be very solid in one direction, have very high degree of your equations but you want a question that not only have a high degree but equation that makes many of the input, many of the components. So equations are quite dense and that combine each component together.
+
+Anna Rose (00:58:53):
+Okay.
+
+JP Aumasson (00:58:53):
+But you want all these combinations to have a high level of solidity so to speak, so which translates into a algebraic degree,
+
+Anna Rose (00:59:00):
+But are you also like in designing these, trying to reduce the number of rounds? This is the feature that I'm not really understanding in what you're describing because like what I just just heard is like, well we added enough rounds so that they can't touch it, but yeah, is there also pressure to make less rounds? Like that's what you were talking about earlier, right? JP you were saying that like that's why do we have all these rounds? We should just get rid of some of the rounds.
+
+JP Aumasson (00:59:23):
+Yeah, but I got quite some pushback because it was often quite emotional arguments. It was kind of what if arguments but then, you know, now with the applications we have, there are some applications where you don't really care about maybe a 50% speed up, but a scale where every nanosecond counts in a, I don't know, big cloud systems it can have a tremendous impact if you optimized speed of your hash and now it's even amplified further in the ZK proof systems because of the order of magnitude of the overhead of the circuit process.
+
+Kobi (00:59:56):
+I remember that very strongly, like when we were working on deploying MiMC even like we were choosing the number of rounds from MiMC, the general guidance is not take a security margin, like adds 20% more rounds. You know, why not? Right?
+
+Anna Rose (01:00:11):
+Oh wow.
+
+Kobi (01:00:12):
+Adds it's performance over it in two places, both when you create a proof, like when you compute hashes when you compute a Merkle tree, but also when you need to use the tree itself in the smart contract and that becomes very costly and very expensive so that's annoying. And that actually brings me back to the performance discussion because you mentioned that, you know, this is really nice when you design functions like Poseidon because you work on field elements and then you do let's say low degree exponentiation and some arithmatic operations and that's very efficient in the circuit, right? Like, because circuits works really well with arithmatic operations, at least the popular ones Growth 16, PLonK, that work really nicely with those but something led you to design Reinforced Concrete right? Which targets a different tradeoff?
+
+Dmitry Khovratovich (01:01:13):
+A little bit, yqes. So I would say if we first talk about this number of rounds, again, I would say that like in the design process, this selection of number of rounds is not that difficult. So how it works usually, well, how it's, for example, it's happening right now in in our team designers we are thinking, so we have like some starting point, like I say, okay, I have starting points, so let's have this round and let's iterate it for like 10 times. Let's have 10 rounds of this kind. And I say, well, we need 10 rounds because the security will be sufficient against that tech. We know against that tech we have developed during the course of this design and someone else says, for example, JP says, okay, I have a different round structure, so it'll be like 20% faster.
+
+(01:02:08):
+And I reply, Well, okay, it'll be 20% faster, but what about the security? So if we use the same 10 rounds, we'll be equally secure and he says, well, not exactly, the security will be like 30% less. So we would have to have not like 10 rounds, but 13 rounds to have the same security and we realize that from a performance point of view, even if like every round is somewhat faster we need more of them. So that like eventually the new design, like the second version will be slower. So say, okay, well this probably will not work out, but maybe we can combine the best of the worlds can we have, something like the better one. And then we like think and think further and eventually we select something that is like fast enough and secure. So we've kind of gradually increase the performance while still having sufficient security.
+
+Anna Rose (01:03:09):
+I wanna ask something like, we've mentioned Reinforced Concrete a few times. I don't know if the listeners are familiar with the work, but does Reinforced Concrete, is that like an add-on to Poseidon or is it like a different category? Is it a new hash function? Like is it just like a different place?
+
+Dmitry Khovratovich (01:03:24):
+Well, one might say that in Poseidon, so this number of rounds is quite big. So we have like more than 60 rounds and this is exactly because we need this algebraic degree of a function to grow up to some needed level up to like two to the 128. Reinforced concrete tries to replace 90% of Poseidon with just one new round. So instead of like, we take like 60 out of 65 Poseidon rounds and replace it with one round which potentially has the same algebraic degree. Just the round itself is very different from this point of view, it can be seen like an advanced like a very next version of Poseidon but kind of from the design point of view, from the analysis, this new round that we introduced, it's of course the very kind of fruited target for cryptoanalysts. So we can't recommend it for usage immediately because like, of course, every single cryptoanalyst in the world when she, when he sees it they immediately go and try to break this particular new addition in the design.
+
+JP Aumasson (01:04:36):
+Well, I have a question Dmitry, I think this tricks what they're doing in Reinforced Concrete is let's say completely break the symmetry, break the structure by using an operation that has nothing to do with the underlying mass structure. But the problem is that since it has nothing to do with it's way much slower to compute, if you work with finite fields. So my question Dmitry, did you think of this trick in when designing Poseidon? And if yes, why did you discard it?
+
+Dmitry Khovratovich (01:05:04):
+I think we did not because we couldn't find a way to describe it in constraints and like R1CS constraints that we worked at that time. So at that time I was not, when we designed Poseidon and I wasn't familiar with other ZK proof systems. So while I was aware of STARKS but still in STARKS you can have like not an R1CS constraint, but almost an arbitrary polynominal expression, but it's still about like multiplications and I had no way kind of, we couldn't design, couldn't devise a way to break this algebraic structure because we didn't know how to efficiently implement it in the circuit and we were also were familiar with one such attempt that was exactly in this Friday design that we broke, that the guys exploited some similarity between binary fields based on bits and binary fields as like polynominals and we were afraid of using this kind of tricks and that's why at the time of Poseidon, we didn't go for it. By the time everything has changed, when we learned about ZK proof systems that could use lookups and this gave us kind of extra tool to start with.
+
+Kobi (01:06:30):
+I have a very practical question. How should people choose parameters? Because you know, when using SHA-2 and like all these traditional old Her functions, you have test vectors, you have very accepted and known designs that people use and can test against but with Poseidon and others, you have all of these constants that you have to choose, then you have to derive and all that. Are there any standards or any efforts to gather the community around?
+
+JP Aumasson (01:07:10):
+Not much and that's a big risk. Oftentimes I did cut reviews of this kind of you know, custom Poseidon and there were no test vectors to compare against your implementation. So what ground rules do you use? So what some people do is that they act as Poseidon as, you know, a framework working with arbitrary finite fields and they implement it for a known instance, of Poseidon, this specific finite number of rounds and they check that they have the same output as the recommendation and then they just customize their new design to work with different parameters which gives them some assurance that they're doing the right thing. But we've seen some, even in Poseidon, some small mistakes like, you know, getting the metrics vector product incorrectly or things like this.
+
+Kobi (01:07:59):
+Are there like risky parameter choices? Like what, what can go wrong?
+
+JP Aumasson (01:08:03):
+Well, if you make too few rounds, of course then it's more in the usage of the hash, how use it if you hash multiple inputs, how you combine them
+
+Dmitry Khovratovich (01:08:12):
+I think there, there's one vector that can be like realistically dangerous. So in Poseidon we use metrices to like, we use a single metrics to multiply a vector and it's possible to make this to design this metrics insecurely ao that there are some invariate sub spaces there. So when you exponentiate this metrics, it has not a full rank at some point and kind of reference beside the metrices. They don't have this problem, but if you generate them randomly there is kind of non-zero chance and kind non-negligible chance you do it wrongly. So you have to just make a simple check for it. So there is in the reference implementation of Poseidon there is a simple script that will check your metrics that it doesn't have this vulnerability.
+
+JP Aumasson (01:09:10):
+I think the paper describes it too.
+
+Dmitry Khovratovich (01:09:12):
+Yes, yes and there is a paper that attacked this non-reference metrices and they, they show that there can, there can be problem. So this is actually, this attack that we, that we missed when we designed a hash function. So this attack, we didn't think about properly, but fortunately the default metrices we supplied, they didn't have this vulnerability.
+
+Kobi (01:09:36):
+Okay. That's lucky and when you choose the coefficient or the elements in these metrics, do they also affect the performance somehow or they just completely random and they don't matter for performance?
+
+Dmitry Khovratovich (01:09:52):
+I think they do affect the performance but it's possible to select them as small constants. So this is not in the reference version, I think in the reference version they are like big prime field elements, but it's possible to make
+
+Kobi (01:10:10):
+Like they're safe in the reference
+
+Dmitry Khovratovich (01:10:11):
+Yeah, b,ut it's possible to make them small. Actually we have we can select some sub metrics of the AES block cipher and they have like efficients 3, 2, 1 and so on and it will be most likely okay, just have to check it with the script. So we didn't see kind of this, when this becomes a bottleneck, so it may be a bottleneck in some circumstances. So you can make metrics multiplication a little bit more optimized.
+
+Anna Rose (01:10:42):
+So in the sort of hash function world, what else is happening and maybe what do you see on the horizon?
+
+Dmitry Khovratovich (01:10:50):
+So, I would say like indeed with introduction of MiMC Poseidon, Rescue, Friday and other designs for the ZK world, the attention of cryptoanalysta and designers has somewhat shifted to these new hash functions because they look like low hanging in fruits for many ones and people are somewhat tired of attacking the old designs. That's not much happening down there and what becomes interesting I think is the development of new zero knowledge proof systems because if you design a hash function tailored to a particular zero knowledge proof system, it can become really, really fast. For example, if you take Poseidon and try to optimize it for PLunK, if you for example design IOP which handles just this Poseidon circuit, you can make a prover like 10 times as fast compared to a regular PLunK prover with a Poseidon.
+
+(01:11:51):
+And I think what we should expect in the near future is that design of hash function tailored to some specific applications where some novel proof systems are used. So new proof systems appear like almost every month we have Nova for example. We have new look up arguments like caulk and it's relatives and we should expect that there will appear hash functions that will make use of operations that are admissible in this proof systems and that try to optimize themselves further and further to be used only in some like very limited set of proof systems, but still they'll be fast enough. So the problem of course with it is that it'll be difficult to cryptoanalyze them because we might have too many different hash functions for any new, every new application might have a new hash function. It's this of course bad because we can't afford a sufficient number of cryptoanalysts to look into this hash function and they will be much less battle tested.
+
+Anna Rose (01:13:02):
+And it sounds like there's no standardization in that case so you don't get sort of that confidence that you're looking for.
+
+Dmitry Khovratovich (01:13:08):
+Exactly, because the proof systems evolve so quickly. We can't have a standard there because we can't have a standard there, we can't have a standard hash function because hash functions will try to catch up with the development of new proof systems to be like fast and tailored for them but this of course, we will have this trade of between performance and cryptoanalysis that we can have like much, much faster hash function but the amount of third party cryptoanalysts is we have for this hash function will be smaller.
+
+Anna Rose (01:13:42):
+What about you JP?
+
+JP Aumasson (01:13:43):
+You guys covered quite a few points I had in mind as well. Regarding standardization as Dmitry mentioned, we can expect to see different hashes optimized for the use cases because unlike, you know, general purpose hash functions, that's a field where first of all there's a lot of competition between projects. All the projects we know and where every single small incremental speed up has a meaningful effect on the user experience, on the cost in terms of gas and the like. So even though Poseidon is kind of the defacto stand out now we can expect people to optimize it for every single use case that they have. But it doesn't mean we're not going to have a kind of standard, semi-standardized way of framework to build hash functions. I think we probably converse to maybe a handful designs and then we'll hit diminishing returns and people will start working on new designs.
+
+(01:14:38):
+Ehich brings me to another point maybe at ZK 8 at the zkSummit in Berlin, there was this great talk by Omer Shlomovits about hardware optimization, hardware implementation? And I know that the trust of a hash is quite important when you have to design hardware to create hardware design because you have to set it on a hash at some point and you have to worry maybe at some point about interprotability because we see many people using the same code <inaudible>, we also see people who just reimplement stuff for the sake of it, but maybe there will be some, you know, vested interest in using the same tools at some point and also, so we briefly touched the topic of Reinforced Concrete. I think there's a lot of potential in the, the trick that Dmitry and his colleagues are using to have this component that is breaking the symmetry and the challenge here is to estimate what security you gain from it and how to do something that is relatively fast or not too slow to implement as a circuit or whatever constraint system you use. So I mean offense to Poseidon, but I expect that this kind of design will manage to outperform Poseidon-like designs if we know how to do it right and the great thing is that it would go faster in the academic environment because people will just deploy something and then Darwin-ism
+
+Anna Rose (01:16:02):
+and someone will break it or not
+
+JP Aumasson (01:16:04):
+Right? Yeah. Or not.
+
+Kobi (01:16:06):
+Yeah. I think to be completely honest, I think that one thing that would make a difference in order to get this actually happening would be to get the tooling for deploying local based systems more practical. That's just hard to do today, but it's getting there so that's nice.
+
+Anna Rose (01:16:26):
+Cool. Dmitry, you did a talk at the zkSummit 8 and JP you did a workshop. I'm going to have both of those videos up by the time this podcast airs, so I'll definitely add those links in the show notes that people wanna explore a little bit more of the work you're doing and I wanna say a big thank you for coming on the show and sharing with us what's happening in hash function land and also letting me ask a bunch of questions I clearly needed to ask to better understand how this works. So thanks a lot.
+
+Dmitry Khovratovich (01:16:51):
+Thank you so much for inviting us Anna
+
+JP Aumasson (01:16:53):
+Thank you Anna.
+
+Kobi (01:16:54):
+ Thanks guys. Thanks for talking about hash functions. It was super interesting.
+
+Anna Rose (01:16:59):
+Yeah, so thanks a lot and thank you for being our 250th episode guests. This is kind of an exciting one. I wanna say a big thank you to the podcast team, Tanya, Henrick and Rachel. And to our listeners, thanks for listening.
+

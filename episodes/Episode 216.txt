@@ -1,0 +1,627 @@
+Anna Rose (00:00:05):
+Welcome to zero knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promised to change the way we interact and transact online.
+
+Anna Rose (00:00:27):
+This week, I chat with Dean Eigenmann and Edgar Aroutiounian from Project Blanc, an MEV focused team, working on arbitrage and MEV strategies. We revisit the topic of MEV, what it is and how participants in the network can capture this. We also dive into the concept of reorgs, accelerationism as a philosophy and get a look at what goes on in the Dark Forest. But before we start in, I wanna let you know about our upcoming ZK Hack mini event. Last fall, we did a 7 week event with puzzle hacking and workshops, all focused around ZK learning. Now we bring it back for a mini version of the event. It's set to last 1 to 2 weeks. It starts on March 1st. If you miss the first edition, or if you wanna participate once again, be sure to sign up the newsletter at zkhack.dev or sign up directly for our first event to get updates on our partners for this edition and our schedule. Also, if you're looking to jump into ZK professionally, I wanna remind you to head over to the ZK jobs board. There, you can find job posts from some of the top teams working in ZK. It's a great place to find your next project. I've added the link to all of this in the show notes. Now I wanna pass the mic to my producer, Tanya, who will let you know all about this week's sponsor.
+
+Tanya (00:01:39):
+Today's episode is sponsored by Polygon. Polygon is one of the top Ethereum scaling platforms for developers with over 130 million unique user wallets. They're known for Polygon POS chain, one of the most popular chains built on top of Ethereum, sometimes clocking even more daily active users than Ethereum itself. And the team is actually working on a spectrum of solutions, including EVM compatible, zero knowledge roll up solutions like Polygon Hermez, Polygon Miden and Polygon Nightfall, which is built in association with Ernst & Young. They also recently announced their acquisition of Mir Protocol. Now known as Polygon Zero. These solutions inherit the security of Ethereum and use the power of zero knowledge over here at the podcast. We've been tracking polygons journey and have recently had Bobbin Threadbare from Miden and Jordi and David from Hermez on the show to talk about their respective projects. We strongly recommend you check out those episodes to learn more about their vision, project roadmap and progress so far. Polygon is also hiring and have a few jobs listed on the ZK Jobs Board. You can check out that link in the show notes. So thank you again, Polygon. Now here Anna's interview with the guys from Project Blanc.
+
+Anna Rose (00:02:50):
+So today I'm chatting with Dean and Edgar. Dean is the co-founder of project Blanc and Dialectic, and Edgar is also the co-founder of project Blanc. So welcome to the show, Edgar and Dean.
+
+Dean Eigenmann (00:03:01):
+Thanks for having us, Anna.
+
+Dean Eigenmann (00:03:02):
+Thank you.
+
+Anna Rose (00:03:03):
+Okay. I think we need to start, what is project Blanc?
+
+Dean Eigenmann (00:03:07):
+Well, it is a team that Edgar and I put together Edgar, who was previously at Flashbots and we decided to start an MEV team together. And so now it's a of, I think five guys it's essentially run like a prop shop where we do arbitrage and execute other MEV strategies while also doing a ton of research, which will probably be opening up relatively soon.
+
+Anna Rose (00:03:33):
+Let's dig in a little bit to kind of the history of this project and maybe the history of your work in the community. Edgar. This is the first time we're meeting. Dean just said you used to work at Flashbots, like tell me a little bit about your entry point into the space. Maybe even leading up to that. Like what got you interested in MEV stuff?
+
+Edgar Aroutiounian (00:03:53):
+MEV, I think for me started when I tried writing my own arbitrage bots. And then there's a whole history of work that I did at, at that point, mostly on my own, actually all of it on my own. And then there's some period passed. This was in 2020 at the end of 2020 just to get to the focus of Flashbots. And I got in a conversation with Georgios in January, 2020 first telling me about Flashbots. And I kind of really wish that I started using it then. Cause I burned a lot of ETH not using it but there's a whole bunch of other stuff that happens in between and long story short there around March. I think it was March. I joined Flashbots.
+
+Anna Rose (00:04:38):
+And what were you doing there? Like you sort of said, you wished you had been using it, but like were you developing with it? Were you building it out or were you like utilizing it for something?
+
+Edgar Aroutiounian (00:04:49):
+When I worked at Flashbots, I worked on MEV Geth itself and a research project on SGX.
+
+Anna Rose (00:04:56):
+I See. This is actually something I've always had a question about like the Geth client it's like the Flashbots geth. What is that? What it's called?
+
+Edgar Aroutiounian (00:05:06):
+Yeah. MEV geth.
+
+Anna Rose (00:05:08):
+MEV Geth. So MEV Geth is like, it's the equivalent of the Geth client that is developed and maintained by the EF I guess. But it has some adjustments, something that allows people operating these nodes to actually tap into MEV. Right?
+
+Edgar Aroutiounian (00:05:24):
+It's regular Geth with like 300 lines of code added.
+
+Anna Rose (00:05:27):
+Oh really? Okay. So what does, what do those 300 lines actually do though?
+
+Edgar Aroutiounian (00:05:32):
+They basically control how the block is made and at the moment that the block is made, if the minor is running geth, as if it was an MEV geth , it checks another transaction pool. Like you have like usually just one transaction pool in the geth client, but here they make like another transaction pool, the private transaction pool, that one can only get populated by trusted IPs, basically something like that.
+
+Anna Rose (00:05:59):
+And how does that actually, like the way you describe it? It sounds very, very like light touch, but what, what is it doing? Like why would anyone use this? What is it actually accomplishing for the miner or, yeah, the node operator.
+
+Edgar Aroutiounian (00:06:13):
+It lets the miner make money without having to do anything extra for other than just a different binary. Okay.
+
+Anna Rose (00:06:19):
+And that's kind of this MEV, which we should potentially define for the on the show. And I know it's actually changed definitions sometimes. Like, is it miner extractable value? Is it minimum? Well, like what's the, what's the acronym.
+
+Edgar Aroutiounian (00:06:36):
+The acronym is kind of, of like it's too nebulous now. Yeah. I think it's just whoever controls block production.
+
+Dean Eigenmann (00:06:43):
+So it originally means miner extractable value.
+
+Edgar Aroutiounian (00:06:46):
+It's like if there's some entity that controls the order of execution, that's like the exploit, the, the bribable entity. So like in the general case, that's the miner
+
+Anna Rose (00:06:57):
+Was there like another word they're using instead of the M in MEV?
+
+Edgar Aroutiounian (00:07:02):
+I've seen people say validator, that's kind of true too. I mean, we work a lot on BSC, so it's validator, not miners, so it's kind of interchangeable.
+
+Anna Rose (00:07:11):
+Cool. okay. So Edgar, you were join, you joined Flashbots, you were working on this geth client. You were, I guess, part of that team, what made you wanna switch and start something new? Like what's, what's different maybe about what you're working on now than what you were doing then?
+
+Edgar Aroutiounian (00:07:29):
+Working on the clients is really hard. But also there was this curfuffle in the summer about reorg. And basically I wanted to step aside to focus on the reorg path and not bring any bad attention to Flashbots.
+
+Anna Rose (00:07:45):
+Got it. And actually, I kind of wanna, maybe later on explore a little bit what that was and what that is, but before we do that, let's actually hear a little bit of Dean's story. Dean we met many, many years ago. I think it was in Zook maybe?
+
+Dean Eigenmann (00:08:02):
+No, I think we met in Paris at, at the first EthCC...
+
+Anna Rose (00:08:06):
+EthCC yes. Yes.
+
+Dean Eigenmann (00:08:07):
+Cause that was like my first outing
+
+Anna Rose (00:08:10):
+Dean was so young back then, I
+
+Dean Eigenmann (00:08:14):
+Think I was 17
+
+Anna Rose (00:08:18):
+So you're 17 years. You're going to your first conference in Paris in this space. What were you up to at the time?
+
+Dean Eigenmann (00:08:25):
+So at the time I was still working in like tra tech in Switzerland, but I was also on this side doing audits together with Matthew Di Ferrante at ZK Labs. Matt is an amazing security researcher who was also part time on the EF security team. And he had started an auditing company and we'd got into an argument on Reddit. And then at one point he was like, do you wanna work with me? And so, so that's how, that's how we had met. Yeah. And then I did that with Matt together for one or two years at the time I also joined ENS cuz Nick Johnson was working on it completely alone. And so I, I joined Nick on that. I helped write a lot of the code. Actually, most of the smart contracts deployed now are the ones I wrote because I don't know if you remember, but there was a bug in the ENS contracts and they needed to all be migrated and Nick was getting married while that was happening. So I was handling that while he was getting married. But then after ZK labs, I joined Status to work on messaging research cuz they were using whisper clearly didn't work. And so we started designing a, a new messaging protocol. I think you've spoken properly with Oskar before.
+
+Anna Rose (00:09:42):
+Yeah. Oskar and Sanaz yeah. They were both on the show actually talking about the project Vac, uh, V A C.
+
+Dean Eigenmann (00:09:50):
+Yeah. So that was, it originally started essentially with Oskar and I, it was a research group underneath Status, which has now grown to a relatively large team. So I had left or I left just as Sanaz joined I think. And then I like tried to do my own web two startup.
+
+Anna Rose (00:10:10):
+Let's talk about that.
+
+Dean Eigenmann (00:10:11):
+Oh God. I got sick, honestly I got sick of crypto. I feel like being so close to the sauce all the time. Yeah. I, I fully rage quit I, I think that crypto has like this thing of like burning out everyone who works in it. And I was, I was pretty faded. I felt like things weren't happening fast enough and we weren't really delivering on our promises. And so I had left crypto to try and do a web 2 thing and then felt the pull, pull me back in. And now I'm ironically bullish, which is not something that I've ever been.
+
+Anna Rose (00:10:49):
+That's funny. Let's talk, I wanna talk a little bit about that experience though. So you left crypto, which, you know, we've over the years, I've known people who've rage, quit crypto, never to return again. And some who took a pause. You were one that took a pause. What did you find kind of on the other side? Like did you feel when you were leaving? Like I wanna get out of this space cuz it's so XYC, and it's better over there or were you just like, I wanna build something.
+
+Dean Eigenmann (00:11:16):
+I thought crypto was solidy and it turns out the traditional tech is equally solidy like, I, one of the things I noticed is that also you can't carry over credentials very easily. Like I think crypto, if I were to raise money, I could fill around probably in the next three hours. not the case in traditional tech.
+
+Anna Rose (00:11:40):
+It's very good to do this though. Like to, to take the step back and to like...
+
+Dean Eigenmann (00:11:44):
+Yeah, honestly, that it was like an eight month period. And I think that was probably one of the most like important growth periods outside of the stuff I've done in crypto.
+
+Anna Rose (00:11:54):
+And it made you wanna come back. So you like, after that experience, you actually wanted to come back into the space and now you're excited about it.
+
+Dean Eigenmann (00:12:04):
+I had founded dialectic while still at Status actually. Okay. So Ryan and I did that while still at status and for the first like three to six months, it was essentially me Ryan and two others. Yeah. And it was just us doing like OTC deals and things like that. And then at one point it just blew up and now it's a team of 20 something people. The fund started with sub millions of, and now it's like grown way beyond that. I remember we had our offsite in St. Moritz, which we do, which we've done twice. Now we had that this year in December or last year in December. Sorry. And Ryan and I like sat down looking at each other and like both like, can you believe that it it's grown to this scale? Especially when we were like looking at the list of the people we're still hiring, I think we're gonna hire like another 30 or 40 people in, within the next 12 months.
+
+Anna Rose (00:13:03):
+That's wild. But like, so Dialectic is a VC, right? Like what is it maybe, maybe you should define what it is cuz why are you hiring so many people?
+
+Dean Eigenmann (00:13:12):
+It's a family office. So it's structured as a family office, meaning that we have clients which are ultra high net worth high net worth individuals. And we help them on their personal lives as well as like their financial lives. Right. So we, we help them invest in things like that, diversify their portfolios. But we also help them on personal things, like ensuring that they, they have PAs and someone takes care of booking their flights and mantain stuff like that. That's, that's what family offices do.
+
+Anna Rose (00:13:44):
+Okay. So it's a family office, but why are, are you hiring because you want more PAs for the clients or are you like, it sounds like you're hiring more as like an expansion into the technology.
+
+Dean Eigenmann (00:13:56):
+So we're hiring just because one of the things which has changed about VC is that you're no longer a capital allocator especially in crypto where there's so much free money, right. No one, like, as I said, I could probably fill around in three hours if I was raising for something in crypto at this point, however, the, that that's not what most developers and most teams are looking for anymore. They're adding, they're looking for investors who can actually add value, which is the meme that every investor tells you that they're a value-add investor . But in crypto, what that means is having your own research team, having a development team, having marketing, having, hiring, and having all those things for your portfolio companies, right? Like as a VC or as a fund, you now have to provide all these auxiliary services for your portfolio companies to actually be a compelling partner.
+
+Anna Rose (00:14:49):
+How does project Blanc work with that? Like how does it connect to this? Is it a different org or is that within this kind of research part of Dialectic?
+
+Dean Eigenmann (00:15:00):
+So when, when we were starting project Blanc, there were multiple questions on whether or not we do it as part of dialectic or do it as its own company right now it's, it's, it's its completely own entity. Dialectic owns a part of it obviously. But the, the reason why we did that mainly is because of remuneration people who work on MEV are making so much money themselves that like you can't convince them to join an organization where most of the equity is already doled out. We needed to create a new entity so that we could give double digit equities to the developers working on the project.
+
+Anna Rose (00:15:39):
+So you kind of did describe it at the very beginning of this episode, but like, so it's not about client maintenance, it's about using existing tools to like leverage MEV like use like use sort of mention the strategies and stuff like that.
+
+Dean Eigenmann (00:15:54):
+Yeah. Project Blanc essentially is a team of four or five people who are executing strategies. Okay. So you can consider project Blanc as a prop shop.
+
+Anna Rose (00:16:03):
+Wha does that mean prop shop? When people say that?
+
+Edgar Aroutiounian (00:16:07):
+It exists to make money.
+
+Dean Eigenmann (00:16:08):
+Yeah. Essentially.
+
+Anna Rose (00:16:12):
+Okay. What does it actually stand for?
+
+Edgar Aroutiounian (00:16:15):
+Proprietary Trading, I think.
+
+Dean Eigenmann (00:16:16):
+Yeah. Yeah. Yeah. It's proprietary trading shops, which are usually you have them in like bigger funds, but it's smaller teams of people who are doing high frequency trading and things like that.
+
+Anna Rose (00:16:28):
+Why did you choose this? This is maybe more to Dean cuz Edgar. I think the reason you would choose to work on this makes total sense. You were already working on it before, but Dean, why would you choose to do something like this? Like why did you choose to go in this direction? Cause there's lots of ways to make money. Like what's why, why MEV?
+
+Dean Eigenmann (00:16:46):
+So, we had been looking at MEV for a while in the team. We just didn't have the expertise. I was the only one who's ever really worked on clients. We had developers as well, but like MEV is a very unique set of things that one needs to know to be able to be successful. And so it requires a, a very specific skillset from the people working on it. And so we were always looking at it and we're thinking about strategies. And then at one point I DM'd Edgar just as he had left Flashbots and we started a conversation and it kind of grew from there. So it wasn't actually fully planned. It was like, okay, we have this opportunity, Edgar, are you down? And we managed to make it work
+
+Anna Rose (00:17:32):
+Interesting. Like I'm trying to picture what the, the team structure, like what do you guys actually do day to day? Maybe Edgar, this is one for you. Like, are you researching what people are currently doing and kind of trying to emulate that? Are you coming up with new strategies yourselves? What does that even what kind of work is that?
+
+Edgar Aroutiounian (00:17:49):
+It's all of it. Okay. Is really all of it. Every, everybody on the team it's kind of it's like a 24/7 thing because we're always trying to improve our own strategies and also noticing some of competitor strategies and also trying to reverse engineer or understand competitor strategies. So it's, it's kind of like is so evolving that there's always like its own set of challenges in addition to the fact that sometimes like the ground rules themselves change. So that also makes it even more challenging.
+
+Anna Rose (00:18:27):
+What is a strategy? What does it mean? Like, can you paint one, paint, a picture of what that would even mean? Like you're running a piece of software. How do you run it differently?
+
+Edgar Aroutiounian (00:18:38):
+Well, I mean like, let's say a strategy is sandwiching. Sandwiching is one maybe strategy. I think most people would know that.
+
+Anna Rose (00:18:45):
+They know that one. Yeah.
+
+Edgar Aroutiounian (00:18:47):
+Right. Somebody makes a trade and you wanna make sure that the trade will go off at the worst possible price for the person who does the trade, because you'll be able to skim off some of that kind of div. So that's one strategy. Liquidations could be another strategy, but there's more like granular levels too. Like how do you go about doing that sandwiching? You could be like, let's say a sub strategy could be like sandwich the sandwicher.
+
+Anna Rose (00:19:15):
+Oh no, right. That starts to sound more fair than just the sandwich strategy. Yeah
+
+Edgar Aroutiounian (00:19:24):
+Yeah, yeah, exactly. Well, there's always a bigger fish in the mem pool so that's kind of, what, what I mean by strategies.
+
+Anna Rose (00:19:33):
+Like, but how sophisticated are they? Like, are they sandwich the sandwicher or are they like, are you altering parameters? Or like, I'm just kind of picturing, like, what do you actually do to even to make these strategies happen? What do you doing?
+
+Dean Eigenmann (00:19:48):
+You could kind of try to imagine it like, like a decision tree or something like that. Like a Mempool transaction came in that you've never seen before. So like, what do you do with it? So some parts of it, you start to like analyze, let's say like some sanity checks, preliminary stuff, and then you can start deciding what do you wanna do with this transaction. Do you wanna run this transaction? Do you wanna predict what this transaction's impact on prices will be? Do you wanna know where most likely this transaction will end up in the block at what index? It kind of like goes deeper and deeper on each one of those kind of sub decisions.
+
+Anna Rose (00:20:29):
+And are you just writing scripts that like, are, are taking all of these decisions into account? Like, you're kind of like, if it's higher than this or if it falls into this threshold, then we're gonna pay attention to it. If it does that, then we're gonna do this. If it has like, I'm just kind of, is it something like that?
+
+Dean Eigenmann (00:20:45):
+Yeah, exactly. Not scripts though. We use compiled languages, but yeah,
+
+Anna Rose (00:20:48):
+Sure I'm not a coder. I was just saying whatever...
+
+Dean Eigenmann (00:20:51):
+But that's exactly it basically...
+
+Anna Rose (00:20:53):
+I guess then going back to that other question, like how sophisticated does it get? Like how big are these strat, like these trees of decision making? Is it usually like you're creating multiple, very short decision trees or are you doing like elaborate? Yeah. I'm kind of trying to get a sense for, for what this looks like.
+
+Dean Eigenmann (00:21:11):
+It can get complicated because sometimes there's also a component of, are you trying to front-run or are you trying to back-run? And one of the two, let's say time doesn't matter. If you're trying to front-run someone time, isn't that difficult because you could always do a, a higher gas price. But if you're trying to back-run someone, the speed of your execution is super critical. Right? If you take too long, then you won't land it. Back-run is when you wanna match the gas price.
+
+Anna Rose (00:21:39):
+Got it. Yeah. Yeah. How do you do that? How would that work? Actually the back running
+
+Dean Eigenmann (00:21:44):
+It's it's a issue of speed. It's like a, there's like some network overhead and then randomness. And then just how fast does your code respond to the new transaction that you've just seen for the first time?
+
+Anna Rose (00:21:57):
+Hmm. Okay. So you're creating these strategies and I think you said this just before Dean, like you have a team of like five or so on doing this right now.
+
+Dean Eigenmann (00:22:06):
+Yeah.
+
+Anna Rose (00:22:07):
+Are you all in individually doing it yourselves or is this something like a, like, is this a real collaborative effort where you're like sharing insights and picking up new kind of tricks that maybe you've seen from the outside? Or one of your colleagues?
+
+Dean Eigenmann (00:22:22):
+It's fully collaborative at this point because no one really has the incentive to do it themselves. Especially with this strategies that we're doing, you're always drinking from the fire hose. Right? One of the reasons why we were able to put together this team is because everyone who's in it has burnt out before. I think we have a team of probably the best people in MEV who are probably making the most money. The problem is you're constantly changing stuff. You're constantly fixing stuff. You're constantly like modifying code to ensure that it's fast enough. And so you're never not working. Right? Like our telegram chat, which we have together is 24/7. Someone is like updating code and writing in it. That they've changed something.
+
+Anna Rose (00:23:06):
+Is it a single repo then? Is it like, you're all contributing to the same thing. It's not that you're individually creating your own strategies. It's like, this is one joint effort.
+
+Dean Eigenmann (00:23:16):
+No, we have a parallel effort because a lot of MEV is creativity and having that kind of creativity, you need to give some kind of freedom. And so we actually have three parallel bots basically in, in some state of production that are always being tuned and tweaked because sometimes we might wanna scratch an itch on some idea, right. Adjusting a bot is not like that easy usually you know, moving things around is very hard to know if you move something around and it doesn't cause a mistake later on. So we have multiple approaches and this way people can maintain like this kind of new blood of creativity always, but also that we can share and funnel pass through ideas that maybe aren't good ideas. Like once you get a MEV the idea you have to build it and that takes time. Right. And I mean, it's, if I'm building this idea and not building another one, I don't wanna tie down a teammate on that. So we, we have it. It's like, it's very collegial. It's not hierarchical. It's like at the sweet spot of a low team count. But everybody just genuinely loves it. And we're just kind of like spitballing ideas with each other.
+
+Anna Rose (00:24:32):
+I think small teams are always better. That's my, my theory. But are you when you're building this thing, like where does the capital come from? Like, are you, cuz you sort of said this before, like each of you could be earning a lot on your own. So is the, is capital that's contributed by the participants and creators of the strategies or is this like you have existing capital that you can do things with through this I'm kind of, I'm kind of trying to picture like cuz to take advantage of MEV or also often trading something or you're doing something with funds as well. So yeah. I'm just curious where that comes from.
+
+Dean Eigenmann (00:25:09):
+We did a small round when we started the company, which was led by dialectic essentially. And that's where the capital comes from. A lot of the strategies we're doing actually don't require that much upfront capital because we use a lot of flash loans.
+
+Anna Rose (00:25:23):
+Oh yeah. Let's talk about that. So this is flash loans MEV and why don't we define for the audience if they haven't heard about it before, what a flash loan is.
+
+Dean Eigenmann (00:25:34):
+So a flash loan is a loan. You take out for the lifespan of a transaction. So I take out this loan and then I pay it back at the end of the transaction. And so what that means is for arbitrage, what we can do is we can borrow millions of dollars and pay back the loan at the end. And we just take the delta of the profit that was made minus the cost of the loan.
+
+Anna Rose (00:25:56):
+Wow. Had flash loans not been built yet, then you would've had to have a lot more upfront capital to actually see this happen, to see any profit ehh?
+
+Dean Eigenmann (00:26:06):
+Yeah.
+
+Anna Rose (00:26:06):
+So MEV plus flash loans equals a business that can be founded with very little capital and can still, already start to take advantage of these strategies.
+
+Dean Eigenmann (00:26:16):
+Yeah. Pretty much the only upfront capital, which you would need is the cost of a transaction.
+
+Anna Rose (00:26:21):
+What are gas fees on something like this? Is it, are they crazy? Like, are you doing a lot?
+
+Dean Eigenmann (00:26:27):
+Some of our inevitably run hundreds of thousands of transactions. But it's on like a lot of what we're doing is on BSC right now. And so it's throwing pennies at the wall and that's why, that's why we can do so many transactions. Right. Because it's like, it's essentially going to a casino and just throwing coins into the slot machine and hoping something comes out. That's the analogy Edgar and I often use when it comes to MEV on BSC.
+
+Anna Rose (00:26:55):
+Actually that was another question. So you've decided like you're doing most of it on BSC, the Binance Smart Chain. Do you do other chains? Like MEV as I've always understood. It kind of starts from Ethereum. That's like where a lot of the initial research, you know, the fact that it's a Geth, that Flashbots is a Geth it's not a fork. Is it? It's a Geth version? What is it?
+
+Dean Eigenmann (00:27:16):
+It's a, it's a fork of Geth. Yeah.
+
+Anna Rose (00:27:18):
+It is a fork of Geth. Okay. So it's a fork of Geth. Yeah. Yeah. I'm just like, are you looking at other chains? Are you all, are you just BSC and Ethereum?
+
+Dean Eigenmann (00:27:27):
+So we don't do Ethereum right now. We're on BSC and we're looking at pretty much every other chain as well, anything which is EVM compatible. We're looking at, we're also slowly starting to venture out into non EVM compatible things,
+
+Anna Rose (00:27:41):
+Really like what?
+
+Dean Eigenmann (00:27:43):
+A lot of osmosis and Cosmo stuff we're starting to look at. The, the reason why we don't do Ethereum itself is because the cost of a failing transaction is much higher. Right. for some of these like arbitrage transactions and things like that, you could be out thousands of dollars on a failed transaction.
+
+Anna Rose (00:28:01):
+Do you when you're doing some of this sort of strategic research, do you ever look at ways? Cause like, I mean originally when the EMV conversation started, it was presented as a problem, right? Like this is a danger, this is a bad thing in a way we should try to prevent more MEV. We should try to add new strategies. Like, you know, we ha actually had the Osmosis guys on talking about using threshold cryptography to, in order to actually make some of these attacks impossible. At the same time, there was this attitude of like, instead of making it impossible, it's democratize it and allow anyone to easily run this software and make use of it so that it sort of levels the playing field. But in the work you're doing, you're creating strategies in order to kind of access the MEV to use it, to, to get it to, I guess that's what it's called to like capture it. But are you also looking at ways to mitigate it? Like, are you interested in how networks could potentially like reduce some of these attacks?
+
+Dean Eigenmann (00:29:03):
+Yeah, so we, we work with some teams or we're starting to work with teams to look at how to prevent MEV when we actually started Blanc - Edgar and I had a long philosophical debate on how we view these things. And I think the, the way we both look at it at this point is from an accelerationist standpoint, someone has to do it to point out all the gapping flaws. And if it isn't us doing it, someone else is gonna do it. And I'd rather Edgar and I do it because we are as said actually are interested in preventing these things or ensuring that chains are a bit more resistant to some of these MEV exploits. Like we keep a relationship with the Flashbot guys. I'm constantly talking to Phil Daian along with other people as well on, especially any, any project that claims to be MEV resistant, I'm always happy to look at and actually give feedback.
+
+Anna Rose (00:30:02):
+What kind of feedback could you imagine actually, giving not feedback to the chains that claim to not have to be MEV resistant, but rather like, as you're doing this work and you're finding kind of like maybe ways that it could be mitigated, how do you actually communicate that? And actually, I guess by this, I also mean like, are you open sourcing in all of the strategies eventually? Like, are you publishing, Hey, we figured out how to do this and this. So you should, so maybe the change should be aware of it.
+
+Dean Eigenmann (00:30:30):
+I think that we will start open sourcing strategies once they become unprofitable. If we open source them, now it's an alpha leak and inevitably the bottom line of Blanc is still to make my money. Right. And we can't maintain that status quo if we start open sourcing the strategies.
+
+Anna Rose (00:30:49):
+Got it. Edgar I wanna to touch on the topic that you raised kinda when we talked a little bit about your background, this idea of a reorg. So from where I was sitting, I saw a little bit of this on Twitter, but I wasn't following it super closely to, to be honest. What I did see was that there was like a, a proposal to kind of go past the way that MEV had been considered before, which was like the sandwiching attacks and stuff like that, more into the reorg strategy, I guess. And then there was a lot of pushback. Maybe you can tell me a little bit more about like what it is, what is a reorg that even mean and what happened?
+
+Edgar Aroutiounian (00:31:25):
+The root of the problem is that in Ethereum, when you get a block, as it is right now in proof of work, once you get the block confirmed, it's not really the block that is to say the update that has been done. All the state updates that have been done in that block, you can't really rely on them. But we all kind of do rely on them. Everybody likes to have fast transactions, right? Like people in the ETH world don't really like the 15 minute or the 20 minute Bitcoin block time. It's just not usable for smart contracts. So to get the faster block time, there are some compromises have been made, let's say because computer science is all about tradeoffs. And one of those trade offs is that after one block in proof of work, Ethereum is accepted. It's not really reliable state yet. Like the data inside of the head of the blockchain is not reliable. Yet you have to wait a few blocks. And so reorg kind of exploits this, or tries to exploit this by letting people pay to redo the last, let's say two blocks or the last three blocks. So reorgs naturally happen. But the idea was to let people pay for it.
+
+Anna Rose (00:32:45):
+Is that something that is happening actually all the time?
+
+Edgar Aroutiounian (00:32:48):
+Reorgs happen all the time naturally in Ethereum, in proof of work Ethereum.
+
+Anna Rose (00:32:54):
+Do reorgs actually happen on other systems? Like, is that something that is just come into all proof of work blockchains? I mean, you sort of said like Bitcoin doesn't potentially so, but it just makes it very, very slow.
+
+Edgar Aroutiounian (00:33:08):
+No Bitcoin also had reorgs. It's just that with the longer period of time that you wait, the less likely someone can pull that off, rather less likely a reorg will happen. Reorg issue is because it's like, it just physically takes time for a block to propagate around the world to a sufficient number of the hash production power, or depending on the chain, maybe it's validator power, something like that. So because of that, you have this issue where sometimes you might have competing versions of reality. And that also happened on BSC, which is a proof of authority network, but they also have reorgs there too.
+
+Anna Rose (00:33:45):
+So tell me a little bit about how you would create something or some sort of piece of software that would actually like use that like so far, what it sounds like is kind of this organic around the world, blockchain thing, based on timing and like where maybe the source of the current chain is and how quickly it's moving. Like that sounds very kind of like, I don't know something that's just gonna happen anyways. What could you do to actually manipulate that?
+
+Edgar Aroutiounian (00:34:13):
+So I start, I worked on basically the, the MEV Geth, how MEV Geth manipulated the production of the block. I just extend, worked on extending that part to where there would be, let's say a third transaction pool, which takes proposals to do a rework. When the geth client, when MEV geth runs code that makes the block, it basically has like a conditional or something that will say, Hey, will I make more money from redoing the last three blocks? Or will I make more money continuing as I was?
+
+Anna Rose (00:34:49):
+Maybe just, can you explain like how multiple clients would actually respond to a call like this? Like, do they all agree to it? Is it something that's proposed and then accepted? Or is this something that's automatic?
+
+Edgar Aroutiounian (00:35:01):
+So that part required a little bit like more extra coding, because I ran into some issues of having to create some kind of coordination between the miners, because they would have to build on my fork of the chain. Like if I created a reorg. Yeah. Ethereum is like, it decides which chain to pick by being like the greediest chain. It's like the heaviest chain.
+
+Anna Rose (00:35:23):
+Yeah. The longest.
+
+Edgar Aroutiounian (00:35:24):
+So I need other people to keep building on my chain. So if, if I can get the next miner to also keep building on my chain, then I need to coordinate that kind of stuff. Like, how am I going to get that message across to them? So I started to have to extend like the P2P protocol, just slightly, just like little things like that. But there was like an issue I'd have to go like backwards in time to then promise more money than what a competitor could have done already future in time kind of. So it became a little bit of a mind bender.
+
+Anna Rose (00:35:58):
+And is this something that you actually specked out completely or was this just like some space of research that you were starting on?
+
+Edgar Aroutiounian (00:36:05):
+No, I got quite a few commits in and that's when I, I ran into massive pushback around the same time that I also had the technical problem of how to communicate to the next miner, to building on my reorg chain, because I wasn't going to start out with like, okay, all the hash power. Right. Although I did have some miners agree to run my code. It wasn't going to be enough hash power to do it on demand whenever I wanted. So I needed to have some kind of way to have other miners join the collusion.
+
+Anna Rose (00:36:37):
+You didn't get, you didn't solve that point. When the pushback had, had started though.
+
+Edgar Aroutiounian (00:36:41):
+The pushback had started like immediately. It's just that, like, when I got to that technical problem, the pushback was like at a Zenith.
+
+Anna Rose (00:36:48):
+Yeah. And so what kind of happened? You got people started to get really angry that you were going in this direction. Basically they were angry that you were incorporating, this it's sounded like people felt like it was kind of heresy. Like you should never suggest such a thing that it was kind of against Ethereum or something.
+
+Edgar Aroutiounian (00:37:07):
+They got all bent out of shape and nice people became mean. And people who said that they'd be friends just disappeared. It was just surreal because to me it's still like some open source project, but I mean, obviously it's not people have put in so much money into the Ethereum world and truth be told if reorg was successful, then the smart contract, the Dapp experience that you have would definitely suffer. Like you would have to wait for quite a bit of time. And probably no Uniswap trade would succeed. You know, everything would get undone. Mm. And then redone and then undone. And it would just, wow. It would be race to the bottom.
+
+Anna Rose (00:37:48):
+So in the end, did you decide to abandon that work? Did you walk away from it or did you evolve it into sort of a different direction?
+
+Edgar Aroutiounian (00:37:57):
+So Vitalik wrote me a telegram message that changed my mind that, and a few friends from Flashbots, but he basically was saying it would be really crappy to poop all over the work that the smart contract Dapp devs have been working on for the past two, three years, because they truly believed in blockchain. And to like really like crap all over their effort, because like the foundational platform that they use would not be usable, it would be really mean it would just, it would just be like, it would be friendly fire. I think because I do believe in blockchain. I want it to succeed.
+
+Anna Rose (00:38:35):
+It's strange that it came down to like one contributor's decision to go in a direction. Cuz like, so you decided you don't wanna do it or you, you would potentially like change course, but like could somebody else do it? What if there was somebody who's just malicious towards Ethereum? Could they not develop something like this?
+
+Edgar Aroutiounian (00:38:54):
+That always kind of like struck me weird? Why is it that something I did. I'm just like a nobody causes so much like issue because the blockchain has been around for five years, five, six years Ethereum, somebody could have done it. And while I was researching it or in my prep work for it, I found some material from like years ago. Like literally like year or one or two years after Ethereum came out talking exactly about this issue. And then I had a few people DM me on telegram telling me that when they were close to the EF, they mentioned these issues. I don't know. I think when people get threatened is better to put your head in the sand and know to address it. Especially if there's like such a euphoria in some like collective vision, you know, it's like, nobody wants to hear bad news. Like that's just one aspect. I think the other aspect is like, it's not easy to code up. Okay. It's very difficult to code up correctly because if you mess it up, then the miner has a lost money. And the miners are risk averse, you know, flashbots kind of normalize the miners running forked code.
+
+Anna Rose (00:40:03):
+But before that they were super wary of something like that?
+
+Edgar Aroutiounian (00:40:06):
+Yeah. Yeah. Yeah. And they still are super wary. They still are super wary and they should be because it's like, it's a lot of revenue that could be gone. And how do you conclusively prove the counterfactual that I would've made more money or less money. If I didn't run the flashbots geth, it's still kind of like, it's not necessarily a hundred percent known, so the miners are risk averse. So even if you could code it up, how would you code it up as an anon? Okay. So like, this anon GitHub profile is going to be run by like the miners with like hundreds of millions of dollars of infra. Or what would it be like, then you have to work for the miners. It's kind of like also a little bit icky. So it's like, there's a lot of factors and also you probably need to have like some kind of Chinese connect.
+
+Anna Rose (00:40:55):
+It's kind of fascinating. The fact that like this social pressure in a way does keep it's like reputation and social pressure actually, despite it being very, very open source and it sounds like anyone could come along and do it. There's this sense that like, it would need to be trusted and for it to be trusted, that probably would need to be a reputation to build up that reputation you'd be in that community and potentially care about what, what the community thinks of you. But do you see this kind of as an attack vector in the future? Like what if there is a malicious actor who is anon or pretends to not be anon, maybe there is a name and they seem like a real thing and they befriend everybody join a team, build the same and like, I'm just trying to think, is there, is there a way, cause like the idea doesn't really go away, the idea that you could do this.
+
+Edgar Aroutiounian (00:41:50):
+The idea was there from day one. Yeah. As soon as the protocol that Ethereum proof of work uses was basically like immediately pointed out, there are these kinds of like time banded or these kinds of like reorg or these kinds of issues. And so it's this overlap, this intersection of like the technical skill, the reputation, the ability to like, just get in contact with the miners, the miners are people, not robots. You know, and not all of them have like an email address that you could just send. Right. And then like, you have to validate that your thing works and conclusively prove it will make more money. It's not easy to intersect all those things.
+
+Dean Eigenmann (00:42:29):
+Yeah. The backstop here is truly the miners. Right. I think that even if someone develops a reorg client, most miners probably wouldn't run it because it is a race to the bottom
+
+Anna Rose (00:42:40):
+But don't you think they might run it? Like in the short term, like wouldn't some of them try if it does make them short term more money or they get some sort of, they have a strategy that they could use for certain things. Like it does seem like very like forbidden fruit or something like people would want to do it a little.
+
+Dean Eigenmann (00:42:57):
+The problem for a reorg client is you need buy-in from a lot of miners, right? The MEV geth one miner can run it and prove that they're making money because they're just determining how the block that they're currently mining is being set up with MEV or with a reorg client. You need buy-in from multiple miners because asset - the miner in front of you needs to build upon your chain.
+
+Edgar Aroutiounian (00:43:20):
+I think basically only ETHER mine can get away with running it on their own
+
+Anna Rose (00:43:24):
+Ether mine being?
+
+Edgar Aroutiounian (00:43:26):
+The mining pool.
+
+Anna Rose (00:43:26):
+Is that the largest mining pool?
+
+Edgar Aroutiounian (00:43:29):
+You need basically like a third, you need to get to like a third of mining pool power to pull off some of these attacks.
+
+Anna Rose (00:43:36):
+But there are groups that actually control a third.
+
+Dean Eigenmann (00:43:40):
+I think Ether mine is at like 32% or 31%. Wow. I mean, they hover around there.
+
+Anna Rose (00:43:44):
+That's the actual amount you would need is like 30%?
+
+Edgar Aroutiounian (00:43:47):
+For some of like the uncle banded attack stuff. Yeah. 33.
+
+Anna Rose (00:43:51):
+Interesting. Why don't they do it?
+
+Edgar Aroutiounian (00:43:53):
+That's a good question. I think it is a recognition that it would probably hurt the chain. I think there was probably many legal issues that would open up. I mean, when I was pursuing reorg, I got many, many legal threats and legal opinions. Right. Especially if let's say I do the reorg and then someone pays to redo a liquidation for someone else. And it's like a 40 million liquidation. That's like whoever had 40 million has enough money to litigate.
+
+Anna Rose (00:44:25):
+Yeah, definitely. Yeah. That's true.
+
+Edgar Aroutiounian (00:44:28):
+So it's not entirely a slam dunk - code is law thing.
+
+Anna Rose (00:44:34):
+So since then, though, like you've, and I guess this is a question, have you shelved that project then? Have you like put it to bed? And now the type of strategies you're looking at and the work you're doing is some is quite different?
+
+Edgar Aroutiounian (00:44:47):
+Yeah. I've shelved that idea out of respect for, of people who gave me the alternative opinions, I shelved it.
+
+Anna Rose (00:44:54):
+Mm. Was it hard to do?
+
+Dean Eigenmann (00:44:56):
+To let go?
+
+Anna Rose (00:44:57):
+Yeah.
+
+Edgar Aroutiounian (00:44:58):
+Um well it was because I left Flashbots over it. And Flashbots is an amazing team with the best people in this space. I can only say good things about each and every one of the people there. So, you know, walking away from that team for an idea that didn't pan out is a little bittersweet.
+
+Anna Rose (00:45:20):
+That's fair, but you found a new team.
+
+Edgar Aroutiounian (00:45:23):
+I did. And, and that came a few months after anyway.
+
+Anna Rose (00:45:28):
+Got it. Okay. Working on other EVM compatible chains kind of makes sense. I feel like a lot of them are also running some sort of geth fork or some sort of like equivalent thing that would be easy to run these strategies on. But when you talk about working on something like Osmosis, these other chains where the, the whole system is very different, they have different prevent and mechanisms, even for MEV or at least planned prevention mechanisms. How do you approach these? Like, would you see yourselves building out this, this client infrastructure again, or doing the fork yourselves with the add-ons or would you see, are you waiting for like another team to build that and then use them for your strategies?
+
+Dean Eigenmann (00:46:10):
+Well, so even on BSC, we have to build our own forks right now. Okay. so not only are we building strategies, we build a lot of infrastructure cuz MEV geth doesn't exist on BSC. And so we are in the for to extract me on, on BSC. We're essentially in the normal mempool, which is why timing becomes so important because we're, we're just fighting the normal mempool.
+
+Anna Rose (00:46:37):
+All of a sudden, I'm confused about how you can do this on BSC. Because like, if it's a proof of what is it, it's not proof of work. It's proof of authority, proof of authority. So it it's like a limited set of miners. Are you in it? Have you been accepted? So like how do you actually do anything here? Like you could create a geth client, but they'd have to run it?
+
+Dean Eigenmann (00:46:56):
+We need to really efficiently send transactions to the validators, which means that we need to try and figure out where validators are and things like that. So that we can, we can reduce the time spent from which we see a transaction to getting our response to a validator. And so it's an interesting game cuz it's micro optimizations, right? We're optimizing for the nanosecond there cuz we just need to get transactions onto the network as fast as possible.
+
+Anna Rose (00:47:23):
+And where do you live in that game? And actually this actually brings up a whole question on the strategies in general because I, I got the impression, like if you are utilizing a strategy, you're acting as a miner or you're acting as a validator, but is that not the case? Like the MEV extraction could be happening by an agent that is not a minor at all, but lives in between the mempool and the miner?
+
+Edgar Aroutiounian (00:47:44):
+We are searchers, searchers have strategies. For, for miners this strategies really just run, just run the software. But for us we have to custom code all kinds of software for the custom strategy.
+
+Anna Rose (00:47:57):
+Ah yeah. And this is the bot and minor or validators running the software. Then you create the bot and you call this a searcher. I actually hadn't heard that term before.
+
+Edgar Aroutiounian (00:48:05):
+Yeah, we run a bot, yeah.
+
+Anna Rose (00:48:06):
+And the bot is called you call the bot a searcher?
+
+Edgar Aroutiounian (00:48:10):
+I guess you could say that. Yeah. I mean searcher is like the entity that's like doing the looking for maybe and trying to claim it. So yeah, I guess so.
+
+Anna Rose (00:48:16):
+Okay. Got it. So on, in the BSC side, like you still need the validators to actually be running a particular kind of software so that you can utilize these?
+
+Dean Eigenmann (00:48:26):
+No, they run regular BSC. That's why speed is so important because we don't have this privileged private mempool.
+
+Anna Rose (00:48:33):
+I see. I see. So they don't have the MEV geth, but there is, there has always been MEV anyway, so you're kind of playing like the older game, right?
+
+Dean Eigenmann (00:48:40):
+Yeah. We're playing the pre-flashbots era game.
+
+Anna Rose (00:48:43):
+Yeah. Yeah. Are you using actually strategies like that? Like that used to be used in that case?
+
+Dean Eigenmann (00:48:49):
+Not real because the game has become too advanced.
+
+Edgar Aroutiounian (00:48:53):
+I mean, some stuff stays the same, like the concept of front running, rather the concept of like PGAs or back running, some of those things stay the same, but some of them are like less important, like PGAs aren't as big on BSC as they used to be on ETH before Flashbots.
+
+Anna Rose (00:49:11):
+So I, I think this has been a really cool kind of journey through the, I, I realize in this conversation that I, I understood what, what the research work on MEV was roughly, but I didn't actually know as much on how it would be to like, like use it, what the games being played were, who, the people, what they're doing, how they're actually this thing. So I think it's been really cool to kind of go through this journey with you both. I have some other questions that are less related to the MEV work and more related, just kind of to general kind of actions I've seen going on, maybe more in the dialectic direction. So Dean, I, I wanted to ask you a question. Maybe you could help like update me a little bit on Sushi. The reason I'm gonna ask you that is I know that there was like a proposal that you were part of, I guess like a few months ago, what's going on with that project. And are you related to it? Were you working on it? Was there some connection there?
+
+Dean Eigenmann (00:50:08):
+So, Ryan and I have been close to the Sushi team since the beginning when there was that rug pull that initially happened, we had reached out to Maki back then already and offered our support. And so literally two hours after, after that rug pull happened, we were on a call with Maki to like discuss next strategies and things like that. Cuz we were, we were very bullish on the idea of Sushi and so we've always been close to the team, obviously Joseph DeLong, who was the CTO for a while is a, is a very close friend who I worked with prior to dialectic already while I was working on ETH2 clients and things like that. So we've always been close to the team. One of the flaws, which you're starting to see in Sushi is one of the issues that I wrote about, I think in 2017, 2018, which is that DAOs without any hierarchy, I don't think they work. Right. and the problem that happens is that there's no accountability. No one feels responsible for anything. No, one's truly in charge. So it's hard to delegate and things like that. Right. And, and these flaws were starting to, to show up in Sushi. Right. a lot of the core developers are very unhappy with what's going on. They're not being compensated fairly and things like that. And the proposal was actually twofold. First we wanted to restructure the DAO and create a hierarchical DAO with different sub DAOs, which are for the various projects that Sushi does. And for like different roles along with changing the way the compensation structure works.
+
+Anna Rose (00:51:42):
+What actually happened in Sushi? I think a lot of people from who maybe weren't closely monitoring the chats, I, or were kind of surprised when Joseph stepped away in general and then your proposal kind of came after that. But what, what had actually happened?
+
+Dean Eigenmann (00:51:56):
+I got a DM about four months before that which to the, was to the tone of we're all gonna quit unless this gets fixed. We were taking those four months to try and figure things out and organize the DAO, which was quite a challenge. We were hoping that people don't leave in that timeframe. And I was on calls every day to convince people not to end up quitting. Sadly, that ended up happening. I think Sushi, if we've learned anything, we'll probably survive. It's just now now a harder challenge to organize it completely. But I think Sushi is gonna come back stronger than ever.
+
+Anna Rose (00:52:34):
+But are you still involved?
+
+Dean Eigenmann (00:52:37):
+Not as much as before. I don't know the new or the, the current leadership as much as I knew the other one and I haven't had much time recently. I'm, I'm hoping to get involved against soon. I think Sushi is a, is an incredible experiment. Totally. when it comes to like some of the crypto ideals. And so just for that sake, I, I love being involved.
+
+Anna Rose (00:53:01):
+It sounds like, I mean, this is, we know that this is the place where a lot of experiments are happening. This one's DAOs, MEV... Actually, are there any topics or spaces that you're exploring right now, maybe within Project Blanc or within Dialectic, other kind of paradigms that you think would be a great place to start experimenting?
+
+Dean Eigenmann (00:53:24):
+I mean, we're doing a lot of interesting things at dialectic. I think one of the things that amazes a lot of people about our team is how developer heavy the team is. So like one of the things we've built internally is a completely automated stable income fund. Ryan and I, when we started Dialectic, we're heavy yield farmers at one point that obviously didn't scale in anymore. It made sense when we were doing it. We hired people to do it and it still doesn't scale. And so one of the things we've, we've done, which we're hiring now for as well to continue is this automated, stable income fund, where we deployed a specific strategies. There's bots that harvest when gas prices are good or where profits are high enough in, in the future, the bots will be able to automatically rebalance depending on the APY specific strategies and things like that. So we're, we're incredibly developer heavy on the things that we do.
+
+Anna Rose (00:54:16):
+Do you, are you playing an NFT land or are you avoiding it?
+
+Dean Eigenmann (00:54:18):
+Dialectic is a heavy player in the NFT land. I think we're one of the biggest investors in play to earn as well as hold probably one of the biggest, like fine art NFT portfolios.
+
+Anna Rose (00:54:34):
+What is your opinion on NFTs?
+
+Dean Eigenmann (00:54:38):
+<Laugh> I...
+
+Anna Rose (00:54:40):
+Dean Has opinions.
+
+Dean Eigenmann (00:54:40):
+You're gonna get me in trouble, Anna. No, I don't get in trouble. I say what I want. I think gaming NFTs are interesting. I find gaming NFTs. Very interesting. I think the utility is becoming something quite cool, especially with some of the gaming investments that we've we've done. I, I think once we get to an interoperability stage, which I'm hop, we see soon gaming NFTs will be even more proven. I, I used to think gaming NFTs were stupid until like I sat down with someone working on them. And one of the things we had discussed was like, imagine you're a world of Warcraft gamer, and I know you used to play world of Warcraft as well. Me, and you have one of let, did you play world of war request?
+
+Anna Rose (00:55:27):
+No way.
+
+Dean Eigenmann (00:55:28):
+I thought you did. I thought we had this discussion. Okay. You played other nerdy games, which count as well,
+
+Anna Rose (00:55:34):
+Civilization, man.
+
+Dean Eigenmann (00:55:36):
+Okay. Well, just imagine like, you know, you have some item that you need to complete a dungeon or something and you haven't grinded to, to get that item, but you can now rent it from someone who's lending it out on an open market, for example, like, that becomes really compelling when you can start generating yield on the items that you've earned in games, which kind of already exists on the steam marketplace, but it is within their closed system. They take a 30% commission and, and the financial products that you can build upon that are not very interesting, right? On steam. You can buy and sell that's it. You can't like lend out an item and things like that. And so I think that's where it becomes interesting when it comes to NFTs as art. I, I see the appeal. I'm not a holder of any, I bought one NFT, which was the first ever fashion NFT. And the reason why I bought that was purely an investment thesis, which is, this is the first ever NFT by a fashion house. It's probably gonna go up in value. And so I bought that.
+
+Anna Rose (00:56:38):
+Have you sold it?
+
+Dean Eigenmann (00:56:39):
+No not yet. I'm still holding. I think it's, it's soon now with like Fendi getting into ledger accessories and things like that. I think we're gonna start seeing the pop for that NFT.
+
+Anna Rose (00:56:51):
+What about you, Edgar? Do you care? Do you pay attention to this or is this like super off your radar?
+
+Edgar Aroutiounian (00:56:58):
+It's on my radar because of Twitter but it's I try to stay hyper focused on something. So I've kind of been on the deep end on work lately.
+
+Anna Rose (00:57:09):
+Do you see MEV developing in a direction? I'm kind of thinking like going forward, you know, right now we're talking strategies, you're talking about different networks, but do you see this role, this kind of strategy, this type of work you're doing, do you see sort of developing into something else?
+
+Edgar Aroutiounian (00:57:27):
+I think it will stay. I think it will evolve. I think it's going to get more nuanced and complicated as real L2s come online as interchange things become more reliable and robust it's gonna get even more creative and complicated.
+
+Anna Rose (00:57:45):
+Once you bring on these other chains, is there actually like MEV arbitrage between different chains? Maybe this is completely silly to even say, but like, is that something that exists?
+
+Edgar Aroutiounian (00:57:58):
+Yeah, that's totally something, right. I mean, it's just when I do arbitrage between two pairs that are out of whack, the fact that the two pairs are on the same chain is kind of like implicit.
+
+Anna Rose (00:58:10):
+It doesn't matter.
+
+Edgar Aroutiounian (00:58:10):
+It doesn't right. It doesn't have to be on the same chain. They could be on different chains. It just makes that like all that extra code that has to deal with that nuance become more nuanced and more complicated.
+
+Anna Rose (00:58:22):
+Interesting. Cool. Well, I guess it sounds like a space to continue to watch. I think you're right. That like as L2s and all of the multichain communication kind of comes online, it's gonna be total wild west for a bit longer, at least. Is there an end game to MEV like, is there sort of a point where all the strategies are filled out and like there's sort of standard?
+
+Edgar Aroutiounian (00:58:44):
+I mean, it's like an equilibrium, like the equilibrium for MEV is when all prices in the markets are balanced, let's say like, there is no arbitrage. There's no dex arbitrage. All the prices are perfectly balanced. It's kind of like that econ market efficiency theory or something like that. Like it's trying to trend towards that, but not all MEV is like dex MEV some other MEV could be like a liquidation that like nobody has put in the trouble to code up against cuz like some weirdo protocol. Another MEV is like you have a, a smart contract that exposes a way to talk to the rest of the world in a way that it wasn't intended to. And nobody has claimed it, right? Like that's not going to trend towards equilibrium unless someone finds it. It depends on where and what subset of MEV you're targeting some of them trend towards equilibrium, some don't
+
+Anna Rose (00:59:38):
+Cool. Well, I wanna say a big thank you to both of you for coming on the show and sharing with me the work you're doing, letting me ask all my dumb questions about MEV. Really appreciate that. You can tell it's not a thing I've studied much, but I really do love kind of checking in on how this is going, what's happening and hopefully what's coming up.
+
+Dean Eigenmann (00:59:59):
+Thanks for having us a thanks, Anna.
+
+Edgar Aroutiounian (01:00:00):
+I used to listen to the ZK Podcast on 1.5, coming back from Mountain View to San Francisco on my commute. Yeah. It's a real pleasure to be on this show with you now.
+
+Anna Rose (01:00:12):
+Cool. Dean, are you gonna say something nice?
+
+Dean Eigenmann (01:00:16):
+Uh, Thanks Anna. Hey, I listen to your podcast. Otherwise I wouldn't have known that Oskar was on.
+
+Anna Rose (01:00:28):
+True, true, true. I'm just kidding. Thank you Edgar for the, for that nice thing you said, and thanks for coming on the show Dean. I know it's been a long time coming. We've talked about it for I think a few years. And so it's really cool to have you on. So thanks again to both of you. I also wanna say thank you to the podcast producer, Tanya, the podcast editor Henrik and to our listeners. Thanks for listening.
+

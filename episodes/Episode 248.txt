@@ -1,0 +1,378 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:27):
+This week I dive back into the topic of FHE with Rand Hindi, CEO at Zama. FHE stands for fully homomorphic encryption, a crypto system that allows for computation to occur on encrypted inputs. We talk about the FHE landscape, what specific use cases it's ideal for, where the technology is at, how FHE differs from MPC or ZK, and look into some of the nuances of the different types of techniques the teams are using to achieve this cryptographic environment where one can do computation in a truly private manner. But before we kick off, I wanna share an announcement from one of our partners on the latest zkSummit, the Web3 Foundation. They're hosting an in-person event called sub0, the Polkadot developer Conference in Lisbon on November 28th and 29th. This year's edition will bring together the global Polkadot community and provide an open introduction to those looking to learn more about substrate Polkadot's framework for building custom blockchains. Learn more and apply at sub0.polkadot.network. I also want to highlight that there is a fresh batch of jobs over on the zkJobs board. If you are looking for a new opportunity to work with the best teams in ZK, be sure to check out their job postings. I'll add the link in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (01:38):
+Today's episode is sponsored by Anoma. Anoma is a set of protocols that enable self sovereign coordination. Their unique architecture facilitates the simplest forms of economic coordination, such as two parties transferring an asset to each other, as well as more sophisticated ones, like an asset agnostic bartering system involving multiple parties without direct coincidence of wants, or even more complex ones, such as end party collective commitments to solve multipolar traps where any interaction can be performed with an adjustable zero knowledge privacy, Anoma's first fractal instance Namada is planned for later in 2022, and it focuses on enabling shielded transfers for any assets, with a few second transaction latency and near zero fees, visit anoma.net for more information. So thanks again, Anoma. Now here is Anna's interview with Rand Hindi from Zama.
+
+Anna Rose (02:28):
+Today I'm here with Rand Hindi, the CEO at Zama. And in today's episode, we're gonna be revisiting the topic of FHE or fully homomorphic encryption. Welcome to the show, Rand.
+
+Rand Hindi (02:39):
+Thank you Anna. Thank you for having me.
+
+Anna Rose (02:41):
+Before we start in, why don't you tell us a little bit about yourself and maybe your background. What led you to want to work on this problem?
+
+Rand Hindi (02:48):
+Privacy is something I've always been interested in. I actually started coding when I was 10 years old, and back in the nineties I had created a social network, with a friend of mine. And at some point in high school, there was this, very tall, very big guy that was bullying me and I thought, I have to find something against him so that he actually stops. And I went into the database of the social network we had built, and I found some private messages he was sending, and I found some very crunchy stuff about, you know, him. I went to him at school, I'm like, Hey, if you don't leave me alone, I'm gonna tell everyone about that. And he left me alone. But it did leave me with a sentiment that I had done something really, really, really wrong because, just, you know what I mean.
+
+Anna Rose (03:31):
+It is sounds pretty rough.
+
+Rand Hindi (03:33):
+I know. Well, I mean, it was the nineties, right? Privacy on the internet wasn't a topic yet. I mean, it was pretty cypher punks, but it wasn't like mainstream. But nonetheless, you know, as a teenager, I felt like I did the right thing for myself, but I did the wrong thing from an ethical perspective. Like, just because I was the person administering the website didn't mean I had the right to people's privacy. And so that was a topic that was on the back of my mind. And when I got into machine learning, you know, 15 years ago, it was clear to me that we're gonna need more and more data and if we want to do anything interesting with AI, and therefore privacy has to be a central issue in machine learning. And that's when I got interested in that. So I did a PhD in machine learning. After that I started a company doing machine learning with privacy. We had built a private voice assistant, so that company got acquired by Sonos. So today in the US if you're using the voice assistant on your Sonos, it's basically our technology. Mm and after that I started Zama, which is working on fully homomorphic encryption as well as doing a lot of investment related stuff.
+
+Anna Rose (04:34):
+Cool. Actually, interestingly, we just did an episode on machine learning and just started like, this is not a show that usually covers that topic. And we did also talk about sort of machine learning in ZK kind of under ZK. So...
+
+Rand Hindi (04:50):
+I love that topic. I love that topic. This is something I'm actively investing in. By the way, machine learning and ZK is like such an amazing intersection. I love it.
+
+Anna Rose (04:58):
+Yeah, that's kind of an interesting path that you're going. Machine learning - privacy. Did you feel like, it sounds like the product that you had built was actually already taking privacy into account, but as I understand it, a lot of machine learning like research or companies, projects aren't, so they're feeding in a lot of data without really thinking about the privacy. I think the assumption here is that like, oh, well, if there's so much data, there's no way that any like private data would really be found. But I think as we talked about in our last episode, that's not really the case.
+
+Rand Hindi (05:30):
+Yeah, absolutely. There is this kind of false dichotomy between privacy and, I would say data usage in general. You know, we've been fed this narrative that if you want to do something useful with data, you have to give away the data. But the beautiful thing about homomorphic encryption, and I would say secure computation in general, is that it enables you to actually do something with the data without actually seeing the data, without only having an encrypted version of the data. And this is a fundamental paradigm shift in the way that we actually use the data, because we're moving from a world where people are trying to monetize data itself to a world where people are using data to monetize a service on top of the data. And if the service is what you care about, you don't need to see the data to offer it anymore.
+
+Anna Rose (06:19):
+True. Although, if you make that private, aren't there still ways to find out things like if you, if you're basically training a model on encrypted data, but like the outcome, could the outcome still like reveal something about the input?
+
+Rand Hindi (06:36):
+Yes. Well, that's not a topic related to cryptography, right? It's, it's, it's a topic related to machine learning. And indeed, this is a problem with machine learning. You know, neural networks in general tend to learn too well. And if there aren't enough examples of something, most likely the network is gonna learn that that example is the, the only one that exists. And so you're, you're able to infer some of the inputs from the outputs in particular if those inputs are not very common or something which are kind of edge cases. A lot of people are working on that. You know, there are ways where you can fuzz the data a little bit, uh, in order to make that more secure, but yeah, I mean that, that's a very, very big problem in machine learning that unfortunately cryptography doesn't solve.
+
+Anna Rose (07:22):
+Mm - now let's turn our attention to FHE though, which is the basis of, I guess, the work you do today. Why did you choose to work on fully homomorphic encryption?
+
+Rand Hindi (07:33):
+When I was running my previous company, we were working on this private by design voice assistant. And you know, a voice assistant is a machine learning model that processes your voice and returns some kind of answer. And to do that, it needs to have a microphone that listens into what you're doing and, you know, sends that to the cloud for some kind of processing. So for us, you know, it was obvious we needed to find some kind of privacy solution, but we couldn't find anything that could be done server side. And so we ended up doing everything on the client directly. But at some point, I hired someone in my team who actually was a cryptographer, and he told me about this new technology. So this was like 2014, 2015. So we're talking years ago he told me about this new technology called homomorphic encryption, where you could actually do the processing on the server on encrypted data so that the server actually doesn't know anything about the data it's processing.
+
+Rand Hindi (08:26):
+And when I heard about it, I was like, wait, hold on. Does that mean that the user can ask something to the voice assistant? What the voice assistant will send back to your server is an encryption of the voice. So instead of sending something like, Hey, what's the weather in Paris? It will be sending like, or like whatever, you know, however you pronounce encrypted data. But this encrypted data would still keep some mathematical properties. And so you still be able to run your machine learning algorithms on it, produce a result, which itself is encrypted. So, you know, the computer that does the computation, you know, it hears and it returns, but the user can decrypt it it can hear, you know, it's like whatever, 23 degrees in Paris. When I heard about this, I was like, oh my god, why isn't everyone doing that? Like, why isn't this technology mainstream? Why are we still, you know, sending unencrypted data to the cloud? And the answer, quite frankly was simple. It just didn't work. You know, it was great idea on paper, kind of like ZK 10 years ago, great idea on paper, but if you try to do anything useful with it, it would either take like, you know, days to get a response back or it just wasn't powerful enough, or you couldn't use it, you know, easily. Like it just wasn't ready yet.
+
+Anna Rose (09:40):
+But now it is. So what's, what's changed?
+
+Rand Hindi (09:44):
+Yes. Now it is. So you see how I'm leading into the next question, right?
+
+Anna Rose (09:48):
+Very easy as an interviewer on this one!
+
+Rand Hindi (09:52):
+So what happened is about four years ago, a new generation of homomorphic scheme started appearing that enabled to do much more complex operations much faster without as much complexity as the old ones. And so that work we've been doing at Zama specifically was to take this technology, which is called TFHE for Torus FHE, and package it in a developer framework that enables any developer without any knowledge of cryptography to use it. And because we've made it easy to use, it became easy to use for machine learning, for blockchain applications, for pretty much anything you wanted to do. So I would say the big breakthrough cryptographically speaking happened about four years ago. And what really is enabling homomorphic encryption today are the tools we built on top of it that enables applications to start using it without having to worry about the cryptography.
+
+Anna Rose (10:46):
+Let's define FHE for, for our audience. I'm gonna do a quick throwback to an episode I did in April, 2020. Where we talked to, uh, Flavio Bergamaschi from IBM. And we did actually an intro to FHE, but as I told you before we started recording, I'm gonna need a refresh because it's been a while and I haven't talked about it in a long time. And so I think it would be really great for us to explore what FHE actually is.
+
+Rand Hindi (11:14):
+The idea of fully homomorphic encryption is that you can do processing on encrypted data without actually having the decryption key. So imagine you're a user and you want to access some kind of service in the cloud. Traditionally you would send your data to the server, the server would process it and send back a response. The problem is that the server doing the computation actually has your data because it has to do processing on it. With homomorphic encryption, instead of sending your data unencrypted, you would encrypt your data with your own private key that's on your device, send your encrypted data to the cloud. But the way it was encrypted still enables you to run, you know, mathematical operations on it. You can do additions, multiplications, apply functions on it, so the server doesn't know what it just got, it still runs its algorithm. The result it produces itself is encrypted under the same key that the user send the inputs in and the server sends it back to the user. We can then decrypt it. So from the user's perspective, nothing changes. You're just sending data and getting a response. But the difference is now the data is encrypted, end to end. It's encrypted when you sent it, it's encrypted during processing, It's encrypted when you got it back. And at no point whatsoever, the private key is sent anywhere.
+
+Anna Rose (12:29):
+You sort of mentioned this kind of special encryption when you describe this part of me goes like, why is it hard to do and then it's like, why do you need this special encryption? What is that exactly? Yeah. So why don't, actually, why don't we start with why is it actually hard to do?
+
+Rand Hindi (12:45):
+Sure. The idea is very simple. Homomorphic encryption is something people have been talking about since the seventies actually. In fact, my co-founder, Pascal Paillier, is one of the inventors of homomorphic encryption and one of the OGs, you know, from, uh, from back in the days, what's really hard first is you have to find a mathematical construct that can do those homomorphic operations. And by that way it means is if you take an encryption of X and you apply a function on the encryption of X, you want to get, as a result an encryption of F of X. So, you know, you have this kind of like transferring property from the encryption to the data itself. And this is something that's not very common. So the first thing is you have to find those homomorphism in mathematics. The second problem is, well, now you found them.
+
+Rand Hindi (13:34):
+Do you know that they're secure? Because, you know, cryptography is about security. You know, there there is a million cryptographic protocols that are easily broken. So you have to make sure that what you just came up with is actually secure. And it turns out that creating something homomorphic and secure is an extremely complicated proposition. So the first time someone did find that for multiplications was back in the seventies, it was actually the ElGamal scheme. The first time someone found this for addition. So being able to do secure homomorphic additions was my co-founder Pascal. So that was a Paillier scheme. And the first time someone found a way to do anything homomorphic, so fully homomorphic encryption, that was in 2009 with Craig Gentry. So it's very, very new. So we've only really had 10, 12 years to figure this out. And so that's why it's been so difficult to actually crack.
+
+Rand Hindi (14:26):
+But once we had that, the problem wasn't just there, the problem was, well, you have to find the right parameters. You know, cryptography is this kind of thing with like a hundred thousand different nubs, and if you put them in a, in the wrong sequence, in the wrong order, you're breaking everything. So either the result is wrong or it's insecure, right?. So, you know, you have to find just the right parameters that things are secure and correct, very similar to how you do it in ZK, by the way. Right. Kind of like in cryptography in general. So finding those parameters is extremely complicated. And this is something that required deep expertise in cryptography. So that again, is something that, you know, we had to figure out a way to automate, you know, so creating compilers that can take some arbitrary programing Python or C and turn that into a homomorphic circuit. So all of these different things kind of add up in a way that, is just wasn't possible to do.
+
+Anna Rose (15:18):
+Hmm. You mentioned homomorphisms, homomorphisms, what are, like, what is that even you sort of said you're looking for certain something. So yeah, tell, tell me a little bit more about that.
+
+Rand Hindi (15:29):
+It just means that the, I mean the structure is the same or the shape is the same. So the idea of homomorphic encryption is, even though the data is encrypted, the structural property of the underlying data is actually intact. So when you apply a function on the encrypted data, this function translates into the unencrypted realm after you've done the decryption. So think of it like, like a language. If I speak to you in English, you know, I'm using syntax using grammar, and you're using that to understand what I'm saying. If I were to speak to you in French or in some language that you don't understand, you know, that language would still have structure, right? You could still record that language, you could still do something with the sentence that just said you wouldn't understand it, but it would still be a correct sentence just in a different language. If I gave you the Rosetta Stone to understand it, then you could decrypt what I just said in the conversation. So it's kind of the same thing with homomorphic encryption. You know, you're just changing the language in which you're speaking the data, but you're not changing the syntax and grammar and everything else around it.
+
+Anna Rose (16:35):
+Okay. So that's the homomorphism, I think I understand that, but like you had also talked about these, like the special encryption. Is that the same thing? Is that special encryption the same?
+
+Rand Hindi (16:47):
+Yes. So, you know, traditionally when you encrypt data, you cannot do anything with the data, right? It's just a random gibberish, data points when you're encrypted homomorphically with a homomorphic encryption scheme. So a special kind of encryption in that sense. It's still gonna be a random thing you're looking at, but this random thing has mathematical properties where you can apply functions on it. Right? And so that's what we're saying, there's a special kind of encryption. You're not just encrypting the data, you're encrypting it in a way that you can still manipulate it, using the same mathematical functions that you would without encryption.
+
+Anna Rose (17:23):
+What is actually outputted? Like, I'm kind of picturing like when you're making that encryption, like, 'cause I, I think I'm, we're so used to talking about like circuits and things in the ZK world, but like, what are you actually using to do that? Does it look more like hashing? Like what's maybe something that we might be familiar with?
+
+Rand Hindi (17:42):
+Yeah, so the program itself, this running the computation is a circuit. Like every program's just a circuit. The inputs are just like a bunch, It's just a vector of a bunch of different numbers, and those numbers in combination effectively represent a message. So a certain number of bits of information that you just encrypted. So the way that it looks actually, the cypher text, the way it looks is the first few bits are the messages. So this is what you actually want to compute on. And the last few bits are random noise that you're adding to guarantee the security of the encryption. And so whenever you're doing a computation on it, you're trying to compute on the bits of message without actually having the noise overflow on it. And that's the whole complexity of homomorphic encryption is you're managing this noise reservoir, at the same time as you're doing computing on the useful bits of information. And this is really what's so complicated about it, but it basically just looks like a vector of numbers, like a huge one.
+
+Anna Rose (18:42):
+Okay. And when it comes out, so this is sort of like I'm sort of picturing going into something that's doing the computation when it comes out, there's, there must be like a decryption phase. Is it special or does it look kind of the same?
+
+Rand Hindi (18:59):
+It's the same thing as encryption, right? It's of the encryption and decryption of homomorphic encryption is very cheap and very simple. Okay. The computation you're doing on encrypted data is what's very costly and very complicated. I see. But encryption decryption is very simple. You know, you just basically, you take a message, you encrypt it into this vector of random values, you operate on that, and then you take this vector of output, encrypted values, and then you decrypt that and you end up with just one value. That's pretty much what, what, how it works.
+
+Anna Rose (19:28):
+When you say it's costly, how is it costly? Is it costly in terms of like, energy spent doing the computation time? Like the size of it? Like what's the cost?
+
+Rand Hindi (19:40):
+The time? Yes. So what happens is when you encrypt the data, so you've got the cypher text, let's say half of it is message bits, so actual useful stuff, half of it is random noise. In practice, what you do is you put the noise on the last few bits, and then you keep some kind of padding in order for the noise to grow. Why? Because every time you do a homomorphic computation, the noise actually grows and grows and grows and grows. And if you do too many computations, the noise ends up overflowing on the actual data that's useful. And if you try to decrypt that, you're just getting a random value. So this is actually doing those computations very fast. But to avoid the noise overflowing on the data, you need to apply a special operation called bootstrapping, which effectively reduces back the noise to some sort of small, value. Uh, as if you just encrypted the original data, and this is the costly operation. Homomorphic encryption is extremely fast until you have to bootstrap, which is very often. And so that's why we say that it's very slow. It's like, is this cleanup operation? You know, like it's easy to break things up, but it's very hard to clean them up. And it's kind of the same thing with homomorphic encryption.
+
+Anna Rose (20:54):
+You sort of mentioned this multiple computations. Is this happening on the same inputs or is this like within a FHE system you're kind of getting lots of inputs doing computation, putting out some outputs, and then more is coming in? Is it on one or is it on many?
+
+Rand Hindi (21:11):
+I guess it depends on your application. Right. You know, in the case of a, for example, a neural network for machine learning, you're getting, you know, sometimes a million inputs that you have to process at the same time. But if you're looking at, you know, predicting the price of, something, maybe it's just like five inputs, it doesn't really matter. That's completely up to the application itself,
+
+Anna Rose (21:29):
+But the computation happening inside. Would one set of inputs be going through multiple computation patterns within it? Or is it always like a single path?
+
+Rand Hindi (21:38):
+Again, I think that depends how you design your circuit. You, you could do whatever you want, it's just a circuit, right? Once, once the data is in, you can really pretty much do anything you want. And I think this is also one of the big differences today is it used to be that with homomorphic encryption you were limited to very simple things, additions, multiplications. You couldn't do deep learning, you couldn't do very complicated flows with the actual data. There's no longer the case today. The new homomorphic technologies that we have enable you to do pretty much anything you want, however complex the circuit. So we can do deep learning, we can do homomorphic smart contracts for blockchains, we can do homomorphic databases. The difference is gonna be of course the cost in the run time. But all of that, again, is getting better and better every day.
+
+Anna Rose (22:23):
+Hmm. That idea of a fully homomorphic smart contract, what does that even mean? Can you explain what that, like, is that something like you have a smart contract that then deals with an FHE black box and returns something? Or are you talking about like running the computation inside FHE.
+
+Rand Hindi (22:42):
+Yeah, yeah, yeah. I'm talking about having smart contracts where some of the states can be encrypted and you can operate an encrypted states directly take a traditional, you know, um, ERC20 token smart contract. You've got the balance. The balance right now is a map between an address and a value, right? And so everybody can see how much tokens, how many tokens a specific address has. And the reason why people need to do that is because, well, you know, if you want consensus, people have to agree on the values. And so that was pretty much the only way of doing it. With homomorphic encryption, you could have the exact same smart contract, but you replace your value by an encrypted value. So you still have a map between an address and encrypted value, but because you can operate on those encrypted values, you can transfer tokens on chain in the same exact codes in exactly the same way. It's just that nobody can see the value unless you have the key to decrypt it. And so I think, you know, the beautiful thing about homomorphic smart contracts is they're just smart contracts, it's just that you're no longer operating on integers. You're operating on encrypted integers if you want to.
+
+Anna Rose (23:49):
+Hmm. Do you picture this kind of needing its own special blockchain to be able to use private?
+
+Rand Hindi (23:55):
+You would need to modify the consensus.
+
+Anna Rose (23:56):
+Okay. Yeah. This isn't like, it can be on a public blockchain and then have this sitting on top.
+
+Rand Hindi (24:01):
+Our stuff is written in Rust. So nothing prevents you from just, you know, using that in your smart contract engine. It's just in practice. In order to make this efficient and to make it work in a blockchain, you can modify the consensus algorithm to take into consideration the specific homomorphic encryption requirements. So I think in practice you would want to modify the actual low level consensus algorithms to actually fit with this homomorphic computation. But it's not, you don't have to, Right. It's just you know, it's just code running really.
+
+Anna Rose (24:34):
+Mm. Would you need some sort of, like in the ZK case, there's often like some curves that need to be included somehow or enabled. Do you have anything like that, like a smart contract blockchain would need to have in it for FHE to be used with it?
+
+Rand Hindi (24:50):
+Yeah. Like every cryptographic scheme, I think, you know, you need specific parameters and you need a specific setup for this to actually work. Same thing here, really. But nothing that wouldn't be easily, uh, deployable. I think we have all the building blocks necessary to make this happen. And in fact, we are actually building an example testnet, for homomorphic smart contracts to show that it's doable today.
+
+Anna Rose (25:14):
+Interesting. What kind of blockchain are you building that with? Like, what's, what's it similar to? Is it like a Geth fork or?
+
+Rand Hindi (25:22):
+No, unfortunately, unfortunately we're doing something much simpler. I mean, unfortunately, we're going for something much simpler. I think, you know, we're, we're currently prototyping with both Substrate and Tendermint. So it's gonna be a very simple, you know, delegated proof of stake type of, consensus algorithm. Again, our goal here isn't to build an Ethereum competitor of some sort or anything like that. Our goal is just to show that it works. Right. And if other blockchains wants to use it, you know, they can use it. Everything is open source. But really the goal here is just to show that it works and to implement all the different building blocks necessary for this to actually be useful.
+
+Anna Rose (25:59):
+I wanna kind of compare FHE to things like MPC or Zero Knowledge. Have you done a lot of research into MPC and stuff?
+
+Rand Hindi (26:07):
+Not so much as I did in FHE, but I know enough about it, yes.
+
+Anna Rose (26:11):
+So what are the different, maybe use cases, like where are, where are times where you think MPC or ZK would be more appropriate and where are times where you think FHE makes more sense?
+
+Rand Hindi (26:21):
+I think MPC is great whenever you need multiple parties to actually, you know, do some something together. So I think, for example, MPC is an exceptional, exceptionally great solution for managing your secret keys, your cryptographic secret keys. It's really good whenever you have to do some kind of like threshold decryption protocol, things like that.
+
+Anna Rose (26:43):
+Voting maybe?
+
+Rand Hindi (26:45):
+Maybe voting. Yeah, why not? However, the problem with multiparty computation is that you still have to communicate with a lot of different people by doing that. So in the case of a blockchain, people are like, Oh yeah, whatever, you know, we already do that anyway, this kind of like the whole point of decentralization. But in practice, if you want to deploy MPC, there is this extra level of complexity having to manage different nodes interacting. So I think that's something that makes it very difficult to use in production and to understand what it means. Homomorphic encryption on the other hand is a very simple client server interaction. You know, you have an application on a server, you have a client connecting to the server and sending data. The only difference is you're now encrypting the data being processed. So there is no difference in terms of architecting your software versus what you do in plain text.
+
+Rand Hindi (27:31):
+But MPC, you have to, you know, merge this thing. The second problem is, no matter how fast the MPC stuff can go, you're always gonna be bounded by the network time. And that's gonna be fundamentally something that prevents you from doing super low latency applications. Right? If those are communicating at large distance, there is nothing you can do to make that faster. However good you are at computation, because homomorphic encryption is running on a single machine, potentially there is unlimited vertical, you know, scalability potential. So sure today homomorphic encryption is, is slower than MPC, but it has more opportunity to be faster long term because the constraints are not the same. So I think both are good. And in fact, you know, in our protocol for homomorphic smart contracts, we use an MPC protocol for distributed decryption and key generation. So we still use an MPC part, but specifically for what MPC is amazing at, which is the key stuff, all the computation is done with FHE.
+
+Anna Rose (28:28):
+What about ZK?
+
+Rand Hindi (28:30):
+So ZK for me is not a privacy technology. ZK is a provable correctness technology. It's a scalability technology. It's not a privacy technology. When people talk about privacy with your knowledge, what they really mean is I'm do, I'm gonna do the computation somewhere else and prove to I've done it. But the computation that's being done like this elsewhere place where the computation happens...
+
+Anna Rose (28:54):
+Might not be private.
+
+Rand Hindi (28:55):
+Exactly. So think about multiple users wanting to collaborate on some computation, right? If they wanted to do that with a ZK protocol, either you would need to design a specific purpose ZK protocol to do that. So it's not very generic purpose. Or those people would need to do this computation on a hub somewhere and then send the proof to the blockchain. If that happens, who guarantees privacy on the hub itself? You know what I mean? So like you, you're only really displacing privacy from an unchained privacy problem to an off-chain privacy problem. But you're not actually guaranteeing privacy .
+
+Anna Rose (29:30):
+In a blockchain context, though. If you look at something like Zcash, they are using it in a blockchain context. There's no open data happening. They're using the ZK P's to prove that transfers had occurred basically.
+
+Rand Hindi (29:43):
+Sure. And that's fine. And again, you know, you can always design a, a special purpose protocol for something. Here I'm talking about taking some arbitrary smart contract and running it privately for multiple users interacting together. There is just no way that you can do a multi-user, ZK generic smart contract protocol because those users will need to talk to each other outside of the blockchain anyway.
+
+Anna Rose (30:08):
+Hmm. I feel like there are teams trying to do that, and I don't, I don't know their arguments to, to bring to the table, but I would be curious if they're listening if they wanna weigh in on this on Twitter, maybe after it airs, if there is any way.
+
+Rand Hindi (30:22):
+Well, I'd love to learn more about that too, if that's the case, because, you know, I mean, I think it's, it's more of a structural thing, right? Yeah. It's, it's just not what it's meant to be used for. And in fact, I think that the holy grail of privacy and, and, and blockchain is actually to have homomorphic ZK rollups. Because if you can do homomorphic smart contracts on the layer one, well, you're still gonna have scalability issues, right? That means just like any layer one thing, you have scalability issues. And so what you want is to be able to do ZK rollups on an FHE smart contract, but then that's equivalent to doing provable ZK FHE. Right. And so I think that what's gonna be really interesting is this intersection between ZK and FHE as a way to create private scalable blockchain solution to smart contracts.
+
+Anna Rose (31:09):
+Interesting. Are you doing any work in that department? Are you working with any of the rollup providers?
+
+Rand Hindi (31:14):
+So we've started exploring what it means to actually do, you know, ZK FHE, it extremely complicated problem. The reason is that we, we looked at all the existing technologies and homomorphic encryption is such a big circuit, it's a huge computation. It just couldn't fit in any proof that would make sense. Right, and so I think, you know, a big problem we have right now is really just trying to just prove it in a time that is acceptable. Well, first of all, we're trying to prove it altogether and then prove it in an acceptable time. But we do think that this is gonna come from some kind of collaboration. You know, I don't think we're gonna be able to crack every problem ourselves. You know, we are the FHE company. There are amazing ZK teams out there, and, you know, collaborating on that would be a fantastic project.
+
+Anna Rose (32:00):
+Hmm. I wonder if FHE will go the path of ZK because originally, like you had said, it had sort of these unusable circuit side, it was just too, too slow, too big. And with a lot of optimization and the introduction of techniques from different kind of realms, it's gotten to become more and more efficient. Now there's zk-SNARKs that don't need the trusted setup. So you have, like you have seen in the last three years or since this show started four years ago, like incredible, incredible progress.
+
+Rand Hindi (32:30):
+The prover is still extremely slow. There's still a bottleneck on proving,
+
+Anna Rose (32:33):
+Well, it doesn't, it depend. I thought the prover is really fast. Wait, which one is it? STARKs and SNARKs. I always mix it up.
+
+Rand Hindi (32:41):
+STARKs. So like those kind of like big <inaudible> purpose prover are still very slow. And the reason is that the amount of computation needed to prove something is still very high. Right. It's, it's, it's much bigger than just doing the computation in the first place. Right. So, you know, proving something with ZK just adds this extra layer of compute, which just takes time. And, and this is the same thing that we see with FHE, is we cracked all the mathematical pieces, right? Just like the ZK community cracked all the mathematical pieces. But just like the ZK community is now getting to the points where they need a hardware acceleration to make this cheap and fast enough in FHE without getting to the point where the last mile is hardware acceleration. So to put it differently, we've solved every problem in FHE on the cryptography side. On the usability side. We just need this extra boost from hardware acceleration in order for this to become extremely cost effective and fast to run.
+
+Anna Rose (33:40):
+What would hardware acceleration look like for FHE? What do you need? Are you just looking for some type of ASIC that would just like make FHE fast quickly?
+
+Rand Hindi (33:50):
+Yeah, absolutely. Absolutely not just ASIC. So we're also looking at photonics, for acceleration. Any, any kind of accelerator would work. But the idea is that, this bootstrapping operation, which is very slow in homomorphic encryption, really boils down to doing a bunch of polynomial multiplications. Right? And the good thing is that doing that requires an FFT or an NTT, which is very similar to what people need to accelerate in ZK as well. So the same accelerators which are being used to accelerate ZK with those NTT's can actually be repurposed to accelerate FHE potential and vice versa. And so it's really interesting, but in the past six months, I've seen an increasing number of ZK acceleration companies start getting interested in doing FHE acceleration. Interesting. So all these things are converging eventually. Right. And I think that, you know, we're gonna see the first accelerators for homomorphic encryption available in the next couple of years. And my bet is that by 2025, homomorphic encryption is basically a done deal. It's done, it's solved. You can use it anywhere. It's cheap, it's applicable, it's powerful. It's easy to use. It's done.
+
+Anna Rose (34:58):
+Do you feel like FHE is meant to take the place of SGX in a way for these TEE's or trusted execution environments? Is that what it's meant to replace in a way? 'Cause it sounds like it has all that flexibility.
+
+Rand Hindi (35:10):
+Yeah. Yeah. Because why would you need a secure enclave? I mean, was the point in that case? There is no point. And in fact, I would even say that enclaves unfortunately have multiple attacks that have been built that have been proven on them. So it's fine if the enclave is on your phone, for example, right? Like, you know, because you, you're the one with the phone. But if you're gonna be offloading the computation to a server that you don't trust, where an attacker potentially has hardware access to a server can, you know, do some kind of power consumption analysis or whatever, then there are ways you can potentially attack the enclave. So homomorphic encryption is the ultimate solution that, you know, TEE's are trying to solve short term.
+
+Anna Rose (35:51):
+I see.
+
+Rand Hindi (35:51):
+So again, you know, it's, it's all a question of being pragmatic. Can you use, you know, trusting environments today? Can you use MPC today? Sure. Do it, it's gonna be faster than FHE in many use cases. Are they gonna be necessary once FHE bridge this final gap in the next couple of years? I don't think so. So I think, you know, it's gonna be like machine learning. You can use a bunch of different techniques, but why bother if you have something like deep learning that can do everything? So it's gonna be the same thing with FHE.
+
+Anna Rose (36:19):
+What are the security risks of FHE though? Like, so, you know, we just mentioned side channel attacks on TEE's. I'm assuming for FHE it shouldn't be the case, although if you do have dedicated hardware, could it be?
+
+Rand Hindi (36:32):
+There is no side channel attack on FHE. Okay. There are no side attack on FHE because there is no private key server-side. You know, in, in a trusted environment the private key is hidden in the hardware pretty much. Right. So, you know, it's there. That's why you can attack it and reveal it. In FHE all the computation server side is done with a public key. So there is no private key to retrieve because there is no private key sent or used in the first place on the server. The private key is always on the client side with the user.
+
+Anna Rose (36:59):
+And you don't think like certain kinds of computation would not be traceable because of like energy or there's no like signals or anything that would come through.
+
+Rand Hindi (37:07):
+Zero. There is absolutely nothing. If you can break homomorphic encryption, you're breaking post quantum cryptography.
+
+Anna Rose (37:13):
+Oh wow. Okay.
+
+Rand Hindi (37:14):
+That would be bad. That would be bad.
+
+Anna Rose (37:18):
+For other reasons.
+
+Rand Hindi (37:20):
+For many reasons.
+
+Anna Rose (37:21):
+It is. So it is post quantum - FHE?
+
+Rand Hindi (37:23):
+It is post quantum, yes. It's based on lattices it's based on lattices. So pretty much the same hardness assumptions as, you know, the NIST post quantum standards that we have now.
+
+Anna Rose (37:33):
+Interesting. Let's then talk about where the ecosystem and kind of community is at. So I know that, you know, the ZK community's been growing, booming. It's doing amazing. The MPC community, I know there was like efforts to build that up. I believe that is a rolling ecosystem. Where's FHE at as an ecosystem?
+
+Rand Hindi (37:55):
+It's growing. It's growing. So we started a community, a year and a half ago called FHE.org. Which pretty much is the community now for homomorphic encryption. So we have monthly meet-ups where we talk about homomorphic encryption. So it's very technical and it's not, it's not like, entrepreneurs community. It's, cryptographers community. It's really about cryptography. So we do meet-ups every month. We've got a bunch of amazing researcher that came to speak. Intel came to speak, Google came to speak. And we also do a yearly conference, usually around one of the existing conferences. Eurocrypt or Asiacrypt or, Real World Crypto, dedicated to homomorphic encryption. And there is also a Discord server, which is very active, where people talk about homomorphic encryption and also where library providers give support to users. So I think, you know, it's, it's getting there, right? I think we are formalizing this community, and when I say we, I don't mean Zama, I mean FHE.org. Which is independent from Zama and is growing and is great and more and more people getting interested in it, it's probably where ZK was two years ago.
+
+Anna Rose (39:02):
+Cool. Tell me about Zama. Like now let's revisit, you know, the beginning of your story definitely led to this, but what is Zama? How big is it? You, you'd sort of mentioned this earlier, what you're actually selling is this sort of black box, the ability for people to like use, use these tools, but not need to necessarily like, you know, develop the cryptography underneath them. So yeah. Tell me a little bit more about Zama.
+
+Rand Hindi (39:27):
+Sure. So we are a homomorphic encryption startup. We build and design cryptographic protocols that we then put into open source developer frameworks, that makes it easy for developers to use homomorphic encryption. So everything we do is open source. Everything we do is published. So we do a lot of research on cryptography. We do a lot of work on packaging that into frameworks. And on top of those frameworks, of course, you know, we're starting to build higher level protocols like the blockchain smart contract protocol or some machine learning specific stuff. So we try really to provide toolbox for application developers to use homomorphic encryption. So the company is a couple of years old. We were founded late 2019, early 2020. My co-founder, Pascal Paillier and I, were friends for years and we have always wanted to do that. So when I sold my previous company, you know, a week later we started Zama. It was like, a back to back thing, which I don't recommend anyone doing. It was..
+
+Anna Rose (40:24):
+You need some time off maybe.
+
+Rand Hindi (40:26):
+Yes, yes. Take six months, travel the world. I should have done that. But, you know, I was just too excited to get started on this. We have about 50 people in the company right now, half of which are PhDs, researchers in cryptography. So we are the largest team of research working on homomorphic encryption. We're fortunate enough that we've raised a significant funding. So we've raised over 15 million euros already. Which gives us plenty of runway to actually build, you know, this technology. The company is French, but we're not really based in Paris. So people are pretty much all over Europe mostly. You know, it was only four of us when COVID happened. So, you know, we had no choice but to be remote for this company.
+
+Anna Rose (41:05):
+Be remote. Um, you had sort of mentioned Python. Are you building tools for people to build applications in Python to then run through this? Is that one of the kind of toolkits that you're doing?
+
+Rand Hindi (41:17):
+Yes, absolutely. The framework itself is built in Rust. So all the cryptography is implemented in Rust. All the library stuff is implemented in Rust. And on top of that, we built a compiler that can convert from some Python program down into a homomorphic circuit that this Rust library will then execute. So the reason we did this is because, we wanted to make sure that data scientists working on machine learning had a very convenient way of plugging their existing Python codes into our homomorphic compiler. So it's really just, it's a product decision. You know, we, we don't implement anything in Python. Python is just a surface language that's being used for developers purposes, but you can use Rust as well if you want to.
+
+Anna Rose (42:01):
+So this isn't yet, there's like no blockchain native languages that you imagine compiling down into this yet? Like you don't have any sort of solidity to Rust
+
+Rand Hindi (42:10):
+Well, we thought about it. That's a good question. I think, I mean, a lot of, a lot of the blockchain world is moving to Rust anyway. So I think, you know, like we're probably gonna stick with Rust for the time being, uh, you know, in doing a compile facility, I don't think is necessary. Plus, I'm pretty sure that at some point someone will do a Rust compiler that goes to DVM directly. And so we'll do rust on Ethereum as well if it's not already done. So I think we're gonna stick to Rust for the blockchain part.
+
+Anna Rose (42:37):
+You also mentioned something, this is kind of going back to the FHE part. You had mentioned sort of the term TFHE. You had this other thing that's maybe specific to Zama. Tell me what that actually is.
+
+Rand Hindi (42:50):
+In homomorphic encryption, you've got three main technologies, three main like schemes that people are using. You know, just like in ZK you've got STARK, SNARK, Splunk, for example. In FHE you've got BGV, CKKS and TFHE. These are the three dominant technologies people are using. BGV and CKKS are very fast, but they can only do a certain number of operations. Beyond that, there's just too much noise and you can't do much about it. TFHE can do fewer operations, but it can bootstrap extremely rapidly. Meaning that you don't have to care about how many operations you're doing, you just keep on going forever. So we took TFHE and we've extended the capabilities of TFHE to be able to do much more than the original scheme that was published a few years ago by a woman called the Ilaria Chiotti, who also works at Zama today. And we've made TFHE able to do large integer automatics, able to do complicated deep learning stuff pretty much anything you want it to do. So are the other schemes useful? Yes, there are use cases where these can be useful, but we think that TFHE will be the dominant technology because of versatility and how powerful the primitives are in it.
+
+Anna Rose (44:05):
+I, I wanna sort of crack open some of these acronyms. So what does the T in TFHE stand for?
+
+Rand Hindi (44:11):
+Oh, the T stands for Torus-FHE.
+
+Anna Rose (44:15):
+Like Taurus?
+
+Rand Hindi (44:16):
+The, like a donut. Not like the animal, like, uh, like, like the, like mathematical Torus. Okay. It's like a donut. Right. Okay. They could have called it donut FHE. I guess it would've been the same thing. The idea behind TFHE was to use a torus as a way to represent, uh, the FHE computations, things like that. So it was just, it was a vision of the mind, if you want to, how the mathematics kind of worked.
+
+Anna Rose (44:40):
+What other projects would you say are in your industry? Like other teams that you maybe collaborate with or are also sort of working on this FHE.org initiative?
+
+Rand Hindi (44:50):
+Well, we work with many, many, many companies. I mean, we've got over 20 different partners ranging everything from hard acceleration to cryptographic libraries to, you know, machine learning stuff. There are more and more companies working on FHE specifically. You know, six months ago there were maybe like three, four of us in the last six months for some reason it just blew up. And now there is like 10 new companies doing FHE, which, I don't know what happened. You know, maybe we showed too much stuff recently and everybody was like, got excited about it. But it's great, right? Because it's gonna make things move faster. And also they're also good for us, you know, it's kind of nice to have a little bit competition finally. Right. It, it felt kind of lonely for a while. There are some very good teams working on FHE and I think, you know, it's, it's a big enough pie that, you know, a few companies can share it. As long as we are the number one in it, of course,
+
+Anna Rose (45:39):
+You know, <laugh>, <laugh>. I see, I see. Entrepreneurial. What are the other projects though, in case, just for us to know?
+
+Rand Hindi (45:47):
+So there is a company called Duality that a bunch of, very good cryptographers started. They're more focused on BGV and CKKS not so much on TFHE. So, you know, we're very similar in many ways. We just at a very different strategy and a very different technology stack. But, you know, they're, they're pretty established. There is a small company that just did their seed round to do homomorphic smart contracts as well called Sunscreen?
+
+Anna Rose (46:13):
+Oh yeah. Wait, I know them. This is, Ravital this is ex-NuCypher folks, right?
+
+Rand Hindi (46:18):
+Yes. That's them. Intel is working acceleration. Then all of the big guys are starting to look into that of course as well. But I would say generally is the trend, right? There are more and more companies, in that space, but you know, some of them are just using FHE. Some of them are inventing new FHE stuff. Ravital and her team are using existing schemes. They're just packaging it in a way that is convenient for smart contract developers pretty much. And they're doing very interesting work. You know, we're looking at what they do, of course, you know, taking inspirations in some cases too. We are much lower down the stack as well. You know, we build new FHE primitives as well as build those tools on top of it.
+
+Anna Rose (46:57):
+I wanna bring it back to machine learning. So you said you have sort of partners who are doing machine learning type stuff, how far away are we really from having private model creation under the hood of an FHE, do you think?
+
+Rand Hindi (47:12):
+Well, it works. It's just very slow
+
+Anna Rose (47:13):
+Right now. Okay. So it's doable already, but okay.
+
+Rand Hindi (47:16):
+It's doable. It's just slow. Okay. When is it practical to use? You need the accelerators. So a couple of years I would say.
+
+Anna Rose (47:24):
+This is your 2025 kind of idea.
+
+Rand Hindi (47:26):
+Yes, yes. 2025. That's my vision.
+
+Anna Rose (47:29):
+That's, that's your goal.
+
+Rand Hindi (47:30):
+Okay. That's where we're, that's where we're going.
+
+Anna Rose (47:33):
+<laugh> Nice.
+
+Rand Hindi (47:33):
+So yeah, so you can do it today if you don't care about waiting for a while.
+
+Anna Rose (47:37):
+What is a while by the way? Like when you say that? Like, what are you talking about? Like, do you mean like, like, you know, hours, days, months.
+
+Rand Hindi (47:44):
+Well, for training, For training it would take a very long time. Okay. for inference, if you're trying to make a prediction with a machine learning model, you know, you can do it in a few hundreds of milliseconds or a few seconds. Mm. It could be a few minutes if you're trying to do some super complicated stuff. So it's still acceptable, right. But it's not real time as people are used to, you know, like super snappy. I do something in one millisecond later, I get their response kind of thing. We'll get there. With the accelerators though, the accelerators are gonna provide, uh, 1000x acceleration for FHE. So something, you know, that takes, like a minute will take, a few milliseconds.
+
+Anna Rose (48:22):
+Very cool. Rand. Thank you so much for coming on the show, sharing with us sort of the journey that you took to Zama, but also letting me ask all those questions I had about FHE and haven't had a chance to ask in a long time. So thanks a lot for that.
+
+Rand Hindi (48:37):
+Thank you Anna for the conversation. Looking forward to it.
+
+Anna Rose (48:40):
+I wanna say a big thank you to the ZK podcast team, Henrik, Tanya, and Rachel. And to our listeners, thanks for listening.
+

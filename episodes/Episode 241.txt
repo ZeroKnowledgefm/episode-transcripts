@@ -1,0 +1,489 @@
+Anna Rose (00:00:05):
+Welcome to zero knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:00:27):
+This week, I chat with Vaibhav Chellani, a bridge builder, and the co-founder of Socket. We explore what makes up the components of a bridge, the types of bridges. And then look at a framework that they've developed to analyze the trade offs are on security and bridges. This episode comes at a really good time. Since at the moment, there are more and more bridges emerging to connect all these different chains together. And since they're so new, there are also a number of bugs, hacks and exploits happening at the same time. Hopefully this gives you some insight into what's going on with bridges. Before we start in, though, I wanna highlight a new video series we've launched this summer. It's called the ZK Whiteboard Sessions. It's produced by ZK Hack as well as the ZK crew from Polygon in it, host Bobbin and Brendan interview the top experts in the ZK space and explore the most important concepts and building blocks in zero knowledge. So, whereas this podcast is very conversational and quite broad in terms of topics. The ZK whiteboard sessions is educational and very much focused in on zero knowledge. It's also on video. So it allows you to explore the math in a much deeper way. If you wanna learn more about zero knowledge tech, this would be a great place to start. We already have a number of videos published, so be sure to check it out. I'll add the link in the show notes. One more thing. The zkSummit returns for its eighth edition. This time we're going back to Berlin and it's happening on September 15th. Be sure to apply to attend. And now Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:53):
+Today's episode is sponsored by Manta Network. Manta is a privacy hub for web3. By leveraging zero knowledge proofs Manta brings on-chain privacy to any crypto asset. Manta pay, which is their first dapp allows users to privately swap crypto assets, cross chain. Manta is also hiring they're looking for skilled developers and engineers, passionate about cryptography and passionate about bringing privacy protection services to all of web3. Manta's remote first backed by teams like Polychain, Binance, and other industry leaders. Check out careers.manta.network to apply. So thanks again, Manta. Now here's Anna's episode with Vaibhav Chellani.
+
+Anna Rose (00:02:35):
+Today, I'm here with Vaibhav Chellani a bridge builder and the co-founder of Socket. Welcome to the show Vaibhav.
+
+Vaibhav Chellani (00:02:41):
+Thank you so much, Anna. It's always been a dream to come here. Yeah. I've been a follower of the podcast for the last two years. Really excited to speak with you today for sure.
+
+Anna Rose (00:02:50):
+Cool. Well, I welcome then as a guest, this time around you're on the other side.
+
+Anna Rose (00:02:58):
+So today I think what I really wanna chat about is bridges I was introduced to you by Kobiour sometimes co-host here and he had told me, like I was, you know, I've been doing sort of an informal interview series with various bridge projects, and I've been doing this over the last year or last six months, at least. And yeah, he, he introduced me to you because he said that it might be cool to get sort of a meta perspective on the bridge landscape and that you would be someone who could help. I feel like it's super, super relevant right now. Obviously we're kind of speaking in the midst of a, a number of like high profile, high value bridge hacks happening, or I guess you can call them hacks or vulnerabilities or bug exploits or something. But yeah, there's just a lot of interest and money flowing into bridge protocols, but also a lot of these kind of, I don't know, like earth shattering yeah. Vulnerability, or like these hacks that scare people away from it. And there's kind of this push and pull around the concept of bridges. But yeah, I think to start off, why don't we find out a little bit about you? Like, what is your road to bridges? What led you to this?
+
+Vaibhav Chellani (00:04:03):
+That's a very interesting story. Yeah. Let me kind of start off from the very beginning. I was still in college when I joined as one of the first hires at Polygon, which was back in the day called Matic.
+
+Anna Rose (00:04:14):
+Yeah.
+
+Vaibhav Chellani (00:04:15):
+I was doing a bunch of plasma research. Plasma group was recently formed. Plasma was the way Ethereum would scale going forward, like Vitalik was, you know, very behind it, like the whole group. It was super fun. We were having like YouTube sessions, community calls, what do you may want to call it? That was super fun. You know, we did like Plasma prime. We did Plasma debit. We did like about 360 flavors of Plasma, but unfortunately like none of that worked out. So I was pretty bummed because of this, but internally like Polygon decided to build a POS system, which I also heavily contributed to. And it was a fairly new tech at that point, because this was, was the only kind of POS system in production and Tendermint, Cosmos, these were still, you know, kind of trying to build the systems.
+
+Vaibhav Chellani (00:05:02):
+So this was fairly interesting, but I still wanted to build this scaling system that inherits the properties of Ethereum, like plasma wanted too. And clearly like the POS system was not that, so one fine evening. I noticed anonymous guy post a proposal on ETH research, Barry WhiteHat that, Hey guys, you know, we should probably try to scale Ethereum via ZKPs. And I was like, okay, let's take this one out. Maybe it's just like another version of plasma, but as it did turn out towards the end, I was fully convinced, okay, this might as well work. It's very new tech, but looks really, really promising.
+
+Anna Rose (00:05:41):
+That was the origin of the ZK rollup concept. Right. That was what he had sort of proposed. Did he call it a ZK rollup off the bat or was it just sort of like let's scale a ZK?
+
+Vaibhav Chellani (00:05:52):
+Yeah, I think it was more of like you mentioned, like, you know, scaling Ethereum to 500 TXs okay. Something like that. That was the exact title I got pretty excited. I texted him on Twitter as, as general as he, he is, he kind of agreed to kind of form like a working group to start working on an implementation little, you know, this was like one of the first implementations of ZK rollups its entirety. Cool. and for me, like, like I did not understand anything about ZKPs, right? So Barry, you know, pretty much hand it kind of black box that really nicely introduced me to things like CirCom, circa days were these like domain specific languages for writing ZKP circuits. So I got really deep into that back in 2019 and I built a rollup. I presented that system during Devcon Osaka. I gave it to a tutorial on, like how to build a ZKP. And,yeah, that was how I got extremely excited about rollups.
+
+Anna Rose (00:06:50):
+But rollups is, I mean, and this is a question I have for later is like, what is a rollup? What is a bridge here, but now, I mean, would you say, was there a transformation from rollups to more bridge and like kind of multi, what is it cross chain bridging?
+
+Vaibhav Chellani (00:07:07):
+Oh yeah. Like what happened was like, after I, you know, kind of built a ZK rollup I wanted to kind of do that full time. Right. Okay. So I joined the Ethereum foundation officially joined Barry's team. Cool. And we built out Hubble. Hubble is this like fastest optimistic rollup. And during that one year of like building this out Hubble is now being used by the team at the World Coin, which is this orb thing. Oh, oh yeah. The world coin eyeballs yeah, yeah. That all the good stuff. Yeah. Well that was like a super fun project, but a unique insight that I had during that project was okay. You know, while rollups are good. The actual problem is like state sharding. What that means is like, if you took all the transactions on Ethereum and started doing those on a rollup, we would not have any stealing at all. So this meant we would need multiple rollups to kind of scale Ethereum. And that meant we need a system that allows inter rollup communication. I just wanted to accelerate this journey towards asynchronous communication happening between different rollups,because I see the future as like multiple rollups, you know, pair to Ethereum pair to Celestia pair to others ecosystems.
+
+Anna Rose (00:08:20):
+Maybe I can ask the question now is a rollup a bridge, does a rollup, have a bridge? What is it? Just a bridge? What is it?
+
+Vaibhav Chellani (00:08:29):
+Yeah, it's a, it's a fairly interesting question. To be honest, like, I don't know yet on how to actually denominate it. We recently kind of created a framework to evaluate bridges in collaboration with L2 B. And if you go on that proposal, this is like the topic that we're debating about and like, you know, is rollup a bridge if yes, what kind of a bridge, like everyone agrees, it's a bridge, but it's a pretty different kind of a bridge where it's so closely tied to Ethereum that social consensus of L1 also affects L2. Right? So it's a very unique kind of, and very closely attached to Ethereum kind of a bridge, I would say.
+
+Anna Rose (00:09:08):
+Say. Got it. So what's what leads you to the work you do today? Actually? What is the work you do today?
+
+Vaibhav Chellani (00:09:14):
+Well, yeah, so Socket is essentially an interop protocol, which tries to allow developers to kind of send data and assets across chains. Cool. so part of our protocol is out there on mainnet today, the asset bridging part, it allows people to send assets on one chain to the next, the way we do that is we aggregate all third party bridges, but we only do like native assets. Right. So like native assets on one chain, so native assets on another team. So, yeah. Excited to kind of get into that also later during the podcast.
+
+Anna Rose (00:09:47):
+Cool. Yeah. So let's kind of go into bridges as mentioned, I've had a number of teams on, who've talked about their particular bridge constructions, but I kind of wanna explore this framework you just mentioned, but let's start sort of the highest level you sort of mentioned rollup could be a form of bridge, but why don't we just say, even above that, what is a bridge?
+
+Vaibhav Chellani (00:10:08):
+Yeah. What is a bridge? I think the definition has changed quite a bit or the last year specifically for this event, I would kind of term a bridge as something that sends assets across chains.
+
+Vaibhav Chellani (00:10:21):
+Okay. I would also introduce another interrupt system called messaging protocols. And I would place things like there are two chains, always connected by a messaging protocol and a bridge is an application on top of this messaging protocol. So a token bridge is a bridge that allows you to send tokens across chains, an NFT bridge would be an application on top of this messaging protocol that allows you to send NFTs across chains. We can imagine a governance bridge that allows you to work from different chains. So I would kind of term bridges as applications built on top of top of some messaging protocol, generally.
+
+Anna Rose (00:11:00):
+Would you say that, I mean, we can talk maybe about some of the different techniques that people are looking at when it comes to bridges. Do they live primarily on one chain? Are they a collection of smart contracts on or on two chains potentially? Or are they their own entity?
+
+Vaibhav Chellani (00:11:17):
+Hmm. Usually it's like a collection of smart contracts on two chains orchestrated by an off chain actor that kind of becomes the man in the middle of how much do you trust this man in the middle? How much of the trust in the system relies with the man in the middle that essentially describes a bit security.
+
+Anna Rose (00:11:37):
+Mm. And I guess going back to that question about what is a roll, is a rollup a bridge. In that case, it usually only has connection to one chain, right? It's not necessarily between two different chains, but rather one. And then the question is the little link between the rollup and the main chain, is that a bridge? And that would also just be some contracts, right?
+
+Vaibhav Chellani (00:11:58):
+Oh yeah. Like if I talk about like on an implementation level, almost all the rollups operate on a basis of like, you know, let's have a get node running and have this competent bridge, like our bridge optimism as the optimism messenger that connects the gets node, the sequencer would be running to an L1 smart contract. So it's essentially also like, you know, two chains connected by extremely secure bridge. Patrick calls rollups as validating bridges. I think that's a, that's a pretty nice term. Yeah.
+
+Anna Rose (00:12:32):
+Interesting. Is it possible basically to basically to construct a roll up where it doesn't have its own chain, it's literally just within the smart contract itself that some logic is in there. It's almost like a DApp. Is that possible?
+
+Vaibhav Chellani (00:12:45):
+Yeah. That's why like these rollup systems, these rollup systems are essentially just smart contracts, smart contracts with a guy who's like, you know, Hey, just give me your transactions. I'll batch it and send it to L1, that's all the rollup operator of the sequencer does. Right. But then, you know, to kind of evaluate some liveness concerns and things like that, people had some consensus mechanism to make sure if like the sequencer goes down the transactions still keep processing. And that's how this like very simple model becomes like a chain that's connected to an L1. Right. But at the very core it's a, a rollup. It's just a smart contract on L1. That's it.
+
+Anna Rose (00:13:23):
+Cool. I know that there was this comment by Vitalik, I think of four or five months ago, or there's a blog post where he argued for a multichain future, but not a crosschain future. So in this case, he's using the term multichain, I think, to refer to more like a rollup centric model with one data availability solution at the center. Ethereum, I don't know if you mentioned Celestia, but like could also be something like that. Or like Polygon Avail solution, but so that's a multi chain in that definition and he's kind of arguing against a crosschain. And I'm curious a little bit like what you guys think about it. I know you also had a rebuttal blog post, so, you might have some ideas.
+
+Vaibhav Chellani (00:14:07):
+Yeah. It was not exactly like a rebuttal. It was more like, I think, yeah. Some nuances get missed and like the comment that Vitalik posted was very interesting given, like no one had actually talked about that in that tone or like with that perspective before and we are starting to see some similar discussions happen with ETH2 over the crypto Twitter over the last couple of days where people have mentioned concerns that there will be like a ETH1 proof of work chain still running. Some miners would still run it. And what happens then? You know, what happens to people providing liquidity on Uniswap things like that. But yeah, it's getting like fairly hairy. So let me kind of address the command directly first and then we can get into like how it's similar to the current situation. Mm. So yeah, like the comment was generally, okay, you know, you cannot really move assets from one chain to the next because blockchains have this unique property of social consensus that makes sure the blockchain is secure. Right. what that means is like even a 51% of the participants in the network, somehow call you, your funds are still safe because you can perform a hard fork. You can socially agree that some form of like collision happened and you can start a Fork uh, before the attack or the wrongdoings, you know, started to happen. Yeah. And that's what essentially makes a blockchain secure. But once you start bridging out of it, you know, things start becoming hairy, right? Yeah. Because what if the bridge accepts a deposit from a fork that's non-existent after a while, because the chain socially hard forked to something else.
+
+Anna Rose (00:15:53):
+Yeah. We've talked about this a little bit on the show. There's this also this idea of like a fragmentation of liquidity. And I just picture trying to track that back across multiple, you just don't know what actions have happened with that. And so this idea that you could hardfork that maybe it's possible, but it just seems more and more complicated if you're also dealing with these like sort of third party bridging protocols in the middle. Yeah. Or if, maybe even if like the origin contract gets messed up on the mainchain, like how quickly does that proliferate through it and what effects does it have? It just becomes very crazy. But at the same time, I mean, I think the argument is like he prefers a multichain to a crosschain, but like, it's not reality that we live in today, whatever four or five months after this blog post comes out, maybe even then there's so much cross kind of chain liquidity happening.
+
+Vaibhav Chellani (00:16:46):
+I mean, the attack that, that he mentions is also like an extreme case, a chain getting 51% attack that has not happened very frequently in the history of blockchains. So it's, it's a fairly extreme state. And I think we are already kind of using a lot of bridges. I see Circle as a bridge between a bank in US and on Ethereum, on Solana, on Polygon and things like that.
+
+Anna Rose (00:17:14):
+Why do you see that as a bridge? That's actually, I'm curious, like it's not the bridge between the bank and these chains, is it, is it because it's the same underlying asset and they live on different chains so they could be interchangeable somehow? Or what do you mean?
+
+Vaibhav Chellani (00:17:27):
+Let me kind of start over with, let's say Binance, right. So how Binance and Coinbase work is you transfer money to Binance on an address that they give you let's say on Ethereum and Binance kind of waits for, let's say, 12 confirmations and then starts showing that asset as received on balance and it allows you to trade, right? Now what happens if this deposit, this was lost in a new social, hard fork created by Ethereum. Binance just allowed a user to place a trade on an asset and book a profit when they did not receive money from him on Ethereum. Right. Mm. Now if you just replace Binance with Solana or Polygon, that essentially becomes a bridging infrastructure that we have right now. And that's exactly like the attack that Vitalik is trying to point up. In the USDC example. Right. firstly, it's like a, it's definitely not very close to like the bridging infrastructure that we have right now, given it's like, trying to, it's, it's more of a Oracle because it's trying to like kind of map physical entity toward digital one, but in some sense it's accepting deposits or withdraws from Ethereum back to the bank as well.
+
+Vaibhav Chellani (00:18:38):
+Right. So it also has to wait for finality on Ethereum and it's also, it also has the same attack vector that Vitalik mentioned about bridges, right? Mm. What if a user kind of comes to circle says, Hey, I want to withdraw my USDC and circle accepts that after 12 confirmations. Right. And then the deposit is lost in a new social hard fork. Right.
+
+Anna Rose (00:19:02):
+Okay. So it's,
+
+Vaibhav Chellani (00:19:03):
+It's kind of the same attack vector, I would say.
+
+Anna Rose (00:19:05):
+You sort of just mentioned that it was like an Oracle. I've actually heard that. I think in the interview we did with Nomad, they also mentioned that bridges are like Oracles. Can you explain how that is?
+
+Vaibhav Chellani (00:19:20):
+Yeah. So it is quite interesting. Bridges are essentially like Oracles kind of trying to define Oracles here. Oracle Oracles are things that let blockchain know that something happened in the physical world. That's the definition that we have for Oracle right now. You know, let's say there's a weather Oracle, it will tell an on chain smart contract that, Hey, you know, weather in California today is this much, right? That's a, that's an Oracle. Now.
+
+Anna Rose (00:19:48):
+And maybe the most common example that we see are, are price Oracles. So it's often like determining a price pairing, like what, what do they compare this, this token to this token at this time?
+
+Vaibhav Chellani (00:20:00):
+Exactly. So this Oracle is trying to, you know, let's say really some information from Binance to Ethereum mainnet here. Right. as I did before, let's just replace Binance with something like Solana or Polygon. It essentially now becomes a bridge, right? Because this Oracle can also go to Ethereum and can tell that they just received a deposit from a user on Polygon. So Oracle, Oracle can become a bridge, but I like to kind of highlight and nuance here. I think records that kind of feed real world data to Ethereum mainnet are very hard to
+
+Anna Rose (00:20:43):
+Trust,
+
+Vaibhav Chellani (00:20:44):
+Trust and there are essentially no way to kind of do it without trust. And that's why chain link is pretty popular in that kind of scenario. Because it's like really hard to map like physical entities and digital entities together because it's just like such a different realm. But I feel we could do a lot better in the digital ecosystem because when we are connecting to different blockchains, these are two digital entities that we are trying to connect. And there are ways to kind of prove to one entity that something happened on another entity and we have to strive to not trust in a record here. That would be like the worst case scenario. If you're not able to figure out this billing situation, of course we can, you know, kind of start trusting Chainlink again. But the fact that both of these chains operate on chain, they are digital in nature and they have a way, some kind of script economic security or other methods. I think we should be able to do better than like providing Oracle level security on bridging.
+
+Anna Rose (00:21:49):
+Mm. So we're speaking on this topic seems kind of related another point that was brought up, I think on the Nomad episode was this idea of almost like the call answer problem where it's like, unlike a web call, you're sort of expecting something to bounce back when it comes to blockchains. Like they don't talk to each other that way. And the bridge in a way is trying to get like state of both so that it can act as this conversation piece between the two blockchains kind of going back to what you just said about the Oracle, like in the case of them, a thinking of them like an Oracle, are they also acting a little bit like that communication layer in between?
+
+Vaibhav Chellani (00:22:30):
+Yeah. I mean, Oracle is trying to like map a physical and digital entity. It might as well replace that physical entity with the, with the digital entity. And that would be like the worst kind of bridge that we can have. Okay. And I basically define as like Oracle being the lowest security possible, everything else on double
+
+Anna Rose (00:22:50):
+Only go better.
+
+Vaibhav Chellani (00:22:51):
+Okay. Okay. Yeah. It can only, only become better. And we can use like, you know, some sort of proof, some sort of technical guarantee, some ZKPs hopefully to kind of make this system trustless or trust, minimize, and not as trustful as the records and yeah. Then you can do all sort of messaging, all sort of communication between two different things.
+
+Anna Rose (00:23:13):
+Can you actually go a little deeper on that problem though? This call answer thing? Like what happens when some something happens on one chain? Like basically, how do you get message and reaction? How does that even work?
+
+Vaibhav Chellani (00:23:26):
+Hmm. I'm not a hundred percent sure about what the context was when maybe James told this, but I'll try my best.
+
+Anna Rose (00:23:34):
+Okay. Yeah. Sorry. I'll reference it. Maybe you haven't heard it.
+
+Vaibhav Chellani (00:23:36):
+All good. All good. Basically maybe the problem that he's trying to refer to is that, you know, a normal systems like web2 is built in a pretty async fashion, right. Everything is async in web2, like making an API call is how you do composability between systems in web2 in web3. It's been synchronous communications so far, right? No
+
+Anna Rose (00:24:01):
+One really it's synchronous. It always has to happen at the same time. Okay.
+
+Vaibhav Chellani (00:24:04):
+Exactly. In the same transaction. Yeah. That's been the programming paradigm so far. Right. but over the last two years, we just realized that to scale a public blockchain, we have to break it down and there will be some asynchronous system. We have to sacrifice some synchroncity to scaling and no one really knows, like, what's the best way to do async communication in a blockchain context. Yeah. And bridges are an attempt to figuring that out. And yeah, Socket is an attempt to kind of actively push towards that. You know, let's figure this problem out because that's the only way we can scale Ethereum into another chains.
+
+Anna Rose (00:24:43):
+That's interesting that idea of this right now, everything being synchronous. Do you feel like the bridge solutions that exist today are actually making it asynchronous or is it more just like we're making tiny baby steps towards having a more, more asynchronous system?
+
+Vaibhav Chellani (00:24:58):
+Kind of like going down the same analogy of like, you know, web2 operating, you know, fully asynchronous. If I were to kind of like one is to one, map it to the current bridging infrastructure, the API code in the web2 world takes 60 seconds at most. At 60 seconds. The communication stops no matter what, right? Yeah.
+
+Anna Rose (00:25:19):
+Either it's works or it just gets canceled
+
+Vaibhav Chellani (00:25:22):
+And it's fairly cheap depending on like what kind of data you're trying to request. It's fairly cheap. But if I were to, like one is to one map, this like web2 system that we have right now to web3, it would mean one API call costs like $100-$200 at the minimum. And the latency that you can expect is like 60 minutes or even a lot more like seven days in case of rollups. Right. So we are definitely like taking baby steps towards it, kind of hard to provide any sort of like guarantees in terms of like latency, because, you know, no one really knows if a bridge kind of promises that, Hey man, I like I'll bridge your transaction like five minutes. So no one knows what the gas price is going to be. Right. So it's like extremely hard to provide these guarantees. And the API calls are extremely extensive, extremely slow. So the amount of async communication that's happening right now is super small. It's mostly tokens where you send it token from one chain and you receive it, like whatever, you know, like 30 minutes later, but we will, you know, kind of get there slowly, I guess.
+
+Anna Rose (00:26:32):
+Well, thank you for answering all these sort of like random questions. These are leftover bridge questions that I feel like I've accumulated over the, the last few months of, of doing these interviews. But let's talk more about this framework. I think that's what we wanted to really cover in this show, which is like the way of thinking about different bridges. Maybe it touches on some of the things we've already mentioned. I know that there's other concepts like light clients and yeah. Even the, the sort of optimistic style that Nomad has or the cryptographic style that Axelar has. So yeah. I'm just curious, like, let's, let's go into it. Let's start to dig into this framework.
+
+Vaibhav Chellani (00:27:08):
+Okay. Oh, just to kind of like have some context about like, why we started look looking into this stuff. Socket's liquidity layer is essentially built like aggregator of like third party asset bridges. And we were like, okay, you know, there are like all of these bridging solutions out there that are always trustless. Of course they're marketed, you know, pretty heavily to like normal people. And the stack is generally hard to understand. So people use it and then they get tracked. Right. So us as a aggregator. Yeah, probably bad timing but we just felt it was important for us to provide some transparency on the security properties of the bridges that we are trying to integrate. Right. So we had this list of like 150 different bridges, and we were trying to find, to provide some information about how secure a particular bridge is without it being too research-y for a normal person to understand.
+
+Anna Rose (00:28:14):
+Wow. So 150 bridges is this, is this sort of like bridge instances or bridge projects, because I'm just thinking like, would you count one of these bridges as like, if you have Solana to ETH and then another bridge would be like, even if it's from the same company, like ETH2, I don't know, something else Alogrand.
+
+Vaibhav Chellani (00:28:34):
+I know, no, these are actual projects. Like these are actual bridging projects that are on mainnet. They have like small amount of liquidity yeah. Things like that.
+
+Anna Rose (00:28:44):
+Okay. So this is not each individual connection. These are projects.
+
+Vaibhav Chellani (00:28:48):
+Yep.
+
+Anna Rose (00:28:48):
+And, and would you say that, like, in those that 150, do you see very clear classifications of how, of these approaches?
+
+Vaibhav Chellani (00:28:58):
+Yeah. not very clear classification. That's essentially why we had to kind of like do it in like a more community oriented way. We could not find a common framework. That's very clear a lot of bridges kind of lie in, in two buckets, a lot of bridges like do one thing differently that could change the whole dynamics of the system.
+
+Anna Rose (00:29:24):
+Wow. And the security, I guess.
+
+Vaibhav Chellani (00:29:26):
+Exactly. Exactly. Wow. Okay. So we wanted to kind of do this more holistically kind of chat with a bunch of teams on like how to exactly categorize these systems, because these are like so different. And for us, we just wanted to try and create a kind of score that we could assign. It would definitely not be super accurate, but that's what, like, we felt that people actually wanted. They don't want to kind of dive into details about like how this bridge works, things like that to understand when they're trying to bridge assets, we just want to tell them, okay, you know, this bridge is like three out of five. This bridge is 3.5 out of five. Just so that they have this upfront and it's not hidden behind like layers of marketing.
+
+Anna Rose (00:30:12):
+How did you do that score though yourself? Like, were you, did you score certain kinds of bridges higher? Like say a light client bridge? Would you just like, if there's a light client on either side, is that's more secure in your book?
+
+Vaibhav Chellani (00:30:25):
+Definitely. Okay. Definitely. Definitely. Like the light client bridges are definitely like the most secure ones after rollups because rollups are like, light clients with social consensus. Mm. Light clients have the same, like problem that we talked about Vitalik mentioning earlier. So light clients with social consensus, that's rollups. Like clients with validity proofs. That's something like what Mina is trying to do. And then there are like normal light clients. But yeah, I can, yeah. This is probably like a good time to like, get into all of this like classification detail.
+
+Anna Rose (00:31:02):
+Sure. Yeah. Let's do it.
+
+Vaibhav Chellani (00:31:04):
+Okay. Sweet. So like starting from the very beginning we talked about this a little bit earlier, but I'm talking about bridges as like, as a application on top of a messaging protocol. So if the messaging protocol has a security property, all applications on top of it inherit that security property directly, just to give an example let's talk about Ethereum and Optimism. Optimism has an optimism messaging bridge of sorts and any token bridge that's built on top inherits the same rollup security. Right. What that means is, you know, going from Ethereum to Optimism would be super fast. Going from up from Optimism back to Ethereum would be super slow, like seven days or things like that.
+
+Anna Rose (00:31:50):
+Just one thing. When you talk about like the token you're using this term for like what's built on top, what did you say again? The token bridging,
+
+Vaibhav Chellani (00:31:58):
+I call it token bridge,
+
+Anna Rose (00:32:00):
+The token bridge. So the token bridge itself, like I think of optimism as sort of a bridging, like it would provide you with the application to actually do the bridging, but are you saying that like any, that Dapp could basically make their own, their own interface and it would be kind of living on both sides, but using this bridge and that would always have the same properties of the underlying message passing protocol, I think. Is that how you say it? Yeah. I gotta get this language, right.
+
+Vaibhav Chellani (00:32:29):
+I mean, no one, no one really kind of has defined these terms. So we are free to use whatever you want.
+
+Anna Rose (00:32:34):
+Okay, Cool.
+
+Vaibhav Chellani (00:32:35):
+Yeah. So like Optimism essentially has provided a way to securely send data from Ethereum to Optimism and vice versa. Now this data can be anything. It can be a data about like bridging of a token bridging of an NFT and applications. Like people can come and kind of build bridge applications on top of this messaging protocol that they have built. So optimism token bridge is just one example that Optimism team has built. Yeah. So synthetics, for example, uses the same messaging system, but they have a different kind of like bridging mechanism. That's not the same as optimism token, which okay. So yeah, people can come and experiment as they like build like different sort of like logic on top things like, you know, I'm on L2. I want to vote on a proposal. That's on L1. Yes. You can do that via optimism messaging bridge.
+
+Vaibhav Chellani (00:33:34):
+Right. You just have to build an application on top. Yeah. So the hierarchy is a messaging bridge. I just call it a messaging protocol just to not use like bridges very frequently. So messaging protocol, bridge applications on top, and then comes this new term called liquidity networks on top of token bridges. Right? So token bridge is something that allows you to send tokens from one chain to the next. Liquidity networks are systems that allow you to swap these tokens from one chain to the next. So when you use a liquidity network, you basically swap out already minted asset and not kind of make a new one, right. This difference is like pretty simple pretty subtle, pretty confusing at times. So happy to kind of dive a little bit deeper.
+
+Anna Rose (00:34:31):
+I wanna go over those steps again, cuz I started writing them down as you were saying them, but it's messaging bridge, message protocol, token bridge.
+
+Vaibhav Chellani (00:34:41):
+I would just call it a messaging protocol, a token bridge on top, then a liquidity network. You can kind of remove the bottom layer
+
+Anna Rose (00:34:50):
+The, the bottom layer. Okay. Yeah. And then, but the liquidity network, is that sort of like a DEX, is that like when you're trading, like instead of it being that you're going, like if you wanted to trade a dot for ETH could you just in this other sphere, just like do it automatically kind of immediately without having to transfer your like transfer and wrap your assets to each one. Is that sort of what you mean when you say liquidity network?
+
+Vaibhav Chellani (00:35:18):
+Yeah. That is kind of close. So essentially let's say USDC on Ethereum is not the same as USDC on Solana.
+
+Anna Rose (00:35:28):
+Okay.
+
+Vaibhav Chellani (00:35:29):
+Right. So these are different assets. So you can kind of imagine liquidity networks as being a crosschain DEX such that they allow you to swap USDC on Solana for USDC on Ethereum, because these are different assets. Okay. Altogether,
+
+Anna Rose (00:35:45):
+But it doesn't allow you to swap. It's not allowing you to do full cross network trades.
+
+Vaibhav Chellani (00:35:52):
+Eh, no. It's not allowing you to like no token actually crosses Ethereum. Yeah. And Solana boundaries. It's just that you exchange ownerships with the counterparty. Okay. So the, so the guy who is holding USDC Solana, you take the USDC Solana from him and exchange for taking the Ethereum Solana, you know, from the other guy. So it's like kind of changing ownership on both sides, but no actual asset moment happened between the boundaries.
+
+Anna Rose (00:36:22):
+But do you have to, do they have to be the same asset synthetically on each side? The example you gave is U SDC on two chains, but does it yeah. Could it be two different tokens on two different chains?
+
+Vaibhav Chellani (00:36:33):
+Yeah, definitely could be. Yeah. Well USDC here it's technically the same assets, but it's on Solana and Ethereum so it's actually different assets.
+
+Anna Rose (00:36:43):
+I just, I guess I'm just like, I'm thinking almost like from a trader's perspective where like maybe just a simple trader's perspective where you'd really just wanna, you have it sitting somewhere. You want a sort of maybe the native token on the other chain. And I'm wondering if, if this liquidity network would be something that could happen. What about stuff like, like loans and like, could you also use a liquidity network to do more sophisticated defi stuff like potentially locking tokens on one side to provide like as collateral and then providing liquidity on another?
+
+Vaibhav Chellani (00:37:16):
+I mean, there are some like tricky ways to do it, but at that point you might want to use the token bridge or the messaging protocol to do it. Right. Because you could just build this whole thing as a application on top of the messaging protocol, you know? Yeah. That would make it a lot more simpler because these liquidity networks are a lot of time kind of restricted by the amount of liquidity. So you, you likely will not want to be sustained by that.
+
+Anna Rose (00:37:43):
+Can we go a little deeper into liquidity network then? Because I don't know if I fully see the distinction there.
+
+Vaibhav Chellani (00:37:51):
+Of course. Let me maybe like start out with some examples, right? So an example of a liquidity network in production right now is, are, are things like hop and connects. Right. So hop and connects. They allow you to get into an engagement with a counterparty or with a market maker who swaps the token with you for a fees. Right. and that's the reason why these things can be like super fast, super cheap things like that. Right. To kind of elaborate on the difference between a token bridge and a liquidity network. Maybe let me kind of walk through the journey in both cases. So let's say you want to move some money from Polygon to Ethereum, right? Or, you know, let's do Ethereum to Polygon. Let's say you want to move a hundred USDC from Ethereum to Polygon. You go to the token bridge, the token bridge, escrows the money on a smart contract on Ethereum and the Polygon native bridge means a wrapped version of USDC on Polygon and now applications use this rap version of USDC as normally USDC and it's, you know, it's like the native USDC until like circle starts minting there.
+
+Anna Rose (00:39:08):
+Okay. And before, until it goes direct, until circle goes direct. Okay. Okay. Yeah.
+
+Vaibhav Chellani (00:39:13):
+Yeah. So assuming circle is not minting directly on Polygon. This is essentially Polygon USDC right. Okay. So now a user, when he's trying to kind of, you know, bridge from Ethereum to Polygon, he has this one way of doing it, which is going where the Polygon native bridge that would mint new USDC and escrow his USDC on Ethereum. Yeah. The other way that we're talking about, which is the liquidity networks what happens there is you are on Ethereum. You look for guys who are willing to give you a hundred, or let's say 99 USDC on Polygon. Once you find this guy, you lock your money inside the smart contract on Ethereum, this market maker, or this counterparty, he gives you money on Polygon. So you receive 99 USDC on Polygon. And then this guy can go back on Ethereum and take your a hundred USDC there.
+
+Anna Rose (00:40:07):
+I see. So it's you don't mint it, you just use existing on one side that actually speaks to a very old episode. We did about like the lock unlock mint burn kind of concept. So what you described with the token bridge there is that you would basically lock on one side and then mint on the other, and then I guess to move backwards, you have to burn it and then you'd unlock it on the main, on that original space here. What you're talking about is like lock, unlock on one side and lock lock on the other, right. Or just like trade to you. It's like you get it.
+
+Vaibhav Chellani (00:40:42):
+Yeah. It's more, more like a swap, you know? Okay. So it's like a token swap. There is no token transfer. There's just like swapping of tokens that's happening across chains, just to kind of highlight a very interesting difference here is that usually these liquidity networks can be pretty fast because you are essentially kind of engaging with the market maker. Right. So let's say I'm trying to move from Ethereum to Polygon and you are kind of offering me a rate. Let's say, you know 98 USDC right. So you might be willing to take on some kind of rollback risk in exchange for more fees. Right. What that means is you would allow me to get from Ethereum to Polygon in let's say two minutes, instead of Polygon native bridge doing it in 15, 20 minutes. Yeah. Because you can offer more competitive rates because you can take on additional risk for a fees. Right. Okay. So usually people use these liquidity networks for like faster transfers and you know, kind of bypass the native bridge. And if you notice really this concept started coming up, like a lot of these kind of bridging designs started to come up when Arbitrum and Optimism went live, because using the native bridge there for going from Optimism back to Ethereum is not really an option
+
+Anna Rose (00:42:05):
+Because it took takes seven days or so. Yeah.
+
+Vaibhav Chellani (00:42:07):
+Yeah. So we needed like a swap protocol that would give you, give it to you instantly.
+
+Anna Rose (00:42:13):
+Got it. Behind the scenes though. Are they manually using those bridges as well? Like, are they moving those tokens over sort of, and then in the meantime, lending stuff out to you or like giving you things, is that sort of how it works?
+
+Vaibhav Chellani (00:42:24):
+Yeah, definitely. So these guys would be maintaining like liquidity pool on both chains. Yeah. And they would be like, kind of swapping between these liquidy pools, but you have to imagine at some point, one of their pools will not have liquidity anymore. So at that point they would rebalance and they would rebalance via whatever messaging bridge or token bridge that's connecting these two chains. So at some point they would be using it, but would, it would be in a more batched fashion. Right. And only when they've run out of liquidity.
+
+Anna Rose (00:42:54):
+Got it. So you've just kind of given that description of how these bridges are built and these different components of like a bridge or a, I don't even know how to describe it. Cause it's like multiple bridges, protocol, whatever. Yeah. Basically like how these cross chain entities are starting to develop and the stack that they have, but I will kind of wanna go back to the framework and the security. And actually, I wanna, I wanna step back, because you had started to tell us the, the most secure and you were kind of going down and I'm curious what happens after, where did you stop? You stopped at like light client, but not validity proof. That I don't know what happens after, in terms of security.
+
+Vaibhav Chellani (00:43:38):
+Yeah, definitely. Let's get into that stuff. Yeah. So maybe we can, we can go in some sort of order, right. Order of security, right? Yeah. So we have kind of nailed down the stats here, a messaging protocol on top of that, a token bridge on top of that liquidity network. Like and now we'll start going into some like how are these bridges designed and how that affects security? And we do do that in a decreasing order. We'll start with the most effective way to move assets or data across chains. And that would be what rollups do like, okay. So in the framework itself, we call it like, light client verifying validity of the stake.
+
+Anna Rose (00:44:23):
+Okay.
+
+Vaibhav Chellani (00:44:24):
+Right. These are like the most secure way to do crosschain building. We essentially kind of describe it as like bridges that verified the validity of a state transition that happened on the source chain, but we validate or verified it on the destination chain. So the destination chain will take all of those transactions. It will validate it somehow that these were correct and only then kind of accepted. So let me kind of describe how rollups are an example of this. Right. So when we are talking about, you know ZK rollups or optimistic rollups let's assume these are two different chains connected by a bridge, right? So a ZK rollup essentially proves to Ethereum, that hey man and I just processed some transactions on my side and here's the ZKP that attests or like that proves that all of these transactions were done correctly.
+
+Vaibhav Chellani (00:45:18):
+And in the optimistic scenario, it's like, Hey, Ethereum, these are the transactions I processed. Prove me wrong. Prove me wrong. Yeah. Yeah. It's like a very lazy way of doing it. But essentially Ethereum is the source of growth. Ethereum verifies kind of verifies all transactions and the validity of those transactions. So this is one kind, right. The more secure kind we can get into other trade offs, but talking about only security. Yeah. This is the best that you can get. Okay. So now we go a little bit less, right? So the second thing that we introduced was light clients validating consensus. So these are systems that allow asset and data movements, but they only validate consensus. Okay. Right. So let's say you were trying to bridge between Ethereum and Solana. This is all theoretical. I don't think it's actually possible, but okay.
+
+Vaibhav Chellani (00:46:15):
+You would be verifying consensus of Solana on Ethereum and vice versa. Okay. You wouldn't be checking all transactions. You wouldn't be like, you know, kind of seeing if the transactions were executed correctly, you would just be like, okay, if two, by third of the validators say it's secure, then it's secure. Cool. Right. If you don't have to get into the nitty gritty, just to elaborate the different between both of these things, the earlier one, light client validating transactions, that's more like a full node, in Ethereum's context a light client valuing consensus. It's more of a like client in the Ethereum context, like a light node that people can run in their browsers. Like cool. And we obviously know like, you know, kind of running a full node is definitely more secure running a light client, like, so it's kind of like baring some like similar properties there, a bunch of examples here for the first one, it was like, rollups for the second one. It's like the Polygon POS bridge Cosmos IBC is a great, great example. You know, like IBC, it's all like line based. You have two chains, they would validate consensus of each other as long as they both are honest. Things are extremely good.
+
+Anna Rose (00:47:30):
+It's interesting to me that you put rollup as more secure than IBC, I guess. I never really thought of that comparison. You also mentioned sort of like the Mina the Mina setting. But that is that one layer down from IBC where it's like, it proves itself kind of, but it doesn't necessarily, it just submits a proof. It's not that that has to live somewhere else. Just the proof is enough.
+
+Vaibhav Chellani (00:47:53):
+Yeah. You touch upon a very interesting point. This is like the exact point that we are fighting on right now or, or the L2B forum. Okay. So the Mina bridge is interesting because it's also validating transactions, but it's not, it's not as secure as rollups. So I would put it somewhere in between. I would put it somewhere between cosmos IBC and rollups.
+
+Anna Rose (00:48:17):
+Okay. So it's even higher in terms of security than IBC.
+
+Vaibhav Chellani (00:48:21):
+Definitely. Okay. Definitely because in Cosmos IBC, if one of these chains lie oh yeah. That, that the validity of Consensus, you know, let's say, you know, two by third validator collude, then the destination chain would gladly accept it. Okay. But here the Mina chain is posting a ZKP. So if the ZKP is valid, the state transitions are valid and the destination chain would accept it. And they have no problems with like consensus failures or things like that. Cool. The problem, the Mina chain has that rollups don't is social consensus.
+
+Anna Rose (00:48:54):
+What does that mean?
+
+Vaibhav Chellani (00:48:56):
+Let's say you tried to bridge out of Mina to Ethereum and you created a valid ZKP for it. Ethereum gladly accepted it, but Mina hard forked.
+
+Anna Rose (00:49:09):
+Oh, ah, yes. Okay. Okay. Something else. Okay. Okay. This is that okay.
+
+Vaibhav Chellani (00:49:14):
+Yeah. Mina hard fork to something else and it's gone now. It's like fully wrecked. Okay. rollups don't have this problem because there is one source of growth. That's Ethereum L1.
+
+Anna Rose (00:49:25):
+Got it.
+
+Vaibhav Chellani (00:49:26):
+But in Mina and Ethereum, both are at the same level. I would put It like that.
+
+Anna Rose (00:49:31):
+And the idea is if Ethereum hard forked, which is hard to do and unlikely, but like, say that happens, then it would carry with it, all of its rollup stuff anyway. Exactly. So it would kind of follow it. Okay, cool. So I got that. So then in the case, going back to IBC though, and then IBC also doesn't have the social consensus part, it could also have one side of it hard fork and it would kind of wreck a lot of transactions or like, you know, assets being held on either, either chain. Okay.
+
+Vaibhav Chellani (00:49:57):
+Yeah. This is exactly why I think Cosmo's trying to build Tendermint makes a lot of sense. Because Tendermint has this really nice property of instant finality. What that means is like, as soon as a block is minted, you can be assured that it's final, that there would be no forks. And this is really good for bridging because then you are not worried about like forks and things like that. So that's why like Tendermint makes a lot of sense.
+
+Anna Rose (00:50:23):
+Okay. Going down the stack. So
+
+Vaibhav Chellani (00:50:27):
+Yeah. Going down the stack
+
+Anna Rose (00:50:29):
+Or not the stack, it's going through the list on the spectrum. Okay. Yeah. What are, what are we, where are we at?
+
+Vaibhav Chellani (00:50:36):
+So the next one is where most of the bridges lie right now. And that's external validator set. Right. Okay. So, so far we haven't seen anything adding security in the middle or like taking off security in the middle. Right. It's been two chains trying to communicate with each other. And we mean like talking about different ways to do that. But with external value to say, we kind of say that we add another chain in between. Yes. And both of us, we would trust this chain for crosschain transactions. Right. So all the security moves from trusting the execution on both of these chains to trusting the execution of this middle chain
+
+Anna Rose (00:51:18):
+And I guess an a good example here would be like gravity bridge, gravity bridge, Axelar and I think chain, Wormhole. But would you put Nomad in there? Because I, I spoke to them about it and they, they said, I mean, they don't have a validator set, they have Watchers, they have these other agents that sort of check it, but they're not exactly a, like a full chain in and of themselves.
+
+Vaibhav Chellani (00:51:41):
+Yeah. It's kind of like a one state here. I mean, for the framework itself, we put optimistic validation in a separate bucket. Okay. But I would personally put the current Nomad system in an external validator bucket, mostly because the watcher set is kind of permissioned, meaning no one who does not have permission already. So it's not like an optimistic rollup where if the sequencer says, Hey Hey Ethereum, here's the latest stake route. These are the transactions. And now anyone in the world can literally come and challenge. The current Nomad system is not like this. The current Nomad system only allows a subset or whitelisted actors to kind of pause the system. Right. So it's kind of moving from the external validators set where validators approve of transactions to a model where validators, pause,
+
+Anna Rose (00:52:35):
+Pause. I see.
+
+Vaibhav Chellani (00:52:36):
+So it's a good, or a different kind of tradeoffs in the sense that things like runin hacks, where the private key got leaked things like that cannot happen because the worst thing that you can do is like pause the system. So it's like good in that sense,
+
+Anna Rose (00:52:52):
+Going further, are there even less secure types?
+
+Vaibhav Chellani (00:52:55):
+Definitely. So now that we've kind of introduced that, okay, we can have a chain in the middle. That's like validating or that's providing security to everything crossing. Now we can just like, talk about how secure this like middle chain is, right. The top level security. I mean, what we would call trustless in terms of like crosschain would be, if you don't add any security, then the two chains that you're trying to connect between. Right. That's why like, rollups are the best, right? Mm. So here we've introduced a full new, like third one trust entity. Yeah,
+
+Anna Rose (00:53:31):
+Yeah, yeah.
+
+Vaibhav Chellani (00:53:31):
+Okay. And it's not like what people wanted to opt in. So now the security is like, as secure as this third chain is. Right. Okay. And now we are talking about how many validators does this third chain have, has who runs these validators? Is it the same entity? What's the stake distribution, things like that. Like things that we wouldn't be worried about if this was a L1, because again, social consensus.
+
+Anna Rose (00:53:57):
+Okay. More insecure.
+
+Vaibhav Chellani (00:54:01):
+More, more insecure. I think. It just, now it's about different parameters. I think broadly we've like covered all different techniques. Now it's about different parameters parameters. Like, yeah. Who's the validator. How many are these?
+
+Anna Rose (00:54:17):
+Like a full, like a five person multisig as your is not good. That's very dangerous. Would you actually consider these sort of multisigs as bridges? Like where it's purely like, like it's, there's none of the there's no third party. There's no, light client, it's just like, yeah. Signers,
+
+Vaibhav Chellani (00:54:35):
+But yeah. These, the signers then become the third party. Right?
+
+Anna Rose (00:54:39):
+Okay.
+
+Vaibhav Chellani (00:54:40):
+Yeah. So they are like, yeah, this is like exactly how like 60, 70% of bridging is done right now by multisigs. For sure.
+
+Anna Rose (00:54:48):
+Sure. Everything we've talked about here is security, but there are other trade offs. Were there other metrics that you were also looking at in your evaluation of these bridges? Or was it just security? Cuz there's time there's like, how long does it take? How easy is it to build on top of maybe like, can people build on like some of these might just be really complicated to actually build anything on?
+
+Vaibhav Chellani (00:55:10):
+Absolutely. So when we started building socket's liquidity layer, we wanted to build like a system that allows people to send USDC from one chain to the next that's the that's the goal. Right. Then we started looking at all of these different systems and we found out we could black box asset bridges or like token bridges into three properties. Right. One is security, one is latency and the third one is cost. Okay. So if we have these three things we can transparently tell the user what the bridge is. Right. Got it. Gimme a bridge and these three things, and I know everything about that bridge. Right. so depending on like how the bridge is constructed all these three things vary. Right. So if it's a rollup and it's an optimistic rollup, the latency becomes seven days.
+
+Anna Rose (00:56:01):
+Yeah.
+
+Vaibhav Chellani (00:56:02):
+Right. If it's cost, you know, kind of means, yeah. I, me, I would, yeah, I would, I would probably call it medium. Okay. but high, if it's a ZKP you know? And the prices change, right. Prices change in because we also have liquidity networks which are like hop, connects Stargate. And these are just like market makers offering you a rate to go cross chain. Right? So it started looking a lot more like the DEX problem than the actual bridging problem. We started seeing asset bridging as more like we have 150 different options and they all vary in like three dimensions, security, latency, and costs. And we want to offer the best one to the end user
+
+Anna Rose (00:56:51):
+In your system. Do users actually get to choose how secure, how expensive, how fast?
+
+Vaibhav Chellani (00:56:56):
+Exactly. They have like, oh,
+
+Anna Rose (00:56:58):
+Interesting
+
+Vaibhav Chellani (00:56:58):
+Three options. Whatever they want to prioritize. If you're trying to bridge larger amounts, you would want to use the native scene, even native bridge, even if it takes a little bit longer or it costs a little bit more because these liquidity networks might not have enough liquidity to even, you know, kind of process that. So we started aggregating these, these are three properties we care about. We are trying to build out this like framework to kind of assess how to think about security with these systems, cost and latency. Those are like fairly objective and easier to think about latency. You know, we just like, kind of see how much time has this provider taken over the last, like two months. And we kind of calculate a medium on the cost. It's like easy to see because everything is happening on chain.
+
+Anna Rose (00:57:50):
+I think this sort of leads us to, like, what do you think is a good strategy for people who wanna build on top of bridges or use them? Because we happen to be interviewing, I know this episode's gonna come out a little later, but we're talking on the week that the Nomad exploit happened. And we have a lot of friends. I have a lot of friends there. I think you might have friends there too. And obviously we're feeling for the team and everything they're going through, but I also know some people who've lost funds. So what do you kind of recommend in terms of the, yeah, what strategy, like what do we do with this landscape? Cause I don't think only relying on rollups actually works. Right? True. There's delay. There's high cost. There's like other drawbacks that are gonna make it. So not, everyone's just gonna go for the most secure. So what, what do we do?
+
+Vaibhav Chellani (00:58:37):
+Yeah, I mean, we try to break this problem down into two things. One is asset bridging and one is data bridging again, right. If you're trying to do asset bridging and you've and if you only do like native assets, then you are fine trusting a not so secure solution. The reason being the most damage that this bridge can do is not give you money on the other side. Right? So let's say if you wanted to bridge Aave from Ethereum to Polygon, for example, right. You can swap that Aave to USDC bridge the USDC, and then swap back from USDC to Aave that way you don't actually have to do like Aave bridging you can use USDC. And as soon as you swap your USDC to like the native Aave, you are done with the bridging risk, right. You are essentially out of the bridging system.
+
+Vaibhav Chellani (00:59:29):
+So when it comes to asset bridging, I would like definitely suggest, you know, kind of sticking to native assets and trying to be away from like, you know, creating a new wrapped version of your assets. And if you do try to add some kind of like gauges where you have things like 1% of my token supply can be maintain in 24 hours. Okay. So that you have like, you know, some kind of like some kind of like parameters or insurance that you can kind of play around with and over time kind of increase these parameters instead of trusting them from day one. So I think a lot more of this infrastructure and a lot more of these techniques have to be adopted given where the landscape is right now. But yeah, I would just kind of suggest, okay. Add more of these gauges, think more about what could happen when things go wrong and try to add backstops for it. Yeah. Try to, you know, kind of ensure your user or things like that. There's there's not much. Yeah.
+
+Anna Rose (01:00:32):
+Do you think that we will find one bridge technique to win them all eventually? Or do you think we are going to have even more bridge techniques? Or do you think maybe they just sort of cluster around some like winning strategies?
+
+Vaibhav Chellani (01:00:43):
+Definitely cluster around. Right. I personally think like, rollups are the way to kind of scale it through. It's like, if your application is a rollup and it's kind of like tied to the same data availability layer, you have by definition, better bridging. Then if this application was a chain and not a rollup, if it's a rollup, you can trustless communicate from your rollup system to another rollup systems trustlessly. But if you're an option it's trustful bridging to everything else. Right. So my personal feeling is like people will choose systems which offer some kind of shared security that Ethereum, Ethereum provides this Celestia plan to provided Polkadot provides it. Yeah. Cosmos is trying to provide it with interchange security. Yeah. So these kind of systems kind of create this like cluster topology, where communication within the cluster is very trust, minimized, but communication outside the cluster is not that trust minimized.
+
+Anna Rose (01:01:46):
+So it's relying more on these bridge things and the, on sort of the bridge protocols. Hmm. Yeah. Yeah. I think that's, I mean, that's a world that I've sort of heard described a couple ways and times by different groups. And I think it does seem like a possible future. It's not what it is right now though. Hey, like right now it really does seem like interoperability solutions, bridging projects come out and they do bridge to like all the EVM chains or they're, they're sort of like, yeah. That you see multiples of these, they might have some sort of, they're more featured in some networks versus others, but yeah. Do so you think there might be a move away from that model?
+
+Vaibhav Chellani (01:02:29):
+I mean, theoretically should, but given like we are still pumping like so much money into like Aptos suite, Solana, things like that. I mean, yeah. I mean, there is a lot of incentive to go to Aptos, right. 10 years down the lane, maybe this happens, but there's a lot of money that's going around that is moving in the opposite direction. So I don't know for sure, but my bit is that we'll see some sort of clustering happen.
+
+Anna Rose (01:02:56):
+So I wanna sort of round this out with a little bit more of a, a look into Socket, the project you're working on and, and kind of, I'm curious, like, where are you at? What choices have you made after having done this analysis? Like where do you live? Where do you plan on expanding to?
+
+Vaibhav Chellani (01:03:12):
+Yeah. So at this point Socket's liquidity layer. It's, it's been on mainnet for a while. I think we started like last December and we also had this like philosophy of not adding more trust to the system. And we've like built out Socket with no upgradeable contracts with no proxies with full immutability. We don't want to add any trust properties while aggregating these asset bridges. It should be like the user is trying to use this bridge directly because it would make no sense if we, you know, kind of add a multisig on and on top. And the user is kind of choosing a trustless bridge because then it becomes a multisig ways, no matter how trustless it is. So yeah, like Socket it's been live, I think it's doing like fairly well. We have an application of ourselves on top called Bunge exchange. The goal of that application is to rethink bridging UX because like bridging UX is fairly shitty right now, to be honest, like funds leave your wallet on one scene and you pray to the God that they appear on the other chain.
+
+Vaibhav Chellani (01:04:20):
+So it's us, our, our like attempt that, you know, trying to do what UniSwap did to swapping. We want to try and do the same for bridging. So this is like on the liquidity layer fund, I think a bunch of people really use it that our only goal there is to kind of allow the user to make an informed decision about what route is he choosing a bunch of projects, take a certain trade off where they want to be more cheap, more fast than secure. And that's absolutely fine, but what's not fine is kind of hiding that behind marketing. So our, our goal is to kind of inform the user about the particular trade offs and the user then may as well take it, you know, it's, it's a perfectly fine trade off for an asset bridge.
+
+Anna Rose (01:05:08):
+Which ones do you live on already though?
+
+Vaibhav Chellani (01:05:10):
+We are on nine different chains right now. Mostly EVM. Okay. but we might try like Solana, we had plans for Terra, but that went away. I cannot hope the same for Solana. So we'll definitely do it at some point.
+
+Anna Rose (01:05:24):
+But do you live on top of existing message, protocol message bridges, or are you ex are you building your own?
+
+Vaibhav Chellani (01:05:31):
+So we are kind of building a data solution that allows people to send assets via the liquidity layer and then perform some action with it via our messaging layer. Right. So let's say if you want to bridge your assets deposit into Aave, right. The way you would do that is like send your assets via the liquidity layer where the asset would be sent via, let's say hub connects or like whoever the market maker is who's providing the best or the cheapest way to kind of send that asset across. And once we have that asset on the other side, the data layer kind of in informs on what to do with the asset now. Okay. Is it, you know, does the user want it to be deposited into Aave, does the user kind of, you know, want to work on governance, things like that.
+
+Anna Rose (01:06:17):
+But you don't live across, you're not using IBC. You don't live across Nomad. You're not on top of Axelar, you're not like using any of those existing ones. No. Okay.
+
+Vaibhav Chellani (01:06:26):
+No, I think our goal there is, you know, try to provide similar to like our liquidity layer, try to provide all trade offs to people and allow them to build systems that kind of go from external value to set to rollups by a simple change in a configuration, that's it. Right. And then we will obviously using our risk framework, show that to the user in a very transparent manner, but the users are like projects should be okay. Taking a certain trade offs and users should be informed about it. That's that's the only thing that we are going for here.
+
+Anna Rose (01:07:06):
+Cool. Cool. Well, thanks so much for coming on the show and sharing with us, this sort of framework for thinking about bridges and also giving us kind of a sense for what you're doing over at Socket.
+
+Vaibhav Chellani (01:07:17):
+Of course. Thank you so much for having me. This was definitely a fun conversation.
+
+Anna Rose (01:07:21):
+Totally. And I wanna say a big thank you to the ZK podcast production team, Tanya, Henrik, and Rachel, and to, our listeners. Thanks for listening.
+

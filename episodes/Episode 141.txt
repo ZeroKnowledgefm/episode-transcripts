@@ -1,0 +1,508 @@
+Anna (00:00:07):
+Welcome to zero knowledge, a podcast where we talk about the latest in zero knowledge research and the decentralized web. The show is hosted by me, Anna.
+
+Fredrik (00:00:19):
+And me, Fredrik.
+
+Anna (00:00:27):
+This week, Fredrik and I speak with Brian Gu about Dark Forest, a fully decentralized zero knowledge proofs-based game built on Ethereum. But before we start in, I want to say a big thank you to this week's sponsor, Least Authority. Least Authority is a team of security researchers, open source, devs, privacy advocates, and cryptographers. They're known for their security audits and reviews like the Eth 2.0 Specification, Protocol Lab's Gossip sub-protocol, Zcash Sapling upgrade, Tezos Foundation's tzBTC, as well as others. They're also known for their work on zero knowledge proofs integrated into the Tahoe-LAFS (secure distributed file store) with their "ZKAPs: zero knowledge access passes".
+
+Fredrik (00:01:08):
+So for this particular spot, they wanted to let our audience know that they're hiring. Right now, they're looking for a technical writer to help write security research and audit reports as well as open source technical documentation and privacy analysis statements. They're also open to hearing from anyone who's interested in working in advanced security in distributed systems or who may be able to contribute to this mission to promote privacy in some other way. If you want to find out more, check out leastauthority.com/zkpodcast, or check out their jobs page. I'll add the links in the show notes. So thank you again, Least Authority. And now here's our interview with Brian Gu.
+
+Anna (00:01:52):
+So this week, Frederik and I are catching up with Bryan Gu, who's the co-creator of the Dark Forest ZK-based game. Welcome Brian.
+
+Brian Gu (00:02:02):
+Hey Anna, it's great to to be here with you and Frederick. Just by way of introductions, I'm a student at MIT studying mathematics. This summer I'm working on Dark Forest, which is a fully decentralized RTS game built on Ethereum with zkSNARKs. Other than that, I work with the Ethereum foundation help out with some education and recruiting sorts of initiatives, as well as on research and development related to zkSNARKs.
+
+Anna (00:02:28):
+So the plan today is to talk a little bit about education in blockchain, blockchain games generally, but the main focus is going to be on Dark Forest and hopefully we get a chance to understand why the introduction of like zero knowledge proofs systems actually add something to this game where it's not just like, as I understand, it's not just like a nice to have, but it actually like helps in the mechanism itself. You already did a short intro to yourself, but I guess maybe as a continuation on that, what first got you excited about zero knowledge topics? Like what, what was your entry, what was your entry point into that research space?
+
+Brian Gu (00:03:05):
+Hu, in late July of last year, I went to a conference. It was one of the Ethereum foundation's sort of research workshops that they hold once every couple of months. And that conference was particularly focused around some advances in zero knowledge, which was really blowing up at the time like this was summer of 2019. So a bunch of new protocols were coming out. Jordi had just published you know, his, his snarkjs, and what's now wasmsnark. I went there and I was just blown away by the fact that this thing, which I had totally I've been peripherally aware of. I thought it was, you know, it sounded like this awesome cryptographic thing that was like totally not feasible, like definitely moon math, but really cool, that it was actually feasible for use in applications as of that time.
+
+Brian Gu (00:03:51):
+And there was just so much work and activity going on there. So after this, around the same time I was also reading a lot of like science fiction and I just read Liu Cixin's Three-Body trilogy. The second work in that trilogy is called Dark Forest. And that was sort of an inspiration along with diving into what was going on and what was possible and zkSNARKs to start getting a little bit more involved. And in particular, the idea for Dark Forest, the game came out of that as well. So yeah, about a year into the ZK journey.
+
+Anna (00:04:18):
+It's funny because some folks, if, if anyone's listened to the, the episode that I did recently on trusted setups, I think your name may have come up in that cause you actually did do some work already. Like I think, you know, we're going to spend most of this episode talking about Dark Forest, but you've actually done a little bit of work on sort of this other part of zero knowledge proofs as well. So what, what did you do for trusted setups? What's yeah. So what's your contribution there?
+
+Brian Gu (00:04:43):
+I met Wei Jie and Kobi and Barry at some of these workshops as well, and they kind of introduced me to this project Semaphore that they were working on and in particular I was working on both Dark Forest and some more general Ethereum related things over, over fall, 2019. And they sort of asked, you know, they were, it was on the horizon for them to be getting a, a trusted setup going for Semaphore and they asked if I might look into some of the tools that people were building in order to see if anything could be repurposed for the Semafore multi-party computation trusted setup ceremony. So I looked into this, you know, it looked like the state of things was quite primitive.
+
+Anna (00:05:19):
+Yeah. There had been like six or seven done. So yeah,
+
+Brian Gu (00:05:21):
+Like in total. Yeah. So really not much out there. A lot of it was just like manual, like, you know, someone would coordinate on a mailing list. People were just sending like verifications back and forth. One of the best ones that we were able to find was the Aztec protocols Ignition ceremony, and, you know, they, they had done a really wonderful job with that. And at the time that was definitely, I think the largest trusted ceremony set up ceremony that had been run. And they'd also open source all of their code. You know, I spent a bit of time around like late 2019, just repurposing that, repackaging it to work with more general kind of just arbitrary ZK circuits. And you know, we ran a small trusted set... or we started running a small trusted setup ceremony a couple of months ago for Semafore based off of that, but still a lot of work to do there.
+
+Anna (00:06:07):
+But that, that was you brought sort of the automated coordinator that we actually talked about in that previous episode, you brought that to Semaphore, right? Like from the ignition, this idea that, you know, you no longer needed this mailing list person, who's just like manually sending it out, but it would actually happen more automatically.
+
+Brian Gu (00:06:24):
+Right. Right. And you know, it, it was a very, it's still a very like primitive kind of, there's a lot of manual steps still involved. But I think that, you know, I know a lot of people are thinking about this as more ZK projects are on the horizon.
+
+Anna:
+Totally.
+
+Fredrik (00:06:37):
+I think that's a thing that I struggled with as well. I've been invited to participate in some of these setups, but it's really hard to like figure out when to do what and how, like, even just like, from the point that I picked up the message to coordinate with myself, like, what am I supposed to be doing? It's hard. So just having like an app, tell me what, like what's the next step, when am I supposed to do that stuff, would be good.
+
+Anna (00:07:04):
+Well, they're definitely developing as we speak.
+
+Fredrik (00:07:08):
+I wanted to ask you a question on, on one of your intro comments. You said you worked a bit in education, is that in, within zero knowledge stuff as well? Or general blockchain stuff? Or what kind of education?
+
+Brian Gu (00:07:21):
+Yeah, so one thing that I am really excited about just in general is sort of community building, especially community building within sort of technical spheres. So for example, I run this one program called Hack Lodge, which we sort of described as quote unquote, like summer camp for hackers. The idea is every summer in winter we get a big Airbnb. We find 20 of the best sort of undergrad engineers and math students in mostly US colleges that we can whether through, you know, our kind of organizer networks or alumni, or just people who have built really awesome stuff in our students. And we all just, we invite them to come hack with us in this big house for a week. We run like workshops have talks and everybody comes out with some sort of shift project. And as I've been getting more involved in Ethereum I have found that the sort of student who likes a program like Hack Lodge is, is oftentimes going to be someone who's also really into kind of the frontiers of what's going on in decentralization on Ethereum or whatever else.
+
+Brian Gu (00:08:19):
+So I work with like a number of other peers or undergrad students to get them excited about like what's actually possible in the space. I think that there's a little bit of a misconception especially in universities that, you know, crypto isn't really like a serious thing. It's just a bunch of these scams ICO is whatever. And one of my goals and, and, you know, I try to bring people into like, for example, those EF (Ethereum Foundation) workshops especially undergrad students to show them that, Hey, there's some really cool stuff going on here. If you're interested in math or engineering or computer science, and this is a place you can really sink your teeth into and be early in some of like the coolest problems, depending on your particular interests.
+
+Anna (00:09:01):
+It's actually, it's such a shame that like that ICO smear still exists. I don't know what else to call them.
+
+Fredrik (00:09:08):
+I don't think it comes from... the ICO thing, strengthened it, but it comes from Bitcoin. I mean, this has been around since before Ethereum. This is the general attitude. Like I typically say at least half of all programmers think blockchain is bullshit.
+
+Anna (00:09:24):
+Wow. You think still?
+
+Fredrik (00:09:26):
+Yeah. Yeah. For sure. Like if you go on the rust subreddit, like everything blockchain gets downloaded and just all this, just a hype word or buzz word, and it's all hype, there's nothing to this. And I think it comes from Bitcoin originally where people just don't understand cryptocurrency or like what it's for, especially in the western world. And so they just attribute that to every other blockchain project as well. Like why, if I don't see the point of an electronic currency, then why would I need any other blockchain?
+
+Anna (00:09:58):
+Do you think the hacks though, like the Mt. Gox, Mt.Gox, and maybe some of the characters who have regionally like dominated this space may have had an influence on that too.
+
+Fredrik (00:10:08):
+I don't think they get, I don't think that people that are like detractors to that degree actually get that deep. I think they just go like uh proof of work waste energy. This shit, don't, don't take further.
+
+Brian Gu (00:10:22):
+And it, it really speaks also to, I at least in my experience talking with, you know, peers or people who I'm bringing into the space, the fact that there's just not really that many great entry points. Like, you know, if you search any, you know, intro blockchain kind of related concepts, just in a simple Google search, the chances of you getting something really meaningful, or you being able to tell what's meaningful, the signal from the noise is just going to be so low. And that's been one of the initiatives, especially with these workshops. You know, we, we want to bring young people into these workshops to show them like, to give them a actual safe and kind of like legitimate introduction into crypto. Like, Hey, you know, here's where the, here's where the interesting problems are. Here's smart people working on them.
+
+Fredrik (00:11:06):
+Yeah. I think that's a huge problem. I mean, this is something that I think, and work on a lot too, is all the material is written like by crypto anarchists for crypto anarchists. Mean if you come to this space, not being that, then you're like, what the fuck is this? You have no way of actually learning...
+
+Anna (00:11:24):
+Or, and, or written by advanced cryptographers for advanced cryptographers.
+
+Fredrik (00:11:28):
+Yeah, sure. And then, and then, then it's just at a different level. They probably won't even find it
+
+Brian Gu (00:11:33):
+Totally inaccessible. Yep.
+
+Anna (00:11:35):
+So what do you think is missing? This is sort of like before we move on, what do you think is missing in terms of education? You sort of mentioned this on-ramp but can you picture anything else that you think we should be doing?
+
+Brian Gu (00:11:47):
+Yeah. I mean, I think that, you know, a lot of great stuff has been happening in the last couple of years, at least, you know, from when I started looking into this stuff in 2018, compared with now, there's already a lot of just tremendously better resources and content better con there's, there's better mechanisms for servicing the better content as well. And I, I pointed, I I'm able to point people to things like, you know, Vitalik's blog posts on zkSNARKs or things like that that are able to make like, you know, that, that are able to take complex concepts and distill them down and really show people like what's interesting in here. So one thing that I think about a lot is I think just having more, you know, the people who are working on very technical things we really ought to have people paying attention equally to communication you know, writing useful things, creating these kinds of entry points that people can find online. And then as a community also kind of you know, really, really encouraging that and helping to surface that especially to newbies. So I think that, you know, just better content and flooding kind of the network with good and useful articles, papers, whatever else is just goes a long way.
+
+Anna (00:12:59):
+Yeah. I think, I think one kind of, one thing that's sometimes missed and this isn't, I think there's sometimes needs to be like a little bit more patience given to the dumb questions with the early stage questions. And it's hard because like, if you've heard those questions, a number of times, it's very boring to answer the same question again, but I think it, it does help, like even for people at like the dinner table, even if someone asks you the dumb thing, just try for that moment to like help them out at least or help point them in the right direction. Coz I so, I so often just for see people like, well, they'll dismiss the dumb question. I mean, I've probably been guilty of that too, but I think that is part of the, part of the challenge...
+
+Brian Gu (00:13:41):
+Absolutely. I...
+
+Anna:
+...may be part of the solution.
+
+Brian Gu:
+...I think the community is certainly like, I think Ethereum within crypto does a relatively Gud job of this, but like being just welcoming and inclusive in general is like, you know, that goes a long way.
+
+Anna:
+Totally.
+
+Fredrik (00:13:55):
+I think there's an opportunity for, like we've come far enough in this space. And there are enough like books and enough content that someone could kind of go through the existing material and create a new modern version because there's like Antonopoulos's various Bitcoin books that introduce like, why is this a powerful concept? And it really goes from very basics. And I think to really onboard someone, well, you have to go back super far and introduce like, why is consensus a thing even like, why is Byzantine Fault Tolerant consensus thing? Why is global consensus I thing, but you can't explain it in technical terms because they're not there yet. So you need to explain that in some other way. And that's like what Antonopoulos managed to do in some of his material, but that's just this one sliver, right? So you need to then take the best out of that and best out of this other thing, and then the best of all the latest research and produce like a new thing that introduces the whole picture to someone.
+
+Anna (00:15:01):
+Okay. So let's move on to Dark Forest. How did you describe that? You actually said it at the beginning of the episode, I've been calling it like a ZK-based game, but you have a very, you have a clear description of this. What, what is it?
+
+Brian Gu (00:15:14):
+Yeah, so the way I think about Dark Forest is that it is the first fully decentralized RTS game. So, you know, that the exciting thing about zkSNARKs is that they actually allow us to build a meaningful strategy game in a fully decentralized fashion and without zkSNARKs we actually just, you know, prior to this, we didn't really have the tools to build a game in this kind of class
+
+Anna (00:15:37):
+And to anyone who doesn't know, RTS is real time strategy. Am I right?
+
+Brian Gu:
+That's right. Yep. So if you think about like, you know, imagine like StarCraft, but decentralized cool.
+
+Anna:
+Cool.
+
+Fredrik (00:15:46):
+There's, yeah, there's a lot to unpack in that. I wonder where to start. I mean, the first thing that comes to my mind is how can you be real time on a blockchain?
+
+Brian Gu (00:15:57):
+Yeah, for sure. So this is definitely, you know, we, we are constrained by the limitations of the blockchain. So it is true for example, that like essentially the game tick size is going to be that 12 to 15 seconds of you know, that, that it takes for an Ethereum block to go. And if you submit your transaction, sometimes you'll have to wait a number of blocks before it's included in the next mined block. So there are those constraints. The main hurdle that we're jumping over that is made possible by zkSNARKs is we are basically allowing for incomplete information to exist in a blockchain or decentralized game. This is something that was previously not possible. You know, if people are familiar with the concept of complete versus incomplete information games, previously, it was mostly only complete information games that were possible in these sorts of decentralized settings.
+
+Brian Gu (00:16:44):
+And I can speak a little bit about, you know, complete versus incomplete information games is a very fundamental concept in game theory. And it's, it's quite simple. And probably most people, I think have an intuitive notion of this. A complete information game basically is a game where all players are aware of the full state of the world. So if you imagine something like chess or checkers, you know, and these games, I can see your pieces, you can see my pieces. There aren't really any secrets as far as the game state goes. But when we talk about incomplete information games, we're talking about, about games like poker or StarCraft or, you know, you might think of something as complex as like EVE Online. These are games where players might have private state there's things in the universe that not everybody knows. And these are the sorts of games that open up all these strategic avenues for deception or emergent behavior or more complex social dynamics and zkSNARKs are sort of the key to unlocking that kind of at least, you know, some class of incomplete information, mechanics and games that previously was not possible.
+
+Fredrik (00:17:42):
+A game like poker has been implemented on Ethereum. So how do they do that without ZK?
+
+Brian Gu (00:17:50):
+So there's definitely a certain class of, I would say like somewhat incomplete information games that you can get to with things like commit-reveal schemes. But for example, if you want to, you know, if you want to have really like persistent hidden information that never gets revealed but at the same time is able to get operated on or computed on, in a way that's consistent with the rest of the game state. Then this is something that's really hard without zkSNARKs if you want to have, you know, some sort of game where I hide a number for some, for some amount of time, and then afterwards, you know, I want to like reveal it and prove that I was being honest about the number that I hid. This is something that was possible, but to get further than that, you need some more advanced machinery.
+
+Fredrik (00:18:28):
+So like in poker, you're not gonna win your hand until you reveal it. And so like the, the chain doesn't need to know, Oh, he has this. So I'm going to reward this secret amount because he has like this hand that no one else can see which you would need Zika for, if you wanted to do a mechanic like that.
+
+Brian Gu:
+Right.
+
+Anna (00:18:49):
+So you sort of mentioned real time and there's this limitation of like the blocks actually being written, but it's, it's also, it's not like real time, real time, right. It's not like you can see the other player's behavior quickly or something like that.
+
+Brian Gu (00:19:02):
+Yeah. So you can sort of imagine it as like, you know, in the game world, every tick is 10 seconds. Like, you know, normally in, in games that are like truly real time, that tick size is going to be really small, just like a fraction of the second of every fraction of a second, the game world is going to be updated. But here we sort of have to wait, wait those 10 seconds for, for transactions to get mined. So it's not truly real time, but the strategy aspect is there. And we do a number of kind of little hacks to make things feel a little bit more continuous as well.
+
+Anna (00:19:31):
+Do you think if you did, I mean, and maybe this is for later in the interview, but if you did this with some sort of like ZK Rollup, or partly like off, off the chain, would you be able to make that faster...
+
+Brian Gu:
+Yeah, definitely.
+
+
+Anna:
+... would you be able to maybe even do more of these like real, real, real time games, like something more complicated?
+
+Brian Gu (00:19:50):
+Yeah, definitely. I mean, so one thing that we might imagine is we could have some sort of a, you know, ZK Rollup layer 2 scheme where, you know, we've got some roll-up node that's accepting incoming transactions, rolling them up and committing them through the main chain, but people are listening to kind of this like network of, of roll-up nodes and optimistically applying these, these moves that are coming in are being sent out by other players in the network. So that's definitely one avenue for bringing that kind of like sense of real timeliness to you know, be more substantial. But yeah, we're definitely very constrained by kind of the execution environment gear.
+
+Anna (00:20:26):
+Fair enough. And I don't want to push ahead too fast. So you, you mentioned before, it's, it's inspired by The Three-Body Problem series, which Frederick you've read one book as I understand, or one and a half. And I listened to one book as an audio book and learned the hard way that I can't listen to a fiction as an audio book at all. It's actually a series that I definitely want to go back and read properly. But maybe you can tell us a little bit about that series and like what it, what it, you know, how it influenced this without maybe spoiling it too much for people.
+
+Brian Gu (00:21:04):
+Yeah, yeah. So the Three-Body trilogy is a trilogy of three hard scifi novels written by Liu Cixin originally in Chinese and translated into English by, by Ken Liu. And I think the second book was actually translated by a translator whose name I can't remember right now, in any case, you know, the, the premise of the novel, of the very first novel is, you know, one day the fundamental physicists of the world wake up and, you know, they're, they're going to run their experiments on all these things. And they realize that like science has just stopped working and sort of, you know, the book is almost like a mystery or a thriller about people trying to figure out like, what the heck is going on here. Like, you know, why are our particle colliders always just like giving these inconsistent results?
+
+Brian Gu (00:21:47):
+Why does it seem like, you know, fundamental physics itself is wonky a little bit of a mystery aspect of this. And over the course of the first novel that's explored in the second and the third novels Liu Cixin sort of branches out into a greater like cosmic scale, you know, there's, there's all these discussions of sort of dynamics with extraterrestrial civilizations, universes, multi-verses, it's a, it's a very like wide reaching in scope kind of trilogy. But there's a particular thought experiment from the second book that was the particular inspiration for the dynamics that we want to build in Dark Forest. And I don't want to spoil too much, but basically kind of one of the underlying ideas here is about when you are a, you know, a loan civilization in a large and potentially hostile universe information is sort of your most important asset.
+
+Brian Gu (00:22:36):
+You know, if you've heard of like, I'm sure people have heard of like the Fermi paradox and, you know, one of the resolutions to the Fermi paradox is sort of that like perhaps civilizations are afraid of kind of broadcasting out information about themselves or about their location, because, you know, there might be some hostile civilizations out there that are willing to, that are just, you know, ready to conquer or eat up smaller or less developed civilizations. This is something that's kind of a very, a very central theme to kind of one of the thought experiments or premises of the trilogy.
+
+Anna (00:23:05):
+Cool. And yeah. Can you, I mean, I sort of hear, you don't want to say, can you say what the problem is, is that, is that it that's like the example that you want to,
+
+Fredrik (00:23:16):
+Well, we can talk about how that manifests in the game and talk to the game,
+
+Anna (00:23:22):
+Yeah, up to you. I guess we could sort of put out a warning now to our listeners who are, if you're in the midst of reading this, maybe you're just like pause and resume this episode. Once you're finished book two, or you skip ahead a few minutes and we'll probably be back on the ZK topics, but yeah. What, what is the thought experiment maybe in a bit more detail if you don't mind.
+
+Brian Gu (00:23:41):
+Yeah, for sure. Yep. Yep. So the Dark, the Dark Forest thought experiment is actually something that was conceived a long time before the Three-Body trilogy was published. And it's, it's one of the answers to the Fermi paradox that is the magically more around like, Oh, you know, we're in a hostile universe and maybe civilizations don't want to be willy-nilly about broadcasting their existence in the case of hostile actors. And one way to kind of think about the Dark Forest thought experiment is just to really put yourself in the position of, you know, suppose that tomorrow humanity discovered an alien civilization, right? Like suppose that we discovered, you know, at this bearing and this direction and this angle, there was, you know, this planet 10 light years from us had life on it. One thing that we can do is we can kind of think about, well, what would be the game theoretic consequences of us having this knowledge, right.
+
+Brian Gu (00:24:33):
+You know, one really simplified way to model this, is kind of, we can think about either this civilization is hostile, i.e., you know, if they encounter another civilization, they might try to destroy it, conquer it, whatever, or just do something generally against our interests, or let's say that they're cooperative, which means that they are like literally any kind of player besides a malicious player, a hostile player. So, you know, there's this kind of almost like prisoner's dilemma situation that emerges when we think about, all right, well, if we know their existence, they're likely to know our existence. And essentially we're stuck in this almost one shot prisoner's dilemma with them. You know, either we can both choose to cooperate and, you know, maybe better both of our kind of species together if one chooses to cooperate, but the other civilization is hostile and defects, then, you know, you, you only get one shot at this prisoner's dilemma. You might get run into extinction especially given maybe, you know, nothing about the technological ability or superiority of this other civilization, you know, so in a one shot prisoner's dilemma, the only equilibrium really is for both sides to defect.
+
+Brian Gu (00:25:38):
+So the result of this is, well, if you're a civilization in the universe that potentially has the ability to explore other star systems, whatever, look for other life, you want to be really careful about keeping your own location and your own existence, very, very private, because if you broadcast that out to someone else, if you broadcast that out, in fact, to the entire universe, the entire Dark Forest of other species or intelligent life, you don't know who is going to take the other end of that one shot prisoner's dilemma, and try to snipe you and get you out of the game before you're able to do damage to them.
+
+
+Anna (00:26:14):
+In a weird... in a weird way by broadcasting you're cooperating.
+
+Brian Gu (00:26:17):
+Yeah. Right, right. I mean, and then there's sort of these second order effects also that are super fascinating. So, you know, let's say you're in communication with another civilization that's close to you. You can do things like threatening to broadcast their coordinates out into the universe, but, you know, if they know of your existence, there's a symmetric thing going on. And there's almost like a mutually assured destruction, uh kind of dynamic here because, you know, if I broadcast your coordinates and someone starts a more advanced, you know, species starts poking around this corner of the universe. Maybe they're going to find me too and try to eliminate me as a potential threat. So there's all sorts of, there's a bunch of different layers and that's kind of one of the central themes that's explored in the last two novels in the trilogy, which I found super, super interesting.
+
+Anna:
+Cool, cool. All right. And end of spoiler here.
+
+Fredrik (00:27:06):
+I can sort of see how this turns into a game, but maybe just explain how does it actually translate into your game and yeah, what is the game actually about, what's the game play.
+
+Brian Gu (00:27:21):
+For sure. You know, first I'll just kind of give the high level overview of what exactly it means to introduce private state into the blockchain with ZK in our context. And then, you know, we'll talk, I can talk a little bit about the specific application and the construction that we used to essentially create a cryptographic fog of war with zkSNARKs. So the general idea is that if you want to build a game with private state, then sort of by definition, you can't always be uploading your private state up to the public blockchain. If you're trying to build this as a DApp. So what you do instead is you upload a commitment to your private state, say, you know, the hash of your state object, as well as a zero knowledge proof that that hash does correspond to some valid private state that's valid with the rules of the game.
+
+Brian Gu (00:28:08):
+So this is a proof basically that you didn't just submit a string of bytes that you pulled from thin air. Then whenever you want to make a state transition in the game, you're going to upload the hash of your new private state, as well as the zero knowledge proof that there is a valid transition between your old state and your new state. So morally what this is saying is like, all right, I moved my knight. I'm not going to tell you where I moved it from or where I moved it to. All that this proof is going to tell you is that I moved my knight in an L shape. And not even like what orientation L shape is, just like some valid L shape. And from this really simple primitive, we can sort of build, you know, a very rich and expressive world where there's this fog of war where people don't know where each other is and stuff like that.
+
+Brian Gu (00:28:53):
+So to give a concrete example, let's say that we want to kind of introduce this dynamic on a game where people live, you know, on a, on a two dimensional grid, let's say, you know, we've got two dimensional, we've got a two dimensional grid that represents space. There's planets in it. And, you know, players have different sort of avatars or whatever on different planets. I might initialize that say, coor..., the coordinates (5, 20). And what I'll do is rather than something, (5, 20) up to the blockchain, I'm going to submit the hash of (5, 20), as well as the zero knowledge proof that I know the pre-image of that hash. And then, you know, you might submit, you might initialize into the game at the coordinates (3, 8), and you'll submit is your knowledge proof up to the blockchain that, you know, the hash of that corresponds to some valid coordinates.
+
+Brian Gu (00:29:39):
+So now what, what do we both see on the blockchain? We both see these two hashes and by virtue of them being, you know, hashes, we can't just reverse engineer, the coordinates from them. So if I want to find things that are close to me, like points of interest, or players, or whatever, I, the best I can do is just brute force. Like if I'm at (5, 20), then I hashed (6, 20), and then, you know, maybe I hash (5, 21). And I just, you know, I basically start doing all this computation for the neighborhood around me. And eventually I might come upon (3, 8) and I'll hash that. And I'll say like, Oh wow, like Anna already published that hash. So I know that Anna lives there and is close to me.
+
+Anna:
+Okay.
+
+Brian Gu:
+So in this way, we have this cryptographic fog of war we're in order to discover the locations of other players, you basically have to compute a bunch of hashes in an almost Proof-of-Work-like way.
+
+Brian Gu (00:30:25):
+And it's, it's kept secure and consistent with zkSNARKs that we've introduced.
+
+Anna:
+This is neat. It's, I mean, as you're describing it. So the game that I play the most that has, I mean, a fog of war, like this end is kind of a, it's a 2D, 2D board is Civ. So where you're like moving closer to another civilization and you find out that, you know, their borders, I mean, in their case, it's not, you can't tell that they've explored places, but you can see the borders of their Civ
+
+Brian Gu:
+For sure. I mean, and likewise here, like, I don't know how many hashes your computer has computed. But you know, I'm, I'm sort of like mining all these chunks of space out and looking for planets and looking for other players as well, in kind of the same way that, you know, insists you might send a scout out to discover, you know, what's going on in this region of the map, what's going on over here, like, can I find where the other players are? But that's all happening with essentially computation.
+
+Fredrik (00:31:18):
+How do you actually like parameterize this so that it's, so that you can't just instantly discover everything. Like, if it's, if it's as simple as you describe it, and it's a relatively simple hash function, then, you know, I can discover millions of these squares in a matter of seconds.
+
+Brian Gu (00:31:38):
+For sure. Yeah. So one thing is that we had to do a lot of tuning to figure out just how large the world should really be. So, you know, just to give a rough sense of parameters we introduced the notion that you know, planets like habitable planets, which are locations that you can actually colonize and act on or, you know, contest. These are defined to be coordinates that hash to, you know, a hash that starts with a certain number of zeros. So then for dealer, I think it's like, you know, one in every two to the 14th or so, squares is going to correspond to a valid planet. So you're going to have to be hashing about, you know, on average 16,000 coordinate pairs, before you find a point of interest, we're all, we also tune the board size and sort of the amount of area per player in such a way that, you know, in order to find another player, you're probably going to have to be running this in your browser with your CPU computing, the MiMC hash over and over again for a couple of hours.
+
+Brian Gu (00:32:37):
+It is definitely true that, and this did happen actually in our last play test, Kobi went ahead and, you know, he spun up some code basically to, to, you know, compute MiMC hash is super quickly on, on, you know, in a parallelized way. And he was able to discover planets much faster than anyone else. Right. But that's part of the fun of it. You know, there's almost a meta meta game that we hope to see evolve that comes from players, you know, using the fact that computation is a first class resource and information as a first class asset in this game, you know, you, we could imagine like we're building out things like an export map function where I might like mine this chunk of space and I might send it over to someone else and they can import it. And suddenly they have all that information as well.
+
+Brian Gu (00:33:18):
+So there's a lot of really...
+
+Anna:
+A trade. Actually doing a trade or something.
+
+Brian Gu:
+Yeah, exactly. And I mean, there's a bunch more layers to that too, like, you know, how do you know that the map that someone has sent to you is actually, you know, the only way you can verify it is to hash it yourself. So there's all these interesting little dynamics that we're, we're not totally sure how they're going to evolve, or if they will evolve in the ways we expect. But, but that's one of the great things about computation as a resource here.
+
+Fredrik (00:33:40):
+Cool. So what's the objective of the game. Like if I find someone, what then?
+
+Brian Gu (00:33:46):
+Right. So you know, the, the real reason that we're excited about this from kind of the end user perspective is that we now have this kind of, you know, rich, persistent strategic universe, imagine, you know, like a persistent Civ world or something like that, where all of the game assets, and this is sort of the line that, you know, crypto gaming has been taking in the last couple of years, very strongly, or all of these crypto assets in the game are natively interoperable with real economic value assets in the crypto ecosystem. So for example, you could imagine someone spinning up you know, an escrow contract that basically says, all right, if you deposit three Ether into this contract, then you know, that will, that will cause my planet to send some amount of resources or, you know, population or whatever to your planet.
+
+Anna:
+This is like really turning play crypto money into play money. This is...
+
+Brian Gu (00:34:36):
+Yes. Yes, exactly. And, and, you know, the thing that I think about is like, there's, in some sense, like every human system in the world we participate in is a game, right? Like the global financial markets are a game. The, um, you know, the property right, that's a game. And the degree to which we call some games real, or some games fake, like, you know, property rights feels like a very serious thing to us. Whereas like RuneScape though there's a very rich and thriving economy in RuneScape, or World of Warcraft. Those, those feel like games. And it seems like one characteristic that realer games have is that they are deeply interconnected with the other systems that we interact with in day to day life. So I sort of see the interoperability of Ethereum and the opportunity to build expressive games on Ethereum as an opportunity to make these games something more than just, you know, frivolous games like these are, you know, I would like to see a future where these are full fledged, virtual worlds that like, you know, they're, they're backed by real economic value.
+
+Brian Gu (00:35:35):
+They're freely interoperable. And you can imagine all sorts of like derivative contracts. And we have some of these in the works as well for kind of composing on these coordination mechanisms on these end game resources and assets.
+
+Anna (00:35:46):
+Cool. What does, what does it look like from a perspective of a player? Like, are they, are they, is it mostly just like they're keeping track of hashes and, and coordinates, or do you actually have a UI and some sort of visual representation?
+
+Brian Gu (00:36:01):
+Yes. So we definitely have.
+
+Anna (00:36:04):
+Like Kobi sitting with a graph piece to the ground.
+
+Brian Gu (00:36:06):
+Yeah, yeah. Yes. I mean, like Kobi's tool, what it would do is just output it like a big json of just like a list of plans. We're not so cool as to just write the contracts and, and hope that people would just kind of, you know, figure it out themselves. We do have a web client that's available at zkga.me or will be once the game is released in about about two weeks. The first version of the game that is, and, you know, the client is meant to be sort of an unopinionated way to play this game in a way that you, you just really don't have to do that much. You're almost playing it as if, you know, the experience ought to be like, you're, you're playing something like Civ. So for example on startup, we're going to initialize a web worker that basically just starts, you know, using the computation power of your computer to be hashing around your local area, looking for planets, that kind of thing, when it discovers planets or discovers hashes that are interesting, it's going to store those locally in your browser's local storage.
+
+Brian Gu (00:37:04):
+So you're not going to have to, you know, you don't have to do any fancy thing of like, like managing essentially, what are your private keys here, your, the locations of your planets. That's, that's all handled. The main thing that we just want to enable is we want to be sure that this is an unopinionated and open source client that people can modify further if they want. So if you want to hook this up to your GPU and go crazy on exploring, like, you know, the upper right corner of the universe, you're free to do that. But yeah, so we do provide an unopinionated client that takes care of all of that, and plays just like or as close as we can get to a normal game within the constraints of Ethereum,
+
+Anna (00:37:41):
+Could someone else like, create their own visual representation then? Like they could put their, like, they could change all of the things from planets into, I don't know...
+
+Brian Gu:
+Like towns or something like that.
+
+Anna:
+Yeah. Like, yeah, I'm really, I'm really pushing you to make this, to make a decentralized Civ. I don't know if you can tell.
+
+Brian Gu (00:38:00):
+Yeah. Oh yeah, no, definitely. I mean, Civ, one of our, like everyone in our team plays Civ as well. We've gotten sucked into many a late night as well. But yeah, no, definitely. I mean, one of the things that's exciting to me about like depths in general is that their client agnostic, or at least like, you know, morally, they ought to be clients agnostic. If they're not, then it's kind of questionable how de-centralized they really are. So, yeah, I mean, you could imagine people re-skinning the game. You could imagine people, I mean, building useful tools or plugins that sort of surface information and more convenient ways. We want to make sure that all of that is possible. And we'd be actually really excited to see some of that kind of stuff evolve, on the contract end as well, there's also a lot of opportunity to do this.
+
+Brian Gu (00:38:42):
+So for example, like we've got this core contract that basically implements the game physics specifying, what can you move, what planets can you move from, and to what are sort of the speed limits in the universe? Like what are, what are sort of the game physics? But people can build all sorts of coordination mechanisms on top of that as well. There's like the escrow contracts that I sort of mentioned, but that's, that's sort of just level one. You could imagine like assassination contracts or contracts that basically, you know, send an attack as soon as, you know, some amount of crowdsourced funding or commitments have been made, you can imagine planets or even empires that themselves are not players, but actually smart contracts are DAOs that are doing all sorts of crazy stuff. You can imagine even like nested games where people are kind of like building a universe inside of a Dark Forest planet or region and altering the physics of that themselves, as long as they sort of conform to this top level, almost like metaverse physics. So definitely a lot of there's a lot of blue sky thinking here and we want to make sure we do ship a simple thing first, but that's one of the things that gets me really excited about building on Ethereum in general.
+
+Anna:
+Cool.
+
+Fredrik (00:39:45):
+So I just want to clarify one thing, cause I think I switched in my head what I'm thinking about as like the game board. And I want you to tell me what the right version is. So originally I thought like you instantiate a game with a set of players and then you're given a universe, but then you said it's a persistent universe. Sounds like more like if I enter the game, I'm like given a planet in this large persistent universe and then I just live in the same one as everyone else participating in the game. So is it, is it the latter?
+
+Brian Gu (00:40:23):
+Yeah, I mean, so the flow is basically, you know, on joining the game, you're prompted to, you know, initialize somewhere in the universe. We have some rules about what planets are able to be home planets, essentially. You know, for example, you know, based on the hash of planets, they have different properties, some are stronger, some are weaker, you can only initialize on weak planets. But you do get to choose like which planet you initialize on within the constraints of, of what you're allowed to do. Once you initialize in, on that planet, then it's up to you to kind of build out your empire in this larger universe that you're sharing with everyone else.
+
+Fredrik:
+Okay.
+
+Anna (00:40:59):
+So going back to that, you sort of mentioned that Kobi was like hashing or he was, he was basically running this computation faster and parallelized and was able to explore faster, but isn't it turn-based or like, or is it actually like if somebody has a more powerful computer, they can actually do this faster or if they've read them more parallelized set up, they can do it faster.
+
+Brian Gu (00:41:22):
+Yeah. So the actual moves themselves, these are things that like alter public blockchain state. So for example, I might say move 10 population from planet to planet B and then, you know, the population of planet eight decreases by 10. And at some point in the future, depending on the distance, the population of planet B increases by some amount, however, the local data that you are saving and, and sort of, you know, creating with your own computation, that's something that's happening entirely locally. So whether or not I know all of the hashes of this big region of space, that is something that the blockchain has no business in knowing. In fact, if that was public information, that would put me at like a huge disadvantage. So I want to keep that secret. So for example, it might be the case that, you know, I own these three planets and I'm moving between the three of them.
+
+Brian Gu (00:42:09):
+Kobi owns those six and is moving between the six of them. But Coby has 10 times more computational power than me and has just explored. And he has saved on his local, you know, in his browser's local storage. He's just got a 10 times bigger area that I have that he knows about. So that's kind of the distinction there's there's work going on locally, but the public state is subject to those Ethereum constraints of, you know, block size and things like that, which is why it's not quite, you know, it's, it's not quite real time.
+
+Fredrik (00:42:35):
+I think going to game definitions. It's not actually, turn-based like, turn-based technically means I have to like, wait until you have done your thing, and then I can do my thing. Whereas real time means we can both do things at the same time. And then what direction it feels like is the tick rates.
+
+Brian Gu (00:42:57):
+And, and definitely like, it's sort of a thing where like I have some hesitancy always when I describe it as like quote unquote real time strategy, because the tick size is like so much longer than, you know, a real time strategy game that we're used to would take. And this is just sort of where like abstractions breakdown, like when you're working in a model where the tick size of the world is 12 seconds, everything's going to feel like a little weird, like, not quite, turn-based not quite real time, but we work with the metaphors we have. Yeah.
+
+Fredrik (00:43:23):
+But then you also, you do have this off-chain component of exploration, which is unconstrained by the chain. So you can explore as fast as your computer can.
+
+Brian Gu:
+Yeah.
+
+Fredrik:
+You're not necessarily limited. So it's more like the the moves that affect the world are slower. 
+
+Brian Gu:
+Right. Exactly.
+
+Anna (00:43:42):
+I have a question in here, but I don't know if we've kind of already answered it, but it's which parts are public and which are private then like, like in the visual depiction, like once you found something you've like, you've mapped it out, you know, it exists, you know, somebody else has potentially mapped it out as well, but can you see, can you see the other players, like if they alter something, can you see it, if you've already explored it or do you have to explore it again to see it?
+
+Brian Gu (00:44:12):
+Yeah. So this is something that like, you know, it might actually help to go through specifically, like what is going on with the zkSNARKs? Like what does the zkSNARKs hiding when I'm doing these computations? So, you know, public state is like, you know, we mentioned before, maybe I live at (5, 20) and you live at (3, 8), the hashes of those coordinates and the players who sort of own those locations, that's going to be public. So whatever the hash of (5, 20) is, that's going to live on the blockchain. There's going to be some mapping that basically associates that with my address and likewise for the hash of (3, 8), (5, 20), like those two numbers are going to be private. So those are basically, you know, they're only stored locally, they're in my browser's local storage. And in fact, I really don't want those to become public because kind of like we talked about with the, with the Dark Forest example, suppose everybody in the universe knew that I lived at (5, 20), strong players, weak players and everything in between, I would be, I would be at a really big risk that someone might try to send some attacking or conquering force to those coordinates.
+
+Brian Gu (00:45:18):
+So within the snark, the thing that we're basically doing a zero knowledge proofs of, is that I know the coordinates behind this hash.
+
+Anna (00:45:27):
+I'm trying to understand that then. So like, say, it's say to you and I, and we're playing against each other and we, or we're close to each other. I know that, I know that the planet you're on exists because I've seen it.
+
+Brian Gu (00:45:39):
+So what, yeah. So what you've done is like you've hashed all of the coordinates in your sort of neighborhood in space. At some point you hashed the coordinates (5, 20), and you got some, you know, some string of bytes. You, every time you have some coordinates, you take that string of bytes and you check the blockchain to see has someone already published this string. And then seeing that I've published that string before you can know that basically, you know, I've also seen (5, 20) when I live there. And that's consistent with what you've seen. So the hash function, you know, by its deterministic nature is going to ensure this consistency across all the different coordinates.
+
+Anna:
+But I konw that you do live there, then.
+
+Brian Gu:
+Yes. Yes. So because you know that like public information associates, my address with that hashes. Public information, it does not include the coordinates, but you happened to have your own accord through your own computation to have determined that five common 20 associates with that.
+
+Anna (00:46:34):
+Oh, okay. So if I've, if I've gone by that place and actually explored it myself, then I do know that you live there, but otherwise what's public is just these hashes and I'd actually don't know what's underneath them. So like, I know that maybe I know how many places you, or I know how that you've explored a lot of things or other people have explored a lot of things. I can see a number of hashes, but I can't see where they've explored unless I'm in the same place.
+
+Brian Gu (00:46:59):
+That's exactly true. I mean, and then there's maybe some tricky things that people can do really too, if you, if you like correlate the moves between like different planets in your empire there's, there's some interesting stuff that, you know, you might be able to glean from that. But yeah, I mean, just the hash in isolation, isn't going to tell you anything about what is the planet location underlying that.
+
+Fredrik (00:47:20):
+If I find a planet, can I publish, is there a knowledge proof that I know where a planet is so I can sell it?
+
+Brian Gu (00:47:30):
+Yeah. I mean, that's definitely a thing that could happen. I mean, I could imagine like off-chain markets, or off-the-core-contract markets happening, it's basically like these information markets, right. Where you're like, Hey, I've just discovered a really valuable and rare planet. Like here's the zero knowledge proof that I know where it is. And you know, the planet properties are determined and in sort of a similar way that like CryptoKitties have the DNA string, the planet hash is kind of its DNA. You know, you, you can detect the DNA and see like, Oh yeah, this is in fact a really rare and valuable planet. Then you might be able to auction off that information as well, or, you know, suppose that you find like Anna's location. And Anna is a really like, you know, she's up on the leaderboard and people really want to take her down. You could be like, all right, everybody, like I'm going to broadcast Anna's coordinates, or, you know, I'm going to sell Anna's coordinates. And if you want to attack her, then like, you know, you can do so with no repercussions. Cause you know where she is.
+
+Fredrik:
+Yeah, exactly.
+
+Anna (00:48:22):
+How did the attacks actually happen in this? So like so far, I've, I've followed what you've said about like exploring and identifying where people are, where you are. But how do you ex...
+
+Brian Gu (00:48:34):
+Yep. Yes.
+
+Anna (00:48:37):
+Actually, before I ask that, when you've explored an area, say you find a planet, do you take over multiple planets or do you only live on one?
+
+Brian Gu (00:48:45):
+Yeah. So you, you do take over multiple planets. So, you know, you would move some forces from your home planet to this new planet, thereby conquering it. And now both of those planets are planets that you own and you can move from.
+
+Anna (00:48:56):
+And that's an action that you actually have to take. It's not that you find it and then automatically move.
+
+Brian Gu (00:49:00):
+Right, right. Cause you have to let the blockchain know that like, Hey, I am, you know, I'm doing something to alter the public state and that is to add this new hash in and declare that I am the owner of it.
+
+Anna (00:49:10):
+Okay. So now, now back to that question, how do I attack?
+
+Brian Gu (00:49:14):
+Yep. Right. So, so
+
+Anna (00:49:16):
+Coz like, do we have ships? What do we have? What are they?
+
+Brian Gu (00:49:19):
+So it's a really, you know, we're working with basically really bare bones, kind of resources and mechanics here. And we do a number of interesting things to make it feel fairly real time, to the extent that it can, the particular, the move mechanic in particular is kind of interesting. So let's say that I have discovered that you live at (3, 8) and I live at (5, 20). Well, what I'm going to do is I'm going to submit to the blockchain a zero knowledge proof. So let's say I want to move say like a hundred military forces. You know, we're going to say like population or military forces, it's kind of like the fundamental unit in this game for sort of attacks. Let's say I want to move a hundred forces from my planet at (5, 20) to your planet at (3, 8).
+
+Brian Gu (00:50:01):
+Well, what I'm going to submit to the blockchain is I'm going to submit the hashes of both of those planets, as well as that number that I want to move from planet A to planet B. I'm going to send me, like, I want to move a hundred guys from planet A to planet B. And then I'm going to submit a zero knowledge proof that I know the two locations that are behind these two hashes. And that I'm going to submit a zero knowledge proofs of an upper bound of the distance between those two planets. The reason I submit the distance is basically because, you know, we want for ships to take time to move from planet A to planet B. So, you know, I don't like if I'm really far away from you, then a malicious malicious actor might just say like, Oh yeah, like actually we're just distanced like one unit away from each other or something like that. So the distance is zero knowledge proofs ensures that all of the moves are happening in a valid way. Kind of like how we talked about like, you know, the Knight is moving in an L shape. It is a valid L shape. I'm not going to tell you what the starting point is or what the ending point ending point is, but it's an L shape. That's like two, two units in one way and one unit in another way.
+
+Fredrik (00:51:05):
+And then when, when those hundreds forces arrive, the winner is determined by how many forces the other person has there.
+
+Brian Gu (00:51:13):
+Right. Right. And there's, there's some trickiness around the fact that like, you know, you can't set up like a cron job on the blockchain. You know, you can't set a, set a timer for something to happen in the future. So you have to do a little bit more trickiness there. But it does end up working out and being consistent with the zk proofs, which is, it's a really fun construction. And I encourage, if anybody's interested in this source here, I'm always happy to talk more about it.
+
+Anna (00:51:37):
+Well, I mean, this sounds like something that we should definitely try out to really see it in action. You mentioned it's coming out in two weeks from when we're recording, which should be what, like the beginning of August.
+
+Brian Gu (00:51:49):
+Yeah. Right, right. I mean, between, you know, we're, we're thinking right now, like we're planning for August 7th. So some more in that kind of late first week, early second week of August is when you should be able to go to zkga.me and, and basically see for yourself what SNARKs can do here. So we're super excited for that. We did run one play test earlier in, and we've been running some like more like alpha kind of like internal play tests as well. And we've been very excited so far about the dynamics that have evolved, especially like Kobi's thing among others
+
+Anna (00:52:23):
+You're working on Ethereum. So there's only one kind of zero knowledge proofs, construction you can really use, but what, what are the tools that are, that make up the zkp game?
+
+Brian Gu (00:52:32):
+Right, right. Yeah. So this is, this is a really good question, especially for anybody out there who's interested in developing zk apps. You know, we struggled for like a couple of weeks, like finding the right tool set to use, but we found that Jordi is kind of stacked that he's putting together at iden3 has been enormously helpful. So that would be, you know, circom the language for writing, you know, zk circuits that compile eventually into proving a verification keys as well as snarkjs, which is, you know, a browser library for computing SNARKs proofs and verifying proofs and all these things that, that works in browser applications in JavaScript. And so, you know, of course the space is super early, so a lot of kinks are being worked out and like all these different tools, stacks. But yeah, that's, that's so far what we've been using and, you know, it's been working quite well. So...
+
+Fredrik (00:53:21):
+So what are the interesting sort of limitations you've run into using is, I don't know, if proof's in this context.
+
+Brian Gu (00:53:29):
+Yeah. So, so we've definitely run into plenty of limitations along our journey in getting this game working among them, you know, first and foremost is definitely just going to be that like the developer kind of quote, unquote, like ecosystem for building zk apps. It's just so early, like, you know, the tooling is relatively primitive just because these things have only been possible very recently. And that comes out in an a number of interesting ways namely that it's, you know, it's oftentimes hard to build these apps where there's not, there's not too much like documentation or great answers to quote unquote like common questions, on the technical end, you know, one thing that we have had to be extremely conscious of is just the performance of zkSNARKs in a browser based game. So I remember when we first, when we put together the very, very first kind of version, just proof of concept end to end, we were using snarkjs and which was at the time a JavaScript library for proof generation.
+
+Brian Gu (00:54:27):
+And I remember we ran our very first, like zkSNARKs for proving, like, you know, that you could, you could move from planet A to planet B and you knew the pre-images of these hashes and it took over a minute. And then we were like, all right. So, you know, we have to figure out something else if we want, if, if this is to be a feasible game, because we can't have people sitting there and waiting for like a minute as their snark generates. You know, fortunately Jordi has a version of, you know, at that time he had, he had recently published wasmsnark which was basically, you know, it was a tool for generating these snark proofs with wasm. And that brought us down to, you know, in kind of a reasonable range, what would take like a second or two for these proofs to generate in browser.
+
+Brian Gu (00:55:08):
+However, as the projects evolved and we wanted to do more and more complex things, this performance bottleneck has really been kind of biting us. So one thing that we're really excited about is right now, you know, when you, when we specify the universe, we're going to specify basically that, you know, one in approximately 16,000 coordinates is going to be a habitable planet. The rest are just empty space, but sort of the characteristics of the planets are fairly uniform, if that makes sense. So this basically looks like if you zoom way out on a map that you've mined a ton of, it basically just looks like it sort of starts looking like noise if you zoom out too far, right? Because it's like, you know, a random one out of every 16,000 planets uniformly across all of spaces, a habitable planet, there's not really much interesting texture, the way that you can add texture into these sorts of games that are generated according to an algorithm is via, you know, techniques in quote unquote procedural generation.
+
+Brian Gu (00:56:06):
+So these are the sorts of algorithms that give Minecraft its complexity and coherence. So, you know, in Minecraft you have mountain ranges, you have different biomes. Like this area is a bunch of forests. And then it transitions into like this, like a tundra or something like that, that all happens with procedural generation. And in particular, a lot of it is based on an algorithm called Perlin noise. So, you know, we, we thought to ourselves, well, the games not like the game is not that interesting if the entire universe is just this flat noisy plane. So can we introduce some texture into it? And that got us thinking about like, you know, can we introduce these more complex procedural generation algorithms into SNARKs like we basically have to SNARKify the Perlin noise algorithm. And after a couple of weeks, we, we did get it working and we were starting to see, you know, there's these interesting dynamics of like, Oh, you know, there's this ocean over here where there's no planets, here's like a choke point.
+
+Brian Gu (00:56:57):
+Here's like a hub with a lot of high value things. The problem is though to get Perlin noise, to wrangle it down into a form that's able to be processed in a snark, took a lot of, kind of, you know, hacking. And the second thing was that, you know, it almost 10 times SNARKs proof time. So, and this is what a really simple version of Perlin noise too. So it's a version that a lot of nice things have stripped out of, you know, one of the next things that we would be really excited about for increases in performance is, you know, we can make much more expressive and layered and rich worlds if we're able to introduce more expressive procedural generation algorithms inside Snarks, but that's only possible if Snarks themselves get faster or more efficient protocols start hitting production. And that's one thing we're really looking forward to.
+
+Anna:
+Wow.
+
+Fredrik (00:57:42):
+This brings a question to my mind of like, how would you plan to upgrade or expand? Like, would you launch a new game with the new world or would you tack the new world onto the side, like World of Warcraft?
+
+Brian Gu (00:57:57):
+Yeah, definitely. So the first, the first couple of games that we're going to be running, they're going to be sort of like, timeboxed, almost like beta play tests, so they'll have a definite end date to them. And then like, you know, the following version after that is going to be, you know, a new contract with a bunch of stuff refreshed. One of my goals with Dark Forest in general is to get to a point where, you know, we feel confident enough in the game, physics and mechanics and all of these things that it's able to live as, you know, a persistent universe, but more broadly the thing that I'm projecting, you know, at that point though, you know, I don't, I don't think that Dark Forest or the concepts behind Dark Forest are just static. You know, it's not, it's not complete, there's all sorts of other interesting constructions that are further out, that we've been kind of exploring and thinking about for ways to use ZK in games.
+
+Brian Gu (00:58:45):
+Dark Forest is one particular way that you can use ZK to make a particular kind of strategy game. But if you know the performance and expressiveness of Snarks improves over time, you know, we've been brainstorming ideas for like a ZK Dungeon Crawler, flash rogue-like game or like ZK RPGs or ZK, even sandbox games. And these are games which require like a lot more performance on the snark end, but it's, it's definitely something that is kind of in what the ideal longterm vision could be, if the technology can get there, which we think it will.
+
+Anna (00:59:22):
+Wow. That is so cool.
+
+Brian Gu (00:59:25):
+But yeah, I mean, we're, you know, we're super excited once we sort of realized that ZK has very natural applications to gaming you know, sort of ideas just started flying, you know, and we've had many like a late night talk about like, Oh man, it turns out that you can actually do this mechanic too with ZK. And like, we'd never thought about that before. And, you know, it seems like the sort of thing that just would be impossible on a blockchain. So yeah, I'm, I'm really looking forward to seeing what other people create as well here.
+
+Anna (00:59:55):
+This is so, it's so cool. And I hope our audience enjoyed that because it sounds like it's unlocking a lot of potential on, on blockchains to explore this kind of stuff.
+
+Fredrik (01:00:03):
+I think this is huge potential outside of blockchain to actually, like there's a big problem in the gaming industry where games are becoming more and more complex that the centralized servers just can't really manage that all the state that's required. And what this does effectively is pushes the computational burden from the centralized server to the clients. And the server is just like an accountant keeping track of hashes. That's a super simple job. And so if you go back to like, whatever, World of Warcraft, there's a limit on the number of players that can be on any one server, because that's what the physical machine can handle, but you could have a much, much larger world if the centralized server all it's doing is just managing hashes.
+
+Brian Gu (01:00:50):
+Yeah. And that's actually one of the crazy things. Like I know people talking about like Ethereum being just the slowest computer in the world a lot. But one thing that we realized as we've been building this is that in a really weird way that, you know, the game, the way we've set it up is almost quote unquote, like infinitely scalable. And what I mean by this is like, you know, a lot of times in these kinds of, let's say there's a genre of these persistent uh strategy space, conquest games. In a lot of these games, there will be, you know, players will play on servers that are limited to say 2000 or even 200 players at one, simply because there has to be a server that's managing all of this. But the interesting thing here is that every single player, like, regardless of whether we have 10 players a hundred or even a hundred thousand can live in the same persistent universe and be effecting, you know, the terrain in, in this shared world. And that's something that's a surprising consequence to me of building this on Ethereum. Cause usually I think about like Ethereum apps is very limited in what they can do, but if you're just tracking hatches, that's all you gotta do.
+
+Anna (01:01:51):
+Well, thank you so much, Brian, for coming on the show and sharing this with us.
+
+Fredrik:
+Yeah. Thank you very much. 
+
+Brian Gu:
+Yeah. Thanks for having me.
+
+Anna:
+It was a bit of a different episode. It was like we went more into the game space, but yeah, you've definitely got us both thinking, so thanks.
+
+Brian Gu (01:02:06):
+And yeah, I mean, if anyone is interested in either checking the game out or getting in touch with us, you know, the link is zkga.me and I think we're, we're probably going to start posting some updates and content to Twitter as well @darkforest_eth.
+
+Brian Gu (01:02:20):
+So if you want to keep up, then feel free to take a look at those.
+
+Fredrik (01:02:24):
+Very cool. Thanks again.
+
+Brian Gu:
+Awesome.
+
+Fredrik:
+And to our listeners. Thanks for listening.
+
+Anna (01:02:29):
+Thanks for listening.

@@ -1,0 +1,480 @@
+Anna (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online. Today James and I chat with Steven Goldfeder and Ed Felten from Arbitrum. We dig deeper into the topic of Optimistic Rollups. We learn about the history of the project and what makes it unique in the ecosystem. But before we start in, I want to tell you about the ZK Jobs Board. A few weeks ago, I held something called a ZK jobs fair, which was an awesome way for job seekers to connect with the best teams working on zk topics. We did this on a gather.town hangout. It was very social. It was very fun. Now as part of the job fair, I also put together the ZK Jobs Board, which is a list of all these available jobs in the zero knowledge space. There are jobs in software development - specifically in Rust, as well as applied cryptography and research jobs. There are also a couple community and Biz Dev positions. Now I've added the link in the show notes. You should be sure to check it out, if you're currently looking for a new opportunity. and also keep your eyes open for the next ZK Jobs Fair, it'd be super cool to see you there.
+
+Anna (00:01:27):
+I also want to take the time to thank this week's sponsor, Aave. Aave is an open source decentralized non-custodial liquidity protocol on Ethereum. With Aave, users can participate as depositors meaning they provide liquidity to earn a passive income. They can also act as borrowers to borrow in an overcollateralized way or an undercollateralized way. Think: one-block liquidity Flash Loans. Given that we are currently doing a series of L2 focused episodes, it makes sense to mention that Aave has also deployed a new market on Polygon sidechain. This lets users pay much lower gas fees. Assets can be transferred from Ethereum with the Polygon Bridge and put to use on Aave's Polygon markets. To learn about it, check out the blog post that I've added in the show notes and also visit the project at Aave.com. So thank you again, Aave, for supporting the podcast. Now, here is our interview with Ed and Steven.
+
+Anna (00:02:36):
+So today James and I are chatting with Steven Goldfeder and Ed Felten from Arbitrum. Welcome to the show guys.
+
+Ed (00:02:41):
+Thanks for having us.
+
+Steven (00:02:43):
+Thanks for having us.
+
+Anna (00:02:45):
+And hi James.
+
+James (00:02:45):
+Hi, Anna. It's good to be here again.
+
+Anna (00:02:47):
+So this is, I think this is the fourth episode in a series of episodes that we seem to be doing on rollups over the last little while.
+
+James (00:02:57):
+Kind of an accidental series.
+
+Anna (00:03:00):
+Totally. I mean, I think about a month ago I did something called "Mapping the L2 landscape" as an event, as a zkSession. Since then I feel like this topic has become extremely relevant for the show. So yeah, I think with today's episode, we're going to be looking at Arbitrum, which is another rollup, I guess it falls into, and correct me if I'm wrong here, but more in the Optimistic Rollup side of things.
+
+Ed (00:03:25):
+That's correct.
+
+Anna (00:03:26):
+But before we start in on all this, I actually am really excited to have the two of you on the show. It's the first time we meet and I would love to hear what your path to Arbitrum is.
+
+Ed (00:03:36):
+Sure. I guess I'll go first, since I was there at the very beginning of proto-Arbitrum. It goes back to actually the 2014. At that time I was teaching a course at Princeton or I was helping teach a course at Princeton about a blockchain cryptocurrency technology. And one of the topics we covered was smart contracts. So it seemed pretty clear to a bunch of us that scaling was going to be a big issue for smart contracts. And so we started thinking about what we could do about it. And long story short, in the fall of 2014 a group of students in this Princeton course did a joint-course project building a very early version of Arbitrum. It was called Arbitrum, you can go on YouTube actually and watch their course presentation. And it's obviously a student work, but you can see really the germ of the ideas from the product there. So that happened and a bit more research on the topic. And then in 2015, in spring of 2015, I got invited to go off and work on the White House staff. And so I worked for President Obama for almost two years, which was when obviously Arbitrum was not so much on my mind during that time, we had other things to worry about. But in January of 2017, when the presidential transition happened, I came back to Princeton, and one day these two graduate students, Steven Goldfeder and Harry Kalodner, came into my office. And at this point I think I'll pass the baton to Steven to tell the rest of the story.
+
+Steven (00:05:06):
+Yeah. So I guess I can back up a little bit. I was eagerly waiting for Ed to come back from the White House, because in the interim, scaling, what we thought scaling, had become a problem. Of course, what we actually saw was a blip compared to what we see today, but it was very clear to me that scaling solutions were necessary and we had early foresight here. So Harry and I basically ambushed Ed at his office and said, "Hey, that Arbitrum thing that you were working on, I think it's time to pick that up". And for that, we worked on Arbitrum for about two years or so, a year and a half to two years, in an academic context, we published a paper on Arbitrum, and it became clear to us basically then, before the paper was even fully published, that there was commercial potential here. And we decided to spin out Arbitrum as a company. I don't think any of us realized that moving forward, we'd all be in this full-time and absolutely loving it three years later, but there's really nothing else that I'd rather be working on now. And that's sort of the beginning, but it's been a really long and really amazing journey in a company so far. And I think the best is yet to come.
+
+Anna (00:06:04):
+Cool.
+
+James (00:06:04):
+That is a really long time for a product to exist. How similar is Arbitrum today to what you started on three years ago and to what the student work from 2014 was?
+
+Ed (00:06:17):
+Yeah, let me compare it to the student work. The piece that really comes through from that very first version is the way that the system resolves disputes between parties about what is the correct execution of a chain. The basic idea of resolving dispute's through this recursive bisection method that we use. That goes back to the very first version of Arbitrum. But I think almost everything else about how it works has been built since then. You know, if you go back to 2014, this is before Ethereum had really launched. And so we didn't think of it at that time as an Ethereum scaling project, because there wasn't really an Ethereum to scale. And so one of the ways in which it's changed is the way that we've adapted some of the basic ideas to work with Ethereum. And I think we found partly that it's a really good fit to the problems and affordances that Ethereum has and partly we've made it fit through the various research and engineering work we've done in between. So that's a big piece of it. Moving into what's today called a rollup model is, I think, one of the changes. Over time, we've had different ideas of what the role of validators are and how all that works. We could go deep on that, if anyone is interested. And this is actually another part of our journey. In the early days of our company, we would talk to people about what we were doing and they said, "Okay, is it State Channels or is it Plasma?" And we would have to say, "No, it's something else." But there wasn't really a word, at that time, for the thing that Arbitrum is, it was only later that this term "rollup" came along, and we recognized, "Hey, this actually is a pretty good description of what we do, or at least a big part of what we do". And so the category that we're in is a category we were in before it was a category.
+
+Anna (00:08:07):
+---But do you,--- I mean, I said this just before, that you're sort of in the Optimistic Rollup category as well, the idea of using, I'm assuming you're using fraud proofs. Was that already part of the idea back in 2015?
+
+Ed (00:08:20):
+Yeah. The idea was Optimistic in the sense that somebody would make a claim about what the correct execution of the chain was. And then there's a time period where people can dispute that, if they want to dispute it. And if there is a dispute, then there's this dispute resolution protocol. So all of that existed in the 2014 version.
+
+Anna (00:08:40):
+Okay. But was it all built with the concept of Bitcoin as the core? Were you thinking kind of in the Lightning context? ---Like wasn't, Oh my bad.---
+
+Steven (00:08:53):
+I think our line back then was "We're chain-agnostic" and that's what it was in our academic paper, it was, "you have some layer one chain that has some basic capabilities and you can build a powerful layer two on top of that". Really, it solidified us that we were building on Ethereum back when we initially formed a company. In an academic paper, you could say, "Oh, it's chain-agnostic" and that's a good thing, but when you're building a company, you have to actually know what you're building on. And it became clear to us that building on Ethereum was the right thing to do. This actually wasn't the most popular model for investors back in the day, this was like 2017, 2018. People just wanted you to launch your own blockchain and your own coin, but it was clear to us back then, that if this could be made to work on Ethereum, we should make it work on Ethereum. And that's sort of the approach that we took. And the rest is history from that point.
+
+Anna (00:09:41):
+So you just mentioned the company that you formed, it's Offchain Labs, correct? That's the company. So I actually wanted to understand that. So, going back to that story you were saying: 2017, you're deciding, "Okay, we're going to actually run with this". You found a company. Who was that company and what was the origin story there?
+
+Ed (00:10:02):
+Yeah. So at first it was the three founders. It was myself and Harry Kalodner and Steven. So we were the three main authors of the academic paper. We had written the vast majority, or, I think, maybe all of the code underlying the academic paper. And so it was just the three of us that spun out into a company. And at first it was just three people and a piece of paper saying that we're a corporation. And that was sort of the beginning of the journey. We did a first fundraising round in early 2019. We started hiring employees and got an office and started actually producing, taking the academic code, which we had licensed from Princeton, and then turning it into something that was going to work as a product.
+
+Anna (00:10:49):
+Wow, you were raising in 2019. That was a tricky time, I remember.
+
+Steven (00:10:53):
+Yes. Back then basically people didn't really believe that scaling would be the issue that it is now, this quickly. I remember one of our investors says, "What you're saying is build it and they will come, do we really need this? Is Ethereum really going to ever reach this capacity? Or is it going to reach it anytime soon?" Another pushback we got was, "Hey, you know, there are so many other problems that will come first, like UX, et cetera, finding good use cases. And scalability is more down the road". So I think that, it was a particularly hard time for the market to raise then. But I think for scaling solutions, also, people didn't really believe that it would become that important that quickly. But we didn't have too much trouble raising, we definitely didn't need to convince people of our story, as opposed to today where people are saying, "Hey, why is this not built yet? Why is it not on mainnet yet? We need this yesterday".
+
+Anna (00:11:44):
+Okay. So we've determined that Arbitrum falls into the Optimistic Rollup category, but when you were doing this, there was no Optimistic Rollup category, really. You didn't call it that, did you? Actually, sort of random question here, but who coined that phrase? I actually don't know that.
+
+Ed (00:12:06):
+So it came in two pieces, I think, as I understand it. First the idea of rollup, which today means something about recording data on the L1 chain to allow people to replay the history of the chain, if they want to. And then Optimistic, as a descriptor on that, came later. We didn't originate either of those terms, but we adopted them because it was clear that they were describing the thing that we were already doing.
+
+James (00:12:39):
+If I remember correctly, rollups came out of Barry Whitehat's work on zkRollups or the early thing that eventually became the foundation of zkRollups. And Optimistic was coined by I want to say Vitalik and then popularized by Dean Eigenmann's post on Optimistic systems.
+
+Anna (00:13:00):
+No way! Dean made that famous?
+
+James (00:13:03):
+He was the first one that I remember writing a big blog post about what is Optimistic. And then after that, they came together to be Optimistic Rollup, which was a description of systems like Arbitrum that were already in progress.
+
+Anna (00:13:19):
+A few weeks ago we did have Optimism on the show. And there obviously you can see they kind of took that name and now it's part of their brand. I keep unfortunately messing that up and being like Optimistic when I mean Optimism, and Optimism when I mean Optimistic. But I want to understand, how does what you've built, how is it different from what they're building, if you're both in this kind of subcategory of rollups, which we're calling Optimistic.
+
+Steven (00:13:49):
+Yeah. It's a great question. The first thing I'll just say on the name. I think they definitely were using the term Optimistic Rollup for that sort of outcome to describe a category of scaling solutions. We also have some others like Fuel Labs, also sort of recategorizing projects into this category. I don't know, Ed, do you want..?
+
+Ed (00:14:08):
+Sure. Let me talk about what the difference is. There's a bunch of ways to come at this, we can talk about a lot of the detailed differences, but one way that I think is useful to think about it is that we start with the idea of resolving disputes that is dealing with claims of fraud by an interactive protocol. So you have two people, Alice and Bob, who disagree about what's the correct outcome of a particular set of inputs to the chain. And how do you resolve that dispute? We use an approach that's based on interactive proving. So that is: Alice and Bob sort of go back and forth. There's a kind of game between those two parties that's refereed by an L1 Ethereum contract. And our system is designed around the idea that that is the best and most efficient way not only to resolve disputes, but actually it allows the most efficient execution, even in the case without a dispute. At bottom, one of the big differences between Optimism's product and our product is the way that the disputes are resolved. And many aspects of the overall design of Arbitrum follow from that decision to use interactive proofing. We can dig into that a lot more, why interactive proving is better, we think, and then what does that mean for the design.
+
+Anna (00:15:31):
+Sure. I want to take one step back into the fraud proof concept, because it was in that interview that I realized with this fraud proof, it's not that you're constantly sending fraud proofs. In fact, it will be very rare that such a proof is actually created. And I guess the reason I didn't get that right away is I'm always thinking from the zk proof context and the zkRollup, where you're often sending proofs. Here this is, if there is a dispute, a fraud proof is submitted and then that fraud proof must be figured out.
+
+Ed (00:16:08):
+Yes. If everyone agrees, if literally everyone agrees what the result is, there's no need for a proof. And as you say, in the common case, no proof is necessary, because someone makes a claim, which is correct. And everyone else looks at it and says, "Aha, that's correct". And on you go. So this is one of the ways that Optimistic systems can be more efficient is you don't have to pay the cost of proving, unless there's actually a dispute.
+
+James (00:16:34):
+Unless something goes wrong.
+
+Ed (00:16:36):
+Unless something goes wrong, one way or another. But normally things don't go wrong. And people are disincented from trying to cheat.
+
+Steven (00:16:47):
+There's a very interesting thing here to connect this question back to the other point of how we compare. Our core differences in the technology is really around fraud proofs. And it's a bit ironic, it's as you mentioned, fraud proofs don't really come up in practice. We expect them, the incentives in the system we worked at, fraud proofs shouldn't come up and we really don't expect to see these, but ironically, the fraud proof technology impacts the happy case as well. So, for example, our transaction costs are quite low and it's because of the way we do fraud proofs. Other systems have issues with large transactions. Consider a transaction that goes over the Ethereum gas limit or a contract deployment that's larger than allowed on Ethereum. We can do these, but systems that rely on fraud proof that reexecute code have trouble with these, because again, even if fraud proofs don't come up, you always have to have the ability to do a fraud proof. So if your fraud proof mechanism requires you to reexecute code and rerun your transactions on chain, then even in the happy case, where there is no fraud proof, you are bound by the limits of the Ethereum chain. And that's something which would be very bad. So it's super interesting that our core technical differences from other Optimistic Rollups are in the way we do fraud proofs, but it actually impacts the healthy system, even when there are no fraud proofs, which is I think an interesting and not super appreciated point.
+
+Ed (00:18:08):
+Yeah. So, I mean, one way of looking at this is you rarely have to do a fraud proof, but you'll always have to be ready to do one.
+
+Anna (00:18:15):
+Got it.
+
+James (00:18:15):
+So you've used the word "interactive" to describe your fraud proofs a few times. Should we say that Optimism's fraud proofs are non-interactive and that's one of the core distinctions?
+
+Ed (00:18:28):
+I think it's probably more accurate to say that they are one round interactive proofs. So someone posts a claim about a rollup block, which is like a claim about what correct execution is. And there's one round of interaction that someone says, assuming it's wrong, they make a claim that it's wrong. And then the system in that one round game is able to resolve it, whereas we use a multi-round interactive protocol. And on the other hand, a zkRollup system would use a non-interactive, cause you just post the proof every time right away.
+
+James (00:19:00):
+So it's much more of a spectrum, than a binary here. We have the zk on one end, as non-interactive, and then Optimism is one round of interaction. And then Arbitrum can do potentially many rounds?
+
+Ed (00:19:13):
+Multiple rounds. As many as necessary. It's a small factor times the log of the number of steps of computation.
+
+James (00:19:21):
+You said "recursive" earlier, which gave me a hint as to how it works.
+
+Ed (00:19:26):
+Yeah. So let me dig into that a little bit more. So imagine that Alice has made a claim about a billion steps of computation and Bob disagrees with it. So what will happen is Bob, first of all, says, he disagrees with that. Bob will make a counterclaim, here's what he thinks the result should be after a billion steps. And then Bob will divide his counterclaim into a hundred smaller claims, each of them being 10 million steps in sequence, line up to be equivalent to his whole billion-step claim. And so now Bob has made a hundred of these 10 million step claims, and Alice will pick one of those to disagree with, Alice has to pick one to disagree with. And so now what you've done is in one round of this game of Bob's move, you've reduced the scope of the dispute from a billion steps to dispute about 10 million steps of computation. So a factor of a hundred at each round, you reduce it. So after whatever the log base 100 of a billion is, which is, I guess, 4.5 rounds, you now have a dispute about one step of computation. And now that finally gets decided on the L1 chain on the merits. That is whoever is making that one step claim has to offer a proof that like, "Hey, this is an add instruction. Here's a proof that it's an add instruction. Here's the proof of what it is that we're adding, and therefore here's what the results should be". So that once that proof is super simple now, but you get there from a billion steps or whatever, a hundred billion down to one through this recursive division.
+
+James (00:21:00):
+Right. The idea is that you and I are running the same computation with the same inputs, we should agree exactly on what happened at every step, right?
+
+Ed (00:21:09):
+Yes.
+
+James (00:21:09):
+So where Optimism, the solution would be to have the L1 run all 1 billion steps. In Arbitrum there's this negotiation between you and I, where we narrow it down to exactly where we disagree, and then the chain resolves just that one step where we disagree.
+
+Ed (00:21:29):
+Exactly right. And the thing that you can prove is that the person who's right can always win the game.
+
+James (00:21:36):
+As long as there's no censorship on the chain and the other kind of standard fraud proof assumptions.
+
+Ed (00:21:42):
+Yes. You have to assume that people can get a transaction on the chain within a not outrageous length of time. So it's about a week in Optimism, I think is what they're thinking, and that's what we're thinking as well, that you have about a week of grace period to deal with denial of service attacks, if there is a dispute.
+
+James (00:22:01):
+So in this example with a billion steps of computation, and we need to do 4 or 5 rounds back and forth, is that one week per round or one week for all rounds?
+
+Ed (00:22:13):
+It's one week total. We sometimes talk about it as a chess clock model. And that is each player gets a clock that starts with a week. And when it's your turn to move, your clock is ticking. And if your week runs out, then you lose the challenge. And so that means that you have a week, and this is a week in addition to the time that it's expected to actually take you in the absence of denial of service. So you have a week of extra cushion to deal with denial of service or crashes or whatever might happen during the entire course of the game.
+
+James (00:22:44):
+Gotcha. Interesting. And so these core differences, while you were talking earlier about Arbitrum being able to handle much larger contracts and much larger computation is because where a one round fraud proof would have to run all billion steps at the same time, Arbitrum can break it down into a bunch of discrete little subrounds or a bunch of discrete rounds.
+
+Ed (00:23:10):
+But only if necessary. So this is one of the key points. If you're operating with this reexecution model, you have to post a state root on the L1 chain basically for every transaction or for every Ethereum gas limit. Whereas with Arbitrum, you don't need to do that, so that you can checkpoint the state route to chain, say, only every 5 or 10 minutes. And because if there's a dispute going, the difference between 13 seconds and 5 minutes is just a couple of rounds of dispute. And with this chess clock model, it doesn't slow down the resolution of the dispute by more than a trivial amount.
+
+James (00:23:55):
+Right. And I guess the other part of that is, if I have committed fraud and I am absolutely sure I'm going to lose this game after 10 rounds, I probably won't even play the game at all. So we don't have to have the layer 1 spend money and gas running this 10 round game, that I know I'm going to lose.
+
+Ed (00:24:15):
+That's true. But also even if you do play the game out, the L1's job is really easy. It's a timekeeper, #1. And #2, it makes sure that the players' moves are sort of valid on their face. So Bob is supposed to issue a hundred intermediate state roots, and did Bob issue a hundred things that look like state roots or not? Whether the state roots are correct or bear any resemblance to reality, the referee doesn't need to know, because that's all going to come out as they play this interactive game. And so the referee just needs to make sure that each player moves on time and that the move is syntactically valid. Does it contain a hundred state roots? Did the person really identify one of those hundred steps? Literally, is it an integer between 0 and 99, the sort of segment identifier that gets passed? So it's very simple checking at each round.
+
+James (00:25:07):
+Interesting.
+
+Anna (00:25:09):
+I'm left with two questions from here that maybe you can help me understand. So we keep mentioning this one week duration. So going back to that idea, fraud proofs, they exist in the case that somebody does something inappropriate, but you have this week-long time frame, I guess, that's been predetermined. When you think of a transaction actually going from the L1 to Arbitrum, things are basically happening over an Arbitrum. And then you're trying to bring it back to L1. Does it then sit for a week on route back to L1, when you're trying to show that this thing has happened, guarantee that it's happened, roll it up and write it? Do you have to wait before you can access it?
+
+Ed (00:25:58):
+There's an important distinction here between finality and what we call confirmation. So finality is when do you know the result? What the result of your transaction will be? At what point in time does every honest party who's watching know exactly what the result of your transaction has to be? And then there's confirmation, which is that at what point in time does the Ethereum chain record the fact that that happened? Does that make sense?
+
+Anna (00:26:23):
+Yup.
+
+Ed (00:26:23):
+Okay. So it might be helpful to walk through kind of the life cycle of an Arbitrum transaction. So some user wants to do an Arbitrum transaction. What they're going to do first is arrange for that transaction to get put into the chain's inbox. So the chain has an inbox, which is managed by an L1 contract. And it's first in, first out. And basically that supplies the inputs to the chain's execution. And so what the chain does is it reads it's inbox, one transaction or message at a time, and it processes each one, and that processing is fully deterministic. So once your transaction is in the inbox, now you can figure out exactly what its result is going to be. And everyone else, everyone else who's paying attention, can also figure that out, because the result of your transaction is a deterministic result of what's in your transaction and what's ahead of it in the inbox.
+
+Anna (00:27:19):
+So when you talk about this execution though, is that execution only on Arbitrum? Or is that execution still on this L1. Like, where are we?
+
+Ed (00:27:26):
+It's execution on Arbitrum.
+
+Anna (00:27:26):
+Okay, so we've already moved off of L1, we're in L2.
+
+Ed (00:27:31):
+Yeah. So as soon as you put your transaction into the Arbitrum chain's inbox, now its result is inevitable. And everyone can know what it is. So as soon as the arrival of your message in the inbox has finality on Ethereum, then your transaction has finality on Arbitrum, and everyone knows what its result will be. The only entity that doesn't know what the result of that transaction will be is the Ethereum chain. So the whole point of an L2 chain is that you don't want to make Ethereum do all the work of executing or checking out all the transactions, right? And so we don't. So all observers who are watching, they can execute along with what the chain is doing, based on the contents of the inbox that are fully known to everybody, figure out what the result of your transactions will be and go on from there. But it takes a week for the Ethereum chain to ratify or confirm that inevitable result.
+
+Anna (00:28:32):
+When we talk about going over to Arbitrum, it's not like a ledger sitting on one person's computer, where things are happening, like that in itself has a decentralized block production kind of system. So it's like, it moves from the L1 to the L2, which has its own, I guess, security in it. And then that extra security is generated by getting that confirmation one week later? Actually, is that how you'd think of security there? Cause I always think like the L1 is supposed to provide the security in a way.
+
+Ed (00:29:08):
+So we think of the L1 as providing confirmation, as confirming or ratifying the result. In the normal case, the history of your transaction will be: you put it into the chain's inbox and once that has finality, that putting into the inbox transaction has finality on Ethereum, now your transaction has finality. Its result is known and is known to you and knowable by everyone.Then at some point, some party will propose a rollup block that includes the execution of your transaction and whatever results it produces, whatever changes it makes to the state of the Arbitrum chain, there's a state root that's posted that summarizes all of that. And then any actions like withdrawals of funds back to L1 are also part of that rollup block. So that rollup block gets posted. If it's correct, everyone knows that it will eventually be accepted. If it's incorrect, everyone knows it will eventually be rejected. So in the normal case, someone posts a correct rollup block that includes your transaction. And then a week later, in the normal case, no one has disputed that and the Ethereum chain confirms it, and now Ethereum knows that that's the result of your transaction. Everyone else knew before that, but it takes a week for Ethereum to find out.
+
+James (00:30:23):
+So say you're me, I'm running an Ethereum node, and then I want to participate in Arbitrum, so I also run an Arbitrum full node alongside it, right?
+
+Ed (00:30:33):
+If you want to, yes. So it's just like Ethereum, and you can run a full node or not.
+
+James (00:30:37):
+And so my Arbitrum full node can learn very quickly whether an Arbitrum block is valid, because it's running the whole Arbitrum chain, it's syncing everything. But then it takes Ethereum a week to catch up to what my node knew all along?
+
+Ed (00:30:54):
+That's right.
+
+James (00:30:55):
+Okay.
+
+Ed (00:30:57):
+Yeah. Your node, everyone's node knows. It knows the score. It's just that Ethereum is slow to find out.
+
+Steven (00:31:02):
+Exactly. We don't want Ethereum executing it. And that's the whole point.
+
+James (00:31:10):
+Okay. And so the idea of that week is that it gives a chance for my node to tell Ethereum that something's fishy here.
+
+Ed (00:31:21):
+Yes. If you think that that rollup block that was proposed is wrong, you can dispute it. You have to say what you think is correct, and then you have to stake and then you and whoever proposed that block will be put into a challenge with your stakes at stake. And eventually one of you will lose and the wrong block will eventually get rejected, and the correct one will eventually get confirmed.
+
+James (00:31:46):
+Interesting. But the outcome of that challenge is known to everyone else, as soon as it happens.
+
+Ed (00:31:54):
+Everyone knows who's in the right, in that challenge.
+
+Anna (00:31:56):
+Okay.
+
+Steven (00:31:56):
+The security property is that you can ensure that, whenever you see on your node that any honest player themselves can ensure the correctness. So if you're running your node and you know the state, that's exactly the guarantee of the rollup, you can guarantee that Ethereum will publish that. It will confirm that because either it's going to be published and accepted, or if someone tries to challenge, you know that you can successfully defend it.
+
+James (00:32:20):
+And so the security guarantee is that Ethereum will catch up to what everybody else knows is correct, as long as there's no censorship and there's one honest person like me out there willing to submit the proof and everything.
+
+Ed (00:32:33):
+So we do assume that there is one honest person who is, or just one greedy person who wants to take the stakes from liars. Even just the person who is challenging wrong rollup blocks for profit will ensure correctness.
+
+James (00:32:49):
+And I think to be clear, is that the assumption of any optimistic system?
+
+Ed (00:32:54):
+Yeah. What's essentially the assumption of rollups is that you get a guarantee of correctness on some assumption, an Optimistic assumption. You have to assume that there is someone who's willing to stand up for the correctness of your transaction or the correctness of the chain at all.
+
+James (00:33:09):
+And for zkRollups you have to assume that the cryptography works.
+
+Ed (00:33:14):
+Yes.There's also questions about censorships. One of the things that I like about Optimistic systems is anyone, literally anyone in the world, can play the role of the one party who forces correct execution. You don't have to rely on someone who has special equipment or special know-how, or secret software or anything. All of the information you need is on the L1 chain, because it's a rollup. And the computational load of actually ensuring correctness is reasonable for an ordinary computer.
+
+James (00:33:45):
+Oh, that's nice.
+
+Anna (00:33:47):
+I want to understand, this idea of one individual can submit a fraud proof, but what does that actually look like? It's not somebody sitting there like sees something with their eyes and pressing "go", right? This is all built into the rules already, I guess.
+
+Ed (00:34:01):
+Essentially, yeah. So in practice, people will run validator software. So a validator software is, if you want to get right down to it, it's a piece of software that watches the chain and it creates disputes and engages in this interactive challenge protocol, when needed. And we, Offchain Labs, produce open source software that will do that. And so anybody can download that, build it yourself, or just download our docker image, or you can write your own, according to the published protocol. So anybody can do that. And there's open source software that lets you do it. So in practice, what you do is you start a validator on your computer, or on an Amazon instance or something. And then you just go about your regular life.
+
+Anna (00:34:43):
+Should we make a distinction here when you use the term "validator"? I mean, I have a validator called ZK Validator, but on these proof of stake L1 networks. I've heard a lot of different words for the actor that lives between L1 and L2. And is that what you're referring to here, when you say validator?
+
+Ed (00:35:01):
+Yeah. So we think of the nodes, the Arbitrum nodes, as basically falling into two categories. There are the ones that are validators, who are paying attention to the correctness of the protocol, making sure that rollup blocks are correct and so on. And most of the time a validator is just watching and checking. Most of the time everything's okay. And so nobody even knows you're running a validator, if you don't tell them. Then there are full nodes, which are more like Ethereum nodes, meaning that they're following along, and many of these nodes will accept RPCs from clients and can provide node services, using the same API that Ethereum nodes export.
+
+Anna (00:35:44):
+Got it. But these validators are not building, they're not creating the block. Actually, this is a question: is there a blockchain in there? Who makes the blocks?
+
+Ed (00:35:56):
+So any validator can make a block. So anybody can make a block. You're essentially proposing a block. If you'd like, you can think of it like the Ethereum chain in the sense that anyone can make a block. We don't have a proof of work that you need to do, instead you're subject to fraud proof. Instead you have to stake and you're subject to a fraud proof.
+
+Anna (00:36:18):
+Okay, so it is proof of stake in a way, it is proof of stake, but you don't call it that. This is where it just becomes so intertwined.
+
+Ed (00:36:26):
+The difference is, I think, that with sort of classic proof of stake you have this scheme where people make blocks and there's a consensus that develops among the people who have stakes down, whereas in our protocol and in most other rollups it's not a consensus protocol, it's a correctness protocol. That is if you are correct, and everyone else in the world is lined up against you, you will still win, because at the end of the day this dispute resolution protocol is determining who is actually wrong about what the chain will do. And so if you're right, you can always win in this game. That's a difference between either proof of work or proof of stake type consensus algorithm.
+
+Steven (00:37:10):
+Traditionally, the proof of stake is like a voting model. And the idea is if you accumulate enough stake, you can overpower and make bad things happen in the system. There is no such attack vector here. All you need is one stake and you can guarantee honesty. And if someone else has way more stake than me and they still can't force a bad action, a bad result into the system.
+
+Anna (00:37:28):
+Is the validator actually like the bad actor, as well? If there was to be a bad actor, would it be a validator actually submitting something incorrect?
+
+Steven (00:37:37):
+Yes. The validator who posts the update would post the bad update, and then another validator would challenge. And you get this interactive challenge between two validators that would play out.
+
+Ed (00:37:47):
+Yup. And then at the end of the challenge, the bad validators going to lose the challenge and they will lose their stake. And some of that stake goes to the good validator, who challenged them, and some gets burned for incentive reasons.
+
+James (00:37:59):
+We were talking earlier about this being a correctness protocol, not a consensus protocol. And that validators, unlike in proof of stake, cannot vote for incorrect things. Am I right in believing that you get that nice property because you're relying on the layer 1 host blockchain to provide you a consensus protocol and everything else you need?
+
+Steven (00:38:22):
+That's exactly correct. There's no magic bullet here. We're using Ethereum's consensus. We need a consensus mechanism, but the property is, if the Ethereum's consensus works, then one honest validator can enforce correctness.
+
+James (00:38:35):
+This is an extension to existing consensus protocols. It improves them, it makes them better and more scalable.
+
+Steven (00:38:41):
+Yeah, exactly. And that's why it's really a layer 2 that by definition, the layer 2 is the true layer 2, because it doesn't have its own consensus, it relies on the layer 1 consensus. And then the validator properly is for ensuring the correctness of the layer 2. And that's why it's so nice, because you can get the decentralization and the security of the layer 1. And then you have these validators that are really, again, minimally trusted. In the typical proof of stake or a different consensus system, you'd have to worry about who are the validators? How many are there? Can they overpower and overteam and form a cartel? Here you don't have that property. All you need to know is that there is one honest validator that's going to do the right thing. And again, that together with Ethereum's consensus is the recipe for correctness.
+
+James (00:39:23):
+So as long as Ethereum is working and there's one honest validator out there, Arbitrum is going to work.
+
+Ed (00:39:29):
+Yeah. As long as that's the case, you will get correct execution of the Arbitrum chain.
+
+Anna (00:39:34):
+Besides the fraud proof, there's something else being written to L1. What is that actually? What is the, not the proof of fraud, but the transaction going back.
+
+Ed (00:39:46):
+Yeah. So let me tell you what's in a rollup block, which is probably the key thing. So a rollup block has first of all, a reference to the previous rollup block saying, "Here's the last block before me that I say is correct." So starting at the end point of that block, the rollup block says: "We can execute a certain number of steps of computation. And if we do that, we'll consume a certain number of messages from the inbox that after doing that, the state root of the chain will have a certain hash. And that along the way, in the course of doing those things, a certain set of outputs will be produced" And there's a sort of hash that summarizes all of the outputs that are produced. So that is the claim it's starting at a certain point, you can execute a certain amount of computation that it takes the state route of the system to a certain value. And that produces outputs that have a certain hash. That's relatively small.
+
+James (00:40:43):
+So phrasing that in kind of more layer 1 terms, the rollup block is the previous state, a bunch of transactions. And the assertion that if you execute all these transactions on the previous state, it'll produce a new state and these messages.
+
+Ed (00:40:59):
+Logically it includes that information, but it doesn't actually physically include it. Like the individual transactions are not actually part of the rollup block. They don't need to be.
+
+James (00:41:09):
+Oh, they're in the inbox.
+
+Ed (00:41:11):
+Because they're in the inbox. The inbox provides. And this is another thing that is, I think non-intuitive for people who are new to this, that you have this inbox contract, which runs on L1, which does two things. First of all, it establishes an order on all of the transactions that are submitted to the chain. And then it also records their call data. It records their data in the form of L1 call data, so that it's accessible to everyone. And then separately you have the rollup protocol, which, given the contents of the inbox, ensures the correct execution. That is the update of the state of the chain. And then whatever outputs it produces.
+
+Steven (00:41:52):
+On higher level point, again, I'm not sure, I'll just say it quickly and I can speak about this, if it's interesting for a question, but sometimes people think that we're scaling Ethereum transactions directly. You have some contracts on Ethereum and then the rollup comes in and gives you extra super power there. There actually was a scaling project that did this, and this was basically Truebit in the day, when the idea there was you're running your Ethereum contract, you get to sign at super intensive, you call out the Truebit, it gives you a result and everything stays on Ethereum. The way to think about Arbitrum and really all the modern rollups, these aren't interacting with the transactions directly on Ethereum. They basically present themselves as other chains. Then they have their own ecosystem and their own transaction history and state, that's built on top and secured by Ethereum. And so it's not that, there's no like one to run relationship between every transaction is effecting something on Ethereum rather. The rollup has an ecosystem. It's a chain that lives on Ethereum, that is secured by Ethereum, that has a trustless bridge back to and from Ethereum. That's sort of the level of interaction really is the bridge and information going back and forth, but it's not like every transaction on Ethereum can just call out into the rollup and get some extra super power, super scaling, energy or whatever.
+
+James (00:43:02):
+Just as a quick aside, I am interested in how you guys would characterize the difference between your recursive fraud proof system and Truebit. I know Truebit is basically defunct these days, so it doesn't matter that much.
+
+Ed (00:43:15):
+Sure. I'd say a few things. One is that in our basic model, the execution is stateful, whereas Truebit is stateless. They are proving the result of a computation that has an input and an output and no state. And so this is what Steven was talking about before, where you have a subprocedure inside of your Ethereum transaction, and you can execute that subprocedure on Truebit, whereas because our system is stateful and because it is capable of emulating Ethereum, you can do 15 minutes of Ethereum transactions in a single rollup walk, if you want. And so the statefulness is an important thing. The other thing is we've made some very significant improvements in the bisection protocol, so that you need many fewer rounds. What we were talking about back in 2014 is similar to the kind of bisection that Truebit uses. And we've since made a bunch of improvements that increase the degree of division in the bisection from a factor of 2 for every 2 rounds to a factor of 100 for every 1 round. So a big difference. And especially when you compound that over multiple rounds.
+
+Anna (00:44:28):
+I want to ask. So I mean, the things that are off the table for an Optimistic Rollup or probably a zkRollup are things like flash loans. Like what you said, it's not one transaction that could go through, go off and come back within one block. It's going to go off. It's going to live off. And then come back after a while.
+
+Steven (00:44:49):
+I would say that flash loans are in play. Flash loans that go back and forth from Ethereum wouldn't be in play, but again, we expect there to be a fully flourishing ecosystem of DeFi protocols on the rollup itself, on Arbitrum. So I think everything you have in Ethereum, we'll see it there, but definitely we don't have synchronous composability, so you wouldn't have flash loans that jump back and forth between the rollup.
+
+Anna (00:45:11):
+Okay. And on the Arbitrum chain, when you say there's an entire ecosystem, is there like gas and all of those elements as well? Is that the case for all the rollups? I actually never asked that question.
+
+Ed (00:45:24):
+There has to be, because if resources are free, then they're going to get overused.
+
+Anna (00:45:30):
+Now I want to bring up something. Steven, you mentioned earlier, which was this idea of re-execution. I think a while back I said, "I have two questions" and one was the one week, and now this is actually the second question. So yeah, it's this idea of, I mean, at least I feel like I understand what we've talked mostly about Optimistic Rollups in general, but you mentioned the re-execution aspect that is actually used more for the fraud proof, it differentiates you somehow. And I don't exactly understand where that fits into this.
+
+Steven (00:46:06):
+Yes. So I think we were discussing that, we were asked about a comparison between us and Optimism and how we do our fraud proof. So what is a fraud proof? So the key idea of a rollup of course is you take the execution off chain and you prove to Ethereum what happens. And the way the fraud proof works is optimistically the validator posts what happens without proof, and then a challenge window opens whereby anyone can prove fraud. And that's what's called a fraud proof. And so what are these fraud proofs, these magical things look like? So the simplest way to do a fraud proof, and this is what Optimism does, is re-execution, where you point to a transaction and say, "Hey, that transaction is fraudulent, and you rerun that transaction on chain. So they have a "before" checkpoint and an "end" checkpoint, and you rerun to say, "Hey, does this transaction match up with the end checkpoint?" And that's how you prove fraud. What we do is different. And this is what Ed was talking about. We do this back and forth and instead of re-executing of say, 5 million gas transaction, we actually just do an interactive process. And what you end up having to execute on chain is not the entire transaction, but much, much smaller, like one step of the transaction. So that's all fraud proof. So you might say, okay, this is all irrelevant, doesn't matter.
+
+Anna (00:47:14):
+Yeah, that's the thing. To me it was kind of in the context of the fraud proof, but how does that have any impact on how the system's built without a fraud proof? That idea that we talked about, like the inbox and the fact that you're writing back to chain.
+
+Steven (00:47:27):
+Yes. So it does have two things that come into play. Number 1, this is something I mentioned earlier as well. The idea is if you're pointing to transactions to re-execute them, then you basically need to have frequent checkpoints. Every challengeable unit has to have a checkpoint "before" and a checkpoint "after". And what this means is in systems like Optimism, you have the checkpoint for every transaction. And a checkpoint is roughly a 32 byte state route, 32 byte hash. And they need these frequent checkpoints, because you need to basically point to something that runs between two checkpoints. We don't need these checkpoints. That's one point. And another is this idea of: we can do transactions, they use much, much, much more gas than it's allowed in the Ethereum block. We can do contract deployments that completely break out of the Ethereum's contract size limit. Now, how can we do that? And the answer is because we don't need to ever run our transactions on chain. If your fraud proof model is re-execution, then you can't have a transaction that uses more gas than it's allowed on an Ethereum block, because it's not challengeable, someone can't say, "Hey, that's wrong". And you say, "Okay, let's run it. Oh, we can't run!"
+
+Anna (00:48:27):
+You can't because there's too much gas on L1.
+
+Steven (00:48:30):
+Right. Or the contract deployment is too large. We can't do that contract, because it's too much gas, but we can do those things because our model doesn't require us to re-execute, rerun full transactions on chain, you can do a transaction on Arbitrum that uses much, much more gas than on Ethereum block. And that's okay, because the fraud proof will not say, "Hey, run that on chain". And you'll be like, "Oh, sorry, I can't". It will get it down to the core unit of dispute. And that's going to always be small and something that you can run on chain. So it's ironic again, the fraud proofs won't come up, but they really do...
+
+Anna (00:49:02):
+Basically what you're saying here is your fraud proof won't break Ethereum. You will be able to run more on your chain. And yet you've been able to make sure that if ever you need to run a fraud proof, it will still fit within the confines of the L1.
+
+Steven (00:49:17):
+Exactly. The mechanism won't come up. But in order for the system to work, the mechanism needs to be there. And therefore you can't do something that is not challengeable, even though no one's going to challenge it, when it is challengeable. But it's a very weird thing, where again, the fraud proofs won't come up. But if you don't have the ability to do fraud proofs, then that's a big problem.
+
+Ed (00:49:35):
+Right. And the key thing is you have to be able to do the fraud proof and you have to have enough data recorded on the L1 chain so that the scope of the fraud proof is defined. So this is this thing that you always need to be ready to do a fraud proof, even if you very rarely have to do it. And the cost of being ready to do one kind of fraud proof versus a different kind of fraud proof can be fairly different.
+
+Anna (00:49:58):
+Okay. So we've talked about, we've mentioned a few of the other Optimistic Rollups, we've mentioned the zkRollups. I want to talk a little bit about the costs of all of these systems and how you fare. What does it cost to use an Arbitrum-style Optimistic Rollup versus others?
+
+Ed (00:50:15):
+Sure. I mean, we've worked really hard to shave down the cost. At this point in time, given the Ethereum gas costs and the price, right now, given the situation with Ethereum fees for all of these systems, the biggest cost is from the L1 footprint of your transaction. And that is the cost to record your call data on the L1 chain, something that you have to do if it's going to be a rollup, and then additional L1 cost is necessary for bookkeeping and divvying the fraud and so on. And we've worked both in the architecture of our system and also in our specific engineering to minimize those things. So to give you an idea, on our testnet that's currently up, people can actually go and run their transactions and then look at our block explorer and see what the L1 cost was. But we're running around something like 2000 L1 gas per transaction, for a transaction that has a small call data. And we think we can get that down further by adopting BLS signatures, once that is fully supported. But that number is really competitive in terms of where other systems are. So we're really happy with that. And there's a bunch of things we've done to make that possible. Some of them are things anyone can do, like aggressively compressing the transaction header data. Some of them are things that not everyone can do, like not posting a state root for every transaction, because our protocol allows us to not do that. So L1 footprint is the biggest component of cost. That's really where we're focused in terms of cost reduction.
+
+Anna (00:51:53):
+This is sort of more generic question, but Optimistic versus zk, does zk tend to be more expensive or Optimistic?
+
+Ed (00:52:00):
+The answer, I think, is it depends. Call data needs to be recorded on the L1. That is pretty much a constant. And then the question is how much bookkeeping is required and how much cost is there per rollup block or per whatever the equivalent is in a zk system.
+
+Steven (00:52:17):
+And another thing to be said here is the overhead of zk, I think is much, much larger than the overhead, on a per batch level, the overhead of Arbitrum or other Optimistic Rollups. So in order to amortize the overhead, you'd need a significantly larger batches in a zk system, than you would in Arbitrum.
+
+Ed (00:52:34):
+And the way that that batch size affects users is that you have some entity that is submitting batches of transactions to the system, and it's got to wait until it has a full batch, before it can do that. And for the user, that means latency. And so if you have a system that needs to accumulate a million transactions in a batch, before it can submit a batch, because a batch is super expensive per batch, then you're going to have a longer latency than a system where you can have a batch of 30 to 50 transactions and still operate very efficiently. And that's kind of the neighborhood that we are in.
+
+Anna (00:53:09):
+That's why, I guess, you said "amortized over", because on a per transaction, Optimistic might still be more expensive, but you can do more of them, I guess, but you win on time.
+
+Ed (00:53:19):
+And time is really important for users. How quickly can they get to the point, where you as a user know what the result of your transaction will be. People are already unhappy with how long that takes on Ethereum and you certainly don't want to make that worse. And there's a whole other conversation about how to make it better. But that's something that goes more to our roadmap than to our current testnet.
+
+Anna (00:53:39):
+Cool. Speaking of, that's actually the next question and a question I want to touch on. I know we're getting close to the end of this episode. So let's hear about this roadmap. You mentioned a testnet. Where's this project at?
+
+Steven (00:53:52):
+Yeah. So we've been on testnet actually since October, and that's a testnet that's fully open and permissionless, anyone can launch and deploy contracts, and we've seen a ton of usage on our testnet. We're actually currently on the fourth iteration of our testnet, but it's been running since October. And a few weeks ago, we put out, let me call, the mainnet release candidate version of our testnet. So this is more or less the code that will run on mainnet and running on testnet, getting some more mileage of testing there. But again, this is our full protocol. Like the fraud proofs mechanisms are up and running on the testnet, we have real validators running. Some other people running validators, as well. We have permissionless deployment and lots of people are playing with our testnet currently. And the scaling Ethereum hackathon is going on and people are building on our testnet. And then we're seeing a nice amount of usage there. So where do we go from here — and the answer's mainnet, of course.
+
+Anna (00:54:44):
+Do you have a timeline in mind or..?
+
+Steven (00:54:47):
+So we haven't announced a formal timeline yet, but what I'll say is I think it's going to be a lot sooner than people expect. We are basically, from a technical perspective, just about there and we're coordinating some details and we'll have a lot more to say about this and the next 1 to 2 weeks, but I think we're probably a lot closer than people realize.
+
+Anna (00:55:08):
+Cool. I know that there's sort of a race between the L2s to find new DeFi projects to work with, or other dApps, more popular projects that are working on top of the L1. How is that going for you? Do you feel that kind of race, that competition and what are you seeing from your side?
+
+Steven (00:55:30):
+So one thing to be said about the way we're approaching our launch, and this is actually something that's different from a lot of other players in the space, but we don't have a white list model. We're not onboarding one project at a time. When we open the flood gates and let projects in, it's everyone, everyone's on the same footing. And we think that that's really the values of the open-end permissionless ecosystem. That's what we're doing here, it should be open to everyone and we're not going to be picking winners. So we have a really, really strong coalition of projects that are launching with us. Some of them are announced, like MCDEX and DODO exchange, and some of them are not yet announced, but we'll be announcing in the next few weeks. And also we have a really, really strong coalition of infrastructure projects already announced Chainlink, but a bunch of other node providers and different infrastructure projects are going to be coming along with us to our mainnet, as well. So I actually think I'm really, really comfortable with the coalition that we have now. Again, much of it is not yet public, but will be. Potentially by the time this is aired will be public.
+
+Anna (00:56:27):
+Cool. Is there anything missing before mainnet release? Is there anything you still need to build or you feel like there's some projects that will make using the system even easier?
+
+Steven (00:56:39):
+Okay. Yeah. So the way we're doing our mainnet launch, I should say, and this is not something we've spoken about publicly yet, but I'm happy to do it to say here. We're initially going to launch on mainnet, and it's going to be mainly open to developers, not in a white list or restricted model, but the idea is it will be open to the developers to set up shop first. So we'll have infrastructure providers sending... A bunch of the projects, for example, that are launching at us, they're going to be using Chainlink. So Chainlink needs to be up and running. And we don't want to be in a situation where we say, "Hey, everyone, we're on mainnet." Five minutes after we deployed our contracts on mainnet, there was nothing running. So there'll be a time where, again, it's open to everyone, but it will really be focused on developers, there'll be a waiting period period. And important in these periods, where projects coming on, or again the infrastructure projects, that we're working with and also projects that really make the user experience better. So one category of projects here are fast bridges. We spoke earlier about that Optimistic Rollups have a delay period that delay withdrawals for roughly one week. But that's really only on the protocol level. The protocol level bridge has this one week delay period, but there are some really, really great solutions coming on board. Like Connext, HOT Protocol, Celer cBridge, that are basically bridging this gap and providing fast liquidity exits to users. So I don't have an exact date on when those will go live, but that's an important piece of infrastructure in the system as well.
+
+Anna (00:57:55):
+Got it. That was actually a question, how would that week long thing be mitigated? And it sounds like you have a plan in place, and that will be happening somewhat in tandem with you going live.
+
+Ed (00:58:08):
+Yeah. And the design of the system makes this possible because, although it takes a week for the L1 Ethereum chain to recognize your withdrawal is happening, your withdrawal has finality, which everyone else can verify right away. And that means that somebody who is thinking of loaning you that withdrawal money right away, can have certainty that that withdrawal is going to happen. And so liquidity provider can cover that one week delay for you at zero risk. And this also enables a competitive market for those liquidity providers. And so we think that there will be a robust market in people who are facilitating instant withdrawals from the network.
+
+James (00:58:48):
+So if I'm a liquidity provider here, I have Ether on Ethereum, you have Ether on Arbitrum. You're going to send me that Ether from Arbitrum to L1, and I'm going to send you Ether on L1 immediately. And I get your Ether after a week. Is that right?
+
+Ed (00:59:06):
+More or less, yeah. There's a small fee involved and there's different ways. There's different technologies for doing this. Some are more state channel, like some are cross chain atomic swaps, some involve selling sort of withdrawal ticket, it gets created on L1. There's different ways of doing it, but that's the fundamental idea: you're trading an L1 asset for an L2 asset and paying a small fee to the provider.
+
+James (00:59:31):
+I am an atomic swap minimalist. So I probably won't be using that one.
+
+Ed (00:59:37):
+Yeah. You can use the technology of your choice. That's the beauty of this.
+
+James (00:59:42):
+I understand you're all on a testnet right now. Is this something that, you know, I could go home after this call and download a Docker client or anything and participate in the testnet?
+
+Steven (00:59:55):
+Yes, absolutely. So there are a few ways to participate in a testnet. One, the easiest way to participate in it that actually doesn't require you to download anything, just point your tooling at an Arbitrum node, deploy contracts and draft the dApps. If you actually want to run a validator on the testnet, there is a Docker image that's packaged up, that will allow you to do that as well. So plenty of ways to participate in the testnet for developers that want to deploy for users that want to use live apps. We have a fork with Uniswap live in the testnet that users can just play around with, and also for power users that want to run validators, which James, I assume, might be. It might be you.
+
+James (01:00:32):
+I have been known to run full nodes once in a while
+
+Anna (01:00:37):
+On that note, I want to say a big thank you to Ed and Steven for coming on the show and sharing all of this info about Arbitrum with all of us.
+
+Steven (01:00:46):
+Thank you so much for having us. This was really a blast.
+
+Ed (01:00:47):
+Thanks.
+
+Anna (01:00:48):
+And thanks James for co-hosting this one.
+
+James (01:00:51):
+Oh, it's great.
+
+Anna (01:00:52):
+And I want to say a big thank you to the podcast producer, Andrey, the podcast editor Henrik. And to our listeners. Thanks for listening.
+

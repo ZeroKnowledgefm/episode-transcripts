@@ -1,0 +1,536 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:00:27):
+This week, I chat with Anna Caroll & my sometimes co-host James Prestwich, from the Nomad project. We explore their optimistic interoperability solution, how it first developed what lessons it takes from previous attempts at interoperability, how the optimistic part of their optimistic system works. We finish off by looking at a few use cases and cross network projects already working to deploy on Nomad. Now, before we kick off, I just wanna highlight the ZK jobs board, a spot where you can find a new gig working in zero knowledge technology. There you can find jobs from some of the top teams in ZK. I specifically wanna highlight one job post, which would have you working with my team over at the ZK validator. We are looking at the moment for a junior researcher. Who's interested in exploring and writing about zero knowledge, proof of stake and general meta blockchain topics. Specifically the ways that these intersect with privacy, if this sounds like something you would be interested in, do check out our job ad in the show notes and get in touch. Now, Tanya, the podcast producer will share a little bit about this week's sponsor.
+
+Tanya (00:01:29):
+Today's episode is sponsored by Polygon Hermez. The Polygon Hermez ZK rollup is a layer two built on top of Ethereum that solves its scalability through mass transfer processing rolled into a single transaction. Zero knowledge proofs are used to present and publicly record the validity and correctness of the role transfers processed on the Ethereum blockchain by storing just the proof and the compressed data of a batch of transfers, the efficiency and the throughput of the network is multiplied. Visit polygon.technology to learn more about polygon Hermez and other Polygon solutions. So thank you again, Polygon Hermez. Now here is Anna's interview with James Prestwich and Anna Carroll from Nomad.
+
+Anna Rose (00:02:12):
+Today. I'm here with Anna Carroll and James from Nomad. Welcome to the show to both of you.
+
+James Prestwich (00:02:17):
+Hi Anna.
+
+Anna Caroll (00:02:18):
+Hey Anna. Thanks for having us,
+
+Anna Rose (00:02:20):
+James. I think our listeners will be very familiar with you. You are a sometimes co-host I hope you'll co-host again, soon we miss you.
+
+James Prestwich (00:02:28):
+It has been a while. Yeah, I think the last time I was even on the podcast was the new year's episode.
+
+Anna Rose (00:02:34):
+I think so. So this is a request made publicly. I hope you come back soon. We'll have to figure out an episode for you to do this summer.
+
+James Prestwich (00:02:42):
+Oh, definitely.
+
+Anna Rose (00:02:43):
+Cool. But yeah, I think most people do know you, but why don't you just give us a quick brief on what you do and who you are?
+
+James Prestwich (00:02:50):
+Yeah. My name is James Prestwich. One of the reasons I haven't been on the podcast lately is because I'm currently the co-founder and CTO at Nomad. So that keeps me really busy during the day. And it's been difficult to schedule time to come back to ZK. Unfortunately.
+
+Anna Rose (00:03:08):
+No problem. Well, you are missing Anna, I wanna hear from you about your story. We actually, so we met at least a year ago. I know I actually did an interview with you on video, which we could probably link to last summer in Paris, but yeah. Tell us kind of about yourself, what you were doing before and what you do now.
+
+Anna Caroll (00:03:29):
+Yeah. Hey everybody. I'm Anna Carroll. I'm the protocol lead at Nomad and I've been in the Ethereum space for nearly three years now. I started out at Dharma doing backend engineering and a lot of stuff sort of interacting with the chain and then moved on from there and started working with James on what today is Nomad.
+
+Anna Rose (00:03:56):
+Very cool. So I wanna hear a little bit about the journey to Nomad. Where did this idea start? Why, like, why was this idea even adopted? Was there some need at some point that became very clear? Yeah. Tell us a little bit about that journey.
+
+James Prestwich (00:04:12):
+Yeah, definitely. Well, you know, I've been working on cross chain protocols for, I wanna say close to five years now. And Nomad is really the realization of a lot of the lessons we learned along the way about what works and what doesn't and what people want and what people don't want. So the actual protocol design for Nomad came from Christmas vacation, like 2020. So towards the end of 2020 I had some time off to just kind of sit around and think and you know, work on what I thought the ideal cross chain communication mechanism would look like. Mm. I took a lot of inspiration from optimistic systems and rollups and tried to build something that caught a lot of those security benefits and cost benefits, but rather than being a new chain, like a roll up is being a cross chain message passing system. So we started off as an internal project at Celo and towards the end of last year, the team decided, you know, it was time to pursue Nomad full time. So, you know, Nomad, the company started late last year
+
+Anna Rose (00:05:30):
+And I actually, I'm excited to say like, I'm, I'm a investor in Nomad through the Zero Knowledge Validator of just recently, this has been put together. So congrats on that round and I'm excited to be sort of part of it, you know, peripherally,
+
+James Prestwich (00:05:46):
+You know, how much I love working with you, Anna.
+
+Anna Rose (00:05:49):
+Aw, James
+
+Anna Caroll (00:05:50):
+Welcome to the squadron. Yeah. Yeah. We've been an illustrious group.
+
+Anna Rose (00:05:58):
+I'm curious now I feel like I probably know the answer to this, but what were the projects before this? What were the bridge things that you were doing? Like, I feel like were you working on Keep, but like, it wasn't your, like you were, I know you were working a bit with that team, but what, what other things were you doing?
+
+James Prestwich (00:06:14):
+You know, at Summa, we worked on a lot of things in the cross chain space. We started off working on atomic swaps between Bitcoin and Ethereum, because that was the only cross chain thing anyone knew anything about back in 2017, we kind of quickly realized that cross chain swaps weren't that great, and nobody wanted them and pivoted into working on relay based instructions. So we built out Bitcoin like clients in solidity for Ethereum and went for cosmos and rust and a few other languages. The idea being that you could use a light client as a communication mechanism, and that's what underpins TBTC today. The problem with light clients is that they are fabulously expensive to operate. The TBTC light client still costs five to six figures every month just to keep running. And a Bitcoin light client is the cheapest possible blockchain light client.
+
+James Prestwich (00:07:22):
+So we don't think of relays as a very viable option anymore. The only place that they're happening in practice is IBC where the relay is heavily subsidized by the chains involved. So after we stopped working on relays at Suma, we contributed to a few other, you know, like cross chain or complex multi chain things. So we contributed a little bit to Aurora the, the near EVM in the very early days, but, you know, mostly we like working on cross chain things. We like working on applications. We like working on things that are user facing, and that's what we, you know, set out to do when we started Nomad, get back to the applications, get back to user facing things.
+
+Anna Rose (00:08:06):
+And I wanna hear like, what's kind of brought you to this problem. Do you have anything in the work you were doing before that kind of got you more excited about this in particular?
+
+Anna Caroll (00:08:17):
+Yeah. Well the, really the honest answer to that question is meeting James is what got me to this problem. So...
+
+Anna Rose (00:08:25):
+Nice.
+
+Anna Caroll (00:08:26):
+I was starting at C Labs. It was January of 2021 just a few short weeks after James had the initial concept for this construction. And of course, James' reputation in this space precedes him. And I had heard lovely things about him as a person. So he's, he's making a face. I really, I really just wanted to work with him and he was working on this. So that's how I really got into the interop space.
+
+Anna Rose (00:08:57):
+Yeah. Nice. And what do you feel has been like the challenge of this kind of work? Like what is this kind of work actually? What is it that you build? I'm gonna go into the actual architecture and stuff in a second, but like, are you, is it smart contracts primarily? Like what is the work of a bridge development team?
+
+Anna Caroll (00:09:15):
+Yeah, well, I mean, there's two main components to the cross chain system that we've built, which there's an on chain component. That's, you know, the smart contracts. Right now our on-chain contracts are only written in Solidity, so they're EVM compatible, but it's possible. And we have plans to expand that to other, you know, execution environments, not just EVM. So there's the on chain component, the smart contracts. And that's kind of my domain, my realm. And then we have an off chain component. The agents, and this is kind of necessary because the core of the problem, like what we are trying to solve is there are these discreet chains, which each have kind of their own security boundaries. They're self-contained and we're trying to enable them to communicate with each other. You kind of can't do this in the EVM world natively using just chain components. There has to be also an off-chain portion that sort of varies these messages from one chain to another.
+
+James Prestwich (00:10:22):
+Yeah, an easy way to think of it is like a chain can't connect out to the internet and pull data in chains, needing information to be pushed to them. They need someone to make a transaction that pushes that information into the chain. And so when you have two chains, you can't have one pull data from the other, you have to have one push data off chain, and then somebody off chain pushes that same data to the other chain. So any cross chain communication system has like these three steps is, you know, send the message on the first chain, somebody off chain sees it and decides to forward it. And then the second chain processes, a transaction
+
+Anna Rose (00:11:02):
+That's actually that, that idea of it not having any ability to pull like a chain, not being able to pull, are there some systems like maybe the, and I don't know how deep in this you are, but like something like the Polkadot system or maybe like IBC, like, did they allow more of a pull or is it also the same problem in those, in those cases?
+
+James Prestwich (00:11:23):
+It's really the same problem. The core here is that chains need to come to consensus. And so you can't introduce anything where different nodes might have different views. So you can't ask the node to connect to google.com as part of consensus, because five different nodes might connect to five different versions with different doodle art. Uh so the way we ensure that all nodes have the exact same view of everything all the time is we ensure that all of the data is pushed in concrete blocks. Those nodes never have to connect out to something and ask to pull information from anywhere.
+
+Anna Rose (00:12:00):
+In this way, though, are you creating almost like a copy or like tracking of a certain chain? And this is maybe goes back to that question of light clients, like, do you still work with some form of a light client, maybe just like a more efficient one and is it tracking the entire chain on one side,
+
+James Prestwich (00:12:18):
+In a nutshell, we don't use light clients. Okay. We think that a light client is the ideal way to do this, but again, fabulously expensive. So in the majority of cases, you just can't run a light client between any two given chains and we don't track the entire chain the way a light client would. We track only a very small portion of the chain. And we think that in general, if you're not running a light client, which most bridges aren't like, only IBC and the near rainbow bridge are running light clients in production today in general, if you're not gonna run a light client tracking, the entire chain is a bad idea.
+
+Anna Rose (00:13:04):
+Okay.
+
+Anna Caroll (00:13:05):
+But I think what's interesting about the question for me is what you're getting at is, is actually at the core of the nomad design, which is nomad is designed to take some state from one chain and allow you to relay that state or replicate that state in a sense on another chain in nomad, that state is represented as leaves in a Merkle tree. And what's actually relayed is assigned a tested Merkle route. So really like the core of this system is simply there are messages sent on one chain and that creates some state. And then that state needs to be relayed to another chain
+
+James Prestwich (00:13:49):
+In Nomad. We're not tracking the entire state of the chain. We're not tracking the entire state of a smart contract. We're trying to track exactly 32 bites.
+
+Anna Rose (00:13:58):
+Okay.
+
+James Prestwich (00:13:59):
+The Merkle route of all the messages that that chain has ever sent.
+
+Anna Rose (00:14:03):
+Oh, and yet it's not attracting the current state of the chain,
+
+James Prestwich (00:14:09):
+Just the current state of that 32 bites.
+
+Anna Rose (00:14:12):
+Wait, where does that live? Actually?
+
+Anna Caroll (00:14:14):
+The 32 bytes live in the Nomad smart contracts. So when people send messages, they call a function on that smart contract, which dispatches a message via Nomad. And what all that does internally is update the state of all of the messages in Nomad. Oh, okay. And then that, this is kind of, one of the core efficiencies is that all we relay is the summary of all that state. And then people can use that to prove that their message was included in that state.
+
+Anna Rose (00:14:47):
+Interesting. Who, who activates that, or what activates this? Like what sends, when you talk about sort of like sending that message, it's like, it sounds like an application or something is doing that to include itself into the Nomad Merkle tree.
+
+James Prestwich (00:15:02):
+Well, our goal going into this was not just to move tokens around, but to allow anybody to build cross chain applications easily. So anybody can dispatch messages via the Nomad smart contracts.
+
+Anna Rose (00:15:17):
+Okay.
+
+James Prestwich (00:15:18):
+They can send it to, you know, any other chain that we're deployed on. In addition to just the cross chain communication piece, we built this standard pattern for building cross chain applications. How do you connect to these channels? What's the content of the messages that are sent? So the goal is to make it really easy for developers to build their own applications that can send messages over these cross chain channels that can receive messages that are coming in and to enable the creation of a bunch of different cross chain applications. Right now we have a bridge application that moves ERC 20 tokens around and a governance application that manages control of a smart contract system on another chain. We're really excited about those two applications, but we think there's dozens, more interesting things waiting to be built.
+
+Anna Rose (00:16:12):
+Mm cool. Is it like, have you created, when you talk about that, like the rules basically that one of these applications would need, is there like a framework then, is there like some template or something that you've produced? I know that sounds maybe very basic, but like something that you, that somebody could easily just pick up and run with, or is it more like you've created a protocol set of rules that they just have to build with?
+
+Anna Caroll (00:16:35):
+Yeah, we have. So we have created an application pattern build on top of Nomad. We're kind, we're calling it kind of a router pattern. Okay. With the idea being, I mean, going back to your original question, right. We're talking about this cross chain messaging protocol, and it's kind of like, what are cross chain messages? What do they do? What do you even do? Like why does it matter? And you know, faring random bytes from one chain to another doesn't particularly matter. What matters is you can build on top of Nomad, you can build applications on top of nomad. So we allow it's completely flexible. It's completely arbitrary information. And then developers can use that to do meaningful and interesting things using the underlying rails to build on top of. So nomad has done the hard part of getting information from one chain to another.
+
+Anna Caroll (00:17:35):
+So developers can do the fun part of doing interesting things with that. So, yeah. To answer your other question, we have created a template pattern. We're calling sort of the router pattern, the idea here being that applications need to sort of talk to each other on either side of this messaging channel. They need to basically create a language or an encoding that is understood both by the sender and the receiver. So the pattern that we've made is kind of a build once deploy everywhere pattern where the same application is deployed to every chain. And that application is capable of both sending messages and receiving messages based on a standard set of logic that performs the kind of application, the core of whatever that application is.
+
+James Prestwich (00:18:31):
+Yeah. we call it the router pattern in an analogy to like your, your router at home, right, if you've got this internet connection. There's a bunch of data coming in over it all the time. The router is the device that sits, connects to the internet and handles that incoming data, translating it into something useful and getting that useful message where it's supposed to go in your home network. So, you know, the Nomad routers that are at the core of these cross chain applications, they handle getting the data from the Nomad channel, translating it into whatever is useful to the smart contracts on that chain and sending it off where it's supposed to go. And in the other direction, they handle calls from local smart contracts. They convert it into the internet format and they send that off, you know, to the Nomad connection to some other chain.
+
+Anna Caroll (00:19:27):
+I think what's hard about this in the current cross chain landscape is that the mental models, even just for arbitrary messages passing across chains, are still quite nascent. We're still building up an understanding of a separation between the channel that passes information and the applications built on top of it. And part of the reason for that is that we're really familiar with one single type of application and that's token bridges. So when a lot of people think about cross chain stuff, they only know, think about or understand the use case of getting tokens from one chain to another. Yeah. But the fact is there's so much more than that in the cross chain space.
+
+James Prestwich (00:20:15):
+Yeah. Users hear cross chain and they think, oh, I can put my USDC on Polygon. Yeah. Which, which is true. But in order to do that, you know, that's not the whole story, a token bridge is just one thing you can build in the cross chain space. And in order to build a token bridge, you need some reliable communication channel under that and you need some interface between the token semantics and the cross chain communication channel. So we work a lot on, you know, to, to borrow a phrase from our Celestia friends. The modular bridge stack is looking at what a bridge is, breaking it up into different components at different layers. And we think that the router pattern is a really critical layer that is neglected that people don't think about very often. This interface between what is the application that the user wants to use and what is the communication channel that's going to help them do that the existence of the router provides that translation layer. It lets you abstract things across chains, cuz you can have a different router per chain using the same channel. It lets you use multiple different channels depending on what chain you're trying to talk to. It's a very, you know, like flexible, useful piece of the stack that nobody has really thought about before.
+
+Anna Rose (00:21:38):
+You had just said before this kind of like if they deploy it here, it sort of deploys everywhere. But I just thought, are you talking about EVM compatible chains? Cuz I guess it's different if you're not using Solidity.
+
+James Prestwich (00:21:51):
+Yes. It's very different. If you're not using Solidity,
+
+Anna Caroll (00:21:54):
+You have to write once for each different VM. If you're talking about virtual machines, if you're talking about the on-chain components within the EVM world, if you build your smart contracts using this pattern, you can deploy your smart contracts to any other EVM based chain. But that being said, part of what we've done is we've taken pains to make our router pattern forwards compatible with other types of virtual machines so that we build once per virtual machine. Right. And even when we do that, our routers on Ethereum or EVM based chains can talk to our routers on other chains such as substrate based chains, for example.
+
+Anna Rose (00:22:39):
+Cool. Does the developer still get to use this template though? Like would you basically provide two templates sort of
+
+James Prestwich (00:22:48):
+Yep. Okay. One of the like critical functions of the router has to be handling the differences between chains a little bit. So for example, in, you know, the EVM you're running your smart contract, it calls out the other smart contract and then yours resumes when it's done. But in most other chains like Cosmos and Solana and Near instead what happens is your smart contract's running it queues up a call to somewhere else. And then when it's done that other contract starts running. So there's just this fundamental difference in the way smart contracts communicate. And part of the reason you have to implement once per VM is to kind of handle those fundamental differences between chains and the router pattern lets you do that very easily. Once there are template routers for each chain, it becomes much easier to build a cross chain application that does the same thing on multiple chains.
+
+Anna Rose (00:23:50):
+Have you encountered any combo chains that just are like very complicated to work together? Like have you found that like Ethereum is bad, like tricky, I'm just curious or do you, do you sort of see this as like a pretty neutral ground that they're all sort of similar
+
+James Prestwich (00:24:06):
+The way this is usually handled right now is very bespoke engineering. So you'll come in, you'll do a lot of bespoke engineering on the Solana side of the stack and some on the Ethereum side of the stack to handle Solana things, like Anna said earlier, we've put a lot of effort into figuring out what things are shared across all chains and how we can design applications and design patterns in a chain agnostic way. Hmm. A good example of this is addresses. Ethereum uses these 20 byte addresses, but everywhere else in the ecosystem uses 32 bytes. Okay. So if you want to design your application in a forward compatible way, you need to use 32 byte addresses even in Ethereum. Mm. And there's actually no runtime overhead for doing that or very little, it's just, you have to think about it as the developer upfront.
+
+James Prestwich (00:25:04):
+And you can handle that difference at the, at the router layer. And so if you follow the router template, it'll just help you handle that upfront and you won't have to worry about it. It'll translate between these chain agnostic 32 byte addresses and the local 20 byte addresses. So the goal is to take this, that's been very bespoke engineering for each pair of chains and turn it into a relatively chain agnostic standard that helps people abstract things to build across different, very different VMs. We're still early in this process though.
+
+Anna Caroll (00:25:43):
+Yeah. I mean, I think to James' point about being early, I mean, right now there's more than enough work to do just focusing on interoperability between EVM based change. And I think that part of what has been a little more challenging about the developer ergonomics of what we've built right now is that, you know, James and I have built our smart contracts, we've taken great pains to build them in a way that can be expanded beyond EVM. But right now, you know, Nomad is primarily EVM compatible at the moment. And you know, right now if a developer is building applications on top of Nomad at the present moment they're likely doing so only within EVM chains and that's kind of okay, because there's plenty of interesting applications just within that world. So there are some shortcuts that you can take if you are only interested in the EVM world to make it a little bit easier to build these contracts.
+
+Anna Caroll (00:26:49):
+For example, you know, our contracts all use a custom bytes and coding scheme for our message passing. So we have done this again because we wanted to be compatible with other virtual machines, but Ethereum and the EVM have their own bytes and coding scheme. This is like ABI. So you ABI encode or ABI decode messages. And it would've been really easy for us to just use ABI encoding and decoding, but we weren't right for compatibility issues. But since then, you know, I've encountered developers who really, and truly are only ever going to be building for EVM chains. And for them, you know, I recommend that they use ABI cuz it's simpler, it's easier. And the mental models are a lot more built out for, you know, solidity developers.
+
+James Prestwich (00:27:44):
+It's a great example of the difficulties of working in this space as we, as the people building the protocol, have to stay completely chain agnostic. We need to plan for the future in which we're near in Solana. And we have a Substrate Pallet and you know, we're out there in like Cosm Wasm and, but we also need to make it really easy for people who are used to solidity and just want to write solidity to use this system. Mm. We have so much work to do on the developer experience on the template applications, on the, you know, solidity interface. If any of this sounds interesting to y'all out there, just hit us up. We have so much to do
+
+Anna Caroll (00:28:26):
+<Laugh>
+
+Anna Rose (00:28:29):
+Okay. I think one of the unique parts of nomad is this optimistic model. When you are on the zero knowledge podcast, you realize there is a competing kind of thinking, which is at least on the rollup front, which is like ZK rollups and Optimistic rollups. I don't actually know if there are ZK bridges or ZK interoperability. Not, not yet. I don't think, I don't know. Is there anything like that that you've heard of?
+
+James Prestwich (00:28:56):
+There is not,
+
+Anna Rose (00:28:57):
+There might be reasons or...
+
+James Prestwich (00:28:59):
+There are definitely reasons. You can kind of think of it as you want light clients, right? Yeah. Anything that's worse, that's not a light client is going to be optimistic or multisig. There's no way to prove validity except, you know, light clients and optimistic systems. So to bring zero knowledge into this, we would have to build a ZK light client. And the only chain on which that is conceivably doable right now is Mina. Ah, there's just no other chain whose consensus process is amenable to being inside a zero knowledge proof.
+
+Anna Rose (00:29:47):
+But what about Plumo? Like I worked on that trusted setup, is that not a ZK light client in a way?
+
+James Prestwich (00:29:53):
+Sort of Plumo is a good step. It has the difficulty that its proofs can't be validated in any other chain efficiently. Ah the flavor of BLS they use is just not present. We tried to get it into Ethereum via EIP uh, a couple years back, but we're not successful.
+
+Anna Rose (00:30:17):
+Okay.
+
+James Prestwich (00:30:17):
+So in terms of zero knowledge bridges, you know, we would like to see some, you know, zero knowledge light clients, but we don't think we're going to see that for almost any like chain, just Mina, maybe, maybe the Plumo work,
+
+Anna Rose (00:30:35):
+But that would only be one side then I guess, right. If it's like a light client on Mina, it's not a light client elsewhere that can talk to that.
+
+James Prestwich (00:30:41):
+Right. So you could build a Mina light client in some other chain, but you couldn't build that, you know Cosmos light client in Mina. Hmm. So even then you'll still need some other system to handle the return trip. We did design a hybrid ZK optimistic system called Rollouts a few years back. 
+
+Anna Rose (00:31:04):
+Yeah. You did a talk on that
+
+James Prestwich (00:31:07):
+Actually at the ZK summit in San Francisco
+
+Anna Rose (00:31:10):
+ZK Summit 4, so long ago.
+
+James Prestwich (00:31:11):
+Oh my goodness. So, the core idea there was that you would build a ZK roll up where different parts of the roll up use different chains for data availability. It is very difficult to do leader selection in a safe way because you know, the leader has to be selected on all the different chains the same way we think it's interesting that it has technical potential, but we don't see anyone building it anytime soon. It's a massive headache. And again, it requires every chain involved to support the same ZK proof primitives,
+
+Anna Rose (00:31:49):
+Interesting
+
+James Prestwich (00:31:49):
+Which so far, you know, like most chains don't support, very good ZK proofs. Oh. And rollouts would require like one level of recursion to be any good. And that's really difficult to get on any chain right now.
+
+Anna Rose (00:32:02):
+Yeah.
+
+James Prestwich (00:32:03):
+I don't see zero knowledge proofs taking off in the cross chain space as a core part of the cross chain communication system. Anytime soon, I think there are places where they could lower costs slightly or take away some of the headaches of getting a good security model, but I'm not sure that the expense of building them is worth it yet.
+
+Anna Rose (00:32:24):
+Hmm. I wanna walk through, but I wanna kind of do this after. I wanna walk through an example of a cross chain proof and verification sort of system, but that's more like in the messages themselves, it's not like in the technology that's doing the bridging, but before I do that, I actually wanna talk about the optimistic pattern. So you're kind of, you, you make the comparison to an optimistic roll up. Is it actually the same or like, I guess I'm curious if it's actually similar to the optimistic roll up or the optimism specifically Arbitrum or if it's something else,
+
+Anna Caroll (00:33:01):
+Well, sort of, as you were touching on earlier, I think you pretty much hit the nail on the head that optimistic systems are flipping this idea of positively proving or verifying upfront on its head. So the whole idea is that okay, instead of having a fully verifiably, true thing up front having a construction that allows us to prove that which can often be more expensive or heavy weight or difficult to implement, we are going to assume optimistically assume that something is correct and give an opportunity for someone to prove that it is not. Mm-Hmm, with the idea being that this can be basically cheaper from a lot of different perspectives, be it gas or sort of resources to implement, to get to this optimistic assumption that something's working. And then in the case that it's not people can come through and do the expensive thing of proving that it's not.
+
+Anna Rose (00:34:10):
+And that's the fraud proof basically.
+
+Anna Caroll (00:34:14):
+Yeah.
+
+James Prestwich (00:34:14):
+The main difference between Nomad and Optimism or Arbitrum are two things. First is that, you know, our fraud proofs are really, really, really, really simple. Our fraud proofs are just, you know, you are supposed to say X, but you said, Y instead it's really simple, easy trivial to verify trivial, to check Optimism and Arbitrum because they're doing something so much more complex than we are,uhas to have quite complex fraud proofs. Uso now that optimism has followed arbitrator's model, you know, Arbitrum or optimism, fraud proof is this recursive unpacking of an execution trace. And, you know, it takes up to seven days. For a Nomad proof. It's just like, oh, you were supposed to sign this. You signed that instead. Done Easy. And the second difference is that Nomad fraud games happen only on one chain. Okay. They only happen on the chain that sends messages because that chain knows all of the messages that have ever been sent,the other chain, the chain that is supposed to receive messages doesn't necessarily know what those messages are.
+
+James Prestwich (00:35:29):
+That's why we're trying to send the messages there because it doesn't know about 'em yet. So you can't run the fraud proof on that chain. And so the bonding has to be on the sending chain. The fraud game has to be on the sending chain and you have to rely on other parties to propagate the outcome to the receiving chain. So each application needs kind of these trusted Watchers who are, you know, shutting down the application when fraud occurs. Fraud is very clear, very obvious, very easy to prove on the sending chain, but the receiving applications need this other mechanism to shut them down.
+
+Anna Rose (00:36:12):
+How long does that take? Like if it's so simple, is it much shorter? Cause I mean, I remember, I think we did last year, these interviews with all of the rollups and these were at least the timeframe at the time was something like seven days that the fraud proof could still be submitted. Is this the same in Nomad?
+
+James Prestwich (00:36:31):
+In Nomad it's much shorter. So the reason that the optimistic growth timeframes are so long is because the games are complex. They take a bunch of different rounds. So they may take, you know, 10, 20 transactions from different parties. In Nomad it's always one transaction, a very simple, small amount of gas. The other reason it's a long period is so that in the event that something goes wrong in this complex protocol and the underlying chain decides to censor your fraud proof. It's easy to show that that was the case in long complex fraud games. You need a long period in order to show that in a short, simple, you know, fraud proof, you need only a short time to show that you are censored. Like if we have an objectively correct fraud proof that, you know, we can broadcast everybody and we can pay super high gas costs for it. Doesn't take very long to show that miners are deliberately censoring you.
+
+Anna Rose (00:37:35):
+Hmm. So what is the timeframe then?
+
+James Prestwich (00:37:38):
+Right now we use 30 minutes for most places I think for everywhere right now. Yep. We think that in the long run, each application is going to want to select their own timeframe for this. Okay. Maybe you have a very high risk tolerance and you want to go much shorter. Maybe you have a very low risk tolerance and you wanna take a few hours or days. Right now we think 30 minutes is a reasonable amount of time.
+
+Anna Rose (00:38:06):
+Does that mean actually that it takes 30 minutes for a message to go or like, does the message go immediately? And then there's this 30 minutes where it could be kind of recalled?
+
+Anna Caroll (00:38:15):
+So sort of the route, right? Like that 32 bytes, the summary of all the states on the sending chain can be relayed immediately. Once it's relayed there's a period during which it can't do anything. Right. That's the fraud period during that time, that's the period of time where someone can come and block fraud. Right. So that it can't take effect after the fraud period messages that are included under that state included under that route can be processed.
+
+Anna Rose (00:38:48):
+Okay. So it's not included until that period is over.
+
+James Prestwich (00:38:52):
+Yeah. The message can't be received by the application until that period is over mm-hmm <affirmative> and, you know, it's kind of worth noting that in general, any cross chain system has a pretty significant wait time. Mm-Hmm <affirmative> you have to wait until the sending chain finalizes which takes anywhere from, you know, like 10 seconds to 20 minutes, depending on what chain you're on or even longer. Sometimes, you know, Bitcoin being an outlier here is something like 60 minute on average finalization proof of work, probabilistic finalization. Anyway, So any cross chain messaging system, whether it's a multisig or whether it's a relay has to have some amount of latency built in to account for, you know, the sending chains, finalization period. Basically our argument is that every cross chain system is going to want this latency on pro, before processing messages. And that most of the bridge hacks that have occurred could have been prevented by this system.
+
+James Prestwich (00:39:59):
+If you have a little bit of time between the commitment to process the message to receive it, and the actual receipt of the message, you can, you know, make reasonable sanity checks like, Hey, is the bridge broken or is this going to steal all of the money? And you know, having reasonable financial controls built into the system and a period where, you know, people can prevent fraudulent or prevent faulty messages from being processed is going to be important to bridges going forward forever. This isn't a, you know, like, oh, it takes 30 minutes to send the message. We're sending messages as fast as it is safe to do so.
+
+Anna Rose (00:40:45):
+Do you think that there will be like some use cases where they'll sort of like go with the trade off on security for the speed and then others where the security's so important that you need to, like, I don't know if you're, if you're thinking around that, like, do you think there still are use cases where they'll continue to use a multisig because of that speed, despite the fact that it's like super unsafe?
+
+Anna Caroll (00:41:07):
+I mean, will they, or should they be two different questions?
+
+James Prestwich (00:41:13):
+Yep. Yep. Agreed. I think people are gonna keep using multi-sigs. Yeah. We have essentially in the Ethereum ecosystem just accepted multi sigs and Oracles, which an Oracle is just a kind of multisig, you know, we've accepted these as a core part of our financial system, the Maker Oracle and the ChainLink Oracles underpinned so much money and the USDC and w BTC, multi sigs and the USDT multisig, you know, un-secure so much money. So I think people are going to continue using these regardless. Our argument is that the applications, a good chunk of them are going to reject that in the long run are going to try to do better than just an Oracle. And that for most application developers in this space, something better than a multisig is what they're looking for.
+
+Anna Rose (00:42:18):
+I wanna ask you just a clarity question here. Like, you're just compared to an Oracle to a multisig and I actually don't know that comparison. Sorry. I feel like I'm, maybe I've just never done enough work on what Oracles are, but like, can you explain what, like, I always think of Oracles. It's like price discovery, right? There's like, how much does something cost versus something else? No?
+
+James Prestwich (00:42:38):
+Right. Well, that's what they do.
+
+Anna Rose (00:42:40):
+Okay.
+
+Anna Caroll (00:42:42):
+That's what they used for right now.
+
+James Prestwich (00:42:43):
+Yeah. But what they are is just a set of people who are signing the, the price,
+
+Anna Rose (00:42:49):
+Huh? It's not based on like market activity or something like
+
+Anna Caroll (00:42:54):
+What an Oracle is, is a way for somebody or some group of people to say, this thing is true and this thing could be anything. But in the majority of the use cases right now, this thing is in the real world, this is the price of an asset, or this is, you know they're they're generally used for price feeds, right. Because
+
+Anna Rose (00:43:19):
+Yeah. They could also be like token to token, right? Like it could still live in the crypto world unless all Oracles basing it on like a USD value and then comparing them to each other or are they sorry, I'm so naive about this. I'm realizing big gap in knowledge here
+
+James Prestwich (00:43:35):
+From a really basic perspective. We have this problem we talked about earlier, blockchains can't pull data. Yeah. So when a blockchain wants to know something, or when an application on a chain wants to know something, someone needs to push that data there and the chain needs to verify it somehow. So when we call an Oracle, you know, any system that just pushes data on a chain, that the chain can't verify. So this usually is real world market data. Like what's the price of an asset right now, or what's the relative price of two tokens or something like that. But it could be anything like you could have an Oracle that tells what the color of James' shirt is today. Uh it would be a boring Oracle, cuz it would almost always report black, but you know, you, you can have an Oracle for that.
+
+James Prestwich (00:44:29):
+The question is like, how does the chain verify this? It can't objectively go and check that my shirt is black. Yeah. It has to rely on some set of parties to report that it can't objectively go out and check the Coinbase price of a dollar in Bitcoin or a dollar in ether today. It has to rely on somebody to sign over that. And so all of the Oracles that we trust in production, like the maker, Oracle, the chainlink Oracle they're usually, you know, like a group of 15 signers and some sort of medianizer like a, you know, system that sanity checks what they're signing. Hmm. It's still, you know, a multisig, it's a multisig signing data instead of signing, you know, like tokens.
+
+Anna Rose (00:45:22):
+I never thought of it like that, but yeah, I guess you're right. Like and how do they even get checked though? Do they get checked?
+
+James Prestwich (00:45:29):
+No, they are okay. The chain can't check them, but, and this is a great part of Oracles and a great part of Nomads model is that the human beings who are sitting off chain and can open up Coinbase can check those. So if the maker Oracle is reporting, you know, a completely bogus value, the human beings will know that. Okay. And can respond to that. If the nomad, you know, cross chain system is fraudulent, human beings can know that and can respond to that and can shut down because of this latency period can shut down applications before the fraudulent messages are processed. You know, a lot of Oracles have similar latency periods built in or similar restrictions on how it can be updated. The goal is, you know, we can't authenticate this Oracle data or this nomad channel data directly. But we can sanity check it. We can have waiting periods to make it safer and we can allow human action to correct it.
+
+Anna Rose (00:46:32):
+Hmm. So I, I mean, I think I understand the logic in having the timeframe and the delay. That's the time when the human being can check if it's correct and potentially submit a fraud proof, but are there also, is there this idea of having tools that live on top of that to sort of speed it up at the same time and then have the ability to claw it back on the other side? I don't know if this is even something you're thinking of, but this is coming again from our, I think our interview with optimism last year, which was like, they talked about, yeah, it's gonna be held for seven days, but there's like an ability to provide liquidity in the meantime. So yeah. I just kind of wonder if there's any equivalent to the cross chain stuff.
+
+Anna Caroll (00:47:13):
+Well, I mean, there's a one to one equivalent in terms of providing liquidity upfront for token transfers and we have a partner who's doing that, which is Connext. So their upcoming sort of network upgrade or sort of hard fork of the connect system will be built directly on top of Nomad. And we'll basically have two cases, a user sends tokens on the sending chain and it's very easy for a Connext router that has liquidity to see that that has happened off chain and then sort of provide liquidity front for the users so they can get it like more or less instantly in, in, on-chain terms.
+
+James Prestwich (00:47:58):
+This goes back to what we were talking about a second ago, it's easy for a human or another off-chain actor to see that the system is behaving correctly. So that liquidity provider can see that those tokens will make it to the other chain in 30 minutes. And that means that it is very low risk for them to go ahead and fill that order now, because they know they'll get paid back in 30 minutes.
+
+Anna Rose (00:48:25):
+Mm,
+
+Anna Caroll (00:48:25):
+Exactly. Yep.
+
+Anna Rose (00:48:27):
+Is there any equivalent for messaging planned or would it, would that be problematic?
+
+Anna Caroll (00:48:32):
+That is ... That's problematic.
+
+Anna Rose (00:48:36):
+Okay.
+
+James Prestwich (00:48:38):
+Yeah. So there's basically like two classes of messages. And you know, this goes for transactions on a single chain, as well as messages between chains. The first is like ether transfers or token transfers anything where the message is sender independent and anything that's sender independent can be sped up, like it can be done by someone else. And that allows this liquidity provider to come in and do it for you. Uh the second is where it's sender dependent. These would be anything that's like an Oracle update or a permissioned access to some smart contract, like maybe borrowing against your collateral in Ave or a compound that is sender dependent. And so you can't have this liquidity provider come and do it for you. It is not always easy to tell which of those two buckets a message falls into, so you can't speed up arbitrary messages. We can only speed up certain ones.
+
+Anna Rose (00:49:41):
+Okay.
+
+Anna Caroll (00:49:41):
+Exactly. To sort of reinterpret or restate what James is saying. Like when a message arrives you have to validate who has sent that message, right? The sender center is dependent or independent. And if you're receiving tokens, you don't really care who it came from. You just care that you got the tokens part of what I was thinking of saying earlier, which I'm realizing now might be a bit more of a confused mental model because of the world that we live in right now. But token transfers are sort of fungible with each other, right? Like if you receive like a hundred tokens, it doesn't matter who it came from. Yeah. Whereas instructions like a governance message are kind of more non fungible. Like it really matters who it came from. It can only come from the person who's permissioned. Whereas if somebody else just rocks up and gives the same instructions, like it's not it's not allowed. Right.
+
+James Prestwich (00:50:37):
+Huh. Yeah. That's a, that's a fun way of looking at fungible versus non-fungible.
+
+Anna Rose (00:50:41):
+I like that example,
+
+James Prestwich (00:50:42):
+That's the, that's the core of the fast liquidity system is you want your a hundred tokens. You don't care where it comes from. Yeah. If it comes over the bridge, that's fine. If it comes from a liquidity provider, that's fine too. But if you're waiting for, you know, collateral in your compound account, or if you're waiting to vote in a governance system, or if you're waiting for, you know, any of these other like application messages we want to go over the nomad channel, you can't speed that up necessarily.
+
+Anna Rose (00:51:13):
+So I wanna switch directions a little bit and look at the competitive landscape for bridging technologies. You know, that I've been doing like a series of interviews where we talk about this from different perspectives. I just last week had Rob on from Polkadot. We talked about XCM. I know you're familiar with IBC. I kind of wanna know, like, how do you see Nomad interacting with those? Like, would it tap in directly to like IBC or would it sort of have to have an extra interface to be able to play in that ecosystem as well? Seems like a different model.
+
+James Prestwich (00:51:52):
+So going back, like 20 minutes in this conversation, we talked about layers and, you know, modular bridging stack, we have built, you know, this optimistic cross chain communication layer. We've built the router pattern on top of that. And we built applications on top of that. One of the things that we were really careful to do with the router pattern was to keep it very communication system agnostic. The router is just expecting some bytes. It doesn't care what communication system those come from. So we're really hopeful that the router will let us just plug into XCM or just plug into IBC directly on any chain, you know, where those are available. The real problem is that on many chains, those aren't available. There's no IBC for Ethereum and there is not going to be any time soon. So we are really excited about, you know, building out the Nomad router as Substrate Pallet, or building out the CosmWasm version and building like the little shim contracts that connect the router to XCM or connect the router to IBC.
+
+Anna Rose (00:53:09):
+Would that actually be the application deployer who would then use that? So it'd be like an application like it, but
+
+James Prestwich (00:53:18):
+Is this, you know, we're, we're looking for that. We're looking to provide that build once, deploy anywhere model where it shouldn't matter to the application developer, whether they're using IBC or XCM, they shouldn't need to write special contracts for those that should be handled for them by the, you know, router framework that they build on in the long run. We're gonna be able to do that right now. You know, XCM is so nascent, CosmWasm nascent, like it's going to take a while to get to that point, but because we built this with future forward compatibility in mind, we think that we're going to provide some of the best developer experience around consistent applications using different channels underneath.
+
+Anna Rose (00:54:07):
+Where would the, like, just using the IBC case? Like would there be a relayer from a chain to Nomad or would it be like, that's the, that's the one thing I'm not totally clear on? Like, would you almost deploy an instance of IBC on your side and exist kind of as a standalone zone for this particular case? I guess you're talking about these frameworks. I think this is where I'm a little bit lost. I just don't know exactly what that would look like.
+
+James Prestwich (00:54:34):
+I don't think we're ever going to want to build our own zone or our own chain. The way I feel about it is you have two blockchains and you need one connection between them. It doesn't make sense to build a third blockchain to try to provide that because now you just have three blockchains and you need three connections. Okay. you've made your problem worse by building a new chain, not better. So our goal is essentially build out the application pattern, you know, make it really easy to build applications and then anywhere we can use IBC or XCM your application should just do that for you and anywhere you can't use IBC or XCM, it will use the underlying Nomad channel. So, you know, between two different Cosmo zones, IBC exists. We want to use IBC. It's fast, it's secure, it's subsidized you know, like we want to use it between two different parachains. If XCM is available, we want to use XCM between Cosmos and Ethereum, like the IBCs not available between any Substrate zone and Ethereum, XCM is not available. So your application though, should not have to worry about that. Your application. Shouldn't have to worry about which cross chain communication mechanism it's using. It should just be hooked up and be ready to go.
+
+Anna Rose (00:56:07):
+Is there a limit though, to the number of chains that you guys can build? Like, I mean, you sort of did a call out just before for help, but like, do you, do you have to cap it at some point because there are all these different architectures
+
+James Prestwich (00:56:19):
+We have to very carefully prioritize where we build.
+
+Anna Caroll (00:56:23):
+Yeah. We have to prioritize the cap is you know, theoretically limited by our lifespans, I guess but we have to prioritize,
+
+Anna Rose (00:56:37):
+I, I did ask this earlier and I'm kind of gonna ask it again, but like, was the, is there one that's harder for you to build on, on your side, any of the networks chains, and I know mostly you've done EVMS, so maybe you haven't even explored what it would be like for all the other ones, but,
+
+James Prestwich (00:56:52):
+Well, we've done a little bit of experimentation in near Wasm, in CosmWasm you know, I've played around with writing Substrate Pallets and writing Solana smart contracts. I don't know that it's, there is any specific environment where it's more difficult. I think it's more about the maturity of the relative environments. EVM is very mature. We know how to do contract upgrades in the EVM. Like everybody knows how they work and how delegate call works. It is much easier to find EVM talent and people who deeply understand the EVM. Every other system out there is a little more nascent. You know, these exist, there are developers for them, but it's, you know, less than a 10th of what you can find for solidity developers. And the depth of expertise is not there the way it is with solidity. Yet I can go out and I can talk to like several dozen deep solidity experts on telegram right now, if I want to people who really understand the intricacies of the EVM and how smart contracts call each other and all the little edge cases and gotchas in the EVM, other environments, they have those edge cases.
+
+James Prestwich (00:58:13):
+They have those gotchas. It's just that there aren't as many experts who know them really well. And when you have something delicate, like transaction routing from a cross chain, you know, like meta transaction, smart contract upgrades really want a high level of expertise to ensure that we get it right. And so it's not that any particular environment is gonna be more difficult to implement, it's that the available expertise in Solana is not yet what it is in Ethereum or the available expertise in CosmWasm or Substrate is not yet the same. So we are going to take more time because we want to be more sure of our work there because it's just not as well understood yet.
+
+Anna Caroll (00:59:00):
+Hmm. Yeah. I mean, so many of the meaningful, like smart contract bugs that have caused massive hacks are so subtle or so deep in the weeds. It's really a question of having that level of understanding, which we do in EVM and which we want to collaborate with folks who do in other ecosystems James's point being that's harder to find in other ecosystems
+
+James Prestwich (00:59:27):
+A really concrete example of this is the wormhole hack a few months ago.
+
+Anna Caroll (00:59:33):
+Exactly.
+
+James Prestwich (00:59:34):
+It was an issue with how the smart contracts checked signatures. Ethereum has a very analogous issue that ec.recover() returns zero for invalid signatures. So you need to not just check the signature. You also need to check whether the output was zero. So back in the day, you know, like five years ago, a bunch of people made that mistake and then it became common solidity practice and well understood. And a bunch of experts were aware of it because in Solana, nobody had yet made that mistake. There weren't people who were aware of the issue and how to avoid it. Solana, you know, fortunately able to remedy this with standard library updates, which solidity doesn't have a standard library. But you know, in general, like some of these hacks happen just because the environment Dakota is running and is not well understood, not deeply understood by the developers. So we want to be very careful adding new environments that, you know, like I don't deeply understand, or Anna doesn't deeply understand yet.
+
+Anna Rose (01:00:43):
+Got it. I had Sergey on the show, I think about a month ago from Axelar. And we talked a lot about that system. I have seen Nomad and Axelar kind of put sometimes like head to head in bridge and interoperability competitions or whatever. So I am curious, like what, what do you make of that system? How do you see it as different? I mean, obviously I think you're going to feel that Nomad is, is better, but yeah. I'm just curious what you, what you make of it.
+
+James Prestwich (01:01:14):
+Yeah, definitely. You know, I think Axelar is a nice iteration on the Thor chain model. This idea that a proof of staked chain should select the multisig members for a multisig bridge. You know, they have some nice efficiencies there. I, I think I want to see more security model innovation in bridges. Hmm. Is I don't think that introducing a new chain and a new proof of stake inflation system to try the same security model with some efficiency gains is like what I would spend my time on.
+
+Anna Rose (01:01:54):
+Mm. This actually, this just makes me realize something that we didn't get a chance to talk about yet, which is the agents on Nomad. Like you just sort of mentioned proof of stake. You're not, right You have these Watchers, they have, you have a few different roles.
+
+James Prestwich (01:02:10):
+Right. We have several different roles. The two that matter, like the two that are trusted that are part of the security model are the Updater and the Watcher.
+
+Anna Rose (01:02:20):
+Okay.
+
+James Prestwich (01:02:21):
+The updater job is to, you know, sign the route of this Merkle tree. They, you know, receive an instruction from the smart contract that just says, sign this route and they sign it and give it back to the smart contract on the sending chain. Like that's the whole thing they need to do. The Watcher's job is to check that the updater is doing that correctly to cause the updater to be slashed if they're not. And to, if they are permissioned by an application to go and shut down that application before any fraudulent messages are received. So the updater is really boring and the Watchers are much more interesting. Hmm. The updater is system selected while the Watchers should be selected by the applications. And this is what, you know, distinguishes us from just a multisig like wormhole or layer zero or a, you know, proof of stake selected multisig like Axelar or ThorChain is that the Watchers must be for the security model chosen by the application, not by the cross chain system.
+
+Anna Rose (01:03:39):
+Hmm. Would an, would an application choose a single watcher or is it a group?
+
+James Prestwich (01:03:44):
+They can choose as many as they want, they could have it be a group. They could have it be, you know, like five individuals. They could have it just be one, you know, watcher the trade off is, you know, the Watchers need to be online. They need to be prepared to shut down this application and they need to only do that. If there's actually fraud, you know, kind of the trade off here is that the Watchers can prevent fraud, but they can also shut down the application. So if they do that, when there's no fraud, you have a problem. So you need to choose Watchers that are trusted by the application to not deny service attacks. Got it.
+
+Anna Caroll (01:04:24):
+And this is pretty important. I think about our system is that the entity that right now has the most trust placed in it, the worst that they can do is cause a delay. Yes, they cannot steal funds. And that's why our system is based on James, you know, putting this nicely on revocation rather than permission. The trust lies in trusting someone to stop bad things, instead of trusting someone to, you know, force good things. If that makes sense. If trust breaks in a system where you trust you know, you trust someone to permit only good things. Then that's when the root of trust breaking can cause loss of funds. Right. I mean, that's like the Ronin hack. For example,
+
+James Prestwich (01:05:17):
+The reason Nomad is not the same as a multisig is because even if you steal all of the keys, if you steal the updater key and all of the watcher keys, you still can't steal funds from the system. Mm. As long as any watcher has access to a key, even if the attacker has access to the same key, the honest party can still shut down the application and prevent fraud from occurring, or rather prevent fraud from damaging users in any way. And this is, you know, we think basically the only innovation in bridge models in the last five years.
+
+Anna Rose (01:05:55):
+Wow, cool. I wanna sort of wrap up our interview, talking a little bit about use cases. So we had sort of mentioned I think we mentioned somewhere the voting use case. I also wanted to sort of walk through this ZK idea to see kind of how, or if it would work on maybe even what the challenge would be. And the idea here would be like to create a proof on one side that you'd verify on another. I don't know what you'd actually, I, in the previous episode, I actually, Rob gave me a really much more complex, like smart way of describing this and I can't remember it, but basically, I think, I just wanna know if like, could you use a bridge, like Nomad to push like a proof through that would be verified on the other side and it's not that the construction is a ZK roll or ZK bridge of any sort, but just that like a zero knowledge proof could be interacted with across
+
+James Prestwich (01:06:47):
+Yeah, you can definitely use Nomad to do things like that. We've thought about using zero knowledge proofs for like messages in the Merkel tree or for more complex, non commitments, you know, various other ways of connecting the message to the, to the commitment.
+
+Anna Rose (01:07:05):
+I do wanna ask about the other, this other use case as well though, this use case of voting, cuz this sounds like something that's has been kind of fleshed out and I'm curious like how is that going to work?
+
+James Prestwich (01:07:18):
+Yeah. Well for, for cross chain governance, there's a couple different related issues. You know, one is you have users on Polygon who have compound or Aave and they want to vote in the governance system, which only exists on Ethereum. So how do you let those users who are on some other chain vote in governance? And then the second is AAVE governance and Uniswap governance and compound governance. And all of these different governance systems are only on Ethereum, once users have voted, you know, once governance has reached an outcome, how do you take that outcome and send it to other chains and implement it on other chains? So we have some very strong opinions on these subjects. And governance is one of the use cases that we are most excited about and that we built out of the box to start off.
+
+James Prestwich (01:08:17):
+So from launch Nomad has had a cross chain governance system, which manages and controls all of our smart contracts on different chains. You know, governance decisions are made on Ethereum and then are sent to other chains to be implemented for the, you know, like first part of the problem users voting. We have some really cool plans here. We want to enable users to vote on other chains without losing liquidity of their assets. And so we're looking at voting vaults and gauges and you know, how we can take the lessons learned from Curve and from the Element finance, voting systems and apply them in a cross chain environment. I don't wanna get into like details of, you know, like what we're thinking right now, cuz we haven't built this out yet and the specifications aren't finalized, but we're, we're really, you know, excited about this is we think that for the next several years, like voting in governance is going to be one of the most interesting things a user can do in, you know, DeFi and smart contract ecosystems. And we think we have it as a first class use case in Nomad.
+
+Anna Caroll (01:09:35):
+Hmm. I think what's really interesting about cross chain governance right now is that so many applications and so many teams and protocols actually have this problem. And a lot of them don't even know yet really that they have this problem or sort of what the problem space even looks like. And this is kind of this digal of how the market structure developed in this case. So basically, you know, because solidity smart contracts can be deployed on other EVM chains. What happened was protocols that gained success on Ethereum, you know, as new EVM chains launched like Polygon, for example and you know, more and more, I mean, optimism, Arbitrum, et cetera. There became sort of this pressure for a lot of these applications to deploy on other EVM chains and oftentimes they did. So without necessarily putting a lot of design work into how those protocols would be governed on other chains.
+
+Anna Caroll (01:10:52):
+So right as James sort of mentioned in a lot of cases, the canonical or the initial protocol lives on Ethereum, the token and the governance system lives on Ethereum, but now the protocol is also deployed and living on other EVM chains. And so the question becomes, how can you take this setup and convert it into something that has truly decentralized governance across all of these different deployments and the easiest way to do that with where things are right now really looks like, okay, governance lives on Ethereum. We'll let it live on Ethereum, decisions are made on Ethereum, but when decisions are made you can also make decisions about protocols on other chains and just simply pass that decision to the other chain to be executed.
+
+Anna Rose (01:11:52):
+But don't you see, like I've always heard this argument that voting should happen, actually not on the main chain, Ethereum, maybe it's a different EVM chain because of its expense. It's so expensive and it's not like a value bearing. I mean it's valuable, but it's not like, do you wanna spend the gas to submit a small vote or maybe you have to do multiple votes? Yeah. I'm curious if you're, if you're also, when you say Ethereum, do you kind of mean like Ethereum and EVM adjacent where votes could happen or do you just think it will never move off?
+
+Anna Caroll (01:12:22):
+Well, a lot of people are interested in or talk about moving votes to cheaper chains, moving, voting to a cheaper chain, you know like Optimism or like Polygon, for example. And I think this is a really interesting avenue to pursue. As things sort of develop, it's just not really where the ecosystem is at right now, basically. You know, where we're at right now, tokens and governance live on Ethereum, generally speaking, there's just a lot of considerations here, but I'd say you can think of this as two different structures and then there's like sub options within each, but really there's two main sort of choices, which are, you have a single governor chain, a single chain to rule them all. And that is where decisions are made and those decisions are passed to other chains. And in the current ecosystem, the governor chain in almost all cases is Ethereum, right? That's where governance was initially launched and that's where decisions are made. And so people talk about moving the kind of quote unquote, governor chain, the, the source of truth for where decisions are made to other cheaper chains. And really the other option is just fully localized governance, right? So like each chain governs itself and there is no global governance and that in that construction, you don't really need a cross chain sort of messaging thing because it all is localized.
+
+James Prestwich (01:14:07):
+The problem is when apps don't have a consistent strategy here, there's not really consistent governance for a bunch of these defi applications across the chains they're deployed on it's haphazard at best. The beauty of, you know, using cross chain messaging for this is that you can essentially build over time a modular governance system. I love calling things modular now. That's yeah, fully new thing, fully Celestia "pilled" but the place where the votes are made, the place where the votes are counted and the place where the decision is committed and propagated out to other chains, those don't have to be the same system and they don't have to be on the same chain anymore. Hmm. You can have votes on every chain that go to one place to be counted. And then the results of the vote tabulation is sent to the place that makes, you know, handles governance decisions. And then the result of the decision is sent out to other places.
+
+Anna Rose (01:15:16):
+Got it.
+
+James Prestwich (01:15:17):
+The problem today is that applications just have no consistent plan for this. They've deployed places trying to grow quickly, and now they're having to go back and figure out governance after the fact. And that's what we want to help them with.
+
+Anna Rose (01:15:35):
+Cool. Do you have any projects already doing this or is this sort of like something you've mapped out architecturally?
+
+Anna Caroll (01:15:41):
+Absolutely. So there are projects that are doing this, and then there are projects that have designed this and are doing this. Okay. Okay. Slightly different. But we have been working with stakeholders in the Uniswap ecosystem to discuss what this looks like in Uniswap right now Uniswap is deployed on more than more chains than just Ethereum, but the Uni voting token and the sort of governor Bravo contract both live on Ethereum. So they had built a sort of bespoke solution for each chain to govern the protocol on remote non Ethereum chains. There were a lot of problems with that. First, every time Uniswap wanted to deploy to another chain, they had to figure out a bespoke system for passing governance messages from Ethereum to that chain. And in practice that included not just different message passing channels, but also different smart contracts to communicate over these message passing channels.
+
+Anna Caroll (01:16:50):
+And what this created was a sort of patchwork of solutions that were very difficult to interact with as a governance participant, trying to pass a proposal across chains. So the system was, you know, somewhat opaque, difficult to navigate, borderline impossible to build easier experiences on top of, and basically very difficult to extend new chains, which sort of limited the speed at which Uniswap could deploy to new chains. If there was a standardized solution for this across all chains, for example, using Nomad as the message passing channel and a standard set of smart contracts for you know, communicating over Nomad, then you would have an out of the box solution deploying to new chains. You could pretty much make deploying Uniswap to new chains a push button experience, and then indeed you would also have a standardized interface and solution for people trying to pass proposals and to actually govern and use this governance system across chains.
+
+Anna Caroll (01:18:04):
+So Uniswap is one sort of protocol that we've been working really closely with on this for a couple of months an example of a team that has, has sort of designed a system around this is the AAVE team actually they have, you know, put out some thinking around cross chain governance and built a solution for themselves, but their solution as well, also used different message passing channels for every chain, which again, replicated this really cumbersome experience, deploying to new chains interacting. And I believe that they are, you know, thinking about better ways and more standardized ways to do this.
+
+Anna Rose (01:18:50):
+Cool. I mean, it sounds almost like this is where, like, I, I feel like we should do a full episode on like new governance structures and voting structures across this ecosystem. We are a little bit out of time to go too deep into it today, but it sounds like a really cool use case and I am very excited to see it in action. What status is this at?
+
+Anna Caroll (01:19:14):
+The status of this governance discussion with Uniswap right now proposals are live on chain to deploy Uniswap, V3 to Moonbeam, as well as to Gnosis chain. And both of these chains, both of these new deployments are using Nomad for cross chain governance. And one of these proposals is being stewarded by me by Nomad. I am Nomad by the way.
+
+Anna Rose (01:19:50):
+Cool.
+
+Anna Caroll (01:19:51):
+But yeah, so the status is for both of these new deployments, they are using Nomad and we are discussing with stakeholders in the community, whether it would be a value add and what it would look like for Nomad to provide this sort of as a service for any new chain deployments and even possibly for existing deployments, again, to create a much simpler, smoother experience to deploy to new chains and to use governance on existing chains.
+
+Anna Rose (01:20:26):
+Cool. So thanks so much to both of you for coming on this show and sharing kind of the journey to Nomad what you're working on, where it's going in a lot of ways. Yeah. Thanks so much for sharing this with us.
+
+Anna Caroll (01:20:41):
+It's been so lovely. Thanks for having us, Anna.
+
+James Prestwich (01:20:44):
+Thank you, Anna.
+
+Anna Rose (01:20:46):
+Yeah. And James, I'm gonna ask one more time. I know I'm putting you on the spot, but you'll come back as a co-host right?
+
+James Prestwich (01:20:51):
+Of course.
+
+Anna Rose (01:20:53):
+Okay, good. Thank you to the podcast editor, Henrik, the podcast producer, Tanya, Chris, who helped with research and to our listeners. Thanks for listening.

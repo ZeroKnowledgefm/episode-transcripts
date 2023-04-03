@@ -1,0 +1,261 @@
+Anna (00:07):
+Welcome to zero knowledge, a podcast where we talk about the latest in zero knowledge research and the decentralized web. The show is hosted by me, Anna,
+
+Fredrik (00:19):
+and me, Fredrik.
+
+Anna (00:27):
+This week Fredrik, and I chat with Omer Schlomovitz from Zengo wallet. We talk about MPC, threshold cryptography and how this work is being used in a blockchain context. But before we start in, I want to say a big thank you to this week sponsor, Least Authority. Least Authority is a team of researchers, cryptographers, open source developers and privacy advocates. They are a security consulting company known for their dedication to pushing the limits on how to build privacy, respecting solutions. They specialize in security audits like the ETH2 specification, protocol labs as Gossipsub protocol, Atomex library, Wallet, and Smart Contracts for the Tezos Foundation, Blockstack's Investor Wallet, Centrifuge Tinlake 3.0 and more. They wanted me to let you know that they're currently working on a step-by-step guide to building ZK Snarks called The MoonMath Manual. You can find and donate to this project on Gitcoin Grants, matching round eight is starting this week.
+
+Anna (01:21):
+Speaking of the zero-knowledge podcast also has a grant on Gitcoin. So when you head over to the site, do consider donating to both. I've added the links in the show notes. Lastly, Lease Authority is also hiring. So if you're interested in working with Least Authority on anything, zero knowledge related, head over to their career page, to learn more about the security auditor position they have open, you can find that at leastauthority.com/careers. I've also added the link to this in the show notes. So thank you again, Least Authority. Now here is our interview with Omer.
+
+Anna (01:56):
+Today we're sitting with Omer Shlomovits from Zengo Wallet, and we're going to be revisiting a little bit, the topic of MPCs and covering primarily the topic of threshold cryptography. So welcome to the show Omer.
+
+Omer (02:08):
+I agree to be a thank you for having me.
+
+Anna (02:10):
+Um, I think we got to know each other a little bit through a research group that you've created called ZengoX I think what would be interesting to kick off this interview is to hear a little bit about Zengo and ZengoX what's. What are those two entities and how are you related to them?
+
+Omer (02:29):
+Yes, so Zengo, is a company building wallets for consumers - crypto wallets. It's a company I co-founded and as part of my role in the company, I have research in a research group, which we renamed ZengoX, uh, which was not the original name, but this is the name we give it now. This group exists on GitHub, which if you think about it is kind of a social network with, uh, the issue tracker and the PR and you can track stuff and you can follow and so on, and we felt the need to, that something was missing, right? So we wrote a lot of cryptographic libraries, uh, uh, very specific to, uh, required all sorts of use cases. And we found that people that are coming, uh, to, to Github or into our Github organization are sometimes lost, and the conversion from taking them from a visitor to a contributor is something that we want to improve.
+
+Omer (03:29):
+So what we've done at the beginning is that we just added a link to a Telegram group, and instead of, you know, asking for contributions. And so just told them, look, we want to know, you want to meet, you want to discuss, let's work together. And it was a, I guess it's a successful experiment because it's organically kind of attracted very interesting people from the space and even a bit from outside the space, which have common interests to a very specific use of cryptography to that group to just go in. And obviously it's, now also exist on Telegram. And what we do is that, uh, first of all, this is like the main group is kind of the front, but, uh, many sidegroups that I have very vivid, uh, discussions that on all sorts of topics that include research. What happened is that when we started by being focused on something called "threshold cryptography" we noticed that there is also room for other kinds of research related topics around cryptography to be discussed that are related to the space and the space is pushing forward, the entire field of cryptography.
+
+Omer (04:38):
+So based on demand, we kind of share more and more of what we are doing, which also evolved from just threshold cryptography to more cryptographic application that heavily relying on cryptography that can be used in, in the blockchain space. And so, so yeah, that's kind of how the research group came to be, which is, I would say like 50% more oriented to cryptographic code and implementation and 50% to research. And then out of this, 50%, also some part of it is for general research in cryptography. And, uh, from time to time, we tried to, I mean, it's one thing to bring people to come and talk and discuss. The other thing is to keep them engaged and feel comfortable to talk about all sorts of questions that they're, like, engage with discussion. So we start to do all sorts of activities around this book, which includes, uh, at some point we had the webinars around cryptography from people from the let's call it the community or ecosystem.
+
+Omer (05:45):
+Uh, we also started some study groups, one about class books, which was highly successful. Uh, I mean, I think now we have one of the, uh, maybe the only one for specific use cases, class groups in rust libraries. And it's, it's, there's like a cost it's not cheap to get the knowledge about class groups. So it really was helpful. Um, yeah, and the kind of activities. I can go on and on, but the end result is that now it's, it's, it's an ecosystem. And then we, we see, uh, growing by the day and gets a lot of engagement. And eventually we're also getting a lot of contributions and this is the core of ZengoX. It's contributors working together to solve interesting research problems and also to build cool libraries in cryptography.
+
+Fredrik (06:30):
+It feels pretty unique to have this sort of research group come out of a wallet essentially where like it's pretty commonplace that a core team has a research group as well, or something like that. Ethereum foundation has a research group, but I've never really heard a wallet company have that. So what is your goal to like contribute that back to the wallet? Or is it so like disconnected from that, at this point that is really about fundamental research or even contributing research back to that, to the protocols?
+
+Omer (07:01):
+Yeah. So, uh, it's a great question. Now we need to understand how ZenGo started. When it started. So my, uh, I came from academia. I met my co-founder, Ouriel, who is a seasoned entrepreneur, and he came up with this issue of the wallet, which never bothered me, but after sleeping on it, I realized that this is a true pain. Now I came with some background in MPC and it took a some like basic research such until we figured out that this is what we wanted to do. Like we need to build key management, which is one of the cause of building a wallet in the space, around multi-party computation or threshold cryptotography or threshold signatures. And from that point I spent pretty much 24/7 implementing MPC, which was in its infancy. Uh, very surprising to see what it was at the time. Now, as you said, when you build a product at the early stage, R & D, and the research was very much related. Like what we could build in the wallet.
+
+Omer (08:01):
+For example, I think the first real research we've done was on recovery. You need to build a recovery scheme that would be equivalent to your binary way of sort of handling the keys like, cause otherwise that, that can just go do you know, secondary, where do recovery? And will get the key out of this one. So we tried to solve recovery and because we are using MPC, we try to stay with the same assumptions and so on. And eventually I think we presented at the Stanford blockchain conference and what's happened is that I'll get some, some part of it is, uh, due to luck is that this area -specifically threshold cryptography in relevant to blockchain space - attracted a lot of folks from academia at the same time. So there's been a huge surge of research that is focused on this area, which meant that for us, it was very easy to first, since we'll kind of one of the first to actually try to work with those, uh, primitives and protocols, we encountered all sorts of problems that has some value to academia people.
+
+Omer (09:05):
+So it was easy to start collaborating with them. So this was the focus of the early days. But from that point, when we started to establish the research community and like answering those questions, it opened up to further questions, for example. So how do you do MPC when you were a lot of parties, not just two or three, which was the common case, what happened when you have 1000 parties? So it kind of led us to these fundamental questions that eventually, for example, in this question we wanted to answer how do you build the communication in the right way for MPC, for example, based on some state machine application BFT um, that we, this was like our angle. So yeah, they diverged and diverged at that point, now what we have now is that, uh, our research is probably ahead of the product. Uh, and it's also, by the way, after you launch it, it's harder to change the cryptography, but the research is still supporting most of what we do in the cryptographic level in the product and in security stack.
+
+Omer (10:08):
+And it also supports other products, uh, for other companies that are using the code, everything is open source. So there is this ecosystem and there are questions arround it. And we also, and allow us to, and it allows us all the time to seek for alternatives, trying to prove, you know, after you solve something about security, you want to improve the efficiency. So this is like another line of research. So I would say that like, there is a lot of connection between our origin and what we are doing now, but there is yet another big chunk of research that is not directly effecting the product in the near future.
+
+Anna (10:42):
+What you described as this community building sounds a lot like the zero knowledge podcast telegram group, and then the ZK study club, and some of the projects that we've been building, obviously a bit more focused on the zero knowledge specific space, but there's so much overlap I find with your group. And I know when I, when I first joined it and got to see what was happening in there, it just seemed like it would be inevitable that eventually we'd have a conversation and hopefully we get to share some of that info.
+
+Omer (11:09):
+Yeah, no, the study clubs are really successful. I think we probably what inspired me to do our study groups, although they kind of picked up a different approach, but I think it was an inspiration. Yeah. We get a lot of inspiration from the zero knowledge ecosystem.
+
+Anna (11:27):
+So we've heard the story from the founding of the company onwards, but can you tell us a little bit about what happened before that led you here?
+
+Omer (11:35):
+Um, the story is kind of simple. Around the launch of Ethereum, I think this is what I picked up, I picked it up, smart contracts kind of blew my mind. So I read the yellow paper, uh, much before I read, uh, Bitcoin paper, the White Paper. My first attempt was to find, uh, an issue with, Ethereum proof of work, the ETH Hash. So it was actually an existing algorithm, that Vitalik kind of tweaked. And my goal was like, I knew that there was no security proof to the tweek that Vitalik had actually done. And I saw then at the same time, there was a lot of other research going on about all sorts of like it's called the Moderate Powered Functions, uh, in relation to space and also like memory consumption in the computation. So I added a quite nice, I think a few observations, I mean, presentation, but nothing that I could actually make substantial contribution out of it. And I guess from that point, I decided to move that against the Vitalik. And then I, uh, eventually I met with Ouriel so this is what I, what I mentioned before.
+
+Fredrik (12:35):
+So we had Nigel Smart from Unbound tech and some university..
+
+Anna (12:46):
+Leuven
+
+Fredrik (12:46):
+KU Leuven - It's supposed to be a cool place. We had him on a different episode to talk about MPCs and a bit of Threshold Cryptography, but, um, I know you listened to that episode as well, Omer. I think we can flesh out our knowledge of threshold crypto a little bit more, but I'm not sure that we have sort of the basics. I think we have the basics of MPC of how know you can go from a polynomial to where different parties have different components and we explain those kinds of things. But going into more like real world cryptography, uh, ECDSA and the like, uh, I don't think we really have the fundamentals there. So maybe you can help us get up to speed a little bit on that and talk about some of your own work there as well.
+
+Omer (13:30):
+Sure. Starting with MPC, stands for multiparty computation. So basically what it means is what we know today is that we can take any function and we can compute it with MPC techniques, meaning that you have private inputs that you don't want to share, but he wants to learn some output. So Nigel mentioned the Millionaire's Problem. Like you want to learn for example. So the input to be some secret salaries and you want to learn who is the richest party. Now threshold cryptography, you could say that this is kind of a branch inside MPC that focuses on functions that are cryptographic, right? So all of the cryptographic functions, we know like key generation and, uh, signing digital signatures and encryption, they all have threshold equivalent and you call it threshold because you need to make this threshold assumption that, uh, is parameterized by, uh, those two parameters that's called t & n.
+
+Omer (14:28):
+And this is a common naming for them convention. So what you want to say that you have n parties joining the computation and out of the n parties, you assume that no more than t, are malicious, meaning that they try to sabotage the protocol and learn something about the other parties inputs. Okay. So why is this interesting? So for example, signatures, which is the biggest use case in the blockchain space, this is something we do all the time when we populate a blockchain, right? When you sign a transaction, you actually do a digital signature over the transaction to sort of say that this is your identity, or the signature is equivalent to say that I have this cryptographically proven identity that I'm attaching to the transaction. Uh, why is this interesting threshold cryptography? So let's take, for example, digital signatures in blockchain. This is what we do for every transaction.
+
+Omer (15:23):
+We attach a signature, which is basically like saying, I have the cryptographic proof that this transaction, uh, came for me. Like I'm saying, this is my identity. And, uh, no one can forge it by the basic security property of signature is that it can be unforgeable, however, like these some kind of single point of failure for once. So one motivation for using threshold cryptography or threshold signature, would be to kind of distribute the trust among parties. So this is actually very similar to multisig that is either existing natively in some blockchains or in others. Like Ethereum, you need to write some smart contracts or some functionality to achieve it, but this is what you try to get. So you can actually encode any access structure that you want, both in multisig and also in threshold signatures, however, using threshold signatures, you can hide the access structure. So the outputs, one of the requirements of the treshold signature is the verification would be the same, right?
+
+Omer (16:24):
+So when you verify multisig you basically need to verify each signature separately. So it has some implications around the size of the transaction and also about the fees that you need to pay for it because it takes more space, but also there's this privacy issue that you can actually expose the access structure. In MPC you require that the verification protocol would stay the same. So for an outside observer, looking at the blockchain verifier and miner, whatever, the signature should look the same. So normally the access structure, can be 500 signers that are somehow connected with some, let's say 'And' gates 'Or' Gates, and all sorts of like, imagine a circuit eventually you get a single signature, which is the same size as a single signer, signature.
+
+Anna (17:10):
+That's the point of failures is that there is sort of a traceability aspect.
+
+Omer (17:15):
+I would say. It depends on, on the use case for some, if you have a really big access structure, so the fees might be something you can not handle, so you'd want to fees of a single transaction, but yes, it might also also the size might be a factor, but then also the privacy. So it really depends. Now I want to connect it a bit to the research community and what is going on in academia. So few people envisioned... Steven Goldsetter. They saw a way that threshold cryptography could be used in a wallet. But the protocols to do it, since on Bitcoin we use a protocol called ECDSA - which stands for Elliptic Curve Digital Signature Algorithm. So the way of doing threshold ECDSA was not really efficient. It was imagined but never done in practice. And when I started my company, there was a large body of researchers trying to push this topic.
+
+Omer (18:15):
+And because of the Bitcoin use-case found very clever ways and tricks on how to make this traditional ECDSA super efficient. Now it's still very far from the efficiency you get from a single signer. First of all, you have to, you have to have communication. With all threshold cryptography, I mean there's some state of the art now they try to minimize the communication, but usually with MPC you need to exchange information. So there's the communication aspect and also the computation. So you do need to involve some complex computation. And also from security wise, there are some security assumptions that are not native in the blockchain, which is just the regular publicly elliptical assumptions that you need to incorporate. Still, those protocols kept improving over the past, uh, three years until we have now really, really efficient ways of doing this special ECDSA.
+
+Anna (19:11):
+I wanna go back for a moment because I just want to redefine you, you sort of made the distinction between the multisig and the MPC and threshold cryptography being a subset of MPC. Basically, you were saying that there, like with threshold cryptography, all inputs are the same size or are identical in a way. Can you just clarify what you mean by that?
+
+Omer (19:32):
+I can clarify by explaining about if we just look at signature. So a signature is actually three different algorithms. One is a key generation, one is signing and one is verification. So when you go to the threshold volume to fit, so you have to find a way to do a distributed key generation or DKG. The signing is also distributed. So we call it distributed signing or threshold signing. Verification must be the same as in the single signer case. So what it requires you is that the output of the signing, the signature algorithm, should look the same as in the single signer case. So it means that you take all of the information from all of ...this might be, I don't know what size access structure and you need to compress it into a single signature. So you do all these kinds of mechanics inside the digital signature, but the output should look or should, uh, be of distinct sizes in a regular digital signature algorithm. However, in multisig you basically concatenate different signatures. So it's, it goes linearly with the number of signers.
+
+Anna (20:39):
+I see. So you end up with a, you and you actually add them. Is that kinda what you mean by that? You're kind of like putting one after another to make this like master signature. Got it. Cool. That's been a helpful distinction actually. Yeah. I've always been a little bit curious as to why multisig weren't considered MPCs or vice versa, but it was cool. With this new kind of threshold cryptography, you know, you've mentioned some of like the pros or the benefits of it, but like, has it also opened up any problems?
+
+Omer (21:09):
+Yes. So behind what I mentioned that you do need to assume some security assumptions. Depends on the protocol. So it might be that you need to introduce some new assumptions into your system, which is not preferable. You also, uh, introduce overhead in computation. You also require communication. So on top of it, the protocols it's extremely complex to write, I can say now with 100% confidence that it doesn't matter who tried to implement threshold ESDSA, they failed ... including ourselves. Like you have to fail. This is one of the reasons why we're so happy to have this kind of ecosystem out of it because it got to be battle tested. This is the only way to gain trust. You have to battle test it over another, you have to get new sets of eyes to look at it. You have to improve it constantly, otherwise it fails. Uh, this is one of the reasons, for example, Binance implemented a threshold signature library, and we found several issues that algorithm itself, the way they implemented the cryptography which can be severe.
+
+Omer (22:18):
+Now it's interesting because it opened up all kinds of new attack vectors, uh, because, uh, I mean, we can go into specific examples of what it looks like to actually maintain this kind of, uh, or to run threshold signatures but, uh, the end result is that, for example, now we are also maintaining Binance library because we kind of see value in trying to standardize it, try to make it as simple as possible, try to make it so their library is the Go library. Our library is the rust library. We want to make them interoperable, want to make them a similar API. We see a lot of confusion around it. So it's really hard. Also just to interact with those libraries requires some level of experience or knowledge of cryptography just to, to, to talk with this to use the API, those libraries. So for example, in our case in, uh, ZenGo libraries would be the stack on top of it.
+
+Omer (23:11):
+So we have another library just to work the threshold signature library, to make it more human friendly, such that you'd avoid mistakes around these, like, you know, round of communications and so on. And then we have another library on top of it, which is more application specific. Now, if you want it to have threshold validation stream or threshold wallet, so you need to another library. Even on top of it, you had one more layer just to wrap it. So to make the API completely completed foolproof, uh, because this is not that the cost of it. It Is extremely complex,
+
+Anna (23:46):
+But that Binance bug that you mentioned, like, was the problem that they had implemented too early before something was battle-tested
+
+Omer (23:54):
+Did a fantastic job. They created state-of-the-art library. They used the right people to consult them. They audited the library, they called it the bugs that we found - its in plural. And also again, we found bugs in, in many other places, including ourselves and... Oh, by the way, our library is also audited. Even, you know, the auditors are not familiar with this new technology. So it's sometimes an issue, but even doing all this great work, you still can find all these cracks that, uh, are really hard to catch. It's really hard for example, to expend, uh, maybe, I mean, one of the main reasons is that you need to find like someone that is fusion between a software engineer, a network engineer and the cryptographer. And usually those guys do not meet. So I guess, yes. Yeah. So it's hard to, to, to completely eliminate bugs the only way to do it, is like any other thing, like the other software, you have to keep battle testing it and like experts look at it and contribute to it's the only way.
+
+Fredrik (25:02):
+Yeah. I think it's worth highlighting that the only thing that, that improves it is, is time, right? I mean, even an open SSL that had been around for 20 years, there were severe bugs that were found. And so he, it's sort of, you can't ever expect anything to be perfect. And I think that's why it's great to have a community and a group of like a number of eyes who are actually looking at it from different vantage points, using it in production, in different settings. And that's the only way you actually find stuff.
+
+Anna (25:31):
+Can you give a bit more detail about the actual bugs though? Maybe that helps us also to understand, like, what does a bug in threshold cryptography mean in the real world? Like why would that be bad?
+
+Omer (25:43):
+Okay, sure. So let me explain about the simplest bug that we found. So for this, I need to introduce another threshold protocol, which is secretly sharing. So the goal of this protocol is it's extremely important. It's mostly when you do threshold cryptography in production, you it's almost a must have. So what you need to do is that an attacker let's say that you, now you thresholdized... this is the name that I use... you thresholdized your stream, your cryptography, So now instead of 1 party, you have n parties, each one also secret, and you want to avoid a situation where an attacker gets hold of t+1 such secrets, but a clever attacker would go and attack one by one. So let's say you spread your secret shares to different sites. That attacker would just go to one site by the other. And until you get enough, enough secret shares that we can reconstruct the secret. So to avoid it, you need to edit this notion of "change with time".
+
+Omer (26:41):
+So you need to take some time parameter and after this time you want to refresg the keys. So you want to keep the same secret key that is never reconstructed, but it should be the same, but you do need to refresh the secrets that you override your old secret. This is also the mechanism if you want to introduce new parties into your group. So, uh, some party is, uh, stopped responding. You want to introduce new ones. So this is a part of this mechanism. Any type is like, for example, in different, uh, where they produce the one will be, can they do it in? Is it also exists in threshold signatures?
+
+Anna (27:16):
+The name you're using here is secret share. Is that what the term you're using?
+
+Omer (27:20):
+I say that for every, for each party, each party holds a secret share I mean, it doesn't necessarily means that this is it, but in the case of signatures, usually this is the case. So what happens in, in, in the Binance code is that you need to do this protocol to reshare. So again, the goal is that you have the same secret. This is like invariant in the system. Should be kept, but the secret shares of the secret should be really reshuffled. Now to do it, you need each party to communicate with the other party. So each party will take his own secret and would share it with the rest of the n - 1 parties. Now, what will happen is that it's enough of an attacker to attack let's say one party for... Actually it can even work for the network attacker, but let's assume that the attacker attacks 1 party ... the attacker would send the right shares to some of the other parties and incorrect secret share to other parties.
+
+Omer (28:19):
+Now, there is a mechanism for each party this is .... because I need to protect against malicious events... so there are mechanisms for each party to check each message that they received and to verify that it received the right message. So this is all good and fine, but what's happens is that this attacker would send some good shares and some bad shares. Now, the ones that received the bad shares would detect it and would abort the protocol, meaning that they will keep the old secret share. The ones that receive the good shares would continue the protocol eventually overwriting the existing secret shares. So you end up with two groups of secret shares that are not compatible with one another, because one done a deletion, which is irreversible. The other one is not done a deletion. So two observations is that one it's really easy to fix.
+
+Omer (29:14):
+So we need to add another round of communication, which is obviously what the implementer wanted to avoid. And in this sum of communication, you do need to kind of say, so which party needs to say, so I got everything right. I got everything wrong. And based on it, they get the consensus of what they should do. Another thing is that a smart attacker that goes undetected, doing it once, can keep doing it, eventually getting to some kind of an extorted extortion situation if it involves money. So it can get to a point where you don't have in your n parties group enough secret shares to reconstruct the full key. Only if you use one of the secrets or a secret that the attacker knows. So it kind of deteriorates the attacks back to a single signer or something like this. And then the attacker can say, okay, you want my secret? Just only if you sign a transaction that gives me half of the amount locked in this account or something.
+
+Fredrik (30:03):
+So if you look broadly at, you know, when you, as you put it thresholdize various schemes, is there a class of problem or a class of attack that seems to pop up, or is it, you know, bugs as in any crypto software? Or is it actually like no, these things we need to be aware of these things are new, new things that pop up that, that come as a result of that.
+
+Omer (30:27):
+So I think that at some point it would be possible to classify those type of attacks. Right now all those systems are very new and the process is very manual. So, you know that, I mean, what happens when you thresholdize a scheme is that you take out all the big guns in cryptography. So immediately it means that you need to, again, move to some kind of distributed system. And, and also you introduce commitments in zero knowledge, and homomorphic encryption and whatever, like you're just throw it all in and out of this, there's a lot of pitfalls that might have to be solved. I mean, there are known like issues that you can, you can start look for. So one of the recent blog post I published was about an issue I found in, in several libraries that are doing threshold signature, but, but different than ECDSA 25519
+
+Omer (31:21):
+And then you, you have some dependency in the Elliptic curve, so you need to work in a specific subgroup of the Elliptic curve. But what's interesting is that when you combine these two things, one is communication and second is walking in the prime order of the subgroup of elliptic curve. There's all sorts of issues. Like each message that you receive, you now need to also check something about the elliptic curve point that you receive, for example, and this checks, uh, sometimes we noticed the goals - they are missing and then all sorts of implications and what you can do. And apparently these checks also should be part of when you do some basic Sigma zero knowledge protocol proofs as part of the MPC and so on. So I guess there are ways that you can cluster those, but, uh, right now, I mean, the process is from my point of view is very manual.
+
+Fredrik (32:11):
+Another thing that I thought about as you put it here, you pull out all the guns to sort of a thresholdize something, but I wanted it to take us a step back, even before that, which is, you talked earlier about Bitcoin and having threshold signatures there, which could lead to multisig. So, or whatever, that doesn't require a Bitcoin script and all sorts of things. And now we're moving into Schnorr and we need better efficiency there, et cetera. But what drives all of these things? What drives these changes? What drives having threshold signatures at all? So like, what are the use cases or why, why do we want these things at some level? I imagine there's, there's many different answers for different fields, but if we look at Bitcoin, for instance, what's the prime motivating factor, you know, earlier you said for the wallets, like having a social recovery scheme is obviously a big thing, but it feels like there's a lot of research that goes into this. It has to be more than a social recovery scheme.
+
+Omer (33:11):
+Uh, yes. Yes. So I, it really depends on, uh, it's a great question and, uh, all sorts of applications for, for threshold cryptography. And if you want to do the cross between threshold cryptography and blockchain, you can think about several killer applications. So one is, uh, indeed this new model, which is on the one hand non-custodial, but still gives you this kind of ways to avoid single point of failure. Okay. So this is, for example, one thing that we use in our wallet, and this was like our, uh, design principle was avoid single point of failure. And once you go into this level, so you don't have a private key anymore. So it means that the attacker must be, let's say two locations at the same time to get the full, to construct the private key. But once you go into this level of having the key distributed and never reconstructed, so you can think of all sorts of stuff to build on top of.
+
+Omer (34:16):
+So you can basically do a lot of what you natively would have done in a blockchain, either in smart contract, um, or in some, in, in script in Bitcoin, you can do it off chain and then your footprint on the blockchain would be minimal. So one example is, is the work we've done a couple of years ago about atomic swaps, but instead of doing it using transactions on-chain, what I'm doing is that I'm switching secret shares between different parties. So if I can distribute one secret, then I can distribute another secret. Now I can, uh, trade in my secret shares. And we came up with this gradual release method that allows you to let's say, switch over replace trade, beat by beat, until you get to a point where one party learns the secret share of another party while the other party learns this party secret share.
+
+Omer (35:09):
+Eventually you get to a point where one party controls full control of some key that the other party now lost control of. Let's say you also building sharing. So without going into much detail, as you can build all sorts of applications around this, when, when you have this ecosystem of not single key, but distributed single key, the other applications in the field, once I was mentioning that I'm getting production. So one is the proof of stake validation. So let's say that you have a blockchain and like you want some consensus and you can learn it with a 1000 validators, but it's not much like an attacker would control most of them. So your network will go down. So what you can do, you can distribute each value. They talk into another 1000 signers, or co-signers such that they need to cooperate together. So you get this factor of increasing security when you do this, all the existing libraries, and then actually, um, Polychain Labs for example, are doing it already. So it's also getting traction. And, and then it goes on and all that, for example, one work that we are now doing is about sticking the Watchtower concept of lightning work. And showing that when you look at it from a key management perspective, how you can extend it into n watchtowers that are connected between them in certain way, that gives you some security benefits.
+
+Fredrik (36:34):
+Yeah. And heard about that. The key trading thing, that's also fascinating. I do generally like the non-custodial, but giving custodial levels of user experience to be an interesting problem space that requires a lot of this.
+
+Anna (36:52):
+Is there any connection? This is sort of a side thing, but is, is threshold cryptography and VDS related?
+
+Omer (37:00):
+No, not really. I mean, there is one connection, which is a project we worked with, uh, with Ethereum. Uh, it starts with the beacon chain. And beacon chain to make the randomness unbiased, you need VDFs and to make VDFs based on RSA groups, you need to generate an RSA group, uh, that no one knows the secret key to. So to do it, you use threshold cryptography. So Ethereum founded a very nice project that, uh, we reviewed them going to present this Processing at Real World Crypto that is doing a massive MPC for RSA keys. Then you can get the public RSA key without a secret key, and then you can use it in VDF and then you can use it, uh, in the beacon chain.
+
+Anna (37:44):
+It's a lower, it's a, it's a, at a different step in this process. It's not deep in the VDF it's rather before it's the prep for the VDF.
+
+Omer (37:54):
+Uh, I mean, there are ways to do, uh, probably threshold VDFs, but, uh, I don't think it was such so far, but this would be another cryptographic primitive that you can thresholdize
+
+Anna (38:06):
+Interesting. Going back to Fredrik's earlier question of like, why you need this, or like how it actually is the perfect solution for certain things. Do you have any other examples of that?
+
+Omer (38:20):
+The public isn't such thing as a perfect solution. Everything is a trade-offs, but I mean, we know that it's very popular with exchanges. Uh, I mean the largest exchanges today, crypto exchanges are using it. So about this kind of model where you have the exchange generate the single key, and this is like the master key, but now the exchange is using some kind of a two-party scheme where one party belongs to one group of signers on the exchange. And the other signer can be one of another group from the exchange, right? So let's say that in order to, to enable, to confirm a transaction from some cold wallet to hot wallet in the exchange, you need to have the agreement or the consent of two groups, and you need to have one or two each. So this is I think, a common case that you seen in exchanges.
+
+Omer (39:21):
+Like you see, uh, you need for, from certain amount, you need, uh, one exact or exact from this group and one operator from this group, something like this. And then you can go on and on with access structure. So it's really convenient to define this type of hierachies and access structures that allows you to have more control over how you confirm cryptographically. Like it's not going to be just an API, Yes, No. You actually need to confirm it cryptographically, which makes it much more secure way to enable these kinds of confirmations.
+
+Fredrik (39:53):
+No, it's starting to pop up, like on, on the same similar vein as exchanges, starting to pop up with validators, as you said, as well, where a validator doesn't want to run everything on one machine, if that machine gets compromised and the key is stolen, they can get double signed or whatever, or, you know, there's various ways to exploit that or attack people. So these are spreading it out on multiple machines or multiple people that need to do stuff to, or take action to break the system.
+
+Anna (40:23):
+Some of the work that you basically shared with us in prep for this episode was about crypto wills. Can you tell us a little bit about that work and how that actually relates to threshold cryptography if that's the right solution for it?
+
+Omer (40:38):
+Yes. So I would first start with a higher level presentation without even like diving into the problem of how to do a crypto will, which basically means that like, I mean, the issue I think is, is a separate story, but in crypto you do need to have some relative of someone you want to have someone that will be able to take in a non-custodial way, of course, your funds after something happens to you. So, but before going into this, just, I think it belongs to - this is the connection to threshold cryptography - to a, both a range of questions around whether I should use it, what applications or what programs should be answered with or should be solved with actual cryptography. So there are a lot of protocols that we want to imagine are happening between two sides and those protocols can be mostly easily solved if you, so let's say, okay, I don't want to trust any one entity in the world, but let's say that I can allow myself to trust that I am getting this something in the middle.
+
+Omer (41:42):
+Let's say server but this server is distributed in the sense that everything it's doing it's doing is, is threshold crypto. So it means that, uh, I can rely on the fact that out of this n servers, at least t+1 will be able to help me with any operation I want. So this is another example of a problem. Like this is the stealth address. So this is the problem that was raised by Vitalik that we picked up, uh, and, and try to solve, uh, with his help. Well now let me, let me give you the concrete example. Let's say Edward Snowden, uh, opens an account, an ethereum account and publishes his address. And says, look I'm looking for donations. Now, you want to donate Edward Snowden, but you don't want it to get back to you, but you don't want a transactional chain showing that you actually can send money to Snowden.
+
+Omer (42:34):
+So you need to find a way to send the money without having this onchain footprint that showed that you sent to this address, this is the stealth address issue. And with crypto is I find it a bit parallel again, there's, let's say not going into the terminology that we introduced in the paper, but let's say you have a sender and a receiver, and the sender should send something to the receiver conditioned on several conditions. One of them is something should, there can only in the future. And other thing is that the digital footprints should be non-existence or something or some conditions on it before the, the funds can actually be collected by the receiver. Now, in both problems, if you introduce this threshold assumption and structure, then you can solve them relatively easy. One goal of these papers is to put the solution out there and say like, this is, let's say the, the ground truth.
+
+Omer (43:26):
+We know that we can do it. Let's formalize it, whatever it's possible. For those that it works, it's great. However, it gets much more interesting when you start to remove this man in the middle. So in the Crypto Will paper, what we, I think one of the interesting solutions that we try to show is that let's say I'm removing this man in the middle or this special assumption with multiple servers by a TEE - trusted execution environments like SGX, or even specifically Intel SGX. So when you put SGX in the middle, we didn't want to count on the fact that the SGX knows the time, and we didn't want to count on the fact that the SGX is confidential. So it makes the problem much more interesting. So there's a spectrum of solutions that you can try to forward the problem before we go into the full case of completely just two parties, like its a 2 party protocol that now needs to be solved in a very expensive way.
+
+Anna (44:25):
+I mean, it's a fascinating question and topic, the crypto wills, what happens to people's. I mean, in the most maybe basic ways, like say someone passes away or it doesn't have, you know, they're, or they're trying to bequeath their crypto to somebody else. How do they ensure that that is done and that the certain kind of rules are followed? So for example, like maybe they don't want to reveal what's in there before they pass away, or they don't want to reveal who else is being bequeathed or something like that. I mean, it's, it's, it's sounds like such a huge problem, but what you're saying is you found kind of like a subset of tools that you could potentially use to solve for this. Yes.
+
+Omer (45:03):
+I mean, at least the research and structure follows: So you have the trivial solution, which is inefficient or requires you to trust someone. You have the more complex solution that requires you to have this structure of servers, but then you also need to have the standard assumptions. And then we go all the way up to the point where you can do just with the two parties that are involved. And yes, like you said, the conditions of the problems are dictated to you. Like, you know, that it should have privacy, you cannot reveal that before you actually die or you need to reveal it only to the right person at the right time. So you have all the conditions, and then you just try to do to find this toolset that can help you solve it under certain conditions. And eventually what I hope is that people will take this paper and would find the solution that fits them best and would use this, or build on top of it, because there are a lot of future questions, because like you said, it's a huge topic.
+
+Fredrik (46:01):
+It's, it's an interesting, like philosophical, uh, and technical problem, like combined where the easiest solution is you just trust your lawyer and be done with it. Um, but then you can go further and further. And, but I mean, at the last point then, as I think it's through a last point of needing real world data is how do you detect when someone dies and like trigger the scheme?
+
+Omer (46:28):
+Yeah, it's, it's, uh, this is. You first need to assume something about, uh, the liveliness of the, whatever entity it is. So the way that we decided to define it is by having this kind of digital footprint. So it can be defined in several ways, but eventually you need to pre-define, like, or to have some contract with yourself on what services you plan to be active on and at what cadence. So it can be a blockchain. It can also be, I don't know, logging into Facebook or Twitter or whatever. And if you are inactive in, in those services for sometime then you're will is supposed to be accessible. So this is like a condition. But we definitely keep this as an open question because theres probably it's, it's an overkill issue. It's a, it's a big,
+
+Anna (47:21):
+Also it changes so much over time. Like, you know, once upon a time I had a MySpace account that I actually visited a lot, but I would hate to have my daily activity of that be in any way referenced or actually my Facebook for that matter. But that's a, that's such a, it's sort of like trying to make your digital life be your life. Like if you're active in some digital way, then you're alive.
+
+Omer (47:46):
+Yep. That's probably the simplest way probably. But, uh, yeah. I mean, the paper has many questions. This is one of the major ones.
+
+Anna (47:54):
+How exactly, and I know you started to explain it before, but where exactly is the threshold cryptography in that construction that you kind of came up with or in one of the constructions? Like where does it live exactly?
+
+Omer (48:06):
+It's you need to get out of the blue and it raises others questions like how can you deploy threshold structures? So how can you actually do it in a way, like in the real world, in production in a way that would maintain this threshold assumption of separating completely the - I call them - end servers. So I just assume if you're having the sky, but for the sake of solving the problem, I just assume that you're have in the sky... you are given from God n servers. They are completely separated. They can act maliciously, but, but you assume that they cannot collude all of them. Like up to a certain threshold, they can collude. And you have a protocol that you need to design improve secure that allows you to solve the problem using this stucture. But it's really a hard problem in real life. Like how can you actually need to separate softwares, uh, in different languages? And, uh, I, to be like, you cannot have an admin that like goes from one machine to machine and put.... Because this admin is a single point of failure. So you broke the assumption or you cannot have your CEO have access to everything. So you have to find ways to actually do it. And it's funny, cause I think most of the industry are not actually solving this like deployment issues.
+
+Fredrik (49:19):
+So we're almost out of time and it's time to start wrapping up. But before we leave you, I would like to hear more about the MPC Alliance, because this is something that you're involved with together with a bunch of other companies. And it sounds like an interesting endeavor, but what is it really?
+
+Omer (49:38):
+Uh, okay. So thank you for bringing this up MPC alliances. It's a nonprofit organization based in Delaware that puts as a goal to push forward MPC adoption through market education. So in the MPC alliance we have, I think now, around 40 members, 40 companies they're different size and shape. So it might, might be competitors. It might be large organizations, Alibaba, for example. Might be smaller ones, startups like, like my own. And we are all working together and we have our own network, try to come up with both technical contributions and marketing contributions to the success of MPC technology. So for example, in technical aspect, I can say that we have Wikipedia. So this is kind of a community project. So a wikipedia for MPC, uh, which is starting to gain traction, like if start to add articles and so on. Uh, but, but it's ongoing for quite some time.
+
+Omer (50:42):
+And this is something that was never done before. We also put a lot of effort into standardization aspects of MPC. And from the marketing aspect, so we host webinars, we participate in webinars, events by companies and we will start the podcast soon and blog posts and on and on and on. And, uh, yeah, that's, uh, I co-founded it together with other two companies, Unbound tech, which Nigel is the co-founder of, and, uh, another co-founder was Yehuda Lindell my supervisor at the university and also with Sepior ApS, which is a company based in Denmark, California, and three of us founded it. And now we together with Dan from Cybernetica, we sit in the board, but it's just, it started just a year ago. So just a very early.
+
+Anna (51:36):
+Cool. And it's great to hear that you're going to be creating more and more resources for people to engage with MPC work. It, will there be sort of specific threshold cryptography within that? Or would you just lump that together? Like, do you think you're going to have to create subgroups as it evolves
+
+Omer (51:53):
+Within the MPC alliance yeah. Yeah. So now I would say two large use cases for MPC, big use-case for MPC nowadays. One is on security, which focuses on threshold cryptography, and one is privacy. So privacy machine learning. And so, and this is like a huge use case and by many companies and there it's divided. I mean, the Alliance is like 50/50. So I know, cause I talk to all of the companies. I have a good industry overview. We have around 50/50 for most of blockchain and non blockchain companies since blockchain drives cryptography. And the use cases in blockchain are usually around the key management and around security. Uh, so we already have this kind of subcommittees that are focused on the different applications and pushes them in their own domains and industries.
+
+Anna (52:45):
+Cool. So Omer, thank you so much for coming on the show and sharing all of this work. We're going to add a number of links in the show notes for anyone who wants to follow along and ah, yeah. Where can, where can people find you or engage with these groups?
+
+Omer (52:59):
+Uh, it's free. It's easy to find. So ZenGo.com, uh, it's uh, everything that you need to know about the wallet. There's a page about ZenGoX that connects to both the Github and the telegram group and from the telegram group, you can hop to any one of the other smaller rooms in on telegram. And you can ping me on telegram as well. \\.
+
+Anna (53:21):
+Well, thanks a lot.
+
+Fredrik (53:23):
+Thank you very much.
+
+Omer (53:24):
+It's a pleasure.
+
+Anna (53:25):
+And to our listeners. Thanks for listening.
+
+Fredrik (53:28):
+Thanks for listening.
+

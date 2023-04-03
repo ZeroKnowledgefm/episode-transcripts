@@ -1,0 +1,450 @@
+Anna (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna (00:00:26):
+This week, I chat with Dankrad Feist, a researcher at the Ethereum Foundation. We talk all about the future of the ETH client infrastructure, the merge, Verkle tries or trees, and more, we also explore how concepts that originated in the ZK research space have made their way into the ETH client stack. But before we start in, I want to let you know about ZK Hack, a multi round online event with workshops and puzzle solving competitions. It's put together by this podcast and the ZK Validator, and it's supported by a group of fantastic sponsors. It will kick off a weekly cadence starting October 26th. So every Tuesday we'll be hosting a workshop and a puzzle. Think hackathon meets CTF meets round based competition. There will be a leaderboard and there will be prizes as well as deep dive learning sessions with the best teams in the space. Do head over to the website now and sign up to join.
+
+Anna (00:01:22):
+I've added the link in the show notes. I also want to thank this. Week's sponsor Aleo, who as an aside is also one of our partners on ZK Hack. Aleo is a new layer, one blockchain that uses cutting edge cryptography to achieve the programmability of Ethereum, the privacy of Zcash and the scalability of a roll-up it's gas-free and gives developers the tools they need to build programs to protect privacy while allowing applications to be regulatory compliant. The same team has also built a new open source smart contract language called Leo. This will enable non cryptographers to harness the power of zero knowledge proofs to build next generation private applications. Applications like front-running resistant, decentralized exchanges, hidden information games, regulated stable coins, and more go to Aleo.org to learn more about the protocol or roll up your sleeves and visit leo-lang.org to start building. And last but not least the Aleo team is inviting the community to participate in their ongoing setup ceremony for trustless generating the system parameters. You can find out more at setup.aleo.org. So thank you again, Aleo. Now here is my episode with Dankrad.
+
+Anna (00:02:36):
+So today I'm here with Dankrad Feist. Who's a researcher at the Ethereum Foundation. This is the first time Dankrad on the show. I want to say welcome to the Zero Knowledge Podcast.
+
+Dankrad Feist (00:02:46):
+Hello, and thanks for having me.
+
+Anna (00:02:47):
+You are not however, the first Ethereum research person that we've had on the show, we've spoken to Justin, we spoken to Vitalik. I feel like we've spoken to a few other of your colleagues but I'm very curious to hear what exactly are you working on in Ethereum research?
+
+Dankrad Feist (00:03:02):
+Yeah I'm working on fundamental protocol research things, so I'm working a bit more on the theory of sides. So I, I do a lot of things that have to do with cryptography. Like I look for new cryptographic constructions that we need and some in our protocol and I work with the cryptography team at the Ethereum foundation. And yeah, I mean, I'm basically the, the interface between the protocol and the cryptography, finding new constructions and putting them into our specification.
+
+Anna (00:03:33):
+Would you say is your primary focus ETH2? Then I know that there's been some debate as to whether or not it should even be called ETH2, but like at the ETH2 world, as we've understood it, is that where you are focused.
+
+Dankrad Feist (00:03:46):
+So this is, this is how I originally came into research. We are actually now giving up this distinction because it doesn't really make sense anymore. Like the merge coming up and from then on, like, it will all be one. So it will all just be Ethereum research. And I have actually now started doing work. That's like, I mean, I guess the distinction is now between consensus and execution. Like the consensus part is what used to be ETH2. And execution is what used to be ETH1. But I'm also working on on execution things. So for example, statelessness is all about execution and I've started working on that earlier this year. So I'm doing both, I would say,
+
+Anna (00:04:30):
+Got it. I had an episode with Ben Edgington, I think a few months ago. And in that, like we explored this evolved version of ETH2, and the merge and the two different kinds of nodes are two different kinds of agents in the Ethereum construction. I would love to at least briefly cover that again for this episode, because I know that we're going to be talking about like these different roles and I want to explore kind of both of them with you if that's possible. So yeah. Can you explain to me, or can you explain to the audience, like how does future Ethereum look like?
+
+Dankrad Feist (00:05:03):
+Right. So currently in Ethereum 1 as it is now we have clients like, for example, Go Ethereum or Open Ethereum, and they actually have several different roles. They, they verify the consensus. So they verify that they are on the chain with the majority hash power, but they also verify the correctness of the execution. So they execute every single block and confirm oh yes, like all the transactions were valid and this is the new state rule that resulted from that compared to that. So in ETH2, currently we are already running the Beacon chain, but we aren't actually doing any execution on it. So right now that's more or less, just a, a way to test out the consensus. And of course the new proof of stake consensus, which to be fair, it's a lot more complex than proof of work to verify. So like it's, it's very reasonable to test it for an extended period, but it does nothing else at the moment. And once we merge the two, we are actually planning to keep the separation between these two kinds of clients. But the, what is currently ETH1 clients which are going to be execution plans will not care about consensus anymore. They will, then their only role will be to verify correct execution, and they will leave the verifying the consensus, the proof of stake to different piece of software which is what is currently the ETH2 client.
+
+Anna (00:06:31):
+You just mentioned Beacon chain though, is the Beacon chain, the ETH2 client?
+
+Dankrad Feist (00:06:35):
+Yes. So that's basically what ETH2 clients do right now. They just follow the Beacon chain.
+
+Anna (00:06:40):
+So you just said the Beacon chain has no execution currently, but it sounds like will it ever have execution?
+
+Dankrad Feist (00:06:46):
+Well, basically the, what is currently Ethereum 1 will just become part of the Beacon chain. So we will put the ETH1 blocks, which currently come with proof of work as consensus. And we put these onto the Beacon chain blocks and that will be the execution. But then whenever an ETH2 client, what's currently ETH2 client, let's call it like consensus client receives the Beacon chain block. They will immediately this us execution part to the execution client, let it verify, then they get a message back. Yes, this was correct. Or like, no, you shouldn't follow this block, but it's not, it's not the correct block.
+
+Anna (00:07:21):
+Okay. So as I understand here though, is it, there's two different client types, but there's only one chain. It's not that there's two chains running parallel. And you sort of said that there's this verification, like what is actually going to be written then onto the chain? Is it, you sort of said this execution would be written on, but like, what does that mean? Like what does it look like? Is it just a proof or something?
+
+Dankrad Feist (00:07:46):
+It looks the same as a current ETH1 block. So currently it's one block consists of transactions and it also has a state root. So like basically at the end, when you've executed all those transactions, you commit to like, this is the new state. And basically like the execution is verifying that these transactions lead to the new state root.
+
+Anna (00:08:07):
+What are you calling the, what was the ETH2 client now? Is that just the consensus client?
+
+Dankrad Feist (00:08:13):
+Yes. So that's, that's how, what is going to be in the future, yeah.
+
+Anna (00:08:17):
+Okay. And this is going to be proof of stake. So this is where the validators are going to live. I guess this is where the current validators already live. It's just going to be evolved a little bit. Why the separation?
+
+Dankrad Feist (00:08:29):
+Why we are keeping two kinds of clients? So, I mean, in practice, we've already seen, like with Ethereum in the past that the monolithic design, like having one big client leads to like a lot of problems, basically like teams don't scale very well. Like typically like developer teams work best when they're like small teams, 5 to 10 people or so it's really efficient. But once you have like a big monolithic piece of software that requires a larger team, like things become very problematic. And like basically generally, like the ERP process was slowed down a lot because of this, because it's just like, I mean, actually we currently only have like one team that was able to really keep up with it. And that's like a huge problem. Like we, we're looking toward this multi-client feature where we don't future, where we don't have to rely on one single client that's ensures consensus. Like we want to have a fail safe. If one client has a bug then there's a different one that we can rely on that will correct it. And this can only work when you have like smaller building blocks where like you can put different pieces of software together and they can live independently maintained by independent teams that only have like a limited interface where they need to work with each other.
+
+Anna (00:09:40):
+And that team you were mentioning though, the one that's running right now is Geth, I guess. Okay. And I know, I mean, we did talk about all these clients that are building the consensus client, but will you, are you also expecting more teams to start building the execution clients?
+
+Dankrad Feist (00:09:56):
+I mean, that is happening, like we do have other clients which are currently in the process of catching up. So I mean, I believe that this will happen one major feature that we're working on that will enable this more is actually statelessness because that will enable different sort of sets of features that execution size can, can target. And some of them will be much easier than others.
+
+Anna (00:10:20):
+That's a topic that I want to jump into, like kind of in depth, but I first, still, like, I kind of want to understand, or I want to make sure that we're super clear on these like two clients. And I think I want to know a little bit about the consensus side first, specifically, like you were saying, you used to work there, or you used to work more on that like focused on that piece of the stack. Is there ZK stuff in the consensus in ETH2? And the reason I ask is I like having seen some of your talks and like obviously having followed ETH research for quite a while, like zero knowledge concepts, keep getting like put in, but in this final version of the client, the consensus client, is there anything, zero knowledge in there?
+
+Dankrad Feist (00:11:01):
+So the answer is not at the moment. It's something like, I mean, it's really when, when you're working on something as fundamental as like the consensus for the future of Ethereum, then you have to be quite conservative. And so we, we, we don't want to use it unless we are really certain that we both need it and that we are really sure that it's, that it's safe and everything. So there's a very high bar and we really want to keep things simple. There are pieces, however, where this might happen in relatively near future, like one is so-called single secret leader election where we want to make it so that only the block proposer of a block knows when it's their turn. Like currently everyone knows what's going to be the next block proposer, which, which causes some problems. So basically the problem is that you can, you can then DoS that specific validator, even if it's not currently known who like, which IP is behind which validator, there are probably ways to find out if you're really like determined. And single secret leader election avoids that because you won't know who is going to be the proposer. So you can't DoS them.
+
+Anna (00:12:09):
+Is that an idea or is that something that's already built in?
+
+Dankrad Feist (00:12:12):
+No, that's not built in, we currently have a we have a protocol that I think Mary Maller was working on. And that's now I think like, I mean, we know it works and everything. As far as I know, there's currently a team working on that, on spec'ing that out and building that out, but it's going to be at least a year or so. I would, I would reckon until it would be actually implemented.
+
+Anna (00:12:38):
+Are you then going live with the consensus client as it is where that could happen, where like a validator could actually be doxxed?
+
+Dankrad Feist (00:12:46):
+Well, I mean, it's already live to be fair. But yes, like the immediate version after the merge will have that, but I mean, like, as I said, it's not that trivial. Like we don't, we don't have a public list like which valid data is like, which peer to peer nodes. So you would have to be quite elaborate and like set up like a huge Dragnet in the peer to peer network to find out what you have to DoS and it's possible. And then there would still be ways to react to this. Like you could then put nodes behind Tor and stuff like that. Yeah. We want to fix it, but it's also not like something where I immediately see that there will be huge attacks.
+
+Anna (00:13:24):
+Got it. Um what kind of consensus is it? So we talked about it being proof of stake, but what is it based on? Is it different from like Tendermint or from the Polkadot model? Like, is it, is a very unique?
+
+Dankrad Feist (00:13:36):
+Yes. So it is different from what many other consensus protocol, protocols too. So it's a, the Casper FFG protocol. So of course, one thing we want from proof of stake, which is something that proof of work can't give us as a finality, like this property, that you can have a checkpoint that can never be reverted, unless at least one third of the validators collaborate to do that. And then they would also get slashed. So they, they would lose a huge amount of money. But we do want more than that. So like, basically we're not happy with the property like that. Traditional consensus protocols have that. Like once you have less than two thirds of the validators online, that you can't build a chain at all. So we, we want an addition, we want what we call this available ledger. So even when more than one third is offline, we can't have this finalization property anymore. We know that, but but we can still have, we can just build like an optimistic ledger and and keep building a chain. And like, some people might be happy to work with that. And some of us not. So that's your own decision as a user, but like basically you're not just stuck with like nothing and that's something we really want to do. And and so like, that's, that's why we have a different protocol that that's quite specific to Ethereum.
+
+Anna (00:14:57):
+Got it. So now let's, let's move into this execution client side of things. Cause I know you had mentioned statelessness and I know I wanted to explore this a little bit. The execution client, this is the current, it's like the Ethereum client, as it's known today, this merge, as I understood it, it's like, it will be somewhat seamless for the client runners. They download like an update. Tell me a little bit about how from the client side, like the ETH1 clients, as they are run today, what changes?
+
+Dankrad Feist (00:15:27):
+Not be completely no change at all. It's not just, you are because of the separation that we're doing between execution and consensus clients. It's not enough to just update your client. So basically you will, you will have to run an ETH2 client as well, because you need to verify the consensus side of things as well, which currently the ETH1 client does, but in the future, won't be able to do any more because that depends on the Beacon chain and nobody's, well, people aren't going to implement that Geth, for example. So basically for someone who currently runs an ETH1 node, they will need to pick one of the ETH2 clients and run that in addition to that currently ETH1 client and connect the two so that they can keep running ETH1. Well, an Ethereum node .
+
+Anna (00:16:11):
+Okay. Can someone just run the consensus? Like once this is all live, if they just want to run the consensus node?
+
+Dankrad Feist (00:16:18):
+No, you can't. And that's because the consensus is only valid. If it's it's based on valid ETH1 blocks. Basically, it's always like this always the property that we want with blockchains that you both verify that a majority is voting for your current chain, but also that it's correct chain and own. It's only a consensus of both of these properties are true. And you can only verify the second part. If you also run this execution client. So you always need an execution client.
+
+Anna (00:16:49):
+On the actual merge. What happens to the previous ledger? Like kind of that, that big chunk of data that everybody needs to have on their computer? Will that just stay somewhere and then a new,
+
+Dankrad Feist (00:17:02):
+No, it just becomes part of like, it just becomes part of the Beacon chain. So the whole, the whole chain, just the two chains just come, come together, like the opposite of a fork in way. Yeah.
+
+Anna (00:17:13):
+The merge. Got it. Okay. Okay. So in this execution client, so this is, this is maybe where I sometimes get a bit confused. Cause I thought like, you know, I knew that there was these two clients. I thought of it as like maybe something you could run separately, but it sounds like no matter what, you're going to be running both all the time and it's pretty much, so it's kind of like running one, but it's in under the hood, there's going to be two.
+
+Dankrad Feist (00:17:38):
+Right. and you can, you can pick and choose. So yeah, like we're, we're planning to make this all compatible so you can run all the different combinations of execution clients and consensus clients.
+
+Anna (00:17:49):
+Okay. All the different teams who have built their unique clients. Do you think? I mean, will these clients have very unique properties like between teams. I mean like, will they be able to actually have different qualities? Will like MEV still be like only in some of them are not MEV, but rather like a flashbots, like project in only some of them like that. That's sort of what I'm curious is like how heterogeneous is an execution client?
+
+Dankrad Feist (00:18:16):
+I mean, I think it's similar to how it is now. Like different teams can focus on different specific use cases. Like, I mean, some teams might decide that they want to build a really lightweight client that you can run on very like low hardware. Some teams might decide to run on a mobile phones, which I really encourage, which is great. Like if we can do that and others are maybe focusing on enterprise where they're like, we can integrate with everything and maybe focus less on resources consumption because that's less of an issue. So I expect these different kinds of strategies to exist. And I think that's more or less the case now, except that like at some point I guess like in ETH1, many client teams dropped out, unfortunately yes.
+
+Anna (00:19:00):
+You just said that you could potentially run it on a mobile phone, but you still need to have this heavy chain don't you? So like how would you, how would that work? Which do you have to break it up somehow?
+
+Dankrad Feist (00:19:09):
+Okay. I mean, there are different things, you know, so right now the, for example, the, the concesus, the Beacon chain. You could easily run that on the mobile phone. I don't think like most more iPhones would be capable of doing that.
+
+Anna (00:19:20):
+But that's current Beacon chain before the merge.
+
+Dankrad Feist (00:19:23):
+Yes, exactly. Exactly. So after the merge I don't know, actually know if it's possible now. It would be interesting thing if anyone has tried porting, I am not aware, but I would say like a good mobile phone could probably run currently in execution client because like they mostly do use SSDs anyway. And the main, the main restricts, like you can, you can run execution on Raspberry Pi, but you need an SSD. You need to add an SSD to it. And this is actually the big thing that's going to change the statelessness. So after statelessness, it's going to be easy, like, because you don't need that SSD anymore. I would suspect as possible to run it on a mobile phone. Now I think it's a bit challenging.
+
+Anna (00:20:00):
+Okay. What does statelessness and just as a caveat, I'm pretty sure I've talked about this on the show before, but it's been awhile. So I don't remember. So maybe you can like help me to just like, yeah. Tell me what statelessness means and maybe what is State-fullness.
+
+Dankrad Feist (00:20:16):
+Yes. So, I mean, there are different different degrees of statelessness. I wrote a blog post going into details about these, but basically what we are aiming for is so-called a weak statelessness. And that, what that means is that you can verify the execution of everything. So like these execution blocks that we talked about earlier, which comes to this stuff like basically transactions and then like a new state root. And you can verify that all that was correct without having any additional information. So basically in terms of like pure, I guess computer science speak, we would call it like the, this, it becomes a pure function. So like verifying that a block as correct. It's just like, you just take that block and it's like, true / false. You don't need any other inputs. There's no like nothing that changes with it or anything, that's it. Right. What we're aiming for as weak statelessness, which means only the verification can be done without the state, not creation of blocks in order to create new blocks, you still need the state. And there are reasons why we think that's fine. And that's, that's the best way of doing it, in terms of UX. There is a stronger notion where you say like, well, even ETH creating blocks is, should be possible without the state, which would be like, yeah, the strong statelessness.
+
+Anna (00:21:35):
+Current, I don't think you call it statefulness, but it's not, it's not like transparent. You're still verifying state in the current thing. Right? It's not just like...
+
+Dankrad Feist (00:21:44):
+So right now, right now it's stateful, like right now in order, like if I sent you and it's one block and like ask you, can you tell me if it's valid or not, you would need to have this whole tens of gigabytes of the Ethereum state, otherwise you can't see it. And basically with statelessness what happens as we add these witnesses, these proofs that everything in this block had a certain state and this was applied correctly. And we add that to the blocks. And then I can send you this block and without knowing anything else, just by like putting it on a piece of software you can say, this is the correct block, or this is not even if you don't even know the previous blocks, you might never have heard of them. It might just be one isolated block. And I don't even tell you what's happened in the past.
+
+Anna (00:22:29):
+What is this witness is a witness of proof? Its witness an agent? Is witness a client?
+
+Dankrad Feist (00:22:35):
+Witness is a certain kind of proof. It's a proof of correct state access, basically. So basically what will happen is with statelessness. So for example, like one operation that I could do is like, I transfer one Ether to Anna and right, as part of verifying the transaction, you need to do a certain things. You need to verify Dankrad had one Ether, you will verify after executing this transaction, he has one Ether less and Anna has one Ether more. So, and there are a couple of more things you also need to check that the signature is correct. So you also need to know what is my public key, and you need to know that this transaction was set in the right order. So you need to know my nonce. So these are basically the different things and all of these things, all of these, this information we will add to the block. So each of these pieces of information, instead of getting it from your memory, when you verify the block, I just provide them to you as part of the block. But in addition to that, now I have to prove to you that I provided the correct information. And so that is the witnesses. That's the witness. So the proof that this, these five pieces of information that I mentioned, that will be part of one such transaction, that all of these were provided correctly. That's the witness then. And as property of these witnesses, at least in the scheme that we are using, which is a vocal Trice, is that using this, this witness, you can always also update this information. So now we have the state root and now we need to compute an update to the state root. So there's a pre-state root. That's like the commitment to the complete all-state, all accounts, everything that Ethereum has. And then, then we have an update state root that says, these are, this is all the new, like, this is how it's after applying this block. And we need to verify that it's correct. And the nice thing is the witness gives you all the information to update it. So now, like from this witness, I can also compute, okay, these are the, all the changes that this transaction and act. And then like we verify that these were correctly applied to the state root.
+
+Anna (00:24:40):
+What kind of proof is a witness?
+
+Dankrad Feist (00:24:43):
+Well, I mean, it's, for example, if, if your state commitment scheme is would be a Merkle root, then it's a merkle proof. So it, it can be different. It depends on your commitment scheme.
+
+Anna (00:24:56):
+But in this, in this case, then it's like, it's not because, I guess when you said it's a proof, I thought I started to think is it a zero knowledge proof or a fraud proof or so, like, I started to think like validity proof, like, is it,
+
+Dankrad Feist (00:25:06):
+And it could be a zero-knowledge proof, for example, like there's a notion of witness compression where you say I wanted this witness to be as small as possible. And then you can simply have a zero-knowledge proof that shows us that your witness is correct, and then you don't need all the other, other witness anymore. And like, in a way, like when you look at how vocal proofs work, it employs a lot of the technique of like general zero knowledge proof. So yeah, in a way it is a zero-knowledge proof.
+
+Anna (00:25:33):
+Is this any in any way? And I don't know if you're as familiar with like the Mina system, but like the idea of recursive SNARKs being used as validity. Like is, does it in any way relate to that? Or would you see this as quite different?
+
+Dankrad Feist (00:25:47):
+No, I mean, we're not trying, basically, we're not trying to compress the execution. So we haven't attached execution at all. Like to verify the block in a state, Stateless system, you still need to actually execute all the transactions. Basically the elegance of statelessness is like realizing that executing is actually not a big deal. It's not the main problem. And also like also downloading all the blocks. That's not the biggest problem. The biggest problem with execution, like with smart contract execution, as we have it right now is accessing all the state. If you look at what the big problem of running Ethereum nodes, it's all about every transaction touches, like different parts of it. So you can't, you can't just, it's too big to just keep it all in Ram. But once you put it on a hard disc, it just becomes a very, very slow and that's, that's the big deal. And that's why statelessness goes such a long way. Of course, like basically proving the complete execution is strictly more powerful. Like it's, it's, it's much better, but that's also a much, much harder problem. So we see that definitely coming in a few years, but statelessness is like a great step in between that gets us many of the advantages already.
+
+Anna (00:27:01):
+Does this impact data availability itself, or would you put that in a different place? Like when you talk about having to prove and trace back, like that's at least what comes into my mind, but I know it might be a different part of, part of the thing.
+
+Dankrad Feist (00:27:15):
+Yeah. So, so data availability is quite different. It might, it might sound like the two are related. But when we're talking about data availability, we are like, the main thing we're trying to solve is the data withholding problem where someone tries to hide some data and that's not really like a concern with the state. So they're two quite separate problems.
+
+Anna (00:27:38):
+I see. And the statefulness, when we like here, we're still talking about, I mean, I, and I know that the question of data availability comes up a lot because of like the L2s and the roll-ups, which I believe would intersect with the execution client. Right. Not with the consensus client?
+
+Dankrad Feist (00:27:54):
+They can intersect with both because like, well, once we add sharding while I guess that's, that's a debatable thing, but maybe sharding, will be probably part of what is kind of the consensus plan. Yes.
+
+Anna (00:28:06):
+I'm almost wondering if we should hold, cause I have more questions on the L2 side of things, but let's keep going into this. So you mentioned, you had just mentioned Verkle Tries or Verkle trees. I know tries and trees get PR and Verkle is a take on Merkel and vector. I am assuming Merkel.
+
+Dankrad Feist (00:28:24):
+Okay. Then let's take the words completely apart. So basically like Verkle Trie. There's like a lot in these two words, basically Verkle stands for Vector Merkel. So it's basically a combination. It's a Merkle Tree, but with a vector commitment instead of hash at the nodes and Trie simply means it's a kind of tree and it's just the kind of tree that's used for key value storage, where you use just use the key to determine the path you use your key to determine the path that you go through your tree. So that, that that's what the worst part and vector commitment. So vector commitments, what we're looking for is sufficient vector commitments, basically where you, where you can prove membership with less than linear work. So for example, if you hash like 16 children, right.
+
+Anna (00:29:19):
+Leaf, leaves?
+
+Dankrad Feist (00:29:20):
+So the leaves are the very bottom of the tree. And then, then nodes are anywhere in the tree and nodes have children and they can leaves or they can be other inner nodes, right. So both are possible. Yes. and then each node has children and in the Merkle Tree you just hash all the children. And in a Merkle Tree, you usually have exactly two children per node. And the reason is that this is how Merkle Tree sound most efficient in this way. Because in order to prove a membership in the hash, you have to give all the siblings, right? And so if you make it wider, then you have to give a lot of siblings. That's the problem with the Merkle tree? So there's no, there's no point in making it wider. It becomes less efficient. But if you use efficient vector commitments, they are inefficient. Like a hash is technically a vector commitment as well. It's just a bad one because you have to give all the siblings. So we were looking for more efficient vector commitments, which luckily exists. And then we don't have to give all the siblings. We just have to give a constant size proof. And suddenly it makes sense to make them wider because suddenly that doesn't increase the proof size anymore. It just decreases the depth which decreases the total proof size. So that's why we want Verkle trees.
+
+Anna (00:30:40):
+One side note. I mean, you did a talk quite recently on this with graphics, which I will link to in the show notes because I, I did watch that. So I'm following what you're saying, but I'm also realizing that if people are just hearing it, it a little bit, it might be good to just see the map to see these trees kind of mapped out. But anyway, sorry. Continue with, with the explanation.
+
+Dankrad Feist (00:31:00):
+Yeah. so like basically now you could ask the question, like, why don't we just go through, like with infinity, why don't you just put it all into one vector commitment if we have them, because that's right. And the problem with that is that this would be amazing for the verifier. Like whoever just wants to like verify that the witness is correct, but it's very bad for the prover because all these vector commitments, basically once it becomes a value wide, you need all the siblings for the proof. You don't need them to verify it, but you need them to generate the proof. So basically the, the Verkle tree is actually an interpolation between these two extremes where you kind of make a trade off between, okay. Like we give the verifier a bit more work, but in return now the proover becomes actually like practical.
+
+Anna (00:31:48):
+Crazy. Who makes the blocks in, in this entire setup?
+
+Dankrad Feist (00:31:52):
+Right. So I'm assuming you're talking about the execution blocks that they would be completely remain the responsibility of execution clients and post-statelessness. You could have, you can have different goals with an execution plan. For example, you might say, like, I only want to verify consensus. I don't actually care what the actual stateless. And then you will run a stateless execution plant.
+
+Anna (00:32:15):
+Just verify.
+
+Dankrad Feist (00:32:16):
+Just verify, will never generate a proof. And like, you could ask the question, well, what's that good for like, as a user, like don't I need the state somehow, or at least need my account or something, or their contracts are intact with. But the nice thing is actually I think is extremely useful because suddenly you can just get the actual state from a service, but you don't have to trust that service anymore because you can very, very easily just verify that everything's correct just by, by doing this much, much less expensive thing. So suddenly like Infura doesn't become this oh, horrible centralized thing that everything in Ethereum depends on. That's like, why don't you just run this tiny extra piece of software and Infura becomes powerless, like they're just, they're just a service provider. And like, you don't have to worry about them cheating or anything anymore. You might have to worry about them going offline. But once we have a couple of these services, that shouldn't be a problem item.
+
+Anna (00:33:08):
+Okay. Now the other question is who makes the proof?
+
+Dankrad Feist (00:33:11):
+Yeah. so basically in order to create those proofs, like when you create a block, you have to create the proof. So as I said, we are going for this week, statelessness notion where you don't transactions don't come with therefore witnesses. There are several reasons for this. It makes a bit less sense to do this and a smart contract chain in general. So basically we're doing this week, statelessness the block producer in order to combine the transactions, they have to have the full state and they generate the proof. This is not like it's, it's not horribly expensive. Like, I mean, I've done some estimates and like, this should be like a few seconds of work or so at most. So it's actually really easy. But it needs to stay at, so it's, it's not, it's not much more, much worse than running a normal ETH1 node now. So things aren't actually getting worse for block producers.
+
+Anna (00:34:03):
+You've just made me think though, like I always equate validators as block producers. And in this case is the block producer living only on the execution side?
+
+Dankrad Feist (00:34:13):
+Right? yeah, so, so there's the Beacon chain and to the validators are the block producers for that Beacon chain. And it doesn't make much sense to like, do that any differently. There's a difference for the execution chain. So the execution chain, when you run your own execution clients, you can make that produce your blocks for the execution chain. What we're seeing in practice though, is that because of MEV, like a lot of people very likely will outsource this functionality. And this is, this probably is the most efficient construction. And so like, we're not going to stand in the way of that. So very likely like the actual proposing of blocks is going to be a much more specialized role that like people who will extract MEV are probably going to do
+
+Anna (00:35:00):
+So wait, this, I got a little lost here. Cause you just said like there's block production on the execution chain. I know right now there is, but like is there actually blocked production on the execution side?
+
+Dankrad Feist (00:35:11):
+So it's, it's best this, this part of the block. So like the, the Beacon chain block, the four block will be everything that is now just the consensus part and will contain, basically one field that is like execution block. And and I'm talking about this field. So that's what I mean by a block production on the execution side. So it's not a full block. If you just sent that on the peer to peer network, it would be ignored because that's, that's not anything that's, it's not
+
+Anna (00:35:37):
+Fully locked in to the blood, to the Beacon chain, but, and now going kind of back to what we were talking about before the proof generation, this witness proof would be made on the execution side, into the execution block that would eventually be included in the Beacon chain. Full and would be written into that chain by the validators. Yep. Yep. Okay, cool. That's helpful. You said weak statelessness and the word weak. I know you've already said how it's weak, but I want to kind of highlight what's weak about it.
+
+Dankrad Feist (00:36:11):
+Yeah. Yeah. So weak just means block producers still need the full state. That's what it means. That's how we define it.
+
+Anna (00:36:19):
+Okay. It's stateless, but you still need the state. It's a...
+
+Dankrad Feist (00:36:24):
+I mean, in the end some, okay. Let's say it like that. Someone always need the state. Right. And I guess like the strongest notion of stateless, I was like uh...
+
+Anna (00:36:33):
+Nobody needs the state.
+
+Dankrad Feist (00:36:34):
+Well no, the strongest would be only the user users maintain their own state. Like you have an account and you will always just remember how much you have in this account. And you will remember your witness for your account as well. I think that's terrible for UX because like, it means you always have to be online. Otherwise you always have to be worried. What if I go offline? Like I won't ever, someone sends me something and now the problem is you have more ETH, but you have no way to access anymore because you always need a witness to access your account. So that sounds pretty bad to me. I don't see how the UX of that as attractive does this mean that block production is maybe a bit more centralized and like not as decentralized as the validators. And I think this is likely true, but this is forced by will be forced by MEV anyway. So that's very likely the case. And the reason that I'm not that worried about this is that we only need one honest block producer in order for this to be fine. Like we only need someone to still be online and not to be censoring for the system to work. Whereas if we look at the validator set, the full validator set, if a majority of them are compromised, then we have a problem, right? Like basically everything breaks. We don't get our nice guarantees anymore. But this is not true for block producers. Like we just, we just need one of them. And like, if, if we notice, oh like oh shit, they've all gone to shit, then someone can just make a new one and they don't need to like replace everyone else. Or so they just go online and say, here, here, here are the new blocks I'm here now. Just take mine. So it's a much, much weaker security assumption. And and I think that that's amazing. And that, that means that I'm much less worried that there's some reduced decentralization in that part of the system.
+
+Anna (00:38:31):
+So what you're saying here though, is it has a weak security model. Does that kind of almost mean like...
+
+Dankrad Feist (00:38:36):
+Security model is actually stronger because it has a weaker assumption. The assumption is weaker, so the security becomes stronger.
+
+Anna (00:38:44):
+Okay. So, but like, if the assumption is weaker, then what you're saying is, do you need less in order to be secure? You need like less good actors. Is it like, I'm kind of going back to the validator idea? Like, is it, isn't now saying like you only need, what is it like an MPC? You only need one honest participant in order to like actually have an honest system.
+
+Dankrad Feist (00:39:04):
+Yeah, exactly. Yeah. That's basically what I'm saying. Yeah. So like it's this N minus 1 security assumption, like as long as there's 1 honest party, everything's fine. Everything works.
+
+Anna (00:39:16):
+Yeah. I don't know if I fully understand how that works though. Like why can one honest proposer actually like beat out the others? Right.
+
+Dankrad Feist (00:39:23):
+I mean, the assumption would be like, so for example, in in what we call like this buildup proposal separation, we say like, we basically have two different roles, like one where you build blocks and a different one where the validators, they, they pick one of those and propose it, and then you need to protect the builders from just taking their blocks and taking them apart and putting them in a different way. But we have systems to do that. So the, the idea is basically the builder will bid for that block to be included. They will just bid for the whole, whole block. And so like, they can, they can make this bit based on the transaction fees that they're receiving and on any MEV that they can extract from it. And then the proposal just needs to take the highest bidder.
+
+Anna (00:40:14):
+The proposer, like the builder. I, oh, see, I, I think I confused them. I thought the proposer fed into the builder, but what you're saying is it's built and then the proposer...
+
+Dankrad Feist (00:40:23):
+That's the one who assembles the blocks like transactions and say like add new ones to extract MEV and stuff like that. And the proposer is just the one who like says, I propose that we choose the specific block from the builders.
+
+Anna (00:40:37):
+And they don't earn any fees necessarily. Do they? The proposer?
+
+Dankrad Feist (00:40:41):
+Well, so the builder will pay the fees to the proposer. So basically the, in the end, actually in a, if it's competitive, then the proposer should should actually receive most of the fees. And maybe because like, if there's two different builders and they're both quite good at extracting, maybe then they will constantly outbid each other, like bid a bit more because like, they basically their limited as however much they are getting from the block. Right. So it's this competitive market and all the, all the profits in the end go to the proposer.
+
+Anna (00:41:15):
+Oh, I misunderstood that then, because you, the builder itself, like putting this together, if they're doing the MEV, like they're incentivized by fees. As far as I understand, like there are, I guess, fees and arbitrage, I don't know, fees and flashbots, payouts fees, but like, so is that what you're saying though? Then like the, the builder will be more incentivized per probably by the MEV side of things and less by the fees?
+
+Dankrad Feist (00:41:40):
+Both. I mean, both fees fees are a type of MEV, right? So all the fees that go to the block producer, builder proposer, they are also MEV because they go currently what we called to the miner,
+
+Anna (00:41:54):
+But I'm still confused though. Like what I just understood those fees kind of go through the builder to the proposers, like the proposer.
+
+Dankrad Feist (00:42:02):
+Ah. Yeah. But they, but the mechanism is not direct. So like basically I, as a builder build the best possible block that I can build, the one that gives me the most possible amount of fees, MEV call it all MEV, basically MEV, because fees are actually part of MEV, right. Okay. Now I have this block now I need to bid for a proposal to include this block. Right. How much am I going to bid? Well, the maximum I can bid as how much an MEV get, right. I'm not going to bid more because then it was money. Yeah. Okay. The minimum is I have to bid more than anyone else, otherwise I won't get it that right. And so, as long as they are two reasonably good builders, they will raise the price to almost the MEV. Right. They won't pay as much. They will pay a little bit less, but if it's competitive, then they would pay like only a little bit less like, and how that much less that's basically their, their profits. And like but most of it would actually go to the proposal.
+
+Anna (00:43:04):
+And the proposer is the kind of agent that you imagined being more professionalized and potentially more centralized. The builder. The builder was more. Okay.
+
+Dankrad Feist (00:43:13):
+Exactly. Yeah. So the proposer is the validator. The proposer is just a normal validator. So, but the point of this is that we don't want validators to, we don't want them to have to become very sophisticated because that will lead to centralization. If they have to be good at extracting MEV, then they will end up like being only like big pools who are competitive. Like otherwise you're like, well, I don't make as much money. I should try that. Just join the pool.
+
+Anna (00:43:41):
+Yeah. It's the builder happening on the execution side. And then the proposers, like, is it, is that sort of the crossover moment where it like goes from this execution block to the Beacon chain?
+
+Dankrad Feist (00:43:52):
+So the builders clearly on the execution side the propos is both like the proposal is a for consensus client, but that means it has to be connected to an execution plan of their own. But the point is, for example, in the poor statelessness world, that could be a stateless client, which is really, really light. It could be like, you almost don't notice that you're running it it's that light. Because you don't need the state because you're getting the blocks from a builder anyway. So you don't need to run a full state for execution client anymore because you never need to build blocks yourself.
+
+Anna (00:44:29):
+But since, since both clients exist often on the same machine at the same time, is there any way to connect your builder to your, to your proposer?
+
+Dankrad Feist (00:44:39):
+Yeah. Of course there is. So if you are both good at extracting MEV or some people might just say like, what, I don't want this. I just want to make sure that everyone's transaction get included and I don't care about MEV then. Absolutely. You can do that. And yeah, it's possible. Yeah.
+
+Anna (00:44:58):
+Okay. Now I want to take another step back to the Verkle Tries because you had sort of mentioned, or you touched on the fact that you're using some sort of zero-knowledge techniques in there. What are you using? This will be interesting for the zero-knowledge podcast audience potentially.
+
+Dankrad Feist (00:45:14):
+I mean, it's, it's, it's nothing super fancy. Like it's essentially the way we're building the Verkle Trees. I said earlier that they're basically Merkle Trees, but with factor commitments, but we are, we actually using something even stronger than that, but using polynomial commitment schemes. And basically I mentioned earlier, so basically the way, the way a Verkle proof works as this, you like so you need to give a proof at like, for every bit of the state, for every leaf that you're accessing, which is basically represents a key value pair. But you need to get, go through all the layers of the Verkle Tree until the root, and you always need to give this vector commitment proof. And in addition, you have to give the parent vector commitments. So like basically the here's the slight difference, like Merkle trees, like you mentioned earlier, you only have to give the siblings, right. Which is really elegant. This is not true for most vector commitments. Like for most vector commitments, the proof itself will not let you generate the parent node, which the tree for Merkle trees. So you also have to give the, the, the nodes themselves, like the nodes on the past, you have to add them to the Verkle proof. And now that the bit I mentioned, which is a bit like based on things that you use in zero knowledge proofs, it's like to compress this for proof, what we do is we just use tricks to like, when you have many polynomial commitments evaluated, many different points, then there's basically a technique to compress. All of that had one single proof. And that's a trick that we're using to make this proof a smaller,
+
+Anna (00:46:50):
+Where did you get that from? Like, what was, what were you studying that like led to that finding?
+
+Dankrad Feist (00:46:56):
+I don't know. I mean, that, that's a good question. I think like Justin and I have been thinking about like polynomial evaluation proofs for quite a while last year, it basically came out of these discussions, but I think Justin basically says it's kind of like a pretty standard technique. So I don't think it's, it's, it's nothing fancy. It's yeah,
+
+Anna (00:47:17):
+We did a, for the ZK study club, we actually did a three parter with Justin on polynomial commitments that I'll try to link to as well in the show notes here. If people want to find out more about it. One thing we didn't talk about yet was sharding, but I also did talk about it many times on many episodes in the past. I think that our audience should have an understanding what sharding is, but I guess the question I actually have for you and this, I understand would be happening on the consensus side. Is this on the consensus Beacon?
+
+Dankrad Feist (00:47:46):
+I guess so, I mean, you could actually technically consider that a third part, but I mean, practical reasons, it will just be part of the content as client I expect.
+
+Anna (00:47:55):
+Yeah. Okay. And I guess the question is mostly, is that in the roadmap or is that sort of been pushed back? Because I just, I know in the conversation with Ben, it sounded like the client developers, aren't like thinking that much about sharding right now.
+
+Dankrad Feist (00:48:10):
+I wouldn't call it pushback. I think it was always like an upgrade. I think we decided some time ago that we're going to do the merge first which I'm strongly in favor of. I think it's a very important part. And like, we basically need to have that finished before we can implement data shards. So, I mean, in the spec research team, we're definitely thinking about sharding now. So like, it's, it's not like it's been pushed far away. But like right now client teams wouldn't have the bandwidth because they are all working on a merge full-time.
+
+Anna (00:48:42):
+What do you need sharding for in this case? Is this how you scale?
+
+Dankrad Feist (00:48:46):
+So this is how we scale data bandwidth. So basically it would add to Ethereum, to the functionality to say this data is available, like it was made available. And that's useful because it scares roll-ups. So basically roll-ups need exactly this functionality right now, basically how roll-ups work. They just put this large chunk of data as called data on the Ethereum blockchain. And the reason they put this is to make it available, to be sure that it's available. And now in the future, they can do this on the shards and set. And on the execution chain, they only have to do a lot, like a much smaller piece of work where they say, okay, this was executed, this was executed. Okay. Here's a fraud proof.
+
+Anna (00:49:28):
+And this actually, so that going back to that question that I had had earlier about data availability, this is the data availability part. So it's not the state data. It's this data.
+
+Dankrad Feist (00:49:39):
+Yes. Yeah,
+
+Anna (00:49:40):
+Yeah. Got it. I think I was just using like the word data. It could be things this actually leads really nicely into kind of my last question of this interview, which is about the roll-ups and your thinking from where you're sitting about them. I think we now live in a, I want to say post, but not quite yet. We live currently in a, in a roll-up world where we have live roll-ups coming on. We have different kinds. We have an optimistic roll-ups we have ZK roll-ups we have full idiom kind of roll ups, like the StarkWare stuff. So like, this has really altered. I feel like the, the way of thinking about the future of Ethereum, if you compare it to like two years ago or three years ago, are you actively working on almost designing this out or is this like the ecosystem build stuff? And then you're kind of trying to find ways to help. I just want to know, like where where's the research base for you on this?
+
+Dankrad Feist (00:50:36):
+Yeah. I mean, it's a bit of both. I'm not, I'm not doing concrete research on roll-ups. Although some, some people from from the research team are, are doing that. I think like where we're more focused on the longterm perspective, like for example, like how do we get to for EVM execution, for example, that's an interesting, oh, like for full ZK EVM execution, like executing the EVM and zero knowledge. Like that's a very difficult problem that I think is a few years away from being practical. But that's definitely one of the big questions, I guess like the nice thing is that, I mean, roll-ups have basically solved a lot of problems for us. Like, I mean, in the past, I think like a few years back, we were still thinking about about execution shots. So like, this is basically like the big news that we like completely got rid of them. And I think almost I'm thinking about them anymore. Like they might come back in the far future when we have ZK EVM, but in a way then they are actually roll-ups. But yeah, so like it has made, made the design space for us much simpler. Like the consensus just needs to ensure that we can prove that some part of data is available and everything else will be done by the roll-ups.
+
+Anna (00:51:56):
+That's so interesting. So that's, that's the change then? It was the execution side of things was going to be sharded, but now with roll-ups, those are the shards and they're heterogeneous because originally the shards were supposed to be all the same. And now you have very different teams even working on these different roll-ups.
+
+Dankrad Feist (00:52:13):
+So, so it's a bit dangerous. So some people have made that mistake of just thinking of roll-ups as shards. But you have to be careful because one thing that people were were super worried about is compostability in shards, right? Like that you can't do this anymore. You can, can't just like call one contract and then another contract and get a complete log, like getting this atomicity of the transactions. And that's indeed not possible with execution charts
+
+Anna (00:52:41):
+Less possible with roll-ups, I guess.
+
+Dankrad Feist (00:52:44):
+So it's, well, it's possible within one roll-up it's not possible across all roll-ups. It might be possible across ZK roll-ups I doubt anyone will implement it. But the interesting thing is one roll-up. Doesn't have to live on one shard. So if you have many data shards, one roll-up can, can simply live across 10 of them at the same time. So that's the danger in thinking about, oh, like roll-ups are just a replacement for shards. Well, they are not because they can, they can fill up, like, there is no fundamental thing that restricts one roll-ups from simply filling up all the shards and giving you full compostability across all of them.
+
+Anna (00:53:20):
+Wow. That's interesting. So they are, so you, you really do make a distinction here that these are not like shards. I do wonder what do you actually see the execution layer looking like as these roll-ups gain momentum track, like is more actually funds and movement goes over to these roll-ups like, if, if more of the action is happening on the roll-ups, what is the execution like the main Ethereum Beacon chain in this case, but like on the execution side, what's it for? Like, what will it be?
+
+Dankrad Feist (00:53:53):
+It's the settlement layer it's like just behind because like either for, for optimistic roll-ups like you need somewhere to post the fraud proofs. And so you need someone who can do execution or for for ZK roll-ups. You need somewhere to, to post your proofs and someone to verify this, you, you could do all of this, but just like basically this the late ledger or what it's now last year idea. You could, you can do many of these things without any execution layer behind what then becomes a very hard, in my opinion, as light clients and settlement between the different layers. Like, so I do think that this execution layer between them brings really advantages.
+
+Anna (00:54:37):
+Why light client? Why does it help with light clients?
+
+Dankrad Feist (00:54:41):
+Because otherwise the light client still has to the execution layer kind of, you could almost say like finalizes things in shard in the, sorry, in the roll-ups and light clients can just take that as their source of truth. And otherwise they can be light clients on the consensus, but you can't really have light clients on the roll-ups. Yeah.
+
+Anna (00:55:00):
+Yeah. You just mentioned ZK EVM too, a couple of times and how that could change something like ZK EVM. We did an episode with Jordi Baylina and David from Hermes Polygon, I guess that's what you call it now. And I know they have a version I heard after that episode that Ethereum Foundation has a version of the ZK EVM. And I think there's a third one that's being built out or developed. These are still very theoretical. It's the idea that you would have like full EVM, like with the op codes, all exactly as it is, but in a ZK roll-up.
+
+Dankrad Feist (00:55:36):
+That what, that would be the ideal result, because then you could just take the, the execution chain as it does now and put that.
+
+Anna (00:55:45):
+ZK-it?. Oh, wow. Oh, I didn't think about it that way.
+
+Dankrad Feist (00:55:50):
+So you can, you can't do that. If you have any version that requires recompiling or changing the hedge funds or stuff like that, if you have to do any of these, then clearly you can, like, you can potentially re-deploy smart contracts to a new chain and to do it on that, but you can never do the whole thing on the currently existing chain. So it depends on what exactly your goal is, how far you have to go,
+
+Anna (00:56:13):
+Why ZK EVM, because you can also have full EVM compatibility and what's the word it's not even compatibility is not the right word. It's like the actual EVM running as it does in an optimistic roll-up, but you didn't highlight that.
+
+Dankrad Feist (00:56:30):
+Alright. So basically what you're suggesting is like take the EVM as it does now, like the execution chain and instead make it an optimistic roll-up itself.
+
+Anna (00:56:40):
+I'm just wondering if there's any disadvantage to doing it that way.
+
+Dankrad Feist (00:56:45):
+I mean, it's mainly, it's mainly about finality ultimately, right? Yeah. I mean, I think that there are some disadvantages it's also not easy to be honest. Like first we can't do it until we have statelessness so statelessness as a prerequisite for that. Then, then we could in principle do that. I haven't thought it through to be honest.
+
+Anna (00:57:06):
+Okay. Fair. But on the ZK side you have. And so that would be possible.
+
+Dankrad Feist (00:57:11):
+I mean, theoretically as possible right now it's just completely impractical. Like, I mean, the question is like, I mean you need to be able to generate a proof for a block in seconds. Right. And so, yeah, that's difficult.
+
+Anna (00:57:23):
+I do wonder from where you're sitting, do you have a preference for any of the kinds of roll-ups and maybe here, it sounds more like you've researched maybe ZK more, but like, do you think that it's actually better?
+
+Dankrad Feist (00:57:35):
+I mean, ZK is, is better, like for sure. I mean the optimistic is a practical straight off. I mean like, okay. Like if I have a roll-up with the same throughput costs, blah blah. And it's ZK is clearly better. Okay. But that's very hard to achieve. So basically that, that's why we have optimistic roll-ups because there are many things we can't do in ZK yet.
+
+Anna (00:57:56):
+And what do you think about like the Porter, the zkPorter or the the StarkWare versions, which, or even actually the, I guess the zkEVM uses that even it's like using a stark, like thing that creates a huge proof and then using a SNARK that makes like compresses that into a small proof.
+
+Dankrad Feist (00:58:14):
+I mean, I think what you're referring to, like with zkPorter or like StarkWare validium, it's like having this zero knowledge proofs for validity, but not posting the data on-chain. Like basically not ensuring data availability. I mean, there's definitely something in it for ZK Roll-ups like going to this validium construction definitely works like a test, some advantages that like you who you can't do that with optimistic roll-ups. I still think that it's much, much better to just get the data availability. And I think like with sharding, it will become cheap enough that nobody would make that trade off. And I think validiums will just not be very attractive anymore. I think like, is it, I think zkPorter is doing this interesting thing where basically who's doing this where you basically, they, they, they give you as a user as they give you the option to just be online. And if you're online, you just sign that you have received the update and then they don't need to post it online. And I think that's a pretty cool construction because basically nothing bad happens. So if you've got offline, you just pay a bit more and your state guaranteed to be online. And if you're online, then you just get it directly and you don't have to pay for the costs of putting it on-chain. So I think that's pretty cool.
+
+Anna (00:59:25):
+I don't remember that from the zkPorter interview, although it might be there.
+
+Dankrad Feist (00:59:29):
+Them, another one might be another one. I can't remember.
+
+Anna (00:59:32):
+Well, we'll try to find it. Okay. In this world with a lot of roll-ups. And you're saying like the execution layer becomes sort of just the settlement layer. Do you actually imagine Dapps actually still living there? Or do you think they'll all this like migrate off
+
+Dankrad Feist (00:59:49):
+Dapps are living there now? Right? I don't know. Like, I mean, it's, it seems unlikely that they will all immediately make the jump. It feels like we're likely going to see a trade off where some world or say, well, yeah, I mean it's expensive, but for me it's all right. So I'll just stay on the execution chain. I don't see like an immediate transition of everything.
+
+Anna (01:00:12):
+What about like how MEV is treated though, going back to that question, MEV in a roll-up world where like roll the roll-up written to chain. I don't know if there's like advantages for certain things to go faster, slower. If there's like a possibility of a sandwich attack between, I don't think you'd call it that, but between like a ZK roll-up and an Optimistic roll-up fraud proof, like being written at a certain moment, like, is this even a space worth thinking about? Or is that like completely not?
+
+Dankrad Feist (01:00:38):
+I mean, I would think that most MEV would be internal. Like they, because like the communication between these different systems is asynchronous, like it tends to be very slow. So I don't know. I haven't, I feel like there isn't directly MEV that can be extracted from those. I think the MEV is mostly within one roll-up, but I think within a roll-up it's exactly the same as it does now. So like each of them will get their own.
+
+Anna (01:01:07):
+Yeah. I think that's kind of what we're all understanding now is it's not just an Ethereum or like, it doesn't have to just be the main chain, if there is any other sort of like place to do sandwich attacks, people are going to try to do it,
+
+Dankrad Feist (01:01:19):
+Right yeah.
+
+Anna (01:01:21):
+Hmm. Cool. Well, Dankrad I want to say thank you so much for coming on the show and walking through all of this with me. Thank you for patiently listening to my kind of Ethereum merge questions, things that maybe I should have known before, but forgot. Thanks a lot for going over all of this with us.
+
+Dankrad Feist (01:01:40):
+Yeah. Thanks a lot Anna for having me, there was a lot of fun and I thought you had really good questions, so thank you.
+
+Anna (01:01:48):
+Cool. So I want to say thank you to the podcast producer, Tanya, to our podcast, editor Henrik, and to our listeners. Thanks for listening.
+

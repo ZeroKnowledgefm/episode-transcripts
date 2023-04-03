@@ -1,0 +1,657 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week I catch up with Justin Drake from the Ethereum Foundation. We catch up about what he's been working on since he last was on the show almost three years ago. We chat about the progress that's been made on VRFs and how these can be used in Ethereum's POS architecture, the concept of ultra sound money, where it started, what it means, and where Justin sees it going, as well as other interests he has in ZK generally. Before we kick off, I wanna share a quick announcement from one of our partners from last fall's zkSummit 8 Event. RISC Zero would like to announce the next version of their ZK VM is now available on GitHub. The new version greatly improves performance, adds GPU support, and includes a pure Rust verifier for easy inclusion as well as in projects. Check all of this out on their GitHub github.com/risc0. That's Risc0. We'll add the link in the show notes now. Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:19):
+Today's episode is sponsored by Mina Protocol. The need for private trusted solutions is clear. A new era of ZK Power decentralized applications is coming, and Mina is the place to build them. Introducing Mina zkIgnite Cohort 0, where developers complete tutorials and build zero knowledge apps or zkApps and get rewarded. There are quarter of a million Mina tokens up for grabs for zkIgnite Cohort 0 participants. Over 2000 builders have joined Cohort 0, and nearly half of them have already submitted code to win prizes. And there are still more prizes to go. Cohort 0 is finishing soon. So head to minaprotocol.com/zkpodcast to get involved today. And if you're tuning into this podcast later, no worries. Mina will be launching additional zkIgnite cohorts. Just head to minaprotocol.com/zkpodcast to check out the best way to get involved. That's minaprotocol.com/zkpodcast. So thanks again, Mina protocol. And now here's our episode.
+
+Anna Rose (00:02:19):
+Today I'm here with Justin Drake. Welcome back to the show, Justin.
+
+Justin Drake (00:02:23):
+Yeah, thanks for having me again
+
+Anna Rose (00:02:25):
+I was just looking back through the archives to better understand when you were last on. You've been on twice as far as I could find and once was like April 2019 and then you were talking about VDFs and then we did an interview in February 2020, like right before everything went down. We were at the Stanford Blockchain Conference and Vitalik was on as well. And it's just sort of wild to remember that recording, because it was just weeks before everything got locked down with one of the last sort of in-person ones I got to do for a long time. But I think maybe a starting point would be to hear what's been up. I mean, a lot has happened since, you know, February 2020. So yeah, tell me, tell me a little bit about what you've been up to.
+
+Justin Drake (00:03:16):
+Oh, wow. So much has happened. I mean, one of the big events, of course is, is the merge
+
+Anna Rose (00:03:21):
+For sure.
+
+Justin Drake (00:03:21):
+But yeah, I think my role has evolved during that time. The research, at least the blue sky research that I have been doing in the early days is to a large extent complete and so to the theme of this discussion, you know, I've been transitioning a little bit more to the human layer to the economics layer. You know, in addition to looking at Ultrasound Money. I've also been looking at themes like MEV and censorship resistance, which are not on the cryptography side of things, but you know, more on the economic side of things and really, I feel is crypto economics. And I feel like I'm exploring this, the second chapter, as it were, the economics side after being fairly satisfied with the first chapter of cryptography.
+
+Anna Rose (00:04:06):
+So I kind of want to hear, let's start on that sort of completion of the cryptography side. The first episode that we did together was on VDFs, verifiable delay functions. Right? Did I remember it?
+
+Justin Drake (00:04:20):
+Yes, that's correct. Yes,
+
+Anna Rose (00:04:21):
+Okay, good and actually I'll add a link to that. I wanna hear what's happened with that research. I mean, at the time, for me at least, you were just presenting this idea. I didn't actually know what this thing was. How far has that gone?
+
+Justin Drake (00:04:35):
+Right so VDFs like many things in Ethereum is a very ambitious project, and it's
+
+Anna Rose (00:04:40):
+Okay
+
+Justin Drake (00:04:40):
+Especially crazy because it involves ASICs, it involves hardware and ASICs just you know, they take a lot of time and they're fairly expensive. Now, it turns out that in the few weeks in December of this year we're gonna have the first test samples of the ASIC. So we went ahead, we taped out the 12 nanometer chip with global foundries. And, you know, fingers crossed it should just work out of the box and we will have these extremely fast VDF evaluators, but that basically do sequential computation extremely fast. You know, we're talking 128 bit modular squaring at a one gigahertz frequency, so one modular square per nanosecond.
+
+Anna Rose (00:05:29):
+Let's give a little bit of context to like, where this lives though. Like, is this purely research, is this something where it's like you had an ambitious research project and now you're seeing an ASIC or are these things already in the Ethereum that we know today, do they exist and this is actually going to optimize something? Or is it still sort of like, oh, well now we have this cool optimized thing we could use in the future?
+
+Justin Drake (00:05:52):
+Right. So the, the research is very much done, but it's not in production yet. So we have this, this primitive, which is interesting because it's a very unique and exotic VDF primitive because it kind of connects to the physics of our world. So just like proof of work connects to the energy consumption, VDF connects to time. And you know, most cryptographic primitives like encryption and hashing and signatures and SNARKSs, they're kind of detached from the physics of things and this very unique cryptographic primitive unlocks various use cases, which are very interesting. One is unbiasable randomness. Another very interesting one is what's called time lock puzzles or delay encryption, which is this idea that you can encrypt a piece of information and it's kind of automatically decrypts at some future point in time and this is actually very interesting in the context of MEV and censorship.
+
+Anna Rose (00:06:51):
+Totally.
+
+Justin Drake (00:06:51):
+And the reason is that you can have this thing called encrypted mempools. So the idea of an encrypted mempool is that when you broadcast your transaction, you actually broadcast it encrypted, and then it gets included on chain encrypted and only after it's been included on chain does it get decrypted and executed and because your transaction is encrypted, people can't see the contents of it and in particular, they can't front run you and they can't censor you at least not as, as easily as it is possible to do today.
+
+Anna Rose (00:07:25):
+I mean, one of the ways that I've always heard this described is threshold decryption. Does this replace that concept or is it also being executed by a VDF?
+
+Justin Drake (00:07:34):
+Yeah, so there's kind of, there's kind of these two flavors of what I call automagical decryption.
+
+Anna Rose (00:07:39):
+Okay. Okay. Okay. So it's like when people are using that term, they're talking about a different technique. They're not talking about the one you just described.
+
+Justin Drake (00:07:45):
+Exactly. So there's kind of two flavors, two very natural flavors of encrypted mempools, one using threshold decryption and the other one using kind of time-based decryption.
+
+Anna Rose (00:07:55):
+Interesting.
+
+Justin Drake (00:07:55):
+And they have different assumptions. So for the the threshold version, you're basically trusting that a committee is majority honest, meaning that some large fraction of it is honest. And if they're dishonest, then they could do bad things. One of the things they can do is they can not choose to not decrypt specific messages or maybe even worse is that they can decrypt things ahead of time and you kind of lose the encryption. With VDF's, one of the very nice things is you just have to trust physics, you're no longer trusting a committee.
+
+Anna Rose (00:08:29):
+Woah.
+
+Justin Drake (00:08:30):
+And so it's kind of a more conservative security assumption, but it's
+
+Anna Rose (00:08:35):
+That's fascinating.
+
+Justin Drake (00:08:35):
+It comes with downsides, you know, one of them is that you need, you need hardware and kind of another one of them is that it's a little harder to work with because you know, you have to wait these delays. And so that can add maybe artificial latency in your system
+
+Anna Rose (00:08:50):
+So it's a bit harder to work with potentially. Is there a way that you would have them both happening at the same time? Would they ever be combined or you'd always do an either or?
+
+Justin Drake (00:09:00):
+Yeah, you can combine them. And one of the things that you can do, for example, is you can have an encryption mechanism, which by default is threshold, but if the committee goes offline for some reason, then after a period of time kind of the delay kicks in and then it automagically decrypts. And so there's actually this form of encryption, which kind of generalizes both threshold and delay encryption, which is called witness encryption. Now, witness encryption is a little bit of moon math but the, the idea here is that you can use any arbitrary witness to decrypt your payload. And so the witness could be a proof that either the committee has signed off on the decryption of your message or enough time has passed. And if you want, you can have like these arbitrary, complicated statements. So one of the statements could be, for example, only decrypt once Ethereum has finalized the block, which includes the encrypted payload.
+
+Anna Rose (00:10:01):
+Just one thing, do you keep saying automagical? Is that what you're saying?
+
+Justin Drake (00:10:05):
+That is what I was saying, yes.
+
+Anna Rose (00:10:07):
+Okay. You say very subtly. So I wasn't sure if I was like missing it, but that's a good word.
+
+Justin Drake (00:10:13):
+Yeah. So basically we want to have this guarantee that your encrypted payload will decrypt. So there's kind of a very naive thing that you can try and do for encrypted mempools where it doesn't involve any encryption, which is that you kind of commit to your trans action by including a hash of the transaction on chain, and then you make a promise that you're going to reveal your transaction and then execute it. But the problem here is that you can't force people to actually reveal those transactions. And so instead what we need is encryption with a sort of guaranteed decryption. And the two main natural flavors are threshold decryption and time-based decryption.
+
+Anna Rose (00:10:51):
+I've done a few episodes where we've mentioned only threshold decryption actually didn't realize there was a second technique that we could use. And the pushback from the MEV crew has always been, oh, you can try to get rid of the MEV there, but the M E V will just move elsewhere. What do you make of that?
+
+Justin Drake (00:11:09):
+Right? So there's different forms of MEV in my opinion, there's kind of good and public MEV and there's kind of bad, and, you know, MEV that is triggered based on user transactions. So let me try and flesh out these two buckets. So in the first bucket you have things like, like arbitrage and things like liquidations or even things like back running. And the idea here is that anyone can go ahead and grab this, this MEV and it actually performs a service to the ecosystem and, you know, MEV is extractable value. It could be extractable value that is specifically put there by the designer of a decentralized application. And so one of the classic examples here is liquidations. We want people to trigger transactions that will liquidate, you know, very risky positions and in order to, you know, guarantee that we give them an incentive, a reward. So that's a form of MEV, which is very good because it's constructive. Now the other form of MEV, which is, is toxic, and it tends to be kind of triggered by user transactions is essentially front running. The idea here is that as a user, I make a transaction and this transaction specifically is gonna get front run. And my belief is that front running can basically be removed
+
+Anna Rose (00:12:30):
+Yeah.
+
+Justin Drake (00:12:30):
+Eliminated with these encrypted mempools. But of course, the first type of public good MEV will stay.
+
+Anna Rose (00:12:37):
+Have you been following some of the, I don't know if the word is controversy, but like findings about the MEV operators of today? I don't know if that's what you call them, but I had the Flashbots folks on some time ago, and they talked about the PBS, the proposal builders separation. And then I learned later that because of this model, there were sort of these centralizing points in the actors actually getting MEV, we had all these conversations about how validators could potentially be centralized or be censoring how they could be coerced and then we learned that actually there's these different places in that stack, which could be, and I'm just curious, like, it sounds like you're obviously digging more into MEV. What are your thoughts on this? And are you looking for ways to mitigate this kind of censorship at these different points?
+
+Justin Drake (00:13:25):
+Yeah, a hundred percent. I did a very deep dive into this whole topic. And so the Flashbots people talk about this MEV supply chain, I like to think of it as a, as a pipeline, as a linear pipeline.
+
+Anna Rose (00:13:38):
+Okay.
+
+Justin Drake (00:13:38):
+Where you have various actors in involved. So it kind of starts with the user. The user goes through an interface to create a transaction, to publish it to the mempool. This transaction gets observed in the mempool by so-called searchers. Searchers take these transactions and they create so-called bundles that extract value and then these bundles get sent to builders that produce blocks, and then these blocks get sent to a relay.
+
+Anna Rose (00:14:07):
+Yeah.
+
+Justin Drake (00:14:07):
+Which access an intermediary between the builder and the proposer, and
+
+Anna Rose (00:14:12):
+It's the relay part that can be centralized. Right. I feel like that's what we talked about in the last time.
+
+Justin Drake (00:14:17):
+Yeah. So it turns out that at every single step of the pipeline, there's an opportunity for, for censorship.
+
+Anna Rose (00:14:23):
+Oh.
+
+Justin Drake (00:14:23):
+And for every single step of the pipeline, we need different types of solutions.
+
+Anna Rose (00:14:27):
+Oh, okay.
+
+Justin Drake (00:14:28):
+And it turns out that for relay specifically, which is a big contentious topic nowadays because of OFAC compliance, there is, as you said, something called enshrined PBS. Which is this idea that instead of doing proposer builder separation outside of consensus, which is a little clunky and a little hacky, and it's basically something called meth boost. Let's do it very cleanly in consensus where you don't need the relays and so right now the, well, the most popular relay is the Flashbots relay, and they're based in the US and they have to do this or at least they've chosen to do this filtering of transactions that involve addresses on the OFAC list. And the net effect of that is because most of the validators are using the Flashbot relay as their relay, roughly 80% of blocks are so-called OFAC compliant.
+
+Anna Rose (00:15:23):
+Although I heard for some reason, I heard it had gone down because the light was shone on it, that number had fallen more to like 60%. Is that possible?
+
+Justin Drake (00:15:32):
+So there's a website called mevwatch.info, and I'm looking at it right now. It's at 73%.
+
+Anna Rose (00:15:39):
+Okay.
+
+Justin Drake (00:15:39):
+And there's a graph with which is basically, it's seemingly up only in terms of the red area.
+
+Anna Rose (00:15:46):
+Okay. So, so forget it. I must be thinking of something else. Okay.
+
+Justin Drake (00:15:50):
+So there's kind of several pieces of good news here. Like one is that relays will completely disappear in two to three years once we have enshrined PBS. Another piece of good news is that this form of censorship is called weak censorship. Is this idea that transactions actually make it on chain. The only bad thing is that they get delayed a little bit. Now we can do some quick math. If 80% of the blocks are censoring are OFAC compliant, that means that only one in every block will contain these transactions. And so the time to the, the average time of inclusion of these transactions will be multiplied by 5 and so the slot time is 12 seconds, 12 times 5 is 60 seconds. So it takes one minute for a censored transaction to go on chain.
+
+Anna Rose (00:16:42):
+Okay.
+
+Justin Drake (00:16:42):
+Now, this is still 10 times faster than Bitcoin on average. And I guess the other piece of good news is that there is this community effort, you know, this desire to address the situation even in the short term before enshrined PBS. And there's various efforts to build you know, credibly neutral relays and this is something which I don't think has been announced publicly, but I guess I could do it now, is the ultra sound money team is working on such a credibly neutral relay. So we're building the ultra sound relay, which hopefully people will use and help address this situation.
+
+Anna Rose (00:17:21):
+So this brings us to another topic, which is kind of one of the reasons that I invited you on Ultrasound Money. Like that's a thing, and this is something that I don't know anything about and you just talked about a team, you know, it's not just a meme anymore, it's a thing. So tell me a little bit about like what is Ultrasound Money? Maybe even give me a little bit of background, like where does this concept start from?
+
+Justin Drake (00:17:47):
+Okay. So let's try and give context and motivation. So for a lot of technical people, you know, we, we like to think that blockchains are secured by mathematics and cryptography. And this is, you know, where I came in and, you know, maybe five years ago, but it turns out that this is just not the case. There's two pillars that are securing blockchains. Pillar number one is cryptography.
+
+Anna Rose (00:18:10):
+Yeah.
+
+Justin Drake (00:18:10):
+And the other one is economics. And that's why we call it crypto economics and it turns out that we can make the cryptography level extremely secure. You know, we can have like provably secure 128 bits, you know, in the quantum oracle model, whatever, blah, blah, blah. But the economics pillar is, you know, much weaker. And it turns out that the overall security is your weakest link. It is important to focus on the economics.
+
+(00:18:35):
+And there's this concept called economic security, which basically tries to quantify how much security is backing your system and it basically puts a number on how many dollars an attacker needs to go attack a specific blockchain and this is something that hasn't really been done very much until recently. Now if you go through the exercise, you realize that Bitcoin has on the order of $5 to $10 billion of economic security, meaning that an attacker with that much money can just completely break the system. They can, for example, only extend the chain with empty blocks. They can start doing reorgs. The whole thing just collapses. And now think, let's think to ourselves, who has $5 billion? Many, many nation states, Russia, China, the US, $5 billion is peanuts. I mean, even someone like
+
+Anna Rose (00:19:34):
+FTX
+
+Justin Drake (00:19:35):
+Perfect example, Sam Bankman-Fried, you know, his evil strategy could have been to just 51% attack Bitcoin and destroy this whole industry.
+
+Anna Rose (00:19:44):
+Yeah.
+
+Justin Drake (00:19:45):
+And so we want to be building settlement layers for the intent of value. We want infrastructure, which is so-called World War III proof. And in my opinion, the only way to get there is to have a trillion dollars of security or ideally trillions of dollars of economic security and the reason is that no single attacker can go take down these, these systems if we're talking about trillions of dollars of economic security.
+
+Anna Rose (00:20:09):
+But When you say economic security, do you still mean needing that much value on the network?
+
+Justin Drake (00:20:15):
+Right.
+
+Anna Rose (00:20:16):
+Does it have to be actually like money invested tokens owned? Like is it, is it that straight calculation or is there some other calculation that goes into that?
+
+Justin Drake (00:20:25):
+Yeah, that's a a great point. So there's kind of, there's two concepts here. One is what is called TVS - total value secured. And if you go on on DeFi Llama or Layer-2 Beat or whatever, there's these websites which will tell you how much value is being secured by these chains and if you take Ethereum for example, there's on the order of $300 billion being secured, there's Ether itself the asset
+
+Anna Rose (00:20:49):
+Yeah.
+
+Justin Drake (00:20:49):
+Which is about 150 billion and then the other 150 billion is ERC20s and NFTs and all sorts of other things like that. Now, the other important concept is how much value is securing the chain? And that is much, much smaller. So in the case of if you're in proof of stake, it's the amount of Eth staking, which is about 15 million Eth, and that corresponds to 18 billion at current prices and so we have this concept called the security ratio, which is the ratio of the total value secured, divided by the total value securing the chain. And we want this security ratio to be, to be low and right now, the security ratio having a look on Ultrasound money is 18.9, meaning that there's roughly 19 times more value being secured on Ethereum than is actually securing Ethereum.
+
+Anna Rose (00:21:45):
+So the staking is the second one, like the amount staked is the second value.
+
+Justin Drake (00:21:50):
+Correct, yes.
+
+Anna Rose (00:21:50):
+Okay.
+
+Justin Drake (00:21:51):
+And you want the second value to be extremely high. Now, if we're gonna be securing the internet of value, you know, we need to appreciate how large the intent of value is. And it turns out that it's on the order of hundreds of trillions of dollars, right? If you take all the wealth and on on the whole world, it's ballpark figure, it's one quadrillion dollars. And you know, if
+
+Anna Rose (00:22:14):
+New category,
+
+Justin Drake (00:22:15):
+And you know, we can expect in a success scenario that hundreds of trillions of dollars will flow to the incentive value. And in order to comfortably secure that, you know, we need to have at least let's say one $1 trillion of economic security so that the security ratio doesn't go into the thousands which would be a very precarious situation to be. And the reason it's would be so precarious is because the security ratio measures how much leverage an attacker has to cause damage. If they were to invest $1, they'd be able to break a $100 or $200 or a $1000. And one of the kind of scary things with Bitcoin, for example, is that we should expect the security ratio to go to roughly a thousand and the reason is that with Bitcoin, the issuance is going to zero and it's only gonna be secured by transaction fees. And transaction fees represent roughly 1000th of where we need to be. And so Bitcoin potentially could be attacked with a very small budget in, in the future relative to its size.
+
+Anna Rose (00:23:20):
+Is this idea here that like there will just be fewer miners because it won't be worth it for there to be as many miners? Like, will there actually be like a reduction in number of actors and that's why it becomes so much easier to attack? That's what I'm sort of trying to figure out. Like what would an attack like that on Bitcoin actually look like?
+
+Justin Drake (00:23:36):
+Right. So in order to perform a 51% attack on Bitcoin, you need to have more hash rates, more hash power than the rest of the network combined.
+
+Anna Rose (00:23:47):
+Yeah.
+
+Justin Drake (00:23:47):
+and basically what is to be done is to buy these mining rigs and connect them to the grid and buy the transformers and the cooling and the data centers and whatnot. Now, ballpark figure in the future, my expectation is that the cost to attack Bitcoin will be roughly a thousand times less than its market cap. So let's say that Bitcoin becomes like gold, $10 trillion market cap a thousand times less, that would be $10 billion. So it would cost $10 billion in the future to go break Bitcoin. So let's, let's do the math. Let's say that Bitcoin becomes like gold. It's a $10 trillion asset. Then the cost of attacking it would be roughly a thousand times less, which is $10 billion.
+
+(00:24:32):
+Now, one of the scary things here is that it actually becomes economically rational to go attack Bitcoin. And the reason is that you can open a so-called short position and you only need to open a tiny, tiny short position on the order of 0.1% of the total Bitcoin supply. So Bitcoin is meant to be this really liquid asset, which, which is, you know, easy to short. You know, right now in order to attack Bitcoin and be profitable, you need to short maybe, you know, 2% or 3% of the total supply is like very hard to pull off. But shorting with 0.1% is much, much easier.
+
+Anna Rose (00:25:10):
+In your calculation, you still talk about it as though you'd have to buy all these rigs, but wouldn't it be a lot cheaper if the fees are so low? Don't miners just drop off anyway? Like the hash power per miner becomes higher anyways. Like you just have less of them, there's less competition and maybe I misunderstand like the sort of end game of Bitcoin here, but like that's how it seems like it would work.
+
+Justin Drake (00:25:32):
+No, you're right. I mean, the most likely scenario that I see is that Bitcoin will never reach $10 trillion. It will never become the size of gold and the reason is that it doesn't have this credibly, you know, sustainable security model. And so what's most likely to happen in my opinion, is that it will stay roughly in the current ballpark of let's say $1 trillion. And what that means is that the total amount of value that's going to go to the Bitcoin miners is actually gonna dwindle over time with every single havening and is going to be less and less. And you're right, like today, you know, the bitcoin mining industry is roughly a 10 billion per year industry in let's say 20 years. It might be a $1 billion industry and so with just 1 billion you'll be able to take down Bitcoin, which has a size of $1 trillion. Yeah. So I'm very bearish on Bitcoin over 20 to 30 year time span because there'll be enough havenings to make the security of Bitcoin very precarious.
+
+Anna Rose (00:26:35):
+Unless I'm gonna give the one thing that could happen, unless the community comes together and allows change to happen. Am I right?
+
+Justin Drake (00:26:44):
+That is correct, yes. I mean, it's kind of interesting how Bitcoiners have been framing the fact that they don't have an EVM as a security benefit. And the reason is that they have this very simple UTXO model, which means that there's a lower probability of bugs and, and things like that. But one of the things we've seen empirically is that Ethereum has a hundred times the fees of Bitcoin and Bitcoin is secured by fees. And so basically Bitcoin has reduced its security by roughly a hundred x by being really, really stubborn and saying, no, we will never support smart contracts and we'll stay with this one megabyte block per 10 minutes.
+
+Anna Rose (00:27:27):
+Let's move on to Ultrasound money. What is the meme? Like? A few years ago everyone was talking about this, but like, I thought it was kind of a joke or something and I don't think I followed it closely enough and I apologized to anyone listening who, who's deep in it. I feel like I should know this better, but tell me how this starts Ultrasound money.
+
+Justin Drake (00:27:45):
+It started as a joke.
+
+Anna Rose (00:27:46):
+Okay
+
+Justin Drake (00:27:46):
+It's actually Vitalik came up with a joke. He said if cap supply bitcoin is sound money, then decreasing supply Eth must be supersonic money and I kind of made a very small variation of that, you know, change supersonic to Ultrasound
+
+Anna Rose (00:28:06):
+Ultrasound, nice.
+
+Justin Drake (00:28:06):
+But yeah, you might ask yourself why would the supply of Eth a decrease? How is that even possible? Well, the reason is that there's two factors that come into determining the supply of Eth. One is issuance, which is inflationary in the sense that it, it increases the supply of Eth. And then there's this other thing called the burn with EIP1559. Every time you make a transaction it destroys Eth. And so if you can burn more Eth than you're issuing, then your supply goes down and this is something that has happened after the merge. And the reason, one of the big reasons is that the merge has dramatically reduced issuance on, on Ethereum by roughly a factor of of 10x. So if you go to the ultrasound.money website, you will see the supply of Eth having decreased since the merge and I'm looking at it right now, it's gone down roughly 6,000 Eth since the merge 64 days ago.
+
+Anna Rose (00:29:07):
+Cool. The story of EIP1559, I did years ago an episode on that. That was controversial at the time, right? Like people didn't want this to happen. What were the arguments against it?
+
+Justin Drake (00:29:18):
+Right. So I think controversial is a bit of an overstatement. I think what what really happened is that there was a very loud minority.
+
+Anna Rose (00:29:27):
+Okay
+
+Justin Drake (00:29:27):
+Maybe one 1% were against it, but they were pretty loud about it. And this is actually very healthy. You know, we want these contrarians that really question our thinking. And I think part of it was around the novelty of it and the fact that the community wanted to push it through quite quickly. You know, it had only gone through, you know, two or three years of due diligence and maybe we needed to do more serious due diligence. I think the other aspect around it was that it was a change of user experience for the users. You know, now there's kind of this two fees. There's the so-called base fee, there's the tip, you know, at at face value it sounds like you know, more complicated, but it turns out that from a UX perspective, it was a game changer in terms of dramatically improving the user experience of Ethereum.
+
+(00:30:18):
+And the reason is that nowadays you just click send and you don't even have to set your, your fee. It just works and you get included in the next block.
+
+Anna Rose (00:30:26):
+Yeah.
+
+Justin Drake (00:30:27):
+It used to be that you had to participate in this auction where you had to guess the kind of the optimal gas price for including transactions. And so there was kind of two scenarios. Scenario number one is that you under bid and then your transaction is just pending
+
+Anna Rose (00:30:41):
+Stuck forever. Yeah. Yeah.
+
+Justin Drake (00:30:43):
+Or you overbid and you feel really bad because you've overpaid
+
+Anna Rose (00:30:46):
+Yeah
+
+Justin Drake (00:30:46):
+And now we have kind of this fair pricing mechanism which is transparent and very easy to deal with.
+
+Anna Rose (00:30:53):
+When was that actually put through? When did EIP1559 actually get included?
+
+Justin Drake (00:30:58):
+Right, so it was included 469 days ago and the reason I know this is because if you go to ultra sound money and you click the, since burn timeframe, there's a little fire emoji, it will tell you how many days.
+
+Anna Rose (00:31:12):
+Ah, so over a year basically.
+
+Justin Drake (00:31:14):
+Exactly over a year. And we've been burning at a rate of roughly 2 million Eth every single year and in comparison, we are currently issuing on the order of 600,000 Eth per year. So we're burning three times faster than we are issuing. And so that kind of leads to a very interesting shape of the supply. So we basically have been printing, printing, printing very fast from Genesis to the merge and then the merge is kind of this inflection point after which the supply kind of starts decreasing and then finds a new asymptote. And so one of the reasons why the ultrasound.money meme is kind of important is because it's a shelling point, right. The shape of the supply is very unique and that creates a shelling point for the community to gather around this asset and recognize it as being special and recognize it as being worthy of so-called monetary premium. Monetary premium is this idea that an asset is somehow worth more than its intrinsic utilitarian value that maybe or originates from cash flows. And you can ask yourself why is monetary premium useful in our industry? And the reason why it's useful is that the only way we can get a trillion dollars of economic security is if we accrue monetary premium and so monetary premium is actually necessary for Ethereum to be successful in its mission of settling the internet of value.
+
+Anna Rose (00:32:48):
+Interesting. So this is this, going back to that, what did you call it? The ratio? Like what the actual value of the staked assets are in this thinking because it has monetary premium, is that actually more valuable than it looks like it's more valuable than what's actually locked?
+
+Justin Drake (00:33:04):
+Yeah. So as you said, for the security ratio to be reasonably small, we need the value of the Eth state to be reasonably large.
+
+Anna Rose (00:33:13):
+Yeah.
+
+Justin Drake (00:33:14):
+Now we can ask ourselves where does the value of Eth even come from? And the way that I think about it is that there's two components. There's kind of the, the fundamentals, the cash flows, and this is how people have been valuing companies, for example. So you can think of Ethereum as being a business which sells secure block space. That's the product that's being sold and people are willing to pay for it with base fees and the income is going to be the total amount of Eth that's burnt, that kind of accrues to the Eth holders and Ethereum, the network. Now in terms of the expenses of this business, it's basically the cost of securing the blockchain, the cost of providing the product and that's going to be the issuance. And so one of the things that we want is first of all, this project, this company to be sustainable, right? We want it to be profitable, we want to have more income than expenses and when that's the case you can look at profit and you can look at so-called P ratios. And so right now this is something on the, you can see on the Ultrasound Money website.
+
+Anna Rose (00:34:24):
+We'll definitely add a link to that by the way in the show notes because it seems like there's some awesome dashboards that we can see there.
+
+Justin Drake (00:34:31):
+Right? So right now Ethereum has a P ratio roughly 30, which is, you know, a reasonable p ratio of of a mature company. It's like not too far away from Google, for example. But then once you have this kind of, this fundamental evaluation, you know, in my opinion we have this idea of monetary premium which derives from the use of Eth, the asset being used as collateral money. and this is idea that when you use Eth as collateral, you're reducing the velocity of money and only a fraction of the total supply is basically privy to these cash flows of the burn and the issuance. So only the portion of Eth, which is actively moving in the economy, is paying for transaction fees. And that's the portion as well, which is subject to the issuance. Now you can ask ourselves why would people use Eth as collateral money?
+
+(00:35:31):
+And that's kind of these two big use cases. Use case number one is using Eth as collateral money for staking and use case number two is collateral for DeFi and my expectation is that the vast majority of Eth, let's say 80% will eventually be used as collateral money. And you know, people often think that money is only useful if it's being used payment and it's moving around, but actually money can be used when it's just sitting there and doing almost nothing other than backstopping some sort of liability. And so the liability that's backstopped in the case of staking is if you make some bad assestations, you make double votes and you know, you get slashed.
+
+Anna Rose (00:36:16):
+Yeah. You get slashed
+
+Justin Drake (00:36:16):
+And then DeFi might be backstopping a loan for example, or backstopping a leverage position or whatever it is.
+
+Anna Rose (00:36:23):
+I wanna go back to the monetary premium though.
+
+Justin Drake (00:36:25):
+Yeah.
+
+Anna Rose (00:36:25):
+Like, so if you're using it as collateral backstopping
+
+Justin Drake (00:36:29):
+Yes.
+
+Anna Rose (00:36:29):
+Like, is the price of the liquid token always the same as the price of these backstopping ones? The collateralizing ones?
+
+Justin Drake (00:36:38):
+Yes. They are the same. And they one way to think about it is imagine that the coins that were used as collateral were completely lost then from an accounting perspective, you know, they're still included in the total market cap, but really in practice they're not just never sold and so if you wanna do a cash analysis, you're gonna do a cash analysis on the liquid tokens. Maybe a more realistic, you know, example might be tokens that are currently vesting right? They're kind of locked and so they're kind of artificially low velocity. And you know, it's, it's a common trick that founders do. They have like these very large portion of the supply which is, which is vesting and they kind of artificially inflate the supply. And you know, I don't wanna pick specific names, but you know, maybe, you know, Solana is a good example where, you know, there's been this massive unlocks and you know, the price has dramatically crashed
+
+(00:37:33):
+And it's kind of in quote lost some of its monetary premium. But in my opinion, there's this kind of very natural strong demand for an organic demand for use of low velocity Eth which in my opinion should it be accounted for when doing this cash analysis? But it's still part of the overall market cap. And it plays a crucial role for two things. One is economic security that we've talked about, and the other one is this concept of economic bandwidth. Now, if you want to be securing the internet of value, you need decentralized applications that have access to economic bandwidth. And one of the, one of the best examples is decentralized stablecoins. Right now we're in a very precarious situation with stablecoin. The major stablecoin, the USDT and USDC are a hundred percent centralized.
+
+(00:38:25):
+A hundred percent trusted and they're being censored and they're massive liabilities and systemic risks for the whole space. What we want is decentralized stablecoins. Now in order to build a, a strong decentralized stablecoin, you need what's called overcollateralization. You need more collateral than the debt which is the stablecoin. So what you want is a design like Dai and Maker and Maker is one of the, the largest consumers of economic bandwidth out there. Millions and millions of Eth are being used. But that's still a very small amount of stablecoins in the grand scheme of thing Dai has on the order of $10 billion of stablecoin, where we want to be in a position where we have $10 trillion of stable coins. Right? If you take all the fiat in the world, you know, we're talking on the order of a hundred trillion dollars of fiat, that's the order of magnitude. And you know, we're gonna want at least $10 trillion in terms of value. And so that means we need at least $10 trillion of economic bandwidth. And again, the only way to get there is through monetary premium.
+
+Anna Rose (00:39:37):
+I wanna go back a bit of a step here. So you had said that with EIP1559, it started to burn things, but emissions were still higher than burn, I guess, right? Like you're saying there was this inflection point at merge.
+
+Justin Drake (00:39:50):
+Yes.
+
+Anna Rose (00:39:51):
+How much did that change?
+
+Justin Drake (00:39:53):
+Yes. So from an economic standpoint, the merge reduced the amount of issuance by a factor of 10 roughly. Okay. So before the merge we had 15,000 Eth every single day in issuance
+
+Anna Rose (00:40:07):
+To the miners at the time
+
+Justin Drake (00:40:09):
+Yes. It was 13.5 to the miners and 1.5 to the proof of state participants, there was these two chains running in parallel.
+
+Anna Rose (00:40:16):
+Ah, yeah.
+
+Justin Drake (00:40:16):
+Proof of work and proof of state.
+
+Anna Rose (00:40:17):
+Okay.
+
+Justin Drake (00:40:18):
+And then the 13.5 disappeared. So we were left with only the 1.5. So we went from 15,000 each per day to 1,500 each per day, roughly a 10x decrease. And the burn, you know, on a daily basis on average is something like 4,000 to 5,000 if burnt and so before the merge, actually the issuance was overwhelming the burn but after the merge the burn is overwhelming the issuance.
+
+Anna Rose (00:40:44):
+Okay. So you have less and less of the overall supply
+
+Justin Drake (00:40:49):
+Yes.
+
+Anna Rose (00:40:49):
+Going forward. And you have some of these things locked in staking, you have some of them locked in DeFi, you have some that are liquid. Yes. I still don't really understand where the monetary premium comes in though. Like are you saying that like you take that number of tokens, you multiply it by the price per one token, that's the market cap, the number of tokens are going down. So you're thinking like the value of each individual token will go up if the market cap stays steady. But what is the monetary premium on that? That's what I didn't fully get from what you explained.
+
+Justin Drake (00:41:21):
+Okay. So there's kind of two ways to think of monetary premium. That's kind of the qualitative way and the quantitative way, let's start with the qualitative way, which is that monetary premium is something very, very special. It's kind of the societal illusion.
+
+Anna Rose (00:41:37):
+Okay.
+
+Justin Drake (00:41:37):
+That we've agreed that we're gonna use one specific asset as as money. And like how do societies coordinate on choosing one specific asset, you know, it used to be salt and then shells and then gold and silver and it's kind of evolves over time, you know, maybe a bit, maybe Bitcoin, maybe Eth soon and it turns out that the way we coordinate as humans to a large extent is through shelling points and memes. Right, and this, this is part of the reason why the Ultrasound money meme is so important and one of the most important memes in money is around scarcity.
+
+(00:42:13):
+That's why, you know, Bitcoin has such a huge emphasis on this 21 million limit. Right? And so the ultra sound money meme is kind of the equivalent of the 21 million Bitcoin limit is kind of the scarcity meme, but there's other things which are, you know, important as shelling points. Like one very, very important shelling points in the context of blockchains is security. And today Ethereum is the most secure blockchain in the world. It has the most amount of economic security of roughly $20 billion.
+
+Anna Rose (00:42:45):
+Wow.
+
+Justin Drake (00:42:45):
+At least twice more than than Bitcoin. And so it has these two most important shelling points going for it. It's the most secure and the most scarce blockchain in, in the world where the supply will decrease for the next a hundred years and the supply of Bitcoin, for example, will inflate, will increase for the next hundred years.
+
+(00:43:04):
+So the the scarcity is kind of like very much black and white and so is the security. And so as a society, there is a possibility that we agree that Eth the asset is worthy of monetary premium and not only is it worthy, but it's kind of necessary for it to be successful in its mission of securing the internet of value by providing economic security and providing the economic bandwidth. Now, once as a society we've kind of agreed on on these shelling points, we can ask ourselves how much monetary premium can we expect from a quantitative standpoint and the way that it works here, it's, it is just a model, right. It's justa way of to think about it is kind of the best model that I've found so far is to look at the so-called velocity of money.
+
+(00:43:50):
+So there's two types of money, in my opinion, this kind of cold money and hot money. Hot money is what's known as currency. The word currency comes from word current. It means money that flows so you can think of money that's used for payments of NFTs, for example. Or even payments of block space for transaction fees. And that's one important part because it leads to cash flows around the burn and you can think of this hot money aspect of the economy as being like a company. But then there's this other, also very important aspect of the Eth economy, which is the cold money, the cold Eth. And that's where the collateral comes in.
+
+Anna Rose (00:44:31):
+Yeah.
+
+Justin Drake (00:44:32):
+And if we have, let's say 90% of all Eth, which is in the cold money scenario, then in my opinion like these 90% don't really play a part in the cash flows.
+
+(00:44:47):
+Like if you're in the company is really only the hot money. Everything else is, this other thing is kind of this use as a collateral money and so if the 10% of the supply is worth, let's say $1 trillion because of cash flows, it's a very successful company, you know, like, like Apple or Google, which has a lot of income and relatively few expenses, then the other 90%, you know, should give it kind of a 10x monetary premium. So there's this illiquidity multiplier that's never term that I use, which is that because part of it is illiquid, it comes in as a multiplier in your overall evaluation in terms of like the fully diluted valuation and it's the same thing with, with some blockchains out there where maybe 90% of the tokens are illiquid because they're vesting and so there's this 10x illiquidity multiplier that should be accounted for when you're looking at the whole market cap.
+
+(00:45:49):
+But unfortunately vesting is not sustainable and it's artificial. On the other hand, staking and use of Eth in DeFi is organic. It's natural and the reason is that it's, it's tied to this idea of the cost of money, right? So when you're staking you have various costs involved, you need to pay for your hardware, for your internet connection, electricity, and you need to pay what I call capital costs, which is the opportunity cost of money. And it turns out that the vast majority of the costs are opportunity cost of money. And so if the cost of money is, let's say 3%, what we should expect is that in the equilibrium, the amount of Eth staked is gonna be such that the issuance is gonna be roughly 3% so that, you know, profit margins kind of 10 to zero and validators are still profitable.
+
+(00:46:43):
+And it turns out that if with a 3% cost of money, we should expect about 30 million Eth stake. So that's kind of a huge lump of Eth which organically will be locked up and with low velocity. And then something I think similar will happen in the context of stablecoin, we need decentralized stablecoins. There's no other way we, in my opinion, we can't be successful without these decentralized, stable stablecoin. Someone I'm hoping will, you know, make a massive breakthrough in terms of improving the user experience or the tokenomics around it or something. And that will lead to a huge demand for Eth the asset as collateral. Now, one of the things you can ask yourself is can we use other forms of collateral than Eth? And it turns out that for staking there's no choice. You have to use Eth and nothing else. For DeFi, you do have choice, but there is a strong reasons to use Eth specifically and the term that we use here as we say that it's pristine collateral, Eth is the only form of collateral that has no contract risk, no governance risk, no oracle risk, all sorts of tell risks that you know, no custodial risk, no counterparty risk. And that makes it a very attractive asset for, for use in DeFi.
+
+Anna Rose (00:48:04):
+Why, when you talk about stablecoin backed by crypto, why does Dai not work? Why does Maker DAOs product not satisfy what you want?
+
+Justin Drake (00:48:17):
+Right. The main problem is that there isn't enough economic bandwidth. So I, I can check the numbers, but I think roughly speaking, Dai is using 3 million Eth now, and that corresponds to, to some amount of decentralized stablecoins.
+
+Anna Rose (00:48:37):
+Are you just saying it's not popular enough yet? I'm curious if there's like, why isn't it, then what kind of breakthrough would you need? Would it just be like a marketing breakthrough, like getting more people to participate in it? Or is it like you need a new concept?
+
+Justin Drake (00:48:52):
+Yeah, so let's say that we want to increase the total amount of decentralized stablecoins by a factor of a thousand, which is what we need to fulfill a vision of being the incentive value. How can we do that? Well, option number one is just for Dai to be more popular in the sense that more Eth is being used to back Dai. But the problem is that there's only so much Eth out there. So if you are using 3 million, then you know, maybe you can increase that to 30 you know, 10x. But pushing it beyond that is gonna be very, very hard because it's a very limited supply of Eth. And so really that shows you the importance of the Eth price itself. So you, you've got a 10x by having more if as collateral, but you need another a 100x that has to come from just the price of Eth increasing. And that's to a large extent only possible through Eth gathering monetary premium and in order for for it to get to that point, we need kind of memes, we need selling points, we need society to kind of somehow believe that Eth, the asset is worthy of monetary premium, and basically education, which is what the money meme is all about, is about spreading this message and encouraging people to learn about Eth the asset and appreciate its selling points may, you know, help if the assets accurate, monetary premium.
+
+Anna Rose (00:50:17):
+I'm so not an economist, but when you say monetary premium, should we be thinking price worth more like token wort ore than it seems? Like every time you say it, I'm still like, oh, what is he, what is he trying to tell me? Yeah. Like what's the translation for what that actually is?
+
+Justin Drake (00:50:35):
+So there's the kind of, there's two things that need to happen. First of all is that Ethereum needs to be a super successful business. It needs to sell a ton of secure block space. And, you know, scalability is gonna play a very important role here so that, you know, billions of people can be paying these transaction fees and that leads to income and profit for Ethereum and here we have this ultra high velocity economy, which is very successful. But what we also need is kind of this ultra low velocity economy to also be successful. And the the reason is that it's going to lead to this illiquidity multiplier to kick in by a fact of roughly 10x is what we can expect in the best case.
+
+Anna Rose (00:51:16):
+And this market, like where's this price even picked from though? Like, you talk about the multiplier, but is this like on CoinGecko it'll show up higher for some reason. Like this what I, where I don't get like, what's it compared to? Like that multiplier of value, right, versus what is your baseline? Are you still basing it on USD actually?
+
+Justin Drake (00:51:36):
+The baseline is the fundamental value as a company and I think the best example I can give here is gold. So gold is a $10 trillion asset and you can ask yourself, where does the value of gold come from? Now it turns out that gold is an industrial metal. It's an extremely useful industrial metal in every single iPhone and computer, or really strictly any piece of electronics. There's gold that's being used and if you try to value gold based on its cash flows, that is an industrial metal, it should be worth on the order of $1 trillion. Now you can ask yourself, where does the extra $9 trillion come from? Well, it, it comes from the fact that there's this crazy societal illusion that we think of gold as money,
+
+Anna Rose (00:52:20):
+Love of gold
+
+Justin Drake (00:52:21):
+and people are keeping it in vaults.
+
+Anna Rose (00:52:23):
+Yeah.
+
+Justin Drake (00:52:23):
+And central banks are locking it up and people use it as jewelry.
+
+Anna Rose (00:52:27):
+They love it because it's shiny.
+
+Justin Drake (00:52:28):
+Yes. So the shininess kind of, and jewelry might be the equivalent of this silly joke ultrasound.money meme, but it
+
+Anna Rose (00:52:36):
+Wow. Okay. Okay. Okay
+
+Justin Drake (00:52:37):
+It's still extremely important. So it just turns out empirically that societal illusions or myths are extremely valuable
+
+Anna Rose (00:52:46):
+Yeah.
+
+Justin Drake (00:52:46):
+In society. And like one example here might be the nation state right. If you look at boundaries and frontiers like this, this is just completely arbitrary. You know, people just get excited about the flag and you know, their football team or something.
+
+Anna Rose (00:53:02):
+Yeah.
+
+Justin Drake (00:53:03):
+Think of the legal system and the police system. Why is it that people in suits, you know, and a stick and they somehow get authority. But if some other random person in the street would perform the same exact actions as police, but they didn't have the uniform, then people would start freaking out. What about religion? Right. Religion is kind of like, there's these crosses and like, I don't wanna insult anyone, but there's like all these symbolism which
+
+Anna Rose (00:53:31):
+rituals,
+
+Justin Drake (00:53:32):
+rituals and yet, you know, religion is extremely powerful. It has allowed the coordinations of millions if not billions of people to do all sorts of things. You know, some good, some bad, maybe crusades, you know, arguably a bad thing. I don't know. But yeah, money is one of these society illusions which is just incredibly useful just as a coordination tool.
+
+Anna Rose (00:53:54):
+Totally.
+
+Justin Drake (00:53:54):
+Just like the legal system or nation states or religion.
+
+Anna Rose (00:53:59):
+Yeah. So, okay, now I wanna understand like ultra sound money so it was a meme, it was like a joke, it was a concept. It kind of informed some economic planning or thought research, the work that you've been doing. But like, what is it also, it's a team. Is it a company? Like what is this Ultrasound money?
+
+Justin Drake (00:54:21):
+Right. So originally it just started as a joke and then it became kind of this educational website and now it's a community, a movement.
+
+Anna Rose (00:54:29):
+Oh, cool.
+
+Justin Drake (00:54:30):
+And so it turns out that David Hoffman, who's one of the hosts of the the Bankless show came up with emojis to describe the Ultrasound Money meme, he had the bat and the sound emoji because bats produce ultrasounds. So that, you know, is a good set of emojis.
+
+Anna Rose (00:54:46):
+This is making some of Twitter make more sense to me. I was so out of the loop. Justin. This is hilarious. Okay. Yes, keep going.
+
+Justin Drake (00:54:54):
+So emojis are kind of one of the most condensed forms of communicating information and memes are nothing but that. They kind of, these small pieces of cultural information that kind of spread virally from mind to mind, very similar to a virus, a biological virus that spreads from body to body. And it just so happens that we have on our hands a pretty viral meme where we now have over 6,000 accounts on Twitter that have this bat signal. And the Twitter accounts is just a meme machine, right? It's role is just to spread the meme forever and forever, partly through, you know, building out the websites, but also through trying to foster this community. So there's a po up that's being issued. There's also a Discord, which is going to be open in a few weeks, and there's sorts of initiatives that are being put forward to try and spread the meme more. And, you know, one of the latest initiatives that I mentioned earlier in the podcast is this ultra sound relay where, you know, we're trying to improve the PRD image of Ethereum. Really, the censorship problem has no fundamentals, right? Because as I mentioned, censored transactions take one minute to come on chain, which is, you know, totally fine. It's not an issue. but from a PR standpoint it just doesn't look good. So it's kind of an anti selling point, as it were, which we're trying to address.
+
+Anna Rose (00:56:18):
+What's your relationship to the Ultrasound Money movement? Do you run the Twitter account? Like who runs the Twitter account?
+
+Justin Drake (00:56:26):
+Right. So I bought the Ultrasound Money domain.
+
+Anna Rose (00:56:30):
+Okay.
+
+Justin Drake (00:56:30):
+And at the end of a two and a half hour long podcast on the Bankless, I said, I bought the domain, let's try and do some sort something with it. And like 10 people came to me and said, I want to help out.
+
+Anna Rose (00:56:43):
+Cool.
+
+Justin Drake (00:56:43):
+And right now we have about four people that are kind of working full-time. There's two devs and there's one, one person who spends her time responding to dms and things like that and there's also me, and, you know, we're trying to just grow organically. We're we, we think of ourselves as a public good. And, you know, very recently we we received, you know, public good funding. Initially it was me that has been funding this project out of, you know, my personal money. So but it, it looks like we might be able to di diversify the sources of funding. And if the meme becomes successful, then, you know, maybe we can be like a 10 or 20 or a hundred people project.
+
+Anna Rose (00:57:28):
+Cool. And you wanna, you wanna actually create a new relayer? Are you competing with Flashbots?
+
+Justin Drake (00:57:33):
+I don't think Flashbots is very happy with the current situation. I think Flashbots wants to focus on the builder side of things you know, they have this SUAVE and the decentralized builder.
+
+Anna Rose (00:57:46):
+Yeah.
+
+Justin Drake (00:57:46):
+I think them running a relay is, is more of a necessary evil. And I think, you know, they're waiting for the relay ecosystem to mature a bit more before, you know, maybe moving out of the relay game. So I think they're very, very encouraging. And I've had, you know, discussions with them where they're really encouraging of this this effort to to put forward an ultra sound relay.
+
+Anna Rose (00:58:12):
+I wanna just mention one other thing before we sign off, which is zero knowledge technology. I sort of wanna go back to the earlier topic of like VDFs. Is there any VDF ZK overlap? Is there any way for those to be used together?
+
+Justin Drake (00:58:27):
+Absolutely, yes. So it turns out that the VDF that we have built an ASIC for needs to be paired with a zero knowledge proof system. A SNARK. And basically the, the SNARK provides the V in the VDF, the verifiable. It allows you to verify that time has elapsed without having to do the computation, the sequential computation yourself.
+
+Anna Rose (00:58:53):
+Amazing. So there's a SNARK in the VDF construction actually.
+
+Justin Drake (00:58:56):
+Yeah.
+
+Anna Rose (00:58:56):
+But when you talk about the ASIC, like as I know there's also ZK ASICs or like ZK hardware being developed. Would you have like a shared hardware piece doing both of these things then?
+
+Justin Drake (00:59:06):
+Great question. So right now the ASIC does only the sequential computation, and we are doing the SNARK proving in GPUs.
+
+Anna Rose (00:59:15):
+Okay.
+
+Justin Drake (00:59:16):
+But Ethereum Foundation and various other people in the ecosystem want to build a SNARK-ASIC. And so that is kind of what we're actively thinking about. in terms of the, the next ASIC that we would go build.
+
+Anna Rose (00:59:31):
+Neat, I've heard there's like some community efforts, like things like ZPrize, which are also created in order to like push that work. Now, before we sign off, I just have one last thing I wanna mention, and that's the Nova whiteboard sessions. We actually recorded this earlier this year. It's just come out as part of the whiteboard sessions that we've been running. Nova, do you do any work on that? I was actually always curious, like, you know, when I talked to you about doing the whiteboard, you were like, let me present this really cool paper. But are you still working sort of in the ZK direction? Are you exploring, are you still doing research in our space?
+
+Justin Drake (01:00:06):
+Yeah, so Nova's a really exciting construction because you can think of it as essentially the fastest SNARK you could ever hope for if you're working with elliptic curves. And it's the one that we're using for the VDF project.
+
+Anna Rose (01:00:24):
+Oh, cool.
+
+Justin Drake (01:00:25):
+And one of the really exciting properties of Nova is that not only is it optimal from a prover standpoint, but it's extremely hardware acceleration friendly, partly because it doesn't have these FFTs. And so it's one of the prime targets to be building a SNARK-ASIC for. And one of the end games, you know, in the Ethereum roadmap is this idea of a ZK EVM at Layer 1. And in order to get there, you know, right now we're, we're off from a performance standpoint by several orders of magnitude and having this hardware acceleration is gonna be a critical part to, to getting to where we want to be
+
+Anna Rose (01:01:07):
+That is so cool. Bringing it back to ZK EVM.
+
+Justin Drake (01:01:11):
+Yes.
+
+Anna Rose (01:01:11):
+We've done a few episodes on that, so I'll try to dig one up and add it here. But yeah, share, I mean, maybe as a sign off, what is that vision? Share a little bit about like next stages or what you're seeing coming up.
+
+Justin Drake (01:01:27):
+Okay. So
+
+Anna Rose (01:01:29):
+I feel like we have a whole episode ahead of us. We, we let ourselves, but yeah, go for it.
+
+Justin Drake (01:01:34):
+Yeah, so I have a very kind of crazy vision, which is that I'm hoping that the proving for the ZK EVMs will happen not in data centers like it's currently happening for many of the zkRollups. You know, a lot of the zkRollups, because it's still very early days, they have so-called centralized proving. And what they do is that they rent out racks and racks and racks of hardware on AWS or some other hosting provider. And this is not good for liveness in the sense that if this centralized prover goes down, everything kind of collapses the zkRollup stalls. Instead, I think the position where we want to be in is we have these pieces of hardware, which allows people from home to be participating in the proving. And we have this idea of a distributed prover network where collaboratively, like a few of these machines can build proofs for these rollups.
+
+(01:02:35):
+Now one of the interesting thing here is that it's possible that ASICs are more about decentralization than they are about performance and one of the consequences here is that really what we need is people to have the hardware in their home and be able to turn it on if and when a primary prover goes down. So I kind of see my vision is that there's a hybrid model. It's the backup. And so it's kind of an insane thing where we'd be investing tens of millions of dollars to build these pieces of hardware to ship them to people around the world. And then they just never turned on. They're just connected to the internet and powered on and ready to turn on at a moment's notice, but they're never actually turned on. And so that means that there's no impact from a power consumption standpoint, there's no impact from a heat standpoint or noise standpoint. And because it's an ASIC, which is custom designed for this one specific operation, it's a very small box with a low footprint. And it's kind of this this crazy vision
+
+Anna Rose (01:03:48):
+Wow. That's like the fallback, huh?
+
+Justin Drake (01:03:50):
+Yes.
+
+Anna Rose (01:03:51):
+That's like, that's the World War III kind of scenario too.
+
+Justin Drake (01:03:54):
+Exactly.
+
+Anna Rose (01:03:55):
+Cool. Well Justin, thank you so much for coming on the show and sharing this amazing update. I loved this conversation. I feel like I got a chance to ask you about, obviously like this big meme I clearly had missed, but also I love how it sort of circles back through the VDFs and things we had talked about earlier. It's really great catching up.
+
+Justin Drake (01:04:16):
+Absolutely. Thank you so much for having me, Anna.
+
+Anna Rose (01:04:18):
+I wanna say big thank you to the podcast team, Henrik, Tanya, and Rachel. And to our listeners, thanks for listening.
+

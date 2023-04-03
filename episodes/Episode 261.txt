@@ -1,0 +1,615 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week I chat with Justin Thaler, associate professor at Georgetown, and author of Proofs, Arguments, and Zero-Knowledge. We chat about his academic background and what led him to working on interactive proofs and then on zk-SNARKs, we then look at the book Proofs, Arguments, and Zero-Knowledge, how it came to be, the ZK Hack study group that formed around it, and how he's been developing this learning resource iteratively with the community. We discussed his earlier work on Spartan, how this influenced his thinking about SNARKs his work on the security of different rollups built with SNARKs and STARKs and more. I hope you enjoy and also be sure to join his upcoming study group if you want to follow along with his next cohort, going through his book all about zero knowledge proofs. You can find this over on the ZK Hack Discord. We've added the link to that in the show notes. I also want to quickly let you know about the upcoming zkSummit9. The event is happening on April 4th in Lisbon. Join us for our 9th edition. There you'll find all the latest research and the most cutting edge implementations of zkTech. It's invite only and the application to attend is now open. I've added this as well in the show notes. Now, Tanya will share a little bit about this week's sponsors
+
+Tanya (00:01:40):
+Pairings, Baloo, Seek-You, Plonk, plookup, flookup, Hyperplonk, BN254, BLS381, FRI, Deep-FRI, Deepest-FRI, FFT, NTT, FHE, Goldilocks, uni-variate sumcheck, multi-variate sumcheck, pasta curves, twiddle-dee, twiddle factors, multiscalar multiplication, modular multiplication, LDE, MLE, Groth16, Marlin, Poseidon, Anemoi, Rescue, Reinforced Concrete, Nova, super-nova, Bulletproofs, Halo1, Halo2, Halo3. Now again, but faster! Check out ingonyama.com to learn more about Zero Knowledge Hardware acceleration. You can find the link in our shownotes. Thanks again Ingonyama.
+
+(00:03:00):
+Aleo is a new Layer-1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup.Interested in building private applications? Check out Aleo’s programming language called Leo that enables non-cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated stablecoins, and more. Visit http://developer.aleo.org.You can also participate in Aleo’s incentivized testnet3 by downloading and running a snarkOS node. No sign-up is necessary to participate.For questions, join their Discord at aleo.org/discord. So thanks again Aleo. And now here's our episode.
+
+Anna Rose (00:03:06):
+Today I'm here with Justin Thaler, who's an associate professor at Georgetown and is the author of the book Proofs, Arguments, and Zero-Knowledge. Welcome to the show Justin.
+
+Justin Thaler (00:03:15):
+Thanks for having me, Anna.
+
+Anna Rose (00:03:16):
+Justin, I know you primarily through the ZK Hack Discord. There is a study group there called the Thaler Book Club, and as far as I can see, there's a group of people meeting often to discuss the book you wrote. This has been going on for a while. I'm very excited to actually get a chance to speak with you and find out more about generally your work and also talk about that. We will get more into that study group soon. But I think as a starting point, I'd love to start off with learning a little bit about what got you interested in Zero Knowledge tech and this kind of cryptography.
+
+Justin Thaler (00:03:50):
+Yeah, so right when I started my PhD, which I guess would've been in 2009, I was already interested in like in streaming algorithms. So these are algorithms for processing, like really massive data sets where you don't even want to store the whole data set because there's so much data and kind of through an accident, but also because I just thought these things called interactive proofs were really cool. I had encountered them in a complexity theory class. I started studying sort of the intersection of the two topics. So there had just been some really recent work kind of looking at basically what happens in an interactive proof if the data being processed is so big that the verifier you want to be a streaming algorithm, so not even to like store the, the input to the computation.
+
+(00:04:32):
+So I started looking at, at that topic and that sort of led you know, I'd say it's a really cool topic, never really on its own, I think made like a big impact in practice but that kind of led me just to looking at interactive proof in general. Forget about the streaming verifier and also around that time there was a really, really important result called the GKR protocol short for Goldwasser Klein Rothblum. Just a really powerful interactive proof. Once I heard about that protocol which actually came from a reviewer of one of our streaming papers was like, hey, you should look at this, it's, you know, seems really general and powerful might be useful to you. I sat down to try to implement it, thinking it would just be awful, right, because the, the prover in that protocol runs in like cubic time in the size of the computation being outsourced.
+
+(00:05:21):
+So something totally, totally impractical. But it turned out that like by looking at these kind of very simple toy problems that the streaming people care about I had just kind of understood the techniques a good amount so when I sat down to implement the GKR protocol, I realized like you can actually make the prover run in, you know, forget about cubic time. It can run in like nearly linear time and that kind of makes the jump from totally impractical to practical. So that was like my whole PhD was kind of trying to continue improving especially on the prover time there, and it really didn't have anything to do with zero knowledge necessarily and then fast forward number of years maybe to like 2016-ish and there was this paper called vSQL, which sounds like it's about databases but really like the key contribution there has nothing to do with databases. So it kind of, it observes that you can kind of take these interactive proofs that I had, you know, spent my whole PhD thesis working on and combined them with cryptography. So what we now call polynomial commitment schemes, and then you get a SNARK.
+
+Anna Rose (00:06:23):
+Interesting.
+
+Justin Thaler (00:06:24):
+Right. So it turns out I had sort of been working on SNARKs without realizing it for a long time.
+
+Anna Rose (00:06:28):
+What actual field? This was a question as you're talking, I was like, you weren't in cryptography, was it math? Like what was the PhD department?
+
+Justin Thaler (00:06:37):
+Yeah, so it was computer science.
+
+Anna Rose (00:06:38):
+Okay.
+
+Justin Thaler (00:06:39):
+But like, I thought of myself, I still sort of do as an algorithms and complexity theorist, and I've really picked up cryptography just as needed, you know over time, which is one reason I was eager to do things that ultimately turned into this book, you know, Proof, Arguments, and Zero-Knowledge, but to try to make it a little less painful for anyone else to pick up the cryptography that's needed in this line of work.
+
+Anna Rose (00:07:06):
+Yeah, interesting. You're saying 2016, this is around the time that you started to discover what would become SNARKs. Was SNARKs a thing? Did they already exist at that point? Like were they well known?
+
+Justin Thaler (00:07:19):
+Yeah. Yeah. So SNARKs existed then, they were well known, but the fact that like basically the deployed SNARKs at that point were really, I mean, I don't know what year Zcash came out off the top of my head. It was round then.
+
+Anna Rose (00:07:32):
+Yeah.
+
+Justin Thaler (00:07:32):
+So essentially what what people were using was what we now recognize as SNARKs from linear PCPs, which ultimately, you know, led to Groth16 and very popular today. Yeah. So, okay. So maybe this is something interesting to, to describe briefly. So the historical development of all these protocols are like first people introduced interactive proofs actually in the same paper that the notion of Zero Knowledge was introduced, which is just some like bizarre miracle of ideas. But yeah, people didn't actually use like interactive proofs for Zero Knowledge until much later, I guess in practice anyway.
+
+(00:08:06):
+So it went interactive proofs, then multi-prover, interactive proofs, then PCPs, then linear PCPs. Okay. But in terms of actually deploying these things as SNARKs, it almost went in the reverse order, with the first ones coming from linear PCPs. And that sounds bizarre, but it's not a complete coincidence because the reason people started studying linear PCPs was exactly that. We didn't have practical SNARKs from regular PCPs.
+
+Anna Rose (00:08:34):
+Got it.
+
+Justin Thaler (00:08:34):
+So, you know, there's this great work of Ishai, Kushilevitz, and Ostrovsky that kind of started introducing these linear PCPs with the explicit goal of kind of getting more practical SNARKs. and, you know, did take some follow up work after their paper to get to get it there. Yeah.
+
+Anna Rose (00:08:50):
+Fascinating. In the last few years. When you talk about like the linear PCP to the regular PCP, do we use any other terms for that today?
+
+Justin Thaler (00:09:01):
+Yeah, we don't have practical SNARKs today from PCPs, but rather kind of a mix of interactive proofs and PCPs that people call IOPs.
+
+Anna Rose (00:09:11):
+There you go. Okay. That's what I was wondering because like that, the terms you just used are slightly familiar, but like, I feel like we, at least with this show, when I started to dive into it, like there you see the introduction of IOPs and that's sort of the direction that people were going. Okay.
+
+Justin Thaler (00:09:28):
+Yeah. Yeah. So I thought, I always thought like from very early on, cause I was working with interactive proofs, I was like, you know, you can always just remove the interaction with Fiat-Shamir, so we should really, protocol designers should be using interaction as a resource that then the resource just sort of gets removed and you don't need it anymore. And at the same time, you know, other researchers were developing like the PCP approach and I guess in the end, you know, it turns out like you need elements of both. Like everyone was right, no one was wrong.
+
+Anna Rose (00:09:56):
+Nice. Okay. Tell me like how at this point, so you've, you've been, I think in our story it's around 2016. Yeah. What work are you doing then? What, what kind of thing? Like, I know the book, I mean, I'd be really curious to hear when the book writing starts because we, by the time we did ZK Hack 2021, the book existed.
+
+Justin Thaler (00:10:17):
+Yeah.
+
+Anna Rose (00:10:18):
+So yeah, tell me when that happens.
+
+Justin Thaler (00:10:20):
+Yeah, so I guess those are two slightly different questions. So with the research, there are two things to say. So one is so I've been working on two things between 2013 when I finished my PhD, which was all on interactive proofs and 2016. So I was working, continuing to work on interactive proofs and there was some work on implementing these things in hardware and stuff like that. So applications that don't require Zero Knowledge or blockchains or anything like that. And I had also done some work on multi-prover interactive proofs. Then the idea there is, I don't know, you might have two computer chips acting as the prover, but they were manufactured in some foundry you don't trust, but it's like a state-of-the-art foundry. So they're very fast, but they're not trusted and you might actually be able to like power down, you know, one of the chips so that the provers can't talk to each other.
+
+(00:11:06):
+and therefore like the, the idea that there are these two non-communicating provers actually kind of make sense in the real world. So that's, that's kind of where I was in 2015 and then this vSQL paper came out Jon Katz, Yupeng Zhang, Babis (Prof. Charalampos (Babis) Papamanthou) and some others that kind of had the key insight. This was before, you know, while, you know, KZG Commitments already existed, people didn't really appreciate this notion of a polynomial commitment scheme yet, but I know Babis had some early work on, you know, extending KZG commitments to multilinear polynomials and had like kind of exactly the right confluence of knowledge to be like, hey, here's this key insight. You can just combine, interactive proofs with these polynomial commitment schemes we already have and you can get a SNARK with that key insight. You know, I realized we've all been working on SNARKs this whole time.
+
+(00:11:54):
+and yeah, that's how from then on, you know, I started studying polynominal commitments in addition to just the interactive proofs and multi-prover interactive peruse. It turns out like the multi-prover interactive proofs we had designed like the second prover was literally just acting as a polynomial commitment scheme. So you can just cut out the second prover and that, that sort of observation sort of led to this work called Spartan, which maybe you've heard of as far as the book goes so that kind of started with a workshop in 2015, I guess in Barbados there's a McGill runs workshops in cryptography there every year.
+
+Anna Rose (00:12:33):
+McGill, like Montreal McGill.
+
+Justin Thaler (00:12:36):
+Yeah
+
+Anna Rose (00:12:36):
+That's my alma mater. Cool.
+
+Justin Thaler (00:12:38):
+Oh, great.
+
+Anna Rose (00:12:39):
+Not in math, but yeah. Nice. But why would they do it in Barbados? That's such a random
+
+Justin Thaler (00:12:44):
+Oh okay.
+
+Anna Rose (00:12:45):
+Is it Montreal in the winter. What is it?
+
+Justin Thaler (00:12:47):
+This is a story I've heard. Well, basically somebody donated a property down there and that, I mean, that's a short version. So you know, it's in this beautiful location. I think they actually wound up selling part of the property. So there's this like, beautiful luxury hotel right next to this like kind of spare sort of housing for the workshop participants. But it's just a wonderful environment. Everyone's kind of there and offline and sitting outside at a whiteboard for the week. So yeah, I like threw together these notes for this like five day workshop and then, you know, kind of just left them for a couple years until I started at Georgetown and started teaching some classes and started, you know, building on the notes. At some point I like threw the notes online and didn't tell anyone about them because they were still kind of in embarrassing shape and, you know, some people stumbled on them and I got some good feedback and then but where things really like people, I guess discovered them as as useful was through ZK Hack, which I guess was a little over a year ago.
+
+Anna Rose (00:13:47):
+Ah, nice. It wasn't like you were presenting this as like finished work, like, this is my textbook, but rather this is a collection and almost a starting point.
+
+Justin Thaler (00:13:58):
+Yeah I think so and the area was just moving so fast by the time you know, 2016 came around and I expanded the notes enough that I'd even think about putting them out in public. And even, so I guess recently I did formally publish the monograph in Foundations and Trends and Security and Privacy, but still consider the thing to be, quite rough in a living document and we'll just keep, you know, maintaining it and years from now I hope to put out, you know, some second version or, so it'll just sort of gradually move into
+
+Anna Rose (00:14:33):
+Cool
+
+Justin Thaler (00:14:33):
+Yeah. As things develop, I hope.
+
+Anna Rose (00:14:35):
+Yeah, I mean, I wanted to ask you about that because I had spoken, so the person at ZK Hack I back in 2021, it was Alessandro Chiesa, I believe in his intro presentation, or one of it was either Alessandro or one of his students actually who were, were presenting and people were asking sort of like, what are great resources to start. He had mentioned your book, he had called it the Thaler book. I mean, we called it the Thaler book. We understood it as like a finished product but at the same time I had actually spoken to Alessandro about the challenges of writing a textbook at this moment because there were, and maybe still are a lot of kind of parts of this that are changing really quickly. And even like the common knowledge of 2017 on how to do this is quite different from the common knowledge of today, but not progressively different. Like there may have been almost like back-tracks or re-thinks or re-vamps and so how do you teach that? How do you write it down? How do you print it becomes kind of a hard question to answer. So yeah. Like which parts would you say have been consistent? Like, do you think there's parts of what you put together that are like, yeah, these parts seem to be like standardizing and becoming quite firm? Or do you feel like all parts are kind of up for grabs to change?
+
+Justin Thaler (00:15:54):
+This is a little bit of a hard question to answer. Right. I think that the general kind of organization and presentation of, you know, like all, all SNARKs having an information theoretical component and a cryptographic component that looks a lot like a polynominal commitment scheme, and you put them together and you get your succinct argument and apply Fiat- Shamir I think that is pretty stable. And at this point, it's largely the details that are changing and there's been, you know, so I've done a lot of kind of forcing into the exposition, like the latest update and it, it hasn't felt that hard.
+
+Anna Rose (00:16:35):
+Okay
+
+Justin Thaler (00:16:36):
+You know, it's like I can go to a chapter and just append to that chapter. Like here, there's more developments. The most recent sort of thing I added just roughly when Nova came out, I guess is a chapter on recursive SNARK composition. That line of work started with Halo. Maybe that's 2020.
+
+Anna Rose (00:16:56):
+Yeah. Halo1.
+
+Justin Thaler (00:16:59):
+Yeah
+
+Anna Rose (00:16:59):
+And then, wait, wasn't it like Halo1, Plonky then it was Halo2. I think these are similar, right? Like there's a line between them, there's like sort of progress there and now, I mean, a lot of teams are using Halo2. I know that they're like
+
+Justin Thaler (00:17:14):
+Right.
+
+Anna Rose (00:17:14):
+Some of the decisions in that have started to like come into everybody's system.
+
+Justin Thaler (00:17:19):
+Yeah and a lot of the benefit of Halo2 as a system, my understanding is not necessarily through support for recursion, but it's just a nice also sort of standalone SNARK as kind of, you know, the PLONK polynomial IOP plus, either like the Bulletproof's IPA polynomial commitment or the code base also supports KZG, which is just literally kind of PLONK. So I think you, roughly had the right trajectory there, so I'd say the history for recursive SNARKs, at least, as I'm aware of it and sort of covered in the monograph is, you can go back at least as far as the cycles of elliptic curves paper scalable, Zero Knowledge via cycles of elliptic curves like that was studying SNARK composition, but like, what people quote full SNARK composition where you take the whole SNARK verifier you kind of represent it as a circuit and then the prover approves that it knows the satisfying assignment to that circuit. Yeah. So, going all the way back to that was like 2013 or something, you could have like a short chapter on like recursive composition, the SNARKs you know, with an implementation out there. But then the Halo line of work sort of wound up in a sense, I'll say getting SNARK composition without full SNARK composition if that's kind of an incomprehensible statement, but, you know.
+
+Anna Rose (00:18:40):
+Interesting.
+
+Justin Thaler (00:18:40):
+Yeah.
+
+Anna Rose (00:18:41):
+Are there moments though where you almost have like breaking changes where like some new paradigm comes in and you, it sort of means some of the previous research or like in a textbook context, it would be like, something you've learned is now gonna be thrown out a little bit, like, oh, we've learned exactly how to, you know, optimize an R1CS and now we're maybe gonna use a very different kind of setup. I know that maybe is a bad example cause I know people are still using it, but like, has there been any sort of like lost work or work that's kind of gonna be pushed aside?
+
+Justin Thaler (00:19:12):
+Yeah, great question. I haven't really encountered that yet. I've been mostly able to handle things via like addition only if you will, so like you know for a long time I only discussed arithmetic circuits, then I added in R1CS in like a very haphazard way where like in the chapter, yeah. So like in the chapter on multi-prover interactive proofs, that's where I introduced R1CS, which is like a weird place to put it in. But, and what happened there was Spartan came out and, you know, was kind of extended like sort of the old, the old MIPS I had been working on, for example to handle R1CS. I'm like, oh, now I better put in like the R1CS presentation. And also by sort of generalizing, sometimes things get simpler when you, when they actually become more general.
+
+(00:19:57):
+And I think Spartan's a great case of that, where I think describing the protocol is actually becomes, especially the making the prover linear time, it actually is simpler when the protocol is general enough to handle R1CS and then I've also added discussion at various places in the book of roughly what is, you know, these even newer intermediate representations like PLONK arithmatization and Air isn't necessarily newer, but Air is another example. So I've been handling everything by addition so far. I haven't, I don't think I've cut anything you
+
+Anna Rose (00:20:30):
+Just mentioned, I want to come back to this actually, but you are mentioning Spartan. I don't know that we've covered it. I'm trying to place where that is in sort of the research steps like at what point, what other kind of contemporary works were published around the same time that would maybe help me just timeframe wise.
+
+Justin Thaler (00:20:47):
+Okay. Yeah. So timeline Spartan is roughly contemporaneous with PLONK and Marlin.
+
+Anna Rose (00:20:52):
+Okay. So this is 2019, I guess this is like the SNARK.
+
+Justin Thaler (00:20:56):
+Yeah, yeah, yeah. Spartan has like a 2020 timestamp on it, but you know, as some early
+
+Anna Rose (00:21:02):
+End of 2019, I think was when these things are coming
+
+Justin Thaler (00:21:04):
+Yeah. Roughly.
+
+Anna Rose (00:21:04):
+Okay.
+
+Justin Thaler (00:21:05):
+That's roughly right. Yeah. Yeah. So, so PLONK and Marlin are both based on what I call constant rounds polynomial IOPs. Okay. Which is an information theoretical protocol that if you kind of combine with KZG polynomial commitments will get you like a SNARK of constant length, constant number of group elements and a universal trusted setup, which was like the main
+
+Anna Rose (00:21:29):
+That's the big sell.
+
+Justin Thaler (00:21:32):
+Marlin and PLONK, and then Spartan because it uses the sum-check protocol. Unless you start bringing in SNARK composition, right. You will, you will not get proofs below logarithmic size. Right. So it's never gonna get down to constant. All of these works have very nice technical insights to ensure that they can handle like totally unstructured circuits they don't require like uniform circuits with, you know repeated structure, the same little computation repeated over and over again. That's not required for these protocols and they can do this with sort of a pre-processing phase wherein the prover runs in linear time or close to linear time and that, that is actually quite complicated to achieve and, and all three works sort of under the hood. They, they have that in there.
+
+Anna Rose (00:22:22):
+Okay. Is Spartan also a universal, does it need a universal trust setup or have a universal trusted set up?
+
+Justin Thaler (00:22:28):
+So it doesn't require any trusted set up at all?
+
+Anna Rose (00:22:32):
+Oh, okay
+
+Justin Thaler (00:22:32):
+So it's just if, if you use a transparent polynomial commitment scheme, it's just, it's just transparent. And the way I would put it is if you have a circuit or R1CS whatever with repeated structure, it also requires no pre-processing period. If your circuit just is completely unstructured, like even writing down a description of the circuit takes, you know, like the description size is like the circuit size, totally unstructured. It can have like a transparent setup. So just like pre-processing. So no like trap door that needs to be discarded. That's linear in the size of the circuit.
+
+Anna Rose (00:23:09):
+Was there any work that followed it that sort of built on it?
+
+Justin Thaler (00:23:13):
+Yeah, there are a bunch of things now. So examples include Quarks, Brakedown, Orion and basically these are more or less just substituting different polynomial commitment schemes into Spartan to get different performance profiles.
+
+Anna Rose (00:23:32):
+Interesting. We were talking before this sort of like, we've veered off into Spartan, but I kinda want to go back to the book. I know you don't call it a book, you call it a monoglith? Is that what you say?
+
+Justin Thaler (00:23:42):
+Monograph? I don't know.
+
+Anna Rose (00:23:43):
+Monograph
+
+Justin Thaler (00:23:44):
+It's a book now at this point
+
+Anna Rose (00:23:45):
+It's kind of a book now, I want to bring up a recent Tweet because I wonder if this is one of those examples that I was trying to find where like, in optimizing in some directions, could you actually be undermining other sort of teams strategies for optimization? And so this, the tweet that I'm mentioning is actually, maybe you can help me explain this. It has to do with HyperPLONK and hardware acceleration. So tell me a little bit the dilemma here.
+
+Justin Thaler (00:24:16):
+Great. Okay. So HyperPLONK is a new sum-check based SNARK for, I guess what people call PLONKish intermediate representation. It's kind of a generalization of circuits that has a nice combination of expressivity and now, you know, good backends for it, whether it's PLONK or HyperPLONK. And whereas PLONK is not based on the sum-check protocol, which is some, you know, like multi-round protocol, HyperPLONK is and there was a nice blog post by Ingonyama, a company focused on hardware sort of exploring issues like comparative issues in hardware. It is not even necessarily, you know, hardware specific, but just in implementations of the various protocols. so basically PLONK is a constant round protocol that you then apply Fiat-Shamir to, to make a non-interactive. So you, you get a, you know, SNARKs a non interactive thing yeah.
+
+(00:25:20):
+Fiat-Shamir ultimately, well, it's only constant round. So whereas the sum-check protocol is longer rhythmically many rounds in the context of, you know, the size of the circuit or what have you. So the key issue kind of raised was maybe there's kind of, the prover cannot start working on round two until it knows what message it needs to send in round one.
+
+Anna Rose (00:25:43):
+I see.
+
+Justin Thaler (00:25:44):
+So it was raising this as a potential bottleneck for when you apply Fiat-Shamir to many round protocols instead of like one, one or two round protocols essentially.
+
+Anna Rose (00:25:53):
+So it's basically like in the case of PLONK plus Fiat-Shamir hardware acceleration is possible because it's very consistent and the minute you use the sum-check, it becomes less consistent and therefore the hardware acceleration efforts would somehow be lost or does it even, like, does it undermine the performance if you try to optimize hardware?
+
+Justin Thaler (00:26:15):
+I think the question is always what is the bottleneck in the prover implementation? And if we're developing special purpose hardware to implement the prover, you have to be very aware of bottlenecks in hardware implementations in particular. Well, one nice thing about sum-check based techniques, I guess these are still the only techniques known that avoid FFTs for the prover anywhere. The FFTs come up fast for a transforms, they come up for the prover in for multiple reasons. Basically what one can be like if you're using FRI as your polynomial commitment scheme, the prover has to do FFTs to like evaluate a polynomial on many different points. But also PLONK, which doesn't necessarily use FRI as polynomial commitment scheme, it uses KZG, FFTs come up there too because of dividing large, large polynomials.
+
+(00:27:06):
+And if you use some check instead you can avoid those FFTs. So this blog post from Ingonyama was specifically focused on FFTs as a possible bottleneck versus sum-check as a possible bottleneck. Now, you know, asymptotically speaking FFTs are super linear time, it's like nlogn time and the sum-check prover can be implemented in linear time. So the question becomes like, well, what's the battle? You know, what's actually worse is like nlogn time in practice, actually worse than like, linear time, but you have like more rounds, you're replying Fiat-Shamir to, there was discussion about that, and then there was additional discussion because a lot of the projects that are, especially if they're heavily focused on recursive SNARK composition and proof aggregation, they kind of never apply a monolithic snark to very big circuits. Right. So they might like break a giant circuit up into many, many, many small circuits and
+
+Anna Rose (00:28:04):
+Then do recursion of them after the fact.
+
+Justin Thaler (00:28:06):
+Exactly and in that setting, you'll never apply an FFT to a vector that's particularly big. So these teams sort of, you know, have this view, which I think is quite reasonable. Although there are counterpoints to be made which I did try to convey my own, perspective of counterpoints which is; FFTs really only become like a bottleneck when things get really big and like maybe through recursion we'll just never have to apply them to really big things ever.
+
+Anna Rose (00:28:36):
+Hmm. You're not working in hardware right now, are you?
+
+Justin Thaler (00:28:39):
+Not, not actively, yeah. Years ago there was some work, which is something I mentioned on Twitter where on hardware implementations of sum-check based just actually interactive proofs and it was before, you know, they were used to make SNARKs. Through that work, I know what the bottlenecks, you know, for the prover were in hardware through that work, yeah.
+
+Anna Rose (00:28:59):
+I feel like though, I'm due to do a hardware one,
+
+Justin Thaler (00:29:03):
+It's a hot topic. Yeah. It'd be great to to hear more.
+
+Anna Rose (00:29:06):
+And I know that there's a number of teams that have actually pushed that forward, but one of the questions I've always had about this, and this kind of goes back, it's an interesting theme both through your tech, like creating educational material as well as investing in hardware acceleration, where it's like, how standardized are the techniques? How decided is the industry as to which of these strategies are they gonna focus on? And I know, I do realize like there are trade-offs, so some use cases might be better suited for some of these things, but if you are investing in hardware, which starts to become like a pretty significant cost, are we as an industry or as a field ready for that? Because, you know once you start stamping these things out, like, they're harder to adjust, I guess.
+
+Justin Thaler (00:29:52):
+Right? I mean, yeah. I'm happy to you know, share my own personal thoughts, which are not necessarily, you know, that informed.
+
+Anna Rose (00:29:59):
+Yeah, sure.
+
+Justin Thaler (00:30:00):
+You know, at the hardware level
+
+Anna Rose (00:30:01):
+I'll do a full episode eventually, so we'll get some other people to weigh into.
+
+Justin Thaler (00:30:05):
+So for the prover anyway like in every SNARK like out there, you know, there's only a handful of bottlenecks typically, right. Which is either a multi exponentiation, an FFT, Merkle hashing or field operations that are not coming from an FFT. Okay. So, which is the bottleneck depends on, you know, which polynomial IOP you're using, which polynomial scheme you're using, and how big is the circuit you're dealing with. The fact that there's such a small handful of bottlenecks, like, sounds good. Like let's just design hardware, like to handle each of these things
+
+Anna Rose (00:30:40):
+All of them
+
+Justin Thaler (00:30:40):
+Yeah but I do think there are still significant moving pieces in terms of like what, what hash functions we're gonna use to build these Merkle trees. What fields we're gonna work over what cryptographic groups we're gonna use and in order to build hardware for this stuff, presumably you have to fix a choice of that. So I do worry that if these choices are still in flux, you know, as particularly with ASICs, right? Which have my understanding is it takes a while to build them and like, you know, things can shift under your feet as you're building them, that is my personal sort of high level take on the space at the moment.
+
+Anna Rose (00:31:19):
+Interesting. Did you dive into hash functions in the book?
+
+Justin Thaler (00:31:22):
+No, so there is discussion in various places of SNARK friendly hash functions. And I mean, but basically just saying, hey, like
+
+Anna Rose (00:31:31):
+There's a black box. It, it exists.
+
+Justin Thaler (00:31:33):
+Yeah.
+
+Anna Rose (00:31:33):
+Okay, okay
+
+Justin Thaler (00:31:34):
+Right. You know, there are hash functions that we believe are, you know, collision resistant or act like a random oracle and that, you know, turn into smaller circuits than you know, your standard off the shelf ones.
+
+Anna Rose (00:31:45):
+Cool. In what you're doing, do you have a focus on, this is actually just a general backstory, or this is a question more on your backstory, but like, have you had a focus on security? Has that come up for you? Or do you feel like that's sort of a separate part of this ecosystem from what you're working on?
+
+Justin Thaler (00:32:02):
+Yeah, I mean, so security is intrinsically connected to performance because that, you know, the tension between the two, I mean, they're like essentially always a tension to some degree. That tension, different projects might make different choices about where to where to be in that spectrum. So I have started looking at sort of security more carefully, concrete security in particular. I got into this because I was preparing a survey talk on, on rollups this summer I was visiting so I was, I was looking at what various projects are doing today, and it was a really interesting learning experience, that kind of led me both to, there's some interesting questions there and also just important conversations I think for the community to have so I started trying to you know, bring these issues up into conversation. So I can elaborate on that a bit if you'd like.
+
+Anna Rose (00:32:57):
+Go for it. Yeah, tell me about that.
+
+Justin Thaler (00:32:59):
+So, you know, there, I guess these issues today are particularly prominent in SNARKs that use FRI. Like that's the deploy, those are the deployed SNARKs where this tension between performance and security is particularly strong. And so it's natural then that that's where you might see projects, you know, kind of choosing to be a little more aggressive on the performance side of things.
+
+Anna Rose (00:33:23):
+And when you say tension, do you mean like kind of they're on either side of a spectrum? Like is it sort of you are going to get great performance but less great security or vice versa? Is that what you mean?
+
+Justin Thaler (00:33:36):
+Yeah, the simplest way of thinking about things is just there, there's a direct tension between verification costs and security level. So I'll elaborate a little bit on, there's actually kind of a three-dimensional spectrum between like prover time and verification costs and security level. But roughly speaking like the bigger the proof, the more bits of security you have, that is the sort of more computational efforts should be required to kind of produce a convincing proof of a false statement. And, you know, in practice, you know, verification costs translate to gas costs. You know, if these things are deployed on Ethereum, say, you know, so like every blockchain node in the world has to like run the SNARK verifier. So, you know, you can reduce those gas costs by sort of getting more aggressive with the security.
+
+(00:34:23):
+And, you know, there are ways to kind of push verifier costs under the prover, whether it's through recursion or something called the FRI blow up factor is another way you could do it. But basically if you kind of fix the, you know, how you're treating the prover there, you know, it's the tension is directly between verification costs and security. So when I, when I kind of sat down to look at what the various projects were doing, there were two things that I was a little bit surprised by. So one is like, not at all project specific, which is, it's just really hard to figure out what, you know, a lot of the projects are doing.
+
+Anna Rose (00:34:58):
+Ooh just like documentation and how clear they are with like, open sourcing some of the stuff.
+
+Justin Thaler (00:35:04):
+Yeah and you know, it also, this makes sense, like the focus on building things and you know, as long as you know, they're comfortable, they're not gonna get owned or something like maybe that's enough for today. But yeah so, you know, it turns out like a lot of these things are kind of, the specs are either academic papers or just the code you know, whether the solidity contract or something and maybe that code is accompanied by like a short white paper that's short on details or something. And then with, with FRI based SNARKs in particular, how secure they are is like not necessarily hard coded into the code, it's kind of a parameter that's like passed to the smart contract or something. So that means you might have to actually go like on-chain to actually just see what is the security level.
+
+(00:35:54):
+So there is like a whole lot of this I was discovering. And then a another thing I I discovered was just like talking to people in the ecosystem who like work on this stuff is just not that many people are aware of what a lot of the projects are doing and in some cases actually had like the, you know, were mistaken about what other projects were doing and interesting. And just, you know, general, like the security properties of FRI are like somewhat complicated to describe. So you kind of put all this together and I thought that there should be some discussion about that. And you know, like the way I thought going into this, you know, things were supposed to happen is, you know, these verifiers, like they live on-chain, anyone can inspect them and that's why we have confidence. Like we don't, the whole point is like, you don't want to have to trust anyone including like whoever wrote that smart contract. Right? Yeah. So I thought, I kind of thought that there, it should be well known what these smart contracts are doing and like how secure are they? And it seemed basically just to not be, so I thought it was important to have a discussion that what happened in the open.
+
+Anna Rose (00:36:56):
+Are you talking about a lot of these systems that are still sort of on Testnet, are they start, like, are they only partially rolled out? Could that be one of the reasons why it's not as clear or would that be maybe something that the teams would, would say are the reasons?
+
+Justin Thaler (00:37:10):
+Yeah. So a lot of these FRI based projects are still in Testnet as my understanding. So like Plonky2, you know, RISC Zero, I know that you go to their website and you know, there's like no guarantees yet that
+
+Anna Rose (00:37:23):
+Yeah.
+
+Justin Thaler (00:37:23):
+You know, the things haven't been audited or whatever. So Starkware is deployed. So that was one that I was, you know able to look on-chain at. And they have posted a whole bunch of materials and like a GitHub, which was very helpful and things like that. But when I saw the security level that was being used in Starkware's deployed systems I didn't feel it was high enough, so I sort of tried to explain why I felt that way and more generally just explain like what's happening.
+
+(00:37:51):
+Because again, it's like complicated to just describe all the intricacies they recently announced on Twitter that they, the next time they update the system, they'll move up from 80 bits to 96 bits of security, which I think is great. So there was also some, some discussion that I saw on Twitter between Starkware wear and Matt Green, who's a faculty at Hopkins. There was discussion about training wheels for the rollups. So this is, I guess there, there's a Vitalik blog post that describes kind of levels of training wheels and I think the upshot is that all of the rollups that are deployed today are still on training wheels and what that essentially means is they're, they're permissioned.
+
+Anna Rose (00:38:35):
+Yeah.
+
+Justin Thaler (00:38:36):
+So only the rollup provider or essentially can update the state of the system.
+
+(00:38:43):
+So may maybe anyone can submit proofs, but the proofs basically don't do anything because only the rollup provider can update the state of the system. And, you know, there might be, you know, with STARKx, maybe there's you know, they've moved one stage up into trading wheels and I guess the point I wanted that might be worth raising just the following, so if things are permissioned, it might be more reasonable to have a security level whereby the basically proofs can be forged. You know, my main concern is in terms of raising this conversation is to make sure that the security level is high enough that either it's infeasible to forge proofs or at least it would be like more expensive than what it would cost to just attack the L1. You know, to acquire like enough stake just like attack Ethereum's proof-of-stake directly or something.
+
+(00:39:32):
+And I don't think 80 bits is at that level.
+
+Anna Rose (00:39:36):
+Okay.
+
+Justin Thaler (00:39:36):
+Which is why I was raising the issue and 80 bits by the way can mean multiple things. And so I've tried to explain exactly what it means in this context, even with the permissioning, if the rollup is really protected via permissioning. Okay. I still think it's important that proofs be un-forageable for two reasons. Okay. So one is maybe a slightly paranoid, but I think still worth worrying about, which is if if the rollup provider's keys get compromised, then somebody can act as the rollup provider and advance the state of the system. And if the the proofs are forageable, then you know, they can, they can prove anything they want essentially. These keys must be hot because the rollup providers are posting proofs multiple times a day or whatever.
+
+(00:40:22):
+Right. So you know, it's not maybe that likely a compromise, but like in centralized exchanges, I guess like best practice is to make use of cold wallets, right? Exactly, because if something's hot, then you can't fully protect it from hacking, like ever. So I think even in permission settings while the training wheels are on, we still want these proofs to not be forageable.
+
+Anna Rose (00:40:43):
+Got it.
+
+Justin Thaler (00:40:44):
+Yeah. So one other comment I wanted to mak is just like, especially since FTX I think rollups have been correctly, you know, kind of contrasting themselves, you know, as to something like FTX as self custodial, and if the system is really protected by permissioning then, right? Like is it, you know, that you do have to trust the rollup provider not to forge proofs. Right. It's protected by the permissioning.
+
+Anna Rose (00:41:12):
+That's interesting. So here, I mean, in the original question it was about security and what I'm hearing here is there's like the two forms. One is like the actual proof creation, security when this is where you're saying like it could be forageable versus the permission or permissionlessness, the idea of a decentralized, it's often sequencer. It's like the bridge, the thing that connects the roll up to the actual main chain. If that's permissioned, then that is also like a security, it's a centralizing force that could potentially be a security issue. Is that correct?
+
+Justin Thaler (00:41:44):
+Yeah, so I, it's not the centralization of the sequencer that's critical. I think that's important for censorship resistance.
+
+Anna Rose (00:41:53):
+Okay.
+
+Justin Thaler (00:41:53):
+You know, so the sequencer kind of decides like what transactions get proved. So if it just like refuses to include Anna's transactions, then you can't and
+
+Anna Rose (00:42:01):
+Yeah
+
+Justin Thaler (00:42:03):
+Yeah. So this is about kind of centralization of proof submission which is, so it's protecting the state of the rollup from attackers. There are two ways to that you could do that. Okay. So one is to make the proofs unforgeable. So nobody can like, you know, act like Anna transferred her funds to me when she didn't or it can be protected by permissioning, which says like, well only the rollup provider can submit proofs. And as long as the rollup provider isn't trying to steal from its own customers or something like, it doesn't matter, and the training wheels mean it's permissioning.
+
+Anna Rose (00:42:43):
+Yeah. Yeah. Okay. So this, there's two kinds of permission and there's permission sequencers or like one sequencer that's centralized or the actual creation of the proofs plus the often like, paired with a transaction. I guess that's sort of what you're describing here. Or like, the thing is, aren't they usually like batches that are, then there's a proof attached to a batch? So like, could someone actually exclude or like change the actual transaction in the batch? I realize they all have different settings and maybe not all of them use this technique, but yeah.
+
+Justin Thaler (00:43:16):
+Yeah. So the, the proofs protect against somebody kind of putting a transaction in the batch that like never existed you know, basically you, you prove, you know, like a digital signature from Anna. So Anna must have really authorized this transaction. So they're protecting against like fake transactions, which is like how you can steal money, right. You say someone whereas a separate concern is censorship resistance which is not fake transactions, but just like refusing to put real transactions, you know, have them be processed.
+
+Anna Rose (00:43:52):
+I see. So the FTX comparison then would be something like, I mean, these bodies still have seemingly like quite a lot of power. So to compare themselves as like the antithesis of FTX is maybe a step too far at this stage, right? Like they're not there yet.
+
+Justin Thaler (00:44:08):
+There's a firm distinction I think between like 80 bits and a hundred bits. Right? Like the distinction is somewhere between that level forging proofs really becomes truly infeasible, you know, with like current known attacks.
+
+Anna Rose (00:44:23):
+Okay. So 96, this move that Starkware proposed, does that solve it?
+
+Justin Thaler (00:44:27):
+So, okay, so here's my personal take on like what is correct security level, I guess. 96 bits of security, you know the way FRI based projects tend to be using that means there are certain conjectures, they're basically assuming known attacks on FRI are optimal when they and, and you know, in order to succeed with probability close to one, you need to do like two of the 96 hash evaluations to find a committing proof of a false statement. Yeah, so somewhere between like two of the 80 and two of the 100 really that number of hash evaluations like truly becomes infeasible today. I was doing so like the Bitcoin network, according to my calculations, which hopefully I didn't mess up does like two of the 80 hashes every hour or so today. So just to give you a sense of what might be feasible and what isn't.
+
+(00:45:13):
+Now their hash function is not what's securing these FRI based SNARKs today, but yeah just with enough investment in ASICs or something, like we could do two of the 80 like every hour, you know, I mean, it's an insane investment in ASICs, but you get the idea. And so here's my take on security, right? Like the accepted cryptographic practice is really 128 bits is you know, so like SHA256, 256 means it's giving you 128 bits of security and you know, I don't think a 100 bits is attackable, but you know, like the, someone could come up with a better attack or you know, who knows. So I do think when projects choose the 100 bit level, you know, I'm not worried that they're going to be attacked today, but my personal take is they are still like not following standard cryptographic process or like practice and sort of just signaling that performance is like a priority over security.
+
+(00:46:10):
+I mean, is my personal take. So the main reason I raised this discussion is to ensure that the security is high enough that it's really you are inheriting the security of L1 by using the SNARK according to no attacks. But even at like a 100 bits, I'm not worried about the known attacks, but the, you know, II feel like kind of long term it might just be, you know, healthier for the ecosystem to kind of signal like a real focus on security rather than eeking out, like that last little bit of performance that you can eek out.
+
+Anna Rose (00:46:44):
+Hmm. It is tricky when you're the builder of these things, they're definitely like, you're the voice from the, it should be the proof, should be more secure. And there's probably others who are like, this thing's too slow. Make it fast. It has to go faster. Yeah okay or cheaper.
+
+Justin Thaler (00:47:01):
+Yeah, exactly. So I'm not out there building it, so it's very easy for me to say this stuff, but, you know I do find the messaging between like, you know, the performances is great and also like, you know we can always just get more GPUs and push the, the cost under the prover and like, they're almost costless, so don't worry about performance, is it just like a little bit of a discordance with you know, then having the security level, like a little bit aggressive. So anyway, there are are lots of roles to be played to keep the ecosystem healthy. So I'm happy to play one and the builders will play another. And, you know,
+
+Anna Rose (00:47:35):
+It's funny, I like Kobi and I actually just went on the Epicenter podcast as guests. I went to the other side. That was fun. But one of the questions that Frederica was asking us was about which of the rollups is best, which of the zk rollups is best? And like we were like, oh, we don't know. And I'm curious, now that you've done this research, would you have a preferred? Do you think there's one that is doing better?
+
+Justin Thaler (00:48:00):
+No, I don't have strong feelings on this. I think you know, there's a lot to rollups besides just like the SNARK being used a a lot and there's a lot of innovation happening on those like non SNARK related aspects of the rollup. Censorship resistance is like basically unrelated to, you know, security of the SNARK and the developers that are building on the L2, you know, like the community, all of these things are, are probably even more important than how performative the SNARK is. And like, I have expertise in one, like very, very narrow topic.
+
+Anna Rose (00:48:38):
+Yeah.
+
+Justin Thaler (00:48:38):
+So, no,
+
+Anna Rose (00:48:39):
+That's true.
+
+Justin Thaler (00:48:39):
+I don't have
+
+Anna Rose (00:48:39):
+That's true. Because there's like the tooling and the language and all of these things that would come along with it. That's cool. When making that decision. So I just want to bring it back to the study group. There has been a Thaler book club study group that's run twice now. There was one that started as mentioned right during in zk Hack 1, which was 2021 and I could see that running. I mean, I wasn't in it. So for me it's like I've been, you know, I see the chats, I know that there's meetings, but I know a few people who are part of that. grjte, for example, has like, we've done an interview about like how useful that first, she was part of the one that was like six people, the really small first one. And I know when there was an announcement to do a second one, there was a lot of interest in that. Tell me about the experience. Like you, I guess at some point discovered that people were doing this study group all about the work you had put together. So yeah. What was that like?
+
+Justin Thaler (00:49:34):
+So I think Thor reached out to me and told me about the study group pretty early on in the first one. So I think they basically just started over once I joined and even the second one I think, you know, a big crowd showed up for the very beginning, and then it's kind of down to like the same kind of, you know, six, seven person size again
+
+Anna Rose (00:49:57):
+But it's interesting who that six and seven person group is because those people tend to go on to like, you know, work in the industry quite quickly. So it's a cool exercise, I think, and, and seeing who goes through it.
+
+Justin Thaler (00:50:10):
+Yeah and this is, you know, I kind of wrote the book, the book was just like a series of brain dumps that kind of got improved over time. So it was kind of written for kind of for myself or something. So it's a certain level and yeah, I do think a a lot of people, you know, start reading it and are like, oh, I would benefit from you know, some less detailed reading first. And yeah. So the, those that have, have stuck with it I guess the fact that they've stuck with it means they've felt it was a useful resource and it is very detailed, so I would hope that then they'd be able to dive into building and so forth.
+
+Anna Rose (00:50:51):
+What did you get out of doing this? Like, why would you, because you were at a lot of the sessions, and what is it like to go through it with this group of people learning?
+
+Justin Thaler (00:51:01):
+Yeah, so it's a wonderful experience and I mean, it's selfish for me because it's just night and day how much I think the presentation has improved by just getting like, continuous feedback on like kind of what wasn't clear what could use, what people are interested in, you know, kind of more detail on whether it was clear or not. Yeah. The book would just not be anywhere close to as useful or sort of polished as it is today and still not very polished without that and it's also just enjoyable to interact with a group of people who are, you know, this intelligent and just excited about the material. It's really been a unique experience for me in that regard.
+
+Anna Rose (00:51:43):
+So do you think you might do another one? Because I know you're sort of getting to the end of the second one as far as I can see.
+
+Justin Thaler (00:51:50):
+No, I'll definitely do it. You know, I think I'll definitely do at least one more and, you know, unless I just get like way too busy for some reason, I'd be happy to literally just do this ad nauseum because again, I view the book as a living document and amazing. It'll just kind of keep getting better. I I hope, yeah.
+
+Anna Rose (00:52:06):
+I do wonder if this is like the new way to learn. A lot of the people learning with you are, I mean, they're on a Discord server. They're, some of them are anonymous, so it's like, it's really, it's not like a class. There's no barrier. There's no like, block people can join or leave. But yes, it's, it's really nice to see this happen and it's what the Thaler Study Club has done actually is inspire a number of other study clubs. We've been running one around the whiteboard series. We want to do a lot of these. There's, I mean, I know there's been talk of the Moon Math manual maybe having a study group as well. Have you seen that, by the way, did you ever have a look at the Moon Math manual?
+
+Justin Thaler (00:52:45):
+I haven't. So I definitely should. Which maybe that's, maybe that's exactly the thing to point people to as kind of a precursor.
+
+Anna Rose (00:52:53):
+Yeah. Well, I wanted to ask you the question that so many people ask when they join, for example, the ZK Hack Discord or like, first joining one of the events that we're doing, and that is, what should people know or do research on or read up on before they start to explore some of the ZK topics that you cover?
+
+Justin Thaler (00:53:14):
+I think that the only technical topics that are really required by some comfort with is finite fields and elliptic curve groups. And with elliptic curve groups, actually fairly recently based on latest feedback, I did try to put some self contained discussion of that in the book. But like, very brief. I think a lot of readers particularly engineers like, you know, don't feel like they understand something until they dive into the weeds and so, like with elliptic curve groups, like you really can largely black box them okay. And understand like just, you know, hand like a paragraph or two and like basically that, like a curve element is like to finite field elements and like that, you know, the base field and the scaler field are different things. And like, literally that's about it.
+
+(00:54:04):
+And that's what I try to put in the book. But I think people, you know, might feel more comfortable with a more in-depth analysis of that. And then finite field, you do really need to be comfortable with at least like, you know, what is like addition and multiplication, modular prime. Right and so for elliptic curve groups, there is a kind of a couple blog posts that I think are really great. There's like a gentle introduction and like an overview of BLS12-381, which is a pairing friendly curve that's very popular today and for fields there's like a really nice book, which is kind of in the spirit of mine. It's just kind of been online forever by Dan Boneh and Victor Shoup, and it has a nice appendix on finite fields. So that's what I've started the, the combination of you know, those three sources and they're nicely all online is what I started pointing people to.
+
+Anna Rose (00:54:51):
+Yeah, fantastic. I will for sure get these from you and put them in our show notes and maybe we can even pin them in the group or something so that people can easily find that. So I want to hear, given the work you've been now doing in this space for many years, what's exciting? Like, do you focus primarily on still the deep research or their use cases, maybe at a higher level that are starting to emerge that get you really excited?
+
+Justin Thaler (00:55:17):
+There is a lot of room for major performance progress still even after all these years of you know, significant effort devoted to it. Now I have a funny view. I think this goes back to the Twitter discussion recently of different perspectives based on projects using recursive composition very heavily versus maybe my own where I have not focused on recursive composition in my own work as a historical viewpoint on recursive composition. You know, this was, it was originally introduced almost as a way to take like a crappy SNARK and make it less crappy. It's like if the runtime of the prover is, you know, super linear in the size of the circuit, you now you don't want to apply it to a giant circuit. Right. Because you know, the cost for the prover just kind of get worse and worse and worse in a sense compared to just like evaluating the circuit.
+
+(00:56:11):
+So the idea is you break the computation down into like tiny circuits and, and just apply the SNARK to each tiny circuit. And from that point of view, I guess it seems clear that you know, there are two ways to make improvement even if you are gonna use recursion. So there's like the crappy SNARK, which I shouldn't call a crappy SNARK, but you know, so there's the base SNARK that you are going to kind of bootstrap recursively to handle bigger circuits. And then there's like how you actually do the recursion. And so I think even with recursive composition, there's room to improve the base SNARK. There's another perspective entirely, which is as soon as you decide that you're going to represent a computation as a circuit or you know, Air or PLONKish, what have you, you've kind of accepted immediately like 6 order magnitude like overhead for the prover compared to, if it was just going to check the witness directly, with like no proof of correctness or something.
+
+Anna Rose (00:57:11):
+Was this the blowup that STARKs experienced as well because they were using FRI?
+
+Justin Thaler (00:57:15):
+No, this is not FRI specific at all.
+
+Anna Rose (00:57:17):
+Okay.
+
+Justin Thaler (00:57:18):
+So I have a blog post for through a16z where I try to explain how I think of this which I don't think is a unique, you know, viewpoint. There's sort of two sources of overhead I call the frontend overhead and the backend overhead. The frontend overhead is like once you decide you're gonna use a circuit but forget about actually proving anything about the circuit. How much more expensive are things now? Like so how, how much more expensive is it to evaluate this circuit over some finite field gate by gate versus just like running a computer program to check the witness for validity. So I call that the frontend overhead. And then the backend overhead is like, how much more expensive is it to, for the prover to prove it knows the satisfying assignment to the circuit compared to just like evaluating the circuit.
+
+(00:57:57):
+And I think ballpark, like we have kind of both sources of overhead down to roughly, you know, very roughly like three orders of magnitude, but they multiply together. So now you have six orders of magnitude. Right, and yeah, like both sources of overhead, like are paralyzable away. So you can throw tons of GPUs at this. And I think this, you know, I hear a lot of you know, like six orders of magnitudes, no problem. We'll just have more GPUs and they're cheap and it's fine. Which is a reasonable perspective, but it's like very clear that like there are things people want to do where you just can't do that, you know? Yeah, exactly. So I remain optimistic, and I've been saying this for years without ever giving anyone like really compelling examples that we will just avoid circuits for applications people do really care about.
+
+(00:58:47):
+In the past I've given these things people really don't care about, like counting triangles in a graph or something where I knew how to do it. But one thing I think is like we already know how to do this and someone just has to build it, is when people evaluate neural networks today, when they train them, when they then do inference with the trained up network largely what they're doing, I'm told, is just repeated matrix small application and moreover like the, you can represent the matrices over fronted fields cause they're really dealing with small integers and they sort of naturally get turned into field elements. So we have special purpose SNARKs where you, you never see a circuit in them for this kind of computation. So I think this'll help to basically let like kind of the blockchain do learning, you know, learn in real time from data on-chain as more and more data gets on-chain and really the learning's happening off-chain and it's just getting proved to the blockchain that the learning is being done correctly.
+
+Anna Rose (00:59:39):
+What do you mean there that you throw out the circuit, the circuit of what, which part? If you're still dealing with some inputs, do you still have a circuit somewhere?
+
+Justin Thaler (00:59:48):
+Yeah, so the neural network itself tends to just be like, multiply some matrices, take the resulting product matrix and like apply a bunch of like what people call nonlinearities, you know, ReLU gates or something to them, and then like, do it again. So you just have these alternating like matrix multiplies ReLUs, repeated over and over again and we would still need to like handle those like, ReLU gates with by like kind of representing the rail operation as a circuit and applying, a general purpose SNARK to that. But with matrix multiply what'll happen is like the prover in its own head will just like you know, compute the product matrix. It doesn't matter how it does it? And then with like a low order amount of extra work, it'll actually prove that it has like the correct product in its head.
+
+(01:00:37):
+Whereas like the traditional way to do this most naively would literally be to like represent the matrix multiply operation as a circuit. And when you apply a SNARK to that circuit, the prover is proving not just that it knows the product, but that it computed it in a specific way.
+
+Anna Rose (01:00:54):
+I see.
+
+Justin Thaler (01:00:54):
+The next step would be to apply something called Freivalds' algorithm, which is like just exploiting the fact that like if I told you what the product matrix was and I actually sent that to you, you could actually check that it's correct faster than computing it from scratch. But if you use that in a SNARKs, the prover would still have to cryptographically commit to this product matrix, which itself could blow away this whole goal of having kind of a low order runtime overhead for the prover to compute the proof. So with these special purpose SNARKs I'm referring to, you don't even have to have the prover cryptographically commit to these product matrices.
+
+Anna Rose (01:01:30):
+Interesting. This, I guess, all falls under the category that people might be starting to hear about, which is like ZK ML
+
+Justin Thaler (01:01:36):
+Yeah. So the application domain would be ZK ML in this situation.
+
+Anna Rose (01:01:41):
+Interesting.
+
+Justin Thaler (01:01:41):
+Yeah.
+
+Anna Rose (01:01:42):
+Is that just generally a field that you're kind of excited about?
+
+Justin Thaler (01:01:45):
+It's something where I, kind of even I as like not a particularly application-focused researcher can see the potential of and where I think the special purpose techniques can really make a dramatic difference in, and I think we'll see some more examples of this soon. Which you know, I've kind of just been saying with with no justification for years like we should be aiming to like, get rid of the circuits completely and now I'm hoping we're, we might actually achieve that sooner rather than later.
+
+Anna Rose (01:02:17):
+This might be a question more for the, like the episode we do, looking more into that, but do you see it as the combination of these techniques? Does it help like you just described the blockchain learn, or does it help with the models and the use of the models? Like is it helping both sides or is it more like we're using neural networks to like, do something into the blockchain?
+
+Justin Thaler (01:02:44):
+Yeah I think it's it is both. So, you know, there's also situations where people want to, a bunch of different entities want to learn from their combined data, but you know, they're not willing to reveal their data to the other entities. And, you know, maybe they're willing to, you know, allow the output of the learning process to be revealed, but not the raw data or something so these techniques could definitely help allow that to happen.
+
+Anna Rose (01:03:09):
+The privacy part then.
+
+Justin Thaler (01:03:10):
+Yeah, exactly.
+
+Anna Rose (01:03:11):
+Okay.
+
+Justin Thaler (01:03:12):
+You know, allowing like these smart contracts to learn from on-chain data, like, and forever, like more data goes on-chain and they update you know, their classifier or something like that doesn't necessarily require any privacy. But then you can bring in privacy too. And this can help like kind of protect, let people learn from training data without revealing it to the learner or something like that.
+
+Anna Rose (01:03:33):
+Interesting.
+
+Justin Thaler (01:03:34):
+The other learners.
+
+Anna Rose (01:03:35):
+Yeah,
+
+Justin Thaler (01:03:36):
+It is true of course, that like, you know what the training algorithm does need to know the data, right? So someone has to know the data, right. Anyway, unless you start using things like FHE, which is way more expensive than SNARK today and stuff anyway
+
+Anna Rose (01:03:49):
+Cool. So I want to hear a little bit about your most recent work. I'm so happy to hear study group's going to happen again. So people could definitely find you there if they want to learn with you, but what are you working on at the same time? And, and yeah, what sort of generally are you focused on?
+
+Justin Thaler (01:04:05):
+Yeah, so I guess what one thing is finding more of these applications, these special purpose SNARKs that don't use circuits at all might be amenable for just kind of night and day performance improvements. Another thing is kind of moving again to, if you did have a circuit, but the circuit was really big and you weren't kind of breaking it into small pieces. I've sort of been working for a while on what we call linear time SNARKs. And this basically means we allow the prover to do like Merkle hashing and field operations, but we don't consider linear time, like multi exponenations or FFTs. And so there's been, I mentioned some of these systems before, like Breakdown, Orion, now HyperPLONK also has a part of the paper that's getting into the action.
+
+(01:04:49):
+And I think this is prime for more, more progress to kind of they already have a good prover to the goal now is really to get the verifier cost lower. And then I'm also interested in like, actually, you know, I've now kind of raised this issue of like how much security is like really enough. So I think it's worth actually like implementing the known attacks and seeing exactly what they cost so I can make much more precise statements than like, oh, this is how many hashes the Bitcoin network does. Oh, this is what some researcher did, you know, three years ago and reported in a paper. So I think that's important, like scientifically and just as projects sort of decide where they want to be in this trade off curve between security and performance. So the summary of things I'm interested in now.
+
+Anna Rose (01:05:34):
+Cool. You mentioned earlier sort of the work you had done with a16z. Tell me a little bit about your involvement with them. What's next there?
+
+Justin Thaler (01:05:41):
+Yeah, so starting next week I'll be joining their crypto research group full-time as a research partner and I'm really excited about that. It's a wonderful group of people and a wonderful collection of companies to interact with, just kind of be in the center of everything, you know, especially over the summers the research group has been bringing in tons of visitors. So and that's how I started with them last summer. It's just a really exciting environment. So I'm, I'm really psyched to start full-time next week.
+
+Anna Rose (01:06:10):
+Nice. Justin, thanks so much for coming on the show and it was great to meet you and get to hear more about like, the work you've been doing. It's been really fun seeing that group kind of active and you in it. But yeah, it's been great to meet.
+
+Justin Thaler (01:06:22):
+Yeah, you too, Anna. Yeah, thanks so much for having me. It's great talking to you.
+
+Anna Rose (01:06:25):
+I want to say a big thank you to the podcast team, Henrik, Rachel, Adam, and Tanya. And to our listeners, thanks for listening.
+

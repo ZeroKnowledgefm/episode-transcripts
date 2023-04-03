@@ -1,0 +1,615 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week, Guillermo and I chat with Brian Retford and Jeremy Bruestle from Risc0. We talk about their previous working cloud and how ZK offered unique solutions to longstanding scaling problems. We cover topics like RISC-V, building VMs, and talk about how Risc0 aims to build a system that could support a robust decentralized public cloud. But before we start in, if you haven't yet, be sure to check out the ZK Whiteboard sessions. It's produced by ZK Hack and Powered by Polygon. This is a series of educational videos that will help you get onboarded into the concepts and terms that we talk about all the time. On the ZK front, it's a great place to start learning about ZK Tech. We also have a study group going right now focused on the ZK Whiteboard sessions, so be sure to check that out over on the ZK Hack Discord. Also, keep your eye out for the upcoming ZK Hack #3. We are returning with our virtual multi-week event. Once again, on November 22nd, there will be workshops and puzzle hacking competitions. Keep an eye out on Twitter and in Discord for more information. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:30):
+Today's episode is sponsored by Mina Protocol. If you're a developer looking to get hands-on experience building zero knowledge applications, then you should apply for Mina's zkApp Beta tester's leaderboard. Participants will get access to test challenges where you can learn to build zkApps on Mina for a chance to rank on the leaderboard against other participants. And the top participants will have the opportunity to be considered for a grant. Mina zkApps are written in type scripts, so developers can easily get started without learning a custom programming language like other ZK protocols. Learn more about the zkApp, beta tester's leaderboard, and how you can start building zkApps by heading to minaprotocol.com/zkpodcast. That's minaprotocol.com/zkpodcast. So thanks again, Mina Protocol. Now here is Anna and Guillermo's interview with Risc0.
+
+Anna Rose (00:02:20):
+Today, Guillermo and I are here with the guys from Risc0. Welcome to the show, Brian Retford and Jeremy Bruestle.
+
+Brian Retford (00:02:26):
+Thanks, super glad to be here.
+
+Jeremy Bruestle (00:02:28):
+Yeah, it's wonderful to do this conversation.
+
+Anna Rose (00:02:32):
+Cool. A quick note ZKV and myself personally are investors in Risc0
+
+Guillermo Angeris (00:02:37):
+And I guess Bain Capital Crypto is as well.
+
+Anna Rose (00:02:40):
+Yeah. Obviously, we are never giving financial advice on these shows, it goes without saying, but we thought we just let you know that before we kick off. So, to start this off, I think it would be great to meet Brian and Jeremy. Tell us a little bit about your journey to working in ZK and in blockchain in general.
+
+Jeremy Bruestle (00:03:00):
+Blockchain is fairly new for me, my interest in ZK originally comes from the sort of more mathematical side. My background has been in, I mean, I've been interested in computer security and cryptography for as far back as it goes. Probably the first notable thing I did was I wrote AirSnort, which was a program that broke web encryption many, many moons ago. If anyone still remembers web, it was the old wifi protocol thing and I'm really fundamentally interested in sort of following new mathematics and sort of emerging research and trying to figure out where you could potentially commercialize that. Most of my startups historically have all been in that sort of arena where there's some sort of new, theoretically interesting thing, and then you figure out how to apply it. I've been following ZK for about seven or eight years since I first discovered the PCP theorem, probabilistically checkable proofs.
+
+(00:04:04):
+And when I realized that it was possible to check correct execution of programs in constant time, regardless of how long they ran, I was like, wait a second this like completely changes the landscape in terms of scalability of distributed computing and all of these things, right? But at the time, it was not a practically useful technology, right? Everything was just way too slow. So I continued to follow the research on it and the way that I do that, because I love math, but I'm not a mathematician. I'm not really great at writing proofs. You know, I'm not an academic. and as a result of the way that I read math is I read the papers and then I try to implement the code and so I had been, you know, sort of in my, you know, copious spare time between startups and, you know, other things you know, taking a little bit of time to implement some of these ideas from the various papers I was reading and then, you know, at some point realized that it was, we were now at the point where this stuff was about to become practically useful, at which point you know, I think I started to try to pitch everyone that I knew about this, you know, oncoming future of you know, sort of zero knowledge proofs in how they would change the world. So I think that's when I started to try to talk Brian's ear off about it as well. So.
+
+Anna Rose (00:05:25):
+Cool. What era is this exactly? What time frame?
+
+Jeremy Bruestle (00:05:28):
+Well, so I think the, when did I start talking to you Retford?
+
+Brian Retford (00:05:32):
+Two years ago. I think this is two years ago. We were on this like road trip to Oregon.
+
+Guillermo Angeris (00:05:38):
+Wait, you were on a road trip to Oregon?
+
+Brian Retford (00:05:41):
+Yeah, well, Intel's offices are down there, so
+
+Guillermo Angeris (00:05:44):
+Oh, got it, got it, got it.
+
+Brian Retford (00:05:45):
+So there's this pattern where Jeremy gets gets involved in or interested in things and then starts talking people's ears off about them. And that's actually, you know, how we started our first startup 20 years ago, which was doing decentralized wireless mesh networking over 80211A and B. It was, and eventually G that kind of worked. That company eventually sold to Nokia long after we we ditched it and then I went off and worked at Google for seven years where I was building out the Google Cloud platforms pricing, billing, and metering systems which actually feeds into my interest in this space. So yeah,
+
+Anna Rose (00:06:26):
+What's the connection there?
+
+Brian Retford (00:06:27):
+The connection is that inside Google you would see a lot of projects and products and product managers all trying to figure out features for their Cloud products and seeing features ship or not ship. And the gating factor was like, can we make 95% margins on it or not? And so I think there's this huge barrier to innovation in this space that that really comes from the sort of centralized control over what Cloud products actually ship and which ones don't and so you know, after Jeremy convinced me that we could use zk to, to really, you know, achieve Cloud scale decentralized computing, it was hard to look away.
+
+Anna Rose (00:07:08):
+Wow. Well, I wanna get into that. I wanna get into that vision. Is there anything else sort of in the lead up to forming Risc0 that you think, like, you sort of mentioned some companies, some startups.
+
+Jeremy Bruestle (00:07:19):
+So one thing that's worth noting is me and Retford have known each other for a long, long time. We met through the Seattle sort of hacking scene as well as some of the other folks in the company. And we've done multiple startups together prior to you know, this, we worked at a company called Vertex AI, which basically built a tenser compiler that allowed you to accelerate various AI workflows, especially on different custom chips, which is why we ended up getting acquired by Intel so I think that the, the thing to note is that we've done multiple companies together. We've known each other for a long, long time, and the, you know, but that we're sort of new to this particular realm. Although I've also been following, to be honest, if we've been following, you know, the state of cryptocurrencies for a long time. I mean, I read Satoshi's paper when it came out, and my thought was, wow, what a brilliant solution to the distributed consensus problem, but it's only gonna do four transactions per second ever because it doesn't scale. So who would ever use this thing which was clearly not correct but, you know
+
+Brian Retford (00:08:28):
+When Jeremy, you know, talked me into doing this company was like, Really? We're gonna do a blockchain company? I mean, I think cryptocurrency is cool, you know, I've used it for various things at, you know, in the past but
+
+Anna Rose (00:08:40):
+Was this prime, this was like bear market a little bit. It was like 2020. Is this what we're talking about?
+
+Brian Retford (00:08:45):
+Maybe it was bear market. I mean, at the time, yes. But I think by the time we really started talking about making a company, it was, it was the bull market
+
+Anna Rose (00:08:53):
+Really. Okay.
+
+Brian Retford (00:08:54):
+Coming up.
+
+Anna Rose (00:08:55):
+Did you, but did you guys have this sense of like, crypto as, like, did you have any concerns about like, the scams and the things that had made headlines?
+
+Brian Retford (00:09:04):
+I mean, I think I did only from a is this a sustainable business model? Is this space going to, you know, is this going to eventually be something that doesn't dominate those, the sort of headlines in that way? But I also think, you know, I bought lots of NFTs prior to this. My friend, one of my close friends was actually one of the pioneers of AI art and was an early sort of NFT person on Tezos. So I always saw the value and I kind of adored a bit of the hype around, or like mainstream media dunking on crypto constantly. I mean, it's some kind of an easy target so yeah, I was a little worried about it, but I think the more I dug into it, the more I realized that, you know, I think a lot of the most interesting things in computer science are going on in this space right now.
+
+Anna Rose (00:09:48):
+Did you think, was it really the ZK part that dragged you in though? Because like you had known, like you said, Jeremy, you've known about blockchain for a long time. Like what was it, what's the switch there?
+
+Jeremy Bruestle (00:09:59):
+So for me, like, I've always loved distributed systems and I've always believed in decentralization and, you know, I mean, our first company was really a wireless mesh networking company, and it used a lot of it, it was a very heavily focused on decentralizing routing and communications right. And I always wanted to really love, you know, sort of cryptocurrencies and not so much the currency side, but some of the more interesting things like smart contracts and what you could do with Ethereum. But like to me, there was obviously this issue, which is like, if I wanted to build Reddit on top of, you know, one of these systems, it was, it was never feasible, right? Because there's always this idea that the, because they don't scale. If you have a lot of transactions, the cost per transaction just goes up and, you know, no one's gonna pay $50 of gas to up vote on Reddit. Right. It's just not reasonable and so I like the idea in concept, but it wasn't until sort of this realization that Zero Knowledge could help pave the way to, you know, I think one of the things we like to say is transactions too cheap to meter, right? This idea that we could actually build really, you know, sort of Cloud scale distributed systems on top of these that I got really excited about the space. so I'd always been interested in it from an intellectual standpoint, but, you know, at that level
+
+Brian Retford (00:11:18):
+Yeah and I think ZK once we started digging into it, so, you know, I think between sort of that road trip and, and Jeremy like, I mean, I didn't even believe this was possible and he was telling me about it. My mind was just blown for like a month and like, somebody's gonna figure out something with the math, but then once you dig into the math, you're like, No, this seems like it's not that hard to understand, like at a conceptual level. And it does seem like lots of computer science would be broken if this is broken. So
+
+Anna Rose (00:11:42):
+What was the starting point? ZK wise like, what was the paper or like project that first dragged you in? Do you remember?
+
+Jeremy Bruestle (00:11:52):
+So, so for me, mean, I think it was, well, so originally it was just discovering that the sort of PCP theorem was in fact true, although not necessarily useful but then I think the one that really got me excited initially was the cycles of elliptic curves, which was the sort of first recursion in zero knowledge proof systems. Because to me, recursion is one of the key components that makes scaling possible. So I actually implemented that whole thing but the recursion time was like, I don't know, a minute and a half or something on the implementation I had, and I was like, too slow, right? And the implementation was pretty efficient as well. So I basically continued to follow it in a, until the DeFi paper was the first moment where I was like, okay, this is starting to get to the point where it's really doable and I started working on implementations of that and yeah, I think it was what I got to, I got a working recursion for a simpler system than the current proof system we have right now. That was down to 15 seconds, and I could see how I could get it down below one second. And then I was like, okay, this is, this is super cool right?
+
+Brian Retford (00:12:58):
+This is actually when Jeremy started talking to people about it, he kind of like, didn't mention he was doing any of this until he's like, explains the whole thing. He's like, and also you can verify proofs inside another proof. I'm like, so can you think about it? And you're like, oh, okay. This has insane implications. Just truly insane.
+
+Guillermo Angeris (00:13:14):
+So here, here's a quick question for you, right? Because like, you know, now let's shift maybe a little bit more toward zero, but I'm actually curious, it's like a wild idea, right? Like to me, like when you guys first talk to us, like when you mention it, it's like the obvious thing to do. It's like, hey, we have, we can build circuits, right? What is a thing that is very cool to build with circuits? The whole concept is wild, right? Like, you have these circuits now, you can like build things with them, you can prove things with them and this is like very interesting kind of theoretically speaking because like, sure, I can like make a thing that you want to convince me of and like, fine, like you can convince me of it and like this very nice short proof.
+
+(00:13:55):
+Okay. But the jump from that to being like, hey, what is a cool thing we can build the circuits that isn't just like, you know, a calculator or something. It's a processor, right? And then be like, oh wait, we can like efficiently verify the entire exist, like, you know, an entire program trace on a specific processor by just like, you know, instead of building the processor on like an FPGA or like a real circuit, you build it in this like zero knowledge circuit. Like where the hell did that idea come from? Because like at the time, you know, ZK VMs were kind of maybe starting to be a thing, but people who hadn't really talked about it and like it was known you could do this, but it's kind of a logical leap. So
+
+Jeremy Bruestle (00:14:35):
+Yeah, it was, so I started, it was basically because when I tried to explain how one would go about writing a program, no one could understand what the earth I was talking it was, it basically, it was like, oh, an arithmatic circuit. Okay, wait, so it's like a circuit, but it's in a finite field. Right? You know, I have a lot of friends who are very smart programmer hacker types, right? And I, as I tried to explain, oh, it's turning complete, you can do, you know, everyone was like, that thing sounds impossible to program.
+
+Brian Retford (00:15:05):
+Yea and I think the, the initial versions too, we were, cause our background at like Vertex AI and the company that Intel acquired was building out DSLs for machine learning. So we're like, we'll just build a DSL and use LIR to compile these circuits because this is a pattern we know and understand and I don't know, we hacked on, you hacked on that for a while, but at some point,
+
+Jeremy Bruestle (00:15:25):
+I think it was, I think it might have been Retford who came up with the ideas like, well, what if we just use an existing like ISA and I can't remember cause we were all hanging out together. I think it was Retford that actually was the one who came up with that. And then, and then basically once that idea popped into our heads, the real question then was, is that actually feasible? And if so, what would be the architecture to use? Right? So we looked at like web assembly, we looked at MIPS, we looked at all kinds of different things. And with the, with this sort of question of how small of a circuit can you build and still run something that's an existing process because you know, we did a lot of compiler work. Our previous company was a compiler company and we know how hard compiler tool chains are and how hard language adoption is and so this idea that, you know, you would just build an entire functional compiler tool chain and a new language and the whole nine yards and get adoption, that's like a huge amount of engineering. On the other hand, if you can build a circuit that is able to run something that already exists, then all that upper part of the stack you get for free. Right?
+
+Brian Retford (00:16:28):
+I say not just the upper part of the stack too, but the entire ecosystem of libraries and existing work that all the other developers in the world have done over the, you know, course of time.
+
+Jeremy Bruestle (00:16:37):
+I was gonna say, when you were just talking recently about, you know this sort of example of using, doing image cropping using you know, zero knowledge proofs and from, you know, Dan Boneh and one of the thoughts was, well actually inside the your risk, you know, zero ZK VM, we could decode a GIF and then crop an image and then re-encode it to a JPEG or whatever because I could just import the, you know, libraries for doing that you know, directly because it's an already existing language. Right?
+
+Guillermo Angeris (00:17:08):
+Right. I remember like a year ago, like you came up to us and you were like, hey, what if we just like did RISC-V, you know, like one of the restricted ISAs. Sorry, say what an ISA means, like an instruction set construction set. What does the A stand for? Do you know?
+
+Jeremy Bruestle (00:17:23):
+Architecture.
+
+Guillermo Angeris (00:17:24):
+Architecture. It is architecture. Okay you know, as like, what if we just like did this and then like had all of RISC-V in other words, all of LVM which is like this thing that you can comp-, that everything compiles to including like RUST, C, C++ anything you want. So you can compile everything down to LVM and then compile LVM down to like, you know, this like micro like micro-architecture, I guess this like RISC architecture. Right? And then just be like, oh yeah, yeah, cool. Like now we just like, can use everything you want on this thing, but also it's zero knowledge because like, that's like a thing you can just build in zero knowledge. It's just like yet another circuit. Right and I was like, wait, why the hell did no one think of this? This is like insane.
+
+Brian Retford (00:18:02):
+Well, Eli, the actually, yeah there was a tweet where Eli who's amazing and, you know, we're obviously huge fans of Eli Ben-Sasson, the inventor of STARKs you know, somebody asked him like, why did you invent Cairo? Why didn't you just, you know use MIPS or something? He's like, oh, well that's not gonna be possible for at least five years or something so
+
+(00:18:23):
+So I think that there's just, when you, if you, there's this sort of like, you know, if you start building something in a nation space, it's pretty easy to kind of get stuck in thought holes. So I think we just, you know, we effectively just had a second, we were advantage and we were just kind of already primed to think about the world this way.
+
+Anna Rose (00:18:38):
+One of the questions I did have, I wanted to ask was about the name Risc0. So Guillermo, you just mentioned RISC-V usually spelt RISC-V. I'm guessing it's RISC-0 knowledge. Is that where that comes from?
+
+Brian Retford (00:18:54):
+Yeah.
+
+Anna Rose (00:18:55):
+Very nice.
+
+Brian Retford (00:18:55):
+You know, I'm good at like one thing in life and it's making up really stupid things like that.
+
+Guillermo Angeris (00:19:00):
+This is a great name though. This is like, honestly like, probably one of the best. Like, like just, it's just such a good reference. It's just, it's really good. It's like, it's perfect and like, people are like
+
+Brian Retford (00:19:12):
+It's quite polarizing. It's quite polarizing.
+
+Guillermo Angeris (00:19:15):
+Really? No way.
+
+Brian Retford (00:19:16):
+The, one of the earliest people I pitched on it was our product manager from Intel, and he was like, that is the stupidest name. You have to change it.
+
+Anna Rose (00:19:21):
+Oh, okay. And wait, you just defined RISC-V, RISC five but I actually don't know anything about this. Can we actually say what that is?
+
+Brian Retford (00:19:32):
+It's actually why, Talk about why we chose it, Jeremy.
+
+Jeremy Bruestle (00:19:35):
+Yeah. So basically RISC stands for Reduced Instruction Set Computing and this is this idea you know early microprocessors there was a question of should you make the instructions for the processor complex and do lots of things, or should you try to boil them down to the smallest possible set of instructions? The most simple way to represent a program you end up having to run more instructions, but the processor becomes much simpler to build. You can run it in higher clock speeds,
+
+Brian Retford (00:20:02):
+And your compiler has to be smarter.
+
+Jeremy Bruestle (00:20:04):
+Right. So, so it's basically that, that's RISC-V is a very modern new RISC instruction set that's learned from all of the previous ones. And so it's like super minimal and very capable and well designed and so when we looked at it, it was definitely by far the sort of easiest of the existing instruction sets or VMs out there that we could implement. Right, right. You know?
+
+Brian Retford (00:20:28):
+Yeah and it also has no IP encumbrances. So X86 is the most notorious CISC or complicated or complex. I'm not even sure what the C stands for anymore. So, you know, implementing X86 would probably be harder than building a ZK VM. Maybe, maybe not. Jeremy would know. But you know, then if you're not doing that, you're basically looking at, you know, ARM or MIPS and there's a whole bunch of other ones that maybe you could think about. But ARM has IP encumbrance and MIPS used to until very recently but also is a bit more complex. But RISC-V also comes with a bunch of bonus features. In addition to being open source, it has complete battery of conformance tests so we know that our processor implements the RISC-V specification because, well, at least in so far as the tests capture that. But on top of that, they actually have a formal model for, for what the RISC-V chips look like. So in the kind of formal methods work we're doing, at some point we'll be able to, you know, really speak very confidently about the nature of the system that we're building.
+
+Anna Rose (00:21:33):
+What exactly now are you building then? Like, are you building a ZK VM where you can run something like RISC on it? I don't know if that's how you're supposed to say that at all, or is it, is that?
+
+Brian Retford (00:21:46):
+That's exactly what happens. So like if a programmer writes, you know, like a Sudoku game or Mao the card game, I know some people are trying to do that in Rust or something and just compiles it, then it runs on top of this VM just like a ZK EVM might run solidity bite code, this runs RISC-V code. So any V, C, C++ and Rust, the compiler compiles this down into the RISC-V ISA and then this runs inside this VM. It's really like having a little like Arduino or micro controller that's like attached and living inside your system, but it's virtual and it can't lie about what it does and also it still has the same kind of ZK properties where you can hide inputs and so forth, as well as hide the program. You can just commit to this functional commitment idea. You can commit to knowing the hash of a program that produces or acts in a certain way.
+
+Anna Rose (00:22:40):
+You just, you've sort of flipped as you're describing it, you've flipped a little bit between the ZK VM, ZK EVM this is a ZK VM, right? This is not for solidity. All those languages you mentioned are not solidity. So do you still see yourself a little bit in the camp of the ZK EVM / ZK VM teams? Cause there's a lot of groups that are trying to do something like this.
+
+Brian Retford (00:23:04):
+So there are two ways you could think about it, obviously, you know, the Ethereum ecosystem and developer community, especially since I had gotten involved, the space just blows me away the events and all the people just building in this space. So, you know, we're by no means trying to detract from that ecosystem and I think there's a lot of ways in which, you know, RISC, there was zero actually can contribute to that ecosystem. So it is possible to compile a solidity code to LVM. We haven't played with that very much just because, you know, time but another thing you can do is run the EVM on top of Risc0. So you can actually compile, well, not, you can't do compile yet because our go support is like, well, the go support will be fully functional in a bit, but you know, one thing at a time.
+
+(00:23:53):
+but there's also Rust implementations of the EVM and that you can compile and you can actually, so you can run Ethereum programs on a EVM running on top of RISC-V. So, you know, you can, a nice thing about having a general purpose processor architecture like this as your base ZK proving system is that you can in fact run other VMs on top of it. There's actually people, and, you know, they haven't told me exactly why they're doing this, but running an X86 emulator on top of RISC-V, and then proving the results of Linux Kernal Boot on X86, it has something to do with gold bars, that's all I can say.
+
+Guillermo Angeris (00:24:38):
+Wait, what is the point of this? Sorry, I'm like,
+
+Brian Retford (00:24:41):
+The person hasn't told us exactly. It has something to do with like physical asset tracking and sensors associated with that at logistic points and stuff like that. I see a lot of applications for this, honestly,
+
+Guillermo Angeris (00:24:52):
+But that's, wait, but I'm surprised like a lot of sensors just like fully just have Linux instead of using some like real time operating systems, really
+
+Brian Retford (00:25:00):
+I, yeah, he did not get into the specifics
+
+Guillermo Angeris (00:25:03):
+Okay. Well that's fair. Fine. All right.
+
+Anna Rose (00:25:07):
+Do you, like in the ZK part of the ZK VMs, are you talking about privacy or are you mostly focused on the scaling quality?
+
+Jeremy Bruestle (00:25:16):
+We absolutely care about privacy and I would say that both are very important to us in terms, so we are, we do fully support zero knowledge and we support both zero knowledge of the execution of the program as well as we can even make it such that you can prove you ran the program you said you were going to run, but without revealing the details of the program, the use cases for that a little more obscure.
+
+Brian Retford (00:25:44):
+I mean, I think if you look at the core technology, you know, the idea that you can build systems with the Risc 0 VM that do like enhance privacy and, you know, enhanced scaling. I'd say as a company, we're initially focused on the scaling aspects. So when we were ideating on what to do as the company we went into deep, deep ZK identity kind of rabbit holes, because I think this is the use cases that most excite me about this space have to do with pseudonymous identity and the ability to ZK, you know, basically do ZK out of stations and sort of reputation scores and all of this stuff but fundamentally, I think if the infrastructure is not there, it seems like these, you know, having an amazing ZK identity system when you can't really build you know a sufficiently complicated application ecosystem seems kind of pointless. So we're focused on scaling because I think that's sort of the, where the biggest need I think is at right now
+
+Jeremy Bruestle (00:26:44):
+Yeah. I mean, it's table stakes basically, right? Like if I want a distributed Reddit that that has ZK I can do all kinds of cool things with the identity, but if I can't actually build the system in the first place, it's sort of not relevant.
+
+Guillermo Angeris (00:26:57):
+So here's a quick question. I think we discussed this prior, but you know, RISC-V or any architecture does not often have like a notion of here is private data and here is public data, right? And we're talking about privacy here. So like, how do you enforce, like, you know, what data is public and what data, like if you're just compiling a C program down, right? Like the C program itself has no notion of here are my variables that I will not reveal to you, right? Like, it has the notion of like, here are variables that you should not access, but there there's no notion of like, privacy in like C or Rust or whatever, right?
+
+Jeremy Bruestle (00:27:36):
+Yeah. So we model that via library calls. So effectively the way that it works is the ZK VM begins execution, and there are sort of calls you can make to request data from the, so we call the VM the guest, and we call the computer running the proof the host. So the guest can ask the host for information, which is always presumed to be private. The guest can do every kind of computation it wants. All of that is presumed to be private. There's a specific API for writing to the public record and anything you don't write to the public record is private. So you know, typically what you wanna do is you, you want your ZKP to attest to some fact about something. And so whatever you wanna attest to, you write that to the public record and that's the only thing that's public. Everything else is private. So that's kind of how we
+
+Brian Retford (00:28:29):
+That whatever you commit to up front, I guess. Yeah.
+
+Guillermo Angeris (00:28:32):
+Okay. So, and what does a program look like, right? So like, usually in processors, like a program is well in like real processors, not this like weird thing where we have a bunch of like virtual, you know, things with Kernel, right? You have like, here's what happens. You have like a chunk of memory that is a program, right? And that's like, you compile it down, you then like write it to memory, and then you say processor start at zero x0400000 go. And then it starts like reading instructions from memory and going up. But like, you know, what is, like, do you have a notion of memory? Like how does it, like, maybe it's getting a little bit too into the weeds, but I'm just like very curious about this specific thing
+
+Jeremy Bruestle (00:29:12):
+It works exactly like that. There is exactly a processor, there is a representation of RAM. We actually use a permutation argument mechanism to do the emulation of the random access memory and yeah, it looks exactly like a regular processor. We actually, so when you compile the program down, we actually compile it to ELF which is a type of
+
+Guillermo Angeris (00:29:33):
+Oh, nice.
+
+Jeremy Bruestle (00:29:34):
+It's a loadable object file for you know, operating systems. And basically we load the program into memory at the dawn. So when the VM, the ZK VM begins execution the first thing it does is it loads the program code into memory and then it jumps to the start address, and then it runs just like a normal program on a normal processor and then it, when it terminates there's this basically use that ecall, which is like a low level instruction in RISC-V to call to the operating system to represent the termination of the program and that's pretty much it. So it actually, it fully emulates all the things like you would expect and when you write a program, you know, it jumps into main and has, there's some initial setup and all the sort of exact standard stuff.
+
+Guillermo Angeris (00:30:24):
+I was gonna ask one more question, which is like what does, here is like, and this is a question that a bunch of teams grapple with, but you know, how do you abstract memory in like a zk sense? This is like, it's a weird question, right? Like, what does it mean to like, load a file into like this ZK circuit and then be like, cool all right go.
+
+Jeremy Bruestle (00:30:46):
+So the current implementation, you know, we just represent memory as a bunch of 32bit numbers that live at well defined addresses. that's sort of the word size that the processor likes and you know, you can load a byte instead of a word if you want to, but that's all just sort of handled by the VM and the initial program state, we actually encode into sort of a Merkle representation from the L file. So effectively the, the initial memory image is determined by that sort of Merkle-izd data structure so then there's a special mechanism for talking to the host using non-determinism. So there's basically this mechanism by which the guest can request data from the host and point the host to a particular memory address, at which point data just sort of magically appears in that memory.
+
+(00:31:44):
+which is allowable because one of the things we do with our memory semantics is we define memory, which has never been read or written to as being allowed to have arbitrary data and so as long as you tell the host to put it in some place in memory that you haven't ever looked at before, which we handle via the library calls and sort of the underlying sort of operating system level of the ZK VM then when you asked the host to put something there, it can appear, of course you need to verify that it's right. So on top of this, we're basically building a set of, you know, mechanisms for allowing sort of sort of Merkle-ized access to data structures. And we're, we're looking at building sort of like an IDL around that to help make it easier for programmers to manage and stuff. Sorry, this is a little bit of a, I'm going into a couple of different things because the question's kind of broad. So it
+
+Guillermo Angeris (00:32:37):
+Sorry, I apologize. But just like even thinking about it, right, like the idea that like you have a processor that lives in, you know, inside of your processor fine, let's say like ZK VM and ZK VMs in general have thought about this, but what I've never seen before, and this is like fucking wild to me at least, is like this idea that you could just like, you know, have undetermined data at the time you're executing, except like the one time you're, you know, like you're executing this like very long complicated program, right? A bunch of stuff is happening and then you're like, crap, I need to go read like this thing, but this thing is not defined while I am, like at the time that I am going to like read it, this thing is not defined. So what do I do? I can just like ask, you know, this is like the little computer living inside your big computer, right? The little computer is like, I don't know what this thing is, so please, big computer, you know, your laptop or whatever. Tell me please, what, like, should this thing be right? I will pause execution until you're like, tell me what this thing is, and then you just like, go and insert it, and then it just continues happily as of like, yeah, everything was cool the entire time, but it's like wild, right?
+
+Brian Retford (00:33:42):
+Yes. Although you're not guaranteed that like anything that happens on the host side is gonna produce something, a proof that's interesting,
+
+Jeremy Bruestle (00:33:49):
+reasonable
+
+Brian Retford (00:33:49):
+To talk about.
+
+(00:33:49):
+Right?
+
+Jeremy Bruestle (00:33:49):
+Of course.
+
+Brian Retford (00:33:50):
+Which is why we get into this kinda localized data structures. Like if, you know, if you call out to the host and it just accesses a random URL and dumps data back from it, then you can't really speak about what the characteristics of that are.
+
+Guillermo Angeris (00:34:01):
+That's right. That's right. That's right.
+
+Jeremy Bruestle (00:34:02):
+But it, it does allow you to do sort of the check and verify, right? If I wanna do a square root, I can always ask the host, hey, please put the square root of this number here, and then inside the ZK VM I can take that number and I can square it and make sure it matches the thing I'm expecting it to be. So would, you know, ZK VM systems use this sort of non-deterministic trick a lot but in our case it's particularly easy
+
+Brian Retford (00:34:22):
+Yeah. Like, please fetch this content addressable storage that hashes to X or whatever, you know?
+
+Guillermo Angeris (00:34:27):
+Exactly.
+
+Brian Retford (00:34:28):
+You can verify that it actually hashes to that so
+
+Guillermo Angeris (00:34:30):
+That's right. That's right. So like, you use this trick a lot, like in ZK proofs, but this is like a very nice and transparent way of doing it, right? Like when you create a ZK proof of like a statement, you have to know what the values of that statement are. But like here, it's like a very like, transparent way of doing that, right? It's like, oh no, like I don't know what this is. Please, like, let me just like go fetch that from like the big computer that I exist in, and then like the big computer is like, here you go. You know, it's like God handing you down and it's like, I will just check you just to be sure but that's okay.
+
+Jeremy Bruestle (00:35:00):
+Exactly. It's interesting because in some ways it inverts the sort of notion of, you know, if you look at, you're running some program in Linux and then you want to call into the operating system, you fundamentally, the operating system is more trusted than the program running in this case, it's kind of like the opposite. It's like there is an operating system you can call out to the operating system, it'll hand you data back, but then you better check it because actually the trusted part is the, the program that's running so it's kind of an interesting inversion in that regard.
+
+Anna Rose (00:35:30):
+So a lot of the ZK VMs that we've been learning about use STARKs, or they use Fry and SNARKs somehow, like they'll do like a recursion step using something that STARKs actually uses as well. But why are most of the ZK VMs using at the very least parts of STARKs or actually using full STARKs under the hood?
+
+Jeremy Bruestle (00:35:54):
+So, so largely it's because STARKs are particularly efficient at proving circuits who have a repeated structure and in this case, the repeated structure is time. So the idea is is that you know, a job of a VM is, there's the state of the processor at time T and then it computes the next date at time T plus one, and time T plus two. It's basically executing the same function, if you will, over and over again. Stepping time forward and STARKS are really well suited for that, the air representation, you know, has this built in notion of that, and, and so it's a perfect match, right for a sort of something that wants to look like a digital circuit running over time.
+
+Anna Rose (00:36:36):
+So this is the air features. So this is different from R1CS in other kinds of SNARKs, AIR arithmatic intermediate representation. You gave me that definition before, I did not actually memorize it myself. And I sort of, I have a visual of this that it's like time-based rounds, kind of like it's going equal time, but why do you need that? Exactly?
+
+Jeremy Bruestle (00:36:59):
+Well, so if you think about it's interesting, the analogy between you know, actual digital processor and these sort of arithmatic circuits is really strong, right? They both like, you know, if you look at a digital circuit, you've got wires, and then you have like gates, and in an arithmatic circuit you have numbers and you have these operations like multipliers for example and in a real digital circuit, there's this idea of clock cycles and combination logic. So you've got this combination logic, which is just like a feedforward circuit. Some inputs come in and it processes through, and then later some outputs come out. But in a real processor, you don't just use combination logic. You also have these little memory cells that when a clock cycle comes in, stuff goes from through that combination logic lands back in memory cells, and then it gets stored there, and then the next clock cycle comes in and that same process repeats.
+
+(00:37:49):
+And so the process that's happening inside of, you know, say your Intel processor or whatever, is this basically the process where every clock cycle, there's a current state and it then computes the new state, and then the clock cycle ends, and then the next one comes around. And that exact structure is the way that a STARK is structured. So if you're looking at something that wants to sort of execute steps over time it's a really perfect analogy. And in fact, actually one could literally transliterate the design of an actual gate level risk five processor over into a STARK. If you were to do that in the naive way, it would run horrifically slowly, but the model is actually strong enough that you could almost lift the direct implementation.
+
+Brian Retford (00:38:35):
+I kinda wonder if that's why Eli like invented them in the way he did. I guess I've never asked him that, but you know, it might have been very intentional on, on his part to build something that is more amenable to creating a VM you know, given that Cairo was, you know, one of the first kind of VMs of this kind.
+
+Anna Rose (00:38:53):
+This is maybe a bit of a dumb question, but like why, you know, we talked about the ZK VM as the environment where you would then deploy RISK-V. Why do you it need to be in a ZK VM? Why couldn't you do that straight on an L1, like on Ethereum? I mean, on Ethereum, maybe it's because it doesn't allow for certain OP codes or I don't know, but like, could you, could you not just have this as a standalone blockchain?
+
+Brian Retford (00:39:18):
+Oh yeah, you could and yeah, that's what we're working on.
+
+Anna Rose (00:39:22):
+Okay and actually you are, so actually that's, that's so funny. Another question then, because like ZK VMs and ZK EVMs, pretty much every time we talk about this, it's always in the context of like them living on another blockchain as a roll up kind of, still using shared security, but in your case you don't need to.
+
+Jeremy Bruestle (00:39:42):
+I think the thing that's important to note is we are very much interested in the L1 space and making an L1 but part of the reason is the fundamental reason that these systems don't scale has to do with the way that consensus itself works, right? And that if you re-look at and re-examine the question of how do you build a consensus system, how do you build, how do you build an L1 with the knowledge that ZK exists, it changes the sort of tools you can have. So one of our goals as a company is to sort of say, okay, if you start over and you say what can you do, what can you build in terms of a consensus mechanism knowing that you have this capacity to do zero knowledge proofs where does that get you? In fact, the one one real quick analogy, so why do L1's not scale very well?
+
+(00:40:35):
+And it's very simple actually. You know, if someone wants to run a computation, no one can believe that computation was right without running it themselves. And as a result, every machine in the network has to run every single transaction, right? and with ZK that that assumption is different. The trust that can exist between two parties is fundamentally different so one person can run the code and someone else can check it and the process of checking is much smaller than the work of running it. And you can use that as a building block to help make systems scale.
+
+Anna Rose (00:41:08):
+I mean there are examples of that already in the wild, like Mina is a recursive SNARK. P.S. I'm an advisor to them. So just declaring everything. but but yeah, I'm just wondering like, I guess like in your consensus, in the consensus part, are there, is there ZK in there as well? Like are you using that recursive technique as well?
+
+Jeremy Bruestle (00:41:30):
+Yes.
+
+Anna Rose (00:41:31):
+Okay. Is that the part that is the ZK of the ZK VM or is there like double layers? Like there's ZK in consensus and then there's ZK somewhere else?
+
+Brian Retford (00:41:41):
+So there's, we use the same ZK VM both for consensus and for the execution environment for user produces. And in fact, I guess the way things are shaping up, and Jeremy could talk about this a bit more, you know, sort of ZK predicates are kind of the key part of how we actually like agree on the next state of the world.
+
+Guillermo Angeris (00:41:58):
+So yeah, I was gonna ask like because this is like somewhat recursive, right? Like what are you doing? Are you just like programming a verifier on top of like your RISK-V process that then verifies like the computation? So like you're just like using the, it's like this feels like a bit of an Oura Evos, like I am using my platform to both like do the computation. No, make us think proof of the computation and also mind you, I'm also gonna verify it on this, like whatever the ZK VM right? As like part of the thing and then like now use that as like my like fully succinct, like small proof that I just like make sure everyone knows to start from Genesis to now or something. Is that the idea?
+
+Jeremy Bruestle (00:42:37):
+So, so currently, just to be clear, the existing open source version that is already released already works. You know, you can run full zero knowledge proofs on real programs inside the ZK VM we are currently working on adding support for recursion and that's not currently released but that said, we do have a sort of prototype working and literally our recursion actually runs our normal Rust verifier inside the ZK VM to do the verification of the zero launch proofs.
+
+Guillermo Angeris (00:43:10):
+Right. What's the like abstraction that you use for recursion? Because recursion is kind of a weird thing, but like you don't really do on normal processors
+
+Brian Retford (00:43:19):
+I mean it's very similar to Mina. You just, you call, you know, in from inside the guest you call the verify function. It's just like you would in like SNARK JFS, you're like doing a proof and you have a proof as an input and you call verify on it and now you've, or if you call verify on two proofs, you've now created one proof that verifies two proofs.
+
+Guillermo Angeris (00:43:38):
+But like you also need this to be like incremental, right? You don't just like, because you don't reprove the entire
+
+Jeremy Bruestle (00:43:44):
+But if you think about like, one can verify the proof that block N derives all the way from the Genesis block. So I can verify that proof that I got from somewhere else outside the system.
+
+Guillermo Angeris (00:43:54):
+Got it. Got it, got it.
+
+Jeremy Bruestle (00:43:55):
+And then I can add another transaction and that combination of those two things proving the history to point N and then adding end to N+1, that new proof now proves zero to N+1.
+
+Anna Rose (00:44:09):
+I think you've sort of answered that earlier question too, like why would a ZK VM be a better environment than something like Ethereum to deploy RISC0, right? Cause like what it sounds like is that that zero knowledge proving proof thing is it's all intertwined and you wouldn't necessarily be able to do that with like a vanilla
+
+Brian Retford (00:44:27):
+Yeah, you could certainly like verify a Risc0 proof on Ethereum. It probably be be reasonably expensive. I think we talked a bit about this certainly, but you could build an L2 Risc0 L2 on Ethereum. I think it just doesn't necessarily, I don't think you're ever going to get then this kind of native scaling enhancement that we're really hoping to see.
+
+Jeremy Bruestle (00:44:46):
+Yeah. One of the cool things is that if you are looking at it because of the fact that I can verify two proofs in one proof, I can then do that two layers and I can do verify four proofs or eight proofs or 16 proofs and you know, powers of two. As a result, our goal is to basically be able to literally process billions of transactions per second right? Our idea is to, we sort of had this idea like we're not kidding about being able to make transactions too cheap to meter. The idea of being able to just really make the scale of you know, sort of these consensus systems massively larger than it is.
+
+Anna Rose (00:45:28):
+Hmm.
+
+Brian Retford (00:45:29):
+I mean they'll still probably be metered, but, you know, effectively <inaudible>
+
+Anna Rose (00:45:36):
+That idea. I mean it's interesting to hear your story of like where you were coming from, the problems you were working on and then seeing ZK as the solution to that. You sort of mentioned this like infinitely scalable Cloud infrastructure, maybe not infinite, but like more than now. Are you still working on that as the vision? Is that the end goal or are there like other use cases that have sort of come up?
+
+Brian Retford (00:46:00):
+So I mean, I think when, when you're talking about building an L1, you know, you obviously wanna support all of these sort of existing use cases for blockchains, so you know, DeFi gaming, NFTs, token transfers, all of this kind of stuff. But additionally, you know, we want to support, and you see a lot of people trying to do this in the EVM ecosystem as well as like building things that look like SQL databases and other kind of you know, developer tooling that actually makes it possible to write more complicated applications more quickly. So we're still like, the intent of this chain is to enable people to also build effectively cloud services and we'll actually be, we're actually building one on top of our L1 that that will eventually release that basically lets you prove any arbitrarily complex computation very quickly using massively paralleled GPU acceleration proofs.
+
+Jeremy Bruestle (00:46:51):
+But we started to sometimes talk about ourself as like instead of being Web3 we talk about it as Cloud 2.0. I mean, I mean we really do absolutely want to construct a decentralized you know public Cloud, you know, write something that you could run real, you could build, like you could build a social media, you know system on, or you could build, you know, real end user applications that are of scale, you know,
+
+Anna Rose (00:47:19):
+Where cloud usually like relied on these like international databases kind of all over the world. Everything would be very, very fast, in this case are you actuall imagining every person's, every like node runner's machine or minor validate or whatever it is they are the data center?
+
+Jeremy Bruestle (00:47:37):
+Yes.
+
+Brian Retford (00:47:37):
+Effectively. Yeah. So we're actually talking to a bunch of ex-Ethereum miners about utilizing their GPs because we have a GPU accelerated backend for this, which is like kind of key to achieving the sub multi millisecond recursion times that we'll hopefully eventually get to, which really is kind of the, you know, linchpin or hinge for scaling. So yeah, we're, we're talking to and if you don't, anybody out there that's GPUs, you wanna use them for something, you know, let us,
+
+Anna Rose (00:48:04):
+You're not proof of stake, then you're going to remain proof of work or are you like a hybrid?
+
+Jeremy Bruestle (00:48:09):
+We still haven't fully decided but our current notion is this thing we call sort of proof of transaction, which is a little bit like proof of necessary work, but the idea being that it will be proof of work-like, except that the work being done is literally running zero knowledge proofs and so as you add more energy to the system, you get more transaction rate. So the idea being a way to make use of all of that work being done to actually help end users get what they want done although certainly we could absolutely build proof of stake mechanism as the sort of final decision about which blocks are considered correct as well from the, so from the security perspective, we could choose either, but regardless there's going to be a fair amount of compute work being done just running the ZKPs themselves.
+
+Anna Rose (00:49:03):
+That's fascinating. Yeah.
+
+Brian Retford (00:49:05):
+And ZKPs have this neat property for a system like that where you can determine longest chain, not necessarily by number of transactions, but by actual overall amount of computation represented in it. So as you roll up all these ZK proofs, you know exactly how many cycles sort of went into every leaf or branch of your tree.
+
+Anna Rose (00:49:22):
+I actually, we did, years ago we did an episode, a full episode on proof of necessary work with Akis Kattis. So I'll link to that if people wanna understand a little bit more about the features, characteristics of this proof of necessary work or proof of useful work, the name has changed a couple times, but yeah, it's interesting.
+
+Guillermo Angeris (00:49:40):
+On the topic of I guess scaling. First things first is, you know, you're talking about a processor that lives inside of a real processor, so you can talk about something weird like how many megahertz you're like, does it, you know, does it actually run at like, how many cycles per second? How many instructions per second can it actually do? And so here's, so now this, this is a very concrete thing that I can ask. How many cycles per second does your current tiny processor run at inside of like a, you know, normal, let's say you normal CPU, and then you, I heard you said you had a GPU prover, so almost like curious about those numbers.
+
+Jeremy Bruestle (00:50:14):
+Yeah, so currently on my Mac
+
+Guillermo Angeris (00:50:17):
+What Mac is it?
+
+Jeremy Bruestle (00:50:19):
+ I guess it's the new,
+
+Anna Rose (00:50:20):
+He does have to DoSS him
+
+Jeremy Bruestle (00:50:21):
+M1 Mac.
+
+Guillermo Angeris (00:50:23):
+Yeah. Okay. Just like the new M1 Pro
+
+Anna Rose (00:50:24):
+Tell all the hackers
+
+Jeremy Bruestle (00:50:26):
+Yeah. Yeah. It's, it's good. So, so on my, on, so currently on my, on my M1 Pro I get about 30,000 cycles per second for execution now sort of with the versions we're working on, we anticipate that I'll actually, we actually support currently on our GPU acceleration, which is not released, we support Metal, which is Mac OS's acceleration framework as well as CUDA and we're looking at more like on the one megahertz, so about a million instructions per second
+
+Guillermo Angeris (00:51:01):
+Wait, Metal actually does like large field arithmetic or do you have to do like some weird?
+
+Jeremy Bruestle (00:51:07):
+We made it do field arithmetic
+
+Guillermo Angeris (00:51:09):
+Okay, cool.
+
+Jeremy Bruestle (00:51:09):
+So there's one thing note by the way, is that our background, our previous company was almost entirely focused on acceleration of ML workflows across multiple systems, including, you know, GPUs, CPUs, custom accelerators. Right? So we have a large background in terms of how to make GPUs doing interesting
+
+Guillermo Angeris (00:51:29):
+Sing and dance if we wanna, if we wanna say it that way. Yeah. Okay. And then, so, okay, so fine. That's, that's Apple M1 Pro, you know, using accelerate framework or Metal or whatever you'd like. What about you know, a cool new hot off the press, well, actually not so hot at the press anymore, but 30-90 or something like that, like a, you know, like a big GPU. Do you, you have any ideas on those numbers?
+
+Jeremy Bruestle (00:51:53):
+Probably in order of, you know, about 10 million instructions per second, although we haven't we don't have the full numbers on that yet, but,
+
+Guillermo Angeris (00:52:01):
+So we're like getting to like, you know, 1970s, 1980s, I feel that's,
+
+Jeremy Bruestle (00:52:06):
+That's like 90's well, I guess see, I mean, you should be able to run Doom on it, is the key thing.
+
+Guillermo Angeris (00:52:13):
+Yeah, yeah, no, but I was, that was exactly the question I was gonna go for is like, when do you think we'll be able to run Doom and ZK, you know?
+
+Brian Retford (00:52:21):
+Also, so an interesting point about all of this too is that you know, there, the ZK the workloads split up into two parts, one's like running the program for it and creating the sort of tape that you then prove and the other part's proving it and the proof, the proving it part can actually be split up and done in parallel,
+
+Guillermo Angeris (00:52:37):
+Right? I mean, you're exploiting this already in like when you're doing it on the GPU, right? Like
+
+Brian Retford (00:52:42):
+That's effectively. Yes.
+
+Jeremy Bruestle (00:52:43):
+And, we should be able to go wider. So in theory, one ought to be able to sort of run the sort of tape generation as Retford describes it and then split the workout across a farm of GPUs or what have you and so you should, in terms of latency to actually generate a proof of a fairly large computation, we should be able to get it down. I mean, one of my goals with our work on recursion and acceleration is to be able to do things like running you know, a full version of a compiler like GCC or something inside of the proof system, and be able to generate a zero knowledge proof that in fact this source code compiles to this binary, right? Like real,
+
+Brian Retford (00:53:29):
+There are a lot of real world use cases for this. That's this in terms of securing supply chain stuff like, you know, making sure that binaries that exist and things that are running on systems, being able to ask them to periodically prove that they're using you know, binaries that were verifiably generated from source code that you audited. So like how long it'll take those use cases to actually trickle down into the real world and who knows,
+
+Guillermo Angeris (00:53:54):
+But like, couldn't I just like prove that about like a binary that I'm not currently using?
+
+Brian Retford (00:53:58):
+So there are, yeah. Things get complicated if you're not doing this for every single computation.
+
+Jeremy Bruestle (00:54:03):
+If the binary itself that you make is run inside of a ZKP system as well,
+
+Guillermo Angeris (00:54:08):
+For sure. Fine. Yes, exactly what like recursively
+
+Brian Retford (00:54:12):
+Occasionally be. Yes.
+
+Guillermo Angeris (00:54:13):
+Right. If we sray within the sandbox, then you can of course always prove everything. And that's a very nice
+
+Brian Retford (00:54:17):
+Well, no, but when people start talking about ZK hardware, you know, and kind of like bearish on it in the short term, but long term, you know, I think somebody's asking us, you know, could you use Risc0 to make sure that like F35 fighter jets are like running the software they're supposed to be or something like, yes, hypothetically, but not right now, probably
+
+Guillermo Angeris (00:54:36):
+Okay. Yeah. Well, I, I'll ask the basic question and then you can you can tell me the, the detail, so, okay, so fine. You know, now we have like fancy schmanzy, like 30-90, and, and you can read it not just in 1x 30-90. In fact, you could run it like arbitrarily wide, because we know like ZK proving is nice and maybe not arbitrarily, but pretty damn close, it's pretty paralyzable. So the next natural question is, okay how about, you know, what are your thoughts on like maybe using it, using FPGAs or using like, you know, like very specific, like ideally at some point in the future, once everything is very standardized, ASICs, but you know, what are, what are your ideas behind like hardware acceleration of ZK proving?
+
+Brian Retford (00:55:14):
+So I, I currently think that the math is like unsettled enough and that ASICs are hard to make, take a long time. And it's also very hard to get access to the latest memory process node technology and so forth. So I think it's gonna be a long time before ASIGs are competitive FPGAs, at least for STARKs. You know, I don't know, Jeremy probably can answer this like more precisely than me, but I honestly think GPUs are probably gonna be very salient for quite a while.
+
+Guillermo Angeris (00:55:44):
+Oh, interesting
+
+Jeremy Bruestle (00:55:46):
+And practically a lot of the stuff is memory bandwidth limited and you know, it's really hard to beat the memory bandwidth of a 30-90. Right, so I think that long term we may see more sort of acceleration, but yes, I agree. I think that it's a little early
+
+Brian Retford (00:56:01):
+Or for like very specific SNARK kind of circuits. If you see certain use cases evolve where people want certain things done very quickly, maybe you'll start to see ASICs for those. But yeah, but I think another aspect of sort of acceleration and we talk about accelerators, there's like accelerating the proving system and then there's also accelerating operations you're running on the proving system. So when it comes to like doing recursion for instance, like right now, if you try to just run the verifier, the pure Rust verifier on top of our source code it takes a very, very long time. In fact, on the open source version, you run out of available cycles before you can actually complete a recursion but we also have an architecture for building accelerator circuits. So if you think about like the, a chip in your laptop, you have the GPU but you also have like cryptography accelerators, you have networking accelerators. There's like really like about a hundred different chips on a sort of modern microprocessor so we have an ability to also sort of build these acceleration circuits and Jeremy can kind of talk about which acceleration circuits we have and their role in recursion.
+
+Jeremy Bruestle (00:57:03):
+So in our current, in our current system for example that's available. We currently have an accelerator for SHA-256 in particular because people need a good fast hashing function and yes, absolutely you could write SHA-256 on normal RISC-V you know, machine code and it would do all right, but you can do much, much faster if you write a specific circuit that does that specific thing. So in the sort of next version of stuff, we're gonna have additionally a finite field accelerator, which is particularly relevant for recursion and we are also considering adding a bigint modulus multiply accelerator, which should enable a large number of sort of elliptic curve kinds of use cases to be run efficiently and, you know, we're containing and some also some additional you know, hashing functions. I mean, effectively if you think about, you know, if you want to build something, if you wanted to say run, you know, GATH on top of the RISC-V ZK VM then you know, much of it would actually run just fine. But some of the, you know, heavy cryptographic components take a lot of cycles and so if we can, if we can move those into accelerators then that's a much better way to go
+
+Anna Rose (00:58:20):
+I just wanna make a quick clarification because when you're talking about you, because, because we kind of circled into hardware and then out when you're saying accelerator circuits, you're talking about virtual circuits still, right?
+
+Jeremy Bruestle (00:58:29):
+Correct
+
+Anna Rose (00:58:31):
+Okay. That's right. What are they, are they just like libraries? What are they?
+
+Jeremy Bruestle (00:58:35):
+So, so basically we have this RISC-V circuit which represents the computation of a normal RISC-V processor and we can just put sort of next to that in the arithmatic circuit representation, another circuit that does say SHA-256, and then based on sort of what cycle we're running and what the RISK-V says, we have this way for those two circuits to interact in our current mechanism, they actually interact through memory. So the, you know, RISK-V processor rights to certain regions of memory and then kicks off the SHA accelerator, which then reads that memory and writes something else and then it goes back. In the new system, we're actually going to model it as calls out to the operating system like you would you know in a normal computer, if you're running code, you can call up to Linux to say write to a file. So instead we're gonna attach the accelerators in that sort of a method but yeah, it's basically an extension to the core circuit itself.
+
+Anna Rose (00:59:31):
+Interesting.
+
+Brian Retford (00:59:31):
+Yeah that w and we sort of build these in a, it's not exactly like Circom, it's quite different, but if we have our own sort of circuit description language that hopefully will release someday once it's a bit more mature that we use to kind of describe both the RISC-V circuit as well as all of these accelerators,
+
+Anna Rose (00:59:47):
+Is this a proper DSL or is this like a different thing?
+
+Brian Retford (00:59:50):
+It will be.
+
+Anna Rose (00:59:51):
+Oh, it will be.
+
+Guillermo Angeris (00:59:51):
+Okay And like, can you write, so let's say I wanted to write like an accelerator for like, I don't know, matrix multiplies, because I think that's really cool and kind of what I do. Can I just like go ahead and be like, is it a standard call, I guess is the question like do I need to go and like actually change the Risc0 source code? Or can I, you know, can I just like call it as if it was like a cool little module or like just like a generic,
+
+Brian Retford (01:00:15):
+Right? If you wanted to write like blast library, you'd probably have to like hook your blast. You'd probably have to redo your blast backend or something like that to call out to your accelerator.
+
+Guillermo Angeris (01:00:23):
+Sure, let's say I can do that. Let's say I like here, you know, I like edit the blast libraries, so like every time it does, you know, whatever, any of the like blast level one operations, it calls my cute little chip instead. Can I just like, well first things first, so when I write this chip in like Circom or like your DSL and like compile it down to some like specific set of like whatever, arithmatic circuits, which like I can then use and then like hook into and I can just do this. Like anyone can just do this or is it just like,
+
+Jeremy Bruestle (01:00:52):
+Well currently we haven't released the circuit compiler but once that, at some point it would be a reasonable use case. Now what it's worth noting is that you need to compile it into the circuit, right? So basically when you run a given program, you're either running the program on the sort of stock, you know, RISC-V circuit that has, you know, say a RISC-V chip and accelerator A and B, or you could run it on yours that has some additional accelerator. So at some point we imagine that people will want to run different programs on sort of different hardware skews, if you will the idea that like the proof system will support this idea and you'll be like, oh I need this, you know? Yeah, exactly, it's
+
+Guillermo Angeris (01:01:33):
+Okay. I like the idea of a hardware skew for like a fake processor that is like a zero knowledge chip living inside your machine. It's just like, it just all really comes back to like a very weird like mental image that like, doesn't really make any sense, but I just love it. It's great.
+
+Jeremy Bruestle (01:01:48):
+You know, in some ways one of our sort of goals is to make these systems approachable to programmers that previously knew nothing about zero knowledge proof systems. And I think that this model of the ZK VM as just you know, a little VM, a little virtual machine that works a lot like any other virtual machine, you know, you cross compile your code, you run it in it, it can talk to the host through some kind of communication channel you know, really opens it up to I think, a wider audience, right? And you don't have to learn a new language or even what an arithmatic circuit is, right? You just think that there's this little, like, it's kind of like a little, you know, Arduino do we know sitting next inside your computer
+
+Anna Rose (01:02:28):
+I have one last sort of point I wanna cover, and that's, so we talked about RISC0 living as an L1, is it going to be connected to any other network or network cluster, like I'm talking ecosystem, Ethereum, Polka Dot, Cosmos, like anything like that?
+
+Brian Retford (01:02:44):
+Almost certainly however the likely partners are gonna do that. So, you know, don't wanna disclose things that aren't signed yet, but we have a couple of partnership deals in the works and people are very much actively looking into doing that and we're gonna actively support them doing that so we see this technology as, you know, being broadly useful and, and while we certainly have our take in what we think the L1's going to, you know, provide and, and be useful for I think we also want, you know, this technology to be available to other ecosystems, yeah
+
+Anna Rose (01:03:13):
+Do you imagine the connection point just being bridges or are you able to connect in a different way to these networks?
+
+Brian Retford (01:03:20):
+Yeah, that's like
+
+Anna Rose (01:03:23):
+Also TBD or can't reveal?
+
+Brian Retford (01:03:27):
+TBD and also also gonna take a couple different forms, you know? There's how our L1 will talk to them and then also just how the technology will get used by these other systems.
+
+Jeremy Bruestle (01:03:37):
+Yeah, I mean if you think about it, there's sort of a multitude of different parts of integration. Like, so if you just look at Ethereum for example one could run an Ethereum EVM in on top of our VM, but one also could have a verifier for our proof system that runs on existing Ethereum. There's a lot of different ways to bridge things and we anticipate there'll be lots of different mechanisms used for different use cases so I wouldn't say there's a one size fits all answer to that question
+
+Brian Retford (01:04:08):
+But certainly in terms of all the sort of ZK like client bridging stuff that everybody's doing these days, I think there's a lot of interesting potential applications there. I haven't really delved into the details myself.
+
+Anna Rose (01:04:17):
+Last thing, maybe you can give us a little bit of a sense for the timeline, the roadmap. When are you live? Can people already use this? Where are you at?
+
+Brian Retford (01:04:28):
+Right. So as Jeremy said, you know, the current version's open source and the sort of next version we're working on will be open source as soon as it's as soon as it's sort of, you know, more complete. But we are when you talk about this sort of blockchain and this very fast GPU proving service, we're working on a DevNet and we're hoping to have you know, have that be public sometime like early next year, late this year. But we will have a sort of private signup and we'll be, you know, sending that out over Twitter probably mostly and various other distribution channels. A couple people have signed up and, you know, we're hoping to get this into people's hands, you know, pretty soon.
+
+Anna Rose (01:05:10):
+Nice. Well thank you so much Brian and Jeremy for coming on the show and sharing with us all your work on RISC0 as well as your journey to work in this field.
+
+Guillermo Angeris (01:05:19):
+Yeah, thank you guys. It was super fun actually. Sorry I devolved into some weird tangents, but it was kind of the whole point of this podcast
+
+Brian Retford (01:05:24):
+oh no, it's great
+
+Anna Rose (01:05:26):
+Yeah, tangent podcast. All right. Thanks again. Guillermo as well for coming on for this one. All the way from Bogota.
+
+Brian Retford (01:05:35):
+Big fan, very excited to actually, you know, be on it when we started the company was like, maybe someday we can be on this.
+
+Anna Rose (01:05:41):
+What? Today day is your day. Nice. All right. Thanks a lot guys. I wanna say big thank you to the podcast team Henrik, Rachel and Tanya, and to our listeners, thanks for listening.
+

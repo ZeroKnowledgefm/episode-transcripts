@@ -1,0 +1,504 @@
+Anna (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online. In this week's episode, I chat with Alberto Garoffolo from the project Horizen. Horizen is a standalone proof of work blockchain that uses zero knowledge proofs to move tokens between the main chain and the sidechains. We discuss how the system Zendoo works and how this compares to other side chain and rollup designs, as well as cover their latest Latus sidechain work. Now, before we start, I want to let you know about a privacy-focused event happening tomorrow, April 29th. I'm co-organizing this as part of the Zero Knowledge Validator work, and this is a Privacy on Polkadot showcase. So this is the first of many privacy and zero knowledge proof-focused Polkadot events to come. We've also done something similar on Cosmos. I've added the link to this Polkadot ecosystem event, and I hope you'll pop over, check it out and join the conversation. I also want to take a moment to thank this week's sponsor EY Blockchain. EY has committed to supporting the integration of the world's business ecosystems onto the public Ethereum blockchain, and they will be hosting an event to do just that. Join their fifth annual blockchain summit and education series on May 18th to 21st for deep dive into zero knowledge privacy technologies, accounting and tax rules, as well as the future of finance. Sign up and learn more at ey.com/globalblockchainsummit, or check out the other work they're doing at blockchain.ey.com. So thank you again, EY Blockchain for supporting this podcast. Now here's my conversation with Alberto from Horizen.
+
+Anna (02:04):
+So today I'm sitting with Alberto Garoffolo from the project Horizen. Welcome to the show, Alberto.
+
+Alberto (02:11):
+Thank you, Anna.
+
+Anna (02:12):
+So today what we want to talk about is Zendoo - a zk-SNARK Verifiable Cross-Chain Transfer Protocol. This is unique. It's interesting, because this episode is coming after three episodes that dealt with zkRollups. Now we're going to switch course a little bit. We're going to talk about a slightly similar concept, but quite a different architecture. But before we jump into that, let's start out with a little bit about you. Alberto, introduce yourself, tell me and the audience a little bit about what you were working on. What got you excited about this and what are you doing now?
+
+Alberto (02:46):
+Oh, sure, Anna, thanks. In my career I covered the role of CTO in several startups. For example, in my previous experience, I was working with AI, facial recognition and this kind of stuff. And more in general, I always started from the idea, from the beginning and then build the team and then following the development from the very beginning up to the delivery phase. And this is exactly what I'm currently doing at Horizen.
+
+Anna (03:17):
+So when did you first join Horizen or even maybe when did you get excited about this entire space?
+
+Alberto (03:23):
+When a friend of mine talked to me about Horizen and he was already following cryptocurrencies and so on, and I got excited. I mean, this was completely new for me and I start exploring and it was really, really, really exciting. And then I met Rob Viglione, one of the co-founders of Horizen. And boom, everything started from there.
+
+Anna (03:46):
+What year was that?
+
+Alberto (03:48):
+It was 2018.
+
+Anna (03:51):
+Okay. But I mean, you jumped in, not just to any, you jumped into a zero knowledge-focused project, didn't you?
+
+Alberto (03:57):
+Yeah, exactly.
+
+Anna (03:58):
+That's the deep end.
+
+Alberto (04:00):
+---That's exactly. --- I mean, for sure. I had to learn quickly, I mean.
+
+Anna (04:07):
+Had you had any experience with cryptography or this level of math before?
+
+Alberto (04:12):
+No, never. I mean, I always liked moving from different areas and bringing my different experience to this area. And this provided me ways for having a different perspective and also, I mean, if I can build something new.
+
+Anna (04:30):
+Cool. Let's discover a little bit about Horizen. What is it, maybe give a little bit of a history. I know you joined in 2018, but I think the project's a little older. So tell us what this project is.
+
+Alberto (04:41):
+Yeah. When I joined the Horizen, the project was already launched then and they shared the same code base as Zcash. So it's a proof of work-based cryptocurrency with shielded transactions, but at the beginning we had the TLS encryption between nodes, for having this encrypted communication between the nodes, and a system of secure nodes and super nodes. I mean, similar to the master nodes of Dash, of the Dash cryptocurrency. And I joined some months later after the launch and one of the first things that I've been working on was a treasury system and also a system for redistributing the funds for secure and super nodes in a decentralized way. And this was the reason, when I started looking at the possible implementations, it was quite clear to me that adding the complexity of managing these funds inside the core software of the cryptocurrency would have led to potential security issues, and the overall complexity of the code would have increased. So instead of doing that, I started thinking, "Okay, but why do we need to keep this kind of data and logic inside the core software? Let's try to organize it in a part of little chain, maybe, with the specific software, with the specific rules". But there was a need for transferring, how to say, the ZEN token from the main chain to this parallel chains. And when I started looking at what others were doing at the time, I discovered that this concept was sidechains. And so everything started in that way.
+
+Anna (06:28):
+Okay. So you were actually trying to tackle a different problem on this proof of work, something like Zcash. ---I kind of want to,--- I wanted to get a little bit into that. So does it have the same transparent shielded account kind of model?
+
+Alberto (06:38):
+Correct.
+
+Anna (06:38):
+Okay. You started from sort of the Zcash or maybe Zero coin...
+
+Alberto (06:45):
+From Zcash, exactly. It's the same Zcash code base.
+
+Anna (06:48):
+Yeah. So that code base, but did you evolve in a very different direction or did you continue to work with that team? Cause it's all quite open source and you could...
+
+Alberto (06:55):
+Oh, no, no, totally different. I mean, totally different. Up to Sprout but, I mean, we switched obviously from the PHGR proving system to the Groth16, but we stayed on Sprout and then later, or even now if you want, I can explain why.
+
+Anna (07:16):
+Well, actually, if you stayed on Sprout, cause you know that vulnerability was discovered a few years ago. Well, I guess, you know. ---What I guess, did you like--- In their case, the way that they fixed it for it was to upgrade to Sapling. What did you do?
+
+Alberto (07:31):
+I had quite, let me say, busy days, as you can imagine.
+
+Anna (07:36):
+All right. So what did you do? If you didn't upgrade to Sapling, what was your solution to that?
+
+Alberto (07:42):
+Oh, I mean, the way that vulnerability was fixed was also to change, not strictly related, but they took the opportunity also to change the proving system behind it. So they switched from PHGR to the Groth16 proving system. And so we ported the same, let me say, fixes inside our code base by using the new Groth16 implementation for Sprout.
+
+Anna (08:08):
+Got it. But you didn't do the full Sapling upgrade.
+
+Alberto (08:10):
+No, we didn't and we paused that development, because in reality, we started thinking about using our sidechain system as a possible solution, let me say, for also shielded transaction, because you can see in our model, you can see a sidechain like a pool of coins, where you put in money and you can withdraw from this pool by providing a SNARK proof. So there is the redistribution of these funds inside this pool, let me say, and the logic that is managed inside this pool is totally decoupled from the mainchain, from what is verified by the core of the cryptocurrency. And so you can even think about having a sidechain that will act as a shielded transaction sidechain. And so for this reason, we didn't integrate immediately Sapling inside our core, because we are planning and we are thinking about the possibility to have a specific sidechain for shielded trasactions.
+
+Anna (09:17):
+So this, I guess, brings you to Zendoo, this work. I mean, was it always called Zendoo or is it more recently that it became, that that was the name?
+
+Alberto (09:29):
+Oh, we gave the name, I mean, at the time we published the paper, so about one year ago.
+
+Anna (09:36):
+Okay. So currently, I mean, if we use Bitcoin as a basis, the most famous sidechain, I guess, sidechain mechanism is Lightning. We did have Bolt. I don't know if you know, Ayo from Bolt, he was on the show about like two-three years ago and also talked about these sidechain constructions, but they're very much connected to the Bitcoin or Zcash model. How do you see what you're doing fitting into that? Is it similar to Lightning? Is it similar to a zkRollup? Where would you place it?
+
+Alberto (10:06):
+The kind of need we are solving with our model is quite similar, because we wanted to provide a way for building decentralized blockchain applications, decoupled from the mainchain, from the ZEN core. And so we have constructed the model that makes use of SNARKs to provide the possibility to interact with the mainchain in a totally decoupled way, without having to rely on some trusted party or a set of, let me say, validators, because in these sidechain models, there are some projects that are making use of validators, that are entities that somehow certify to the mainchain that what is happening on the sidechain really happened, and, for example, the transfers that are happening between sidechain and mainchain are valid.
+
+Anna (10:59):
+Actually the names for those vary. So I've sometimes have said "validator" as well, but it's also been called "committee coordinator". Basically it's the entity, this agent that sits between the L1 and the L2. And that's actually decentralized often, so there'll be many of them repeating the same processes, potentially for rewards.
+
+Alberto (11:21):
+Exactly. And let's say, that our first model was making use of validators or certifiers, or whatever you want to call them. A decentralized set of them. So we have the protocol for selecting them from a bigger set and an incentivization scheme for doing this work. And obviously these actors were responsible to follow the sidechain and certifying to mainchain, that the transfers that were happening from sidechain to mainchain were valid, and were respecting the sidechain rules. But at some point we started thinking about also corner cases, where you can even not rely on an honest majority. And so when you take out this assumption of honest majority, there could be some troubles in some of these scenarios, because mainchain can only blindly trust what these validators and certifiers are certifying. So we wanted to move forward. We wanted to, how to say, provide to mainchain a cryptographic proof that the transfers, let's call them backward transfers, the transfers that are happening from sidechain to mainchain, were valid. And we can see what valid means, because in reality, if you want to prove the validity, the cryptographic validity of such transfers, we have to understand better what does it mean.
+
+Anna (12:44):
+Got it. So you're saying for your construction, when we compare it to say, a zkRollup or any of the rollups, you've opted not to have one of those entities, is that correct? You don't have a validator in your system?
+
+Alberto (12:57):
+I mean, even with a rollup, you can end up with the zero knowledge proof of validity of the transfers. The difference is that, for example, we are making use of recursive SNARKs on the sidechain side. And we have a specific, let me say, protocol on the sidechain side that lets you run a whole sidechain network for managing the specific blockchain application logic out there.
+
+Anna (13:26):
+But back to the question, which is, is there a validator? That's what I'm trying to figure out. Do you have a role between the sidechain and the mainchain?
+
+Alberto (13:33):
+Let's say that you can see two different, in parallel, the mainchain and the sidechain, and in the sidechain you can see there's a blockchain, as well, with it's own consensus. For example, our Latus sidechain is using a proof of stake-based consensus, an Ouroboros-based Praos consensus. So on the sidechain side you have forgers. Because it's a blockchain. So you have really forgers that are producing block on the sidechain side.
+
+Anna (14:05):
+Okay. So that's like equivalent to miners, but...
+
+Alberto (14:07):
+Exactly. But for proof of stake, correct.
+
+Anna (14:09):
+So it's the forger on the sidechain, that is like the miner on the main chain. That's the equivalent?
+
+Alberto (14:15):
+Yeah, correct. Because on the sidechain side, we are not minting new coins. And so we have to use a consensus that lets you, let me say, run the sidechain in a cheap way, let's put it that way. So yes, for sure, we have forgers on the sidechain side that are producing blocks. But when I was speaking about validators previously, I was meaning the actors that have to somehow certify to mainchain that the transfers that are happening from the sidechain to the mainchain are valid, because within the sidechain you can rely on the forgers and on the consensus that are validating, let me say, all the transactions and and are verifying that the transactions are correct and respecting the consensus and so on. But when you want to go out with some coins... Let's do an example. You can think of about a car registry sidechain, where you transfer the ownership of cars. We did some consensus. So you create the sidechain and you customize the consensus for managing this kind of transfers. So what a user will do is transferring coins from the mainchain to the sidechain and then buying the car by posting a transaction on the sidechain. So that will exchange the ownership of this particular kind of object, that is the car, and also to transfer over the money. But then who sold the car probably would like to withdraw the money, withdraw the coins from sidechain and send them to the mainchain to a specific public key, and then maybe transfer them to an exchange. This could be the typical use case. So let me say, the elements that are involved in this process... First, the transfer coming from mainchain to sidechain, and this can be easily solved, if you assume that the sidechains follow the mainchain. So sidechains, they're structure of the mainchain, structure of the mainchain blocks. They can extract, for example, proofs that something happened on the mainchain part and include them in in a sidechain block. Then within the sidechain, we have transactions that transfer the coins from one user to another user, and they want to ship over the car. And then you have the receiving user that wants to withdraw this coin. And you can see these as a specific kind of a transaction on the sidechain side. So let's call it withdrawal request that spends some existing coins in sidechain and append, let me say, to a backward transfer request list this request. Let's say that on a regular basis, these requests are collected and then sent to mainchain. ----Imagine just kind of batch exactly--- The mainchain receives this list of backward transfers that are public key and the amount, for example, each one, and the mainchain has to somehow verify that this really happened on the sidechain side, really reflects what happened on the sidechain side. So what does it mean if they are valid? It means that, for example, this backward transfer is coming from a withdrawal request that spent some existing coins in the sidechain and these existing coins in the sidechain were coming from another transaction that was spending existing coins, and so on. So if we want to say the validity of the backward transfer, we can simplify saying that the whole history of the coins behind this backward transfer is valid.
+
+Anna (17:51):
+But I don't understand from what you described, how a sidechain and a mainchain see into each other. You said that they follow each other, and it's like the part where you roll it all up or you prove something and you verify it, that part, that actual cross-chain thing, at least for me conceptually works. But what you've described is that you're following each other. You're actually keeping track of what's happening on each of these, even during the batching time, no?
+
+Alberto (18:22):
+We can assume that sidechain follows mainchain, and for "follow" what I mean? The most simple thing would be that all the sidechain nodes follow the mainchain network. So they are aware about mainchain blocks, so they can see what happened there. And so they can take decisions based on that.
+
+Anna (18:41):
+But that's what I'm wondering, how do they see it? How do they see? Cause I'm just picturing, the way I've always understood these things is you have node operators, people running a mainchain node... Are all of the people who run a sidechain node, also running a mainchain node? Is that the design?
+
+Alberto (18:58):
+It's a simple approach. We are not using this approach, because we wanted to do something better. So we're including in the sidechain block, so it's the forger that is obliged to follow the mainchain network. ---The forger on the site. ----
+
+Anna (19:13):
+Yes. This is on the sidechain. So this is like the miner equivalent. So the mainchain miner may not be paying attention to the sidechain, but the forger is paying attention to the mainchain.
+
+Alberto (19:23):
+Perfect. Exactly. So the forger on the sidechain side is aware of what is happening on the mainchain and extract, let me say, the sidechain-related information from the mainchain block and includes them in a sidechain block. In fact, we have designed also a specific sidechain consensus that is making this possible. Why I'm saying this, because for example, if you have a fork in mainchain, this has impact on the sidechain, because if I forward transfer, and I mean a transfer happening from mainchain to sidechain, what's happening in the block? And we had included a proof of this forward transferring to sidechain and after the major block...
+
+Anna (20:07):
+Sidechain had it, it assumed it had it.
+
+Alberto (20:09):
+Exactly. And used it maybe, but you have a mainchain fork for whatever reason. I mean, you have consequences on the sidechain and so we have a specific consensus that also manages and handles this kind of situation on the sidechain side.
+
+Anna (20:24):
+That's interesting. So is there, when moving from the mainchain to the sidechain, does the person end up locking tokens? Like they do with Lightning?
+
+Alberto (20:34):
+Okay. How it is implemented. In reality, we, on the mainchain side, we burn the coins. --- So on the valet destroyed. Okay. Yeah, because on the maintenance you do the
+
+Anna (20:48):
+Mint and burn of the bridge. ----
+
+Alberto (20:52):
+We have a specific kind of transaction or better, in reality, a specific kind of output of a transaction in the mainchain. So if you perform a forward transfer in the mainchain, you use some mainchain coins and you send them to a sidechain, but these coins are not existing anymore in the mainchain, they are part of the balance of the sidechain. And now how are they distributed and who is the owner of these coins in the sidechain? I mean, it's totally unrelated with the mainchain, it's not connected anymore. In fact, you can see the sidechain as a pool where you put the money and then you redistribute it with some rules.
+
+Anna (21:33):
+Okay. So you're doing sort of bulk burns on one side and then pooling on the sidechain and redistributing it somehow.
+
+Alberto (21:42):
+Correct.
+
+Anna (21:44):
+Are you minting it on the sidechain? Every time?
+
+Alberto (21:47):
+No, because what happens is that we are not creating new coins in the sidechain. In reality, when a forger includes the proof in a sidechain block that a forward transfer happened in the mainchain, the coins appear in the sidechain, so the consensus in the sidechain knows that the sidechain public key A now is the owner of that amount.
+
+Anna (22:12):
+But it still sounds like they're minted, it if it appears. If it appears, isn't that minted?
+
+Alberto (22:17):
+Yeah. I mean, you can see it that way, but in reality, they are not, let me say, like the coinbase of a block. They are not part of the block-forging process.--- I mean, they are ---
+
+Anna (22:30):
+I see. Cause what you're thinking, when we say "mint", it sounds like the thing that the miners do.
+
+Alberto (22:35):
+Exactly. I mean, I just wanted to clarify that they're not part of the block reward. They are, let me say, something that is coming from the mainchain to the sidechain. So the forward transfer is giving evidence of that.
+
+Anna (22:48):
+Like the value on the sidechain just goes up. The number of tokens goes up and then when you go back, you burn them on the sidechain, so the number of tokens go down.
+
+Alberto (22:57):
+Perfect. And this is very important. So the mainchain keeps tracks of the balance of each sidechain and as a safeguard, it doesn't allow the balance to go minus [less] than zero. So even if the sidechain has some issues, I mean, I don't know some flows of whatever, the balance of the mainchain is preserved. And there are no risks for the mainchain itself.
+
+Anna (23:21):
+Interesting. I mean, this sounds a little bit more like what I always understood as just bridges. Are these not then bridges between chains, with one being considered the mainchain? How is it different?
+
+Alberto (23:34):
+It's a sort of a bridge, you can call it the bridge. The interesting part, I think, is the next part where we see how the sidechain is transferring coins to the mainchain. So how mainchain will be able to validate the other transfer?
+
+Anna (23:48):
+Okay. Yeah. So maybe let's bring in the zk part of all of this. ---So you are--- So, unlike Lightning, which is more locking... Actually, let's make that distinction too. Unlike Lightning, where you're locking tokens on mainchain and unlocking tokens on sidechain and then going back and forth that way, you're kind of keeping them in a, not contract, but something like that, that's always the way I'm thinking about it. In your case, you burn them on the mainchain, they appear on the sidechain, there you do things with them. And then eventually you come back and this is where I'm curious. Again, you have two consensuses running and you've said that, if you mint new ones, it's not like it's the miners minting new ones for themselves, not their rewards that aren't being minted. It's not like a new token, because of the consensus part, it's because of this bridge action. How does that look like? And how is there a zero knowledge proof in there? Cause it sounds like there is.
+
+Alberto (24:45):
+There are a lot of proofs involved in the whole process. Okay. This is correct. So this is exactly what we're doing. So to explain how we use zero knowledge, because the need of the SNARKs in particular, it will be clear when we go back in the part where we verify the backward transfer from the sidechain to the mainchain, because we don't use validators or whatever or certified agents. And we cannot assume that the mainchain knows the rules of all the sidechains and follows all the sidechains, because otherwise it will not scale. So to somehow validate these backward transfers. And so we want to have a cryptographic proof for this list of backward transfers. As we were saying before, it's valid the backward transfer [the backward transfer is valid], if [it] has a history of valid transactions behind it. And so if you think about a circuit or creating a SNARK proof for it, you can think about having verified in a circuit, for example, that you had a transaction that was spending some existing coins and creating some other coins, and you have a SNARK proof for that.
+
+Anna (26:04):
+That's just on the sidechain?
+
+Alberto (26:05):
+Just on the sidechain.
+
+Anna (26:06):
+Wouldn't you just be transferring them from one to another, not like spending and recreating? Are you talking about like in my account, I'm spending...
+
+Alberto (26:15):
+In your account on the sidechain.
+
+Anna (26:16):
+...and receiving...
+
+Alberto (26:18):
+Exactly. Because the reality is that if you want to prove the last part, that is the transfer from sidechain to mainchain, as we were saying before, you have to prove that the whole chain of things that happened though, that led to the backward transfer, is valid. So you can think about, for example, Mina. Mina is using recursive SNARKs to prove the state of the blockchain at some point. You can think of about the state as, let me say, the set of UTXO, the set of coins that are existing at some moment in the blockchain. And you can think about this recursive process as like proving that there is a valid transaction that is transitioning a state to another. And what I mean? That there is a transaction that is spending existing coins in the state, that has the right signature for spending then, and then the new state contains the outputs and the balance of the transaction.
+
+Anna (27:20):
+Exactly. So I think I do follow you here. I think, it was just a bit the language that you used when you said "spend", cause then it sounded like it left the system and came back. But what you're talking about is it's been moved around, in the system, somehow. And there's almost like... You're going to like lock that in. You're going to prove that that happened or something?
+
+Alberto (27:43):
+Exactly. You're proving that it happened, I mean, that you transition the state from A to B, and so on. And you do for every transaction that is happening in the sidechain. But there are additional things that we do. For example, keeping track also about the withdrawal requests that happen in the sidechain. So instead of just enforcing regular transactions that are exchanging coins between users inside the sidechain, we manage this specific transaction that is able to withdraw coins from sidechain to mainchain. And what we do? For example, we remove, we verify that we have the coins in the state that we're spending, in the sidechain, and we add the amount, I mean, the backward transfer to the list of backward transfer that we are batching. And we don't add these coins to the state of the sidechain, because these coins are then burnt in the sidechain and will be available then in the mainchain.
+
+Anna (28:41):
+But where does the zero knowledge proof live then? Does it live across both of them or does it live in the sidechain?
+
+Alberto (28:48):
+This process of generating all the proofs for the whole history is living in the sidechain. So from the mainchain perspective, mainchain will receive a transaction, a sort of a transaction, we call it "certificate", where you have a list of backward transfers, so public key and amounts, simplifying, and at zero knowledge proof that validates these lists. And, let me say, behind this zero knowledge proof, there are all the other proofs that recursively were merged on the sidechain, that recursively validate the list of backward transfers.
+
+Anna (29:25):
+But is the verifier still on mainchain then? You have a verifier, that's verifying the proof that was created on the sidechain.
+
+Alberto (29:33):
+So we have the certificate that goes into mempool, in the mainchain. Then it is added by a miner in a mainchain block, and the miner itself verifies. And each node that received the certificate in the mempool verifies that there's SNARK proof behind it. And the curious thing is the SNARK verification key. What is the SNARK verification key for verifying this proof? It's the specific SNARK verification key that was declared when this sidechain was declared in mainchain. So the point is that each sidechain can declare its own SNARK verification key, and this will provide the possibility for any sidechain developer to implement his own logic, that is reflected by a specific SNARK circuit run on the sidechain side. And the mainchain will be able to verify the validity of the backward transfer in a totally decoupled way, because from mainchain perspective, the only difference between two different sidechains is the verification key that was declared at the time of declaration.
+
+Anna (30:44):
+So I think what you described, I don't fully follow what you mean with this: anyone can be a sidechain and still use these zk proofs the way they want. I figure, isn't there some formal logic or something to this? Like if you're doing recursion, don't they all have to do recursion in the same way? Maybe you can elaborate.
+
+Alberto (31:02):
+Yeah, absolutely. Okay. Let's start from how a sidechain is declared in mainchain. What does it mean "declaring a sidechain"? So we can declare a sidechain, from the mainchain perspective, with a specific kind of transaction. In this mainchain transaction, you have a sidechain ID that will be the unique identifier of the sidechain. And you associate, simplifying, a SNARK verification key for this sidechain. And this SNARK verification key is reflecting the rules of that specific sidechain.
+
+Anna (31:35):
+Okay. So do you almost have on the mainchain a way to program your verifier? Is that what that is in a way? It's a UTXO model, I believe. So it's not like it has programmability the way Ethereum would, but that are you offering this little kind of piece on the verifying side, where people can plug and play, which kind of SNARK they want to use a little bit or..?
+
+Alberto (31:59):
+I mean, the proving system that we are using, and maybe we can even expand it later, it's always the same. The point is that if you give the possibility to a sidechain developer, to declare, when he declares the sidechain, also the SNARK verification key, in reality, you give to him the possibility to implement the sidechain rules however he wants, because from the mainchain perspective, the only thing it knows, the mainchain knows about the sidechain and has to know about the sidechain, are the backward transfers, how to validate these backward transfers. Because what is happening on the sidechain side, I mean, stays on the sidechain's side.
+
+Anna (32:40):
+Okay. Maybe you should define what these rules are, because maybe I don't understand what you mean by rules. Like what are different rules of sidechains? I actually don't follow that. Are they like domain specific or something like that?
+
+Alberto (32:55):
+Exactly. Like for example, you can have a car registry, as we mentioned before, a car registry sidechain, that is something that has specific transaction for exchanging the ownership of the car. And you can have specific rules there that prevent someone from doing something without having some information or whatever. Or you can have other kinds of sidechains that have totally different rules.
+
+Anna (33:18):
+Can you give me another example actually of another sidechain and what those rules might be? Cause then I can see what that means?
+
+Alberto (33:24):
+So for example, we can think about a real estate tokenization sidechain, where you transfer ownership of other kinds of objects that are not cars, for example. And so the rules can be totally different. For example, the kind of object that you're managing in a car registry sidechain are cars. So in a unique transaction, for example, we want to transfer both the ownership of the car and amount for paying for that. And you have a sell order, a buy order. I mean, there are domain specific verifications that are specific for that application. And so this is what I mean for specific rules.
+
+Anna (34:06):
+I want to go back to this though. What is the example of another one? Like the car example I understand, but what's another rule set that would need to be proven? I'm trying to figure out what part of the rules change? Like, would it be something like a stable coin sidechain? Okay, so then there, I can imagine the entire construction is like it's pegged to something. When you move things around, there's all these other aspects to the transaction. So that's what you mean maybe by rules. Like the rules in the sidechain could be quite distinct from one another, and the proving system's the same, but what changes in the verification on mainchain for those two examples?
+
+Alberto (34:49):
+The curious thing is that it doesn't change anything. Just the SNARK verification key changes.
+
+Anna (34:55):
+But when you say "SNARK verification key", what does that mean? Is it the type of key? Is it the number? Does it have a specific private key kind of key or is it like..?
+
+Alberto (35:05):
+When you are able to verify a SNARK proof, you verify it against a circuit. I mean, something that reflects the rules that you want to enforce. And on the verifier side, you have a verification key, a SNARK verification key that reflects that rule. So if I create a proof for some kind of rules, I will have a specific SNARK verification key.
+
+Anna (35:30):
+But when you say that, do you just mean like you get a different key, but it's always the same string? Or is it like a very different thing, much more complicated?
+
+Alberto (35:40):
+Let me say, a key is a set of bytes.
+
+Anna (35:43):
+Oh, it's still that. Okay. I thought maybe it was more complicated.
+
+Alberto (35:45):
+No, I mean, you can see it, for example, the public key, private key...
+
+Anna (35:56):
+No, I understand all that, but when you said "a different key", I thought maybe it was a different format. ---Like is there one in it--- It's the same format, it's literally just a new one.
+
+Alberto (36:06):
+Exactly. That reflects the specific rules of the sidechain. So the proving system is the same. So from the mainchain perspective, the backward transfers coming from sidechain A and sidechain B are verified in the very same way. The only thing that mainchain will have as a difference is the verification key, SNARK verification key that was declared at the time the sidechain was declared in mainchain. And in such a way, you will be able to add the possibility for developers to let mainchain know, which kind of rules are behind that specific sidechain, without having even mainchain not knowing, what are these rules, because they mainchain just knows the verification key, the SNARK verification key.
+
+Anna (36:55):
+That would verify whatever's in those circuits. If it's acting correctly, I guess. You're always looking for correct action. Okay.
+
+Alberto (37:04):
+Exactly. Because when we saw it before, you've to verify a backward transfer, you have implicitly to verify the whole history of the transfers that happened in that sidechain. And so if you have different kinds of sidechains, you have to verify different kinds of rules. And this means that you have to associate a different verification key, SNARK verification key, in the mainchain. And this is the way we allow developers to customize different applications.
+
+Anna (37:29):
+Okay. Now I have a question. Who makes the proof? Is it the forger? You said there's no agent, right? There's no other... So I'm curious now, what is that?
+
+Alberto (37:40):
+The first option would have been to have the forger producing the proofs, because we have to create a lot of proofs, because we are providing a proof for each transaction. But remember, we want to end up in mainchain with just one proof.
+
+Anna (37:56):
+Yes. It's funny when you do SNARKs. And can you do a Merkle tree of SNARKs?
+
+Alberto (38:01):
+Correct.
+
+Anna (38:01):
+Like Snark-Snark-Snark — SNARKs together. I think that's actually how Mina is built, too.
+
+Alberto (38:07):
+Perfect. Exactly. And so, let's say, we have to provide, I mean simplifying, one proof for each transaction, that proves the transition of the state. But let's say for a block, we want to provide one unique proof. So you can have the forger doing this work, but using such kind of approach, the other forgers will stay idle, unless they are working on a specific block.
+
+Anna (38:34):
+You can't have them all forge the proof at the same time, I guess
+
+Alberto (38:39):
+You have to have a protocol for them collaborating. And this is what we did. So we created a specific incentive scheme for creating a market for provers to work in parallel and work in parallel in producing proofs and having, let me say, our reward for producing proofs and also having a market for them competing together to provide the proofs at at a fair price. And so currently the proofs are created by these provers in a decentralized way. And those and the merging processes are done in a decentralized way. And there is a specific incentivization scheme, that also is part of a paper that we just published, that describes in detail how this model works.
+
+Anna (39:23):
+What's that paper called?
+
+Alberto (39:25):
+I mean, it's "the Latus incentive scheme white paper". And it goes into detail about these provers, how the marketplace is working, how you have them competing together, and so on. I mean, and how also you organize, this sounds weird, but how you organize this decentralized work to also reuse the proofs that were not able to be used in a specific lock. So what's the issue? Usually you have a certain block rate in the sidechain or in any blockchain, you have a certain block rate. And if you assume that you have to provide a specific proof for a block, and all the transactions within the block are proven, and it has to be merged in a single proof, [what] could happen [is] that some provers were working on something that was not able to be included in the final proof for this block. So we even created, let me say, an incentive and a mechanism to incentivize the next forger to reuse the same order and to be able to reuse the proofs that were created for the previous block. So, I mean, there are many details also behind it. Yep.
+
+Anna (40:41):
+That's interesting. When you're talking about this larger construction, this mainchain, all these sidechains, that sort of sounds a little bit like it's a sharded blockchain. And I'm wondering, do you think about it that way? Or do you really think of it like... Maybe as another idea, do these sidechains live forever? Or do they like pop up, die? That would sort of define maybe, how sharded it is.
+
+Alberto (41:04):
+I mean, sidechains can live forever, but also can, at some point, if the application is not used anymore, they can die. So from that point of view, it's a bit different. And so these are applications that are proceeding in parallel and have a way for interacting with the mainchain, but they have their own life.
+
+Anna (41:28):
+Okay. ---I mean, but that's,--- I mean, if you look at some of the, even the Eth 1.X role with all of the rollups, it's sort of mimics a little bit a sharded system with these domain-specific sidechains that interact. But it sounds like you don't think of it that way, you don't think of what you're building is sharded.
+
+Alberto (41:47):
+No, not exactly.
+
+Anna (41:48):
+Okay. Is there any communication between the sidechains in your model, other than through the mainchain?
+
+Alberto (41:54):
+Currently we haven't yet defined a specific protocol for communication between the sidechains, but this is something that we are currently taking in consideration. And we would like to expand the protocol to specifically rule this kind of exchange.
+
+Anna (42:11):
+One other question about this, given your use of zk-SNARKs and the recursive SNARKs, are these things all private, too? Is privacy the thing that you're preserving here? Or is that just the proof mechanism between the two things?
+
+Alberto (42:25):
+We're using SNARKs, as we have described them here, for the protocol itself. But we also use zero knowledge and SNARKs inside the sidechain, for example, for providing privacy for data. And there is a specific example we're working on, where we use, on a sidechain, zero knowledge to protect privacy of transactions and data for a specific use case. If you want to, we can go for it.
+
+Anna (42:56):
+Yeah. Actually, I'd be curious to hear that, because ---that's sort of it's, you know,--- we started this conversation learning a bit about Horizen being somewhat of a privacy project with the shielded account model. So yeah, I would be actually curious to bring that back. How is privacy reincorporated into this scheme that you have developed?
+
+Alberto (43:15):
+We extended the privacy concept for just transfers of money to also privacy for data. And we envisioned sidechains also a way for developing decentralized blockchain application, but also preserving the privacy for the users, in terms of data. So one of the specific examples, we are working on this for Celsius, where we are creating a specific sidechain that has to provide a proof of having received a certain amount of funds. So we have --- a sidechain that is, I mean,--- the consensus that is enforcing, let me say, a SNARK-friendly version of the Bitcoin blocks, and then we have zero knowledge proofs that prove that --- there were-- a set of transactions happened on Bitcoin that led to a certain amount of funds, without leaking the information about the transactions that were behind these funds in the blocks.
+
+Anna (44:16):
+Interesting. This is a bit like this selective disclosure idea of thresholds, like proving that some amount of funds exist somewhere, without revealing what they are. But in this case, what you're talking about is a sidechain to Horizen talking to, or looking at a Bitcoin account?
+
+Alberto (44:32):
+Correct.
+
+Anna (44:32):
+Like a public blockchain.
+
+Alberto (44:35):
+Exactly. And the curious thing is that, I mean, Bitcoin is not constructed in a SNARK-friendly way. So we are keeping, let me say, these two things together, the version, the SNARK-friendly version of Bitcoin block and the Bitcoin block with the consensus. And then we use the SNARKs, the zero knowledge to hide the information about the transactions that were behind the funds that we are declaring.
+
+Anna (45:01):
+That's an interesting use case. So you mentioned the Latus sidechain. You gave us a brief description of that. But now I want to bring now privacy into that context. ---Is there any,--- You talked about a SNARKs marketplace, does the SNARKs marketplace interact at all with the shielded assets?
+
+Alberto (45:18):
+Currently it's not. It's not meant that way and it's not structured that way. It's something that is interesting, I mean, for additional and next improvements.
+
+Anna (45:29):
+And would Latus itself be a unique sidechain? Or is Latus something that would live across all the sidechains?
+
+Alberto (45:36):
+We can see Latus as the model and a specific sidechain model, that can be extended with the specific logic for the sidechain. And also, from the development perspective, we are developing an SDK and the sidechain node, that implements all the basic functionalities, I mean, nodes functionality, the forgers, the basic consensus rules, the proof of stake stuff, the creation of the proofs, the basic circuits. I mean, everything that is covered by the protocol. And then on top of this, the developer can add his own logic and can customize also the circuit for covering the specific rules he had on that specific sidechain. So the Latus model is covering all the aspects that are also implemented in the SDK. And on top of it, you can add your own specific logic.
+
+Anna (46:34):
+Where does the marketplace live? Is the marketplace just a separate thing? Is that even on-chain? Or even on-site?
+
+Alberto (46:42):
+It's off-chain and you have these nodes that are, how to say, the kind of connection for exchanging the proofs is the same as the sidechain nodes, but in reality, this kind of information is running off-chain.
+
+Anna (46:57):
+I see. Okay. So it's like a web2 marketplace. Not really, but like we can think of it, like there's no blockchain aspect to that. It's just people being like, "We want to run proofs and make some money."
+
+Alberto (47:09):
+Exactly. And so if they have some computational power that they can use, I mean, they will be provers and they will be rewarded for being a prover.
+
+Anna (47:17):
+Okay. Do you expect though, the behavior to be that a miner is a forger, is a prover? Do you expect individuals to run all three of these, usually?
+
+Alberto (47:27):
+Probably yes.
+
+Anna (47:27):
+What's the requirements to set up one of these provers?
+
+Alberto (47:31):
+Currently we also optimize the proving system, and maybe we will cover later about the proving system, but just to answer briefly here, we optimized it to use a GPU. And so if you have GPUs, you will be able to provide the maximum speed in producing the proofs and it would be the most efficient way for being a prover.
+
+Anna (47:55):
+Well, so you did mention it. What are the proving systems that you're using? And I think we're actually close to the end of the interview, but I think there's going to be some listeners who'd be interested to hear a bit about this.
+
+Alberto (48:08):
+Okay. So just a couple of words about it. So as we mentioned, we needed the way to compose the recursive proof in an efficient way. And so at the beginning, we took inspiration from Coda at the time, now Mina. Let me say that we were using a full pairing-friendly cycle of curves, but we saw that the performances and they saw the performances were not enough. And so I started looking at other possibilities and we also looked at what Halo [Ha-lo] was doing. ---Um, and so,
+
+Anna (48:44):
+[Hay-lo], you mean?
+
+Alberto (48:45):
+[Hay-lo], sorry.
+
+Alberto (48:46):
+And in terms of the deferred arithmetics [?], accumulators and so on. And we wanted to use R1CS, stay with R1CS, and this was one of the reason we decided to go on with something a little bit different. So we started from Marlin, from the Marlin proving system, and we started working to make it more recursively efficient by introducing some of the same concepts that Halo did, but also with the addition of other parts. So we created a specific proving system based on Marlin and we're currently formalizing it in a new white paper that will be published quite soon. And we are also already developing it, because I mean, we will need it in the next delivery.
+
+Anna (49:39):
+Cool. So, yeah. What is the timeline on this? We've talked about three things, basically in this interview: Zendoo, the Latus sidechain and this new work. We can share links and papers potentially to the first two. You have a new work coming out, but are any of these built? Is this still conceptual? How far long are you in? And what's coming up?
+
+Alberto (49:59):
+Okay. We target to release the mainchain modification, that means the full Zendoo support in around a month. And so we already developed all the changes in mainchain, for the interaction with the sidechains, and so on. We are almost at the end.
+
+Anna (50:16):
+So this is like May-June, 2021, you're thinking?
+
+Alberto (50:19):
+Exactly. Within the same year, we will also finish the development of the sidechain SDK and the whole proving circuit and the whole proving system, recursive proving system. And so this will be the next delivery. But from the proving system perspective, the verifier is going to be included in the next delivery, I mean, in one month. And what we are finalizing, from the proving system perspective, is the prover side that will be part of the next delivery of the SDK.
+
+Anna (50:54):
+Did you stay with Marlin, in the end? Or did you switch to something else after that? You said you started from Marlin.
+
+Alberto (51:02):
+We stayed with Marlin, but with these modifications for making it recursively efficient. So we apply them, for example, the deferred arithmetics [?], accumulators and all this stuff to make it recursively efficient.
+
+Anna (51:18):
+Will you be running a trusted setup then? Or will you be sharing a trusted setup? Cause there's a bunch of other ones running, too. You can take parameters from someone else, maybe.
+
+Alberto (51:30):
+We choose to not have a trusted setup. I mean, until you go with a proving system that doesn't need it. Especially because we wanna give to the sidechain developer the possibility to customize the circuit freely, without having to run another trusted setup. So this was another important part of the...
+
+Anna (51:54):
+Although, couldn't you just make it universal? How are the parameters generated for this in the first place?
+
+Alberto (51:59):
+I mean, we have to also taken in consideration that we needed a recursive efficient proving system. And for this reason also we couldn't stay with some other proving system.For example, with pairing-friendly curves, and so on. And so for this reason, we decided to go with Marlin and make it more recursively efficient. And we would have stayed then with something that doesn't need a trusted setup.
+
+Anna (52:26):
+I always thought Marlin does have a trusted setup. I know projects where they're using Marlin and they still have to do phase one of a trusted setup, maybe not the full thing, but they have to do the Powers of Tau.
+
+Alberto (52:38):
+I mean, the kind of commitment scheme that we're using doesn't need trusted setup.
+
+Anna (52:43):
+I see. Okay. Got it. What is the commitment scheme then?
+
+Alberto (52:47):
+It's the polynomial commitment scheme.
+
+Anna (52:48):
+What is it? Is it known?
+
+Alberto (52:51):
+Yeah, it's known. I mean, it's a well-known core polynomial commitment scheme, that is the d-log polynomial commitment scheme that we are using.
+
+Anna (52:58):
+Okay. And most of the projects are using this Kate one, I guess. Okay. So, that's where the difference is, where you don't need to have a trusted setup.
+
+Alberto (53:07):
+Correct.
+
+Anna (53:07):
+Is there a trade-off to not having the trusted setup?
+
+Speaker 2 (53:12):
+I mean, there are trade-offs because of the performances.This is another important part. But we needed to have recursive SNARKs. And the problem is that the currently known full pairing-friendly cycle of curves has a huge field size and this leads to poor performances. And so for this reason we couldn't stay with a full pairing-friendly cycle of curves. And then we moved to something else.
+
+Anna (53:45):
+Sounds good. Well, listen, thank you so much for coming on and letting me explore this new... I, in my mind, don't exactly have a comparable model to what you're talking about. So this has been quite interesting to explore. Yeah. And good luck with all of the work you're doing on the new proving systems and the optimizations there and launching all of this stuff.
+
+Alberto (54:09):
+Thank you very much. It was a pleasure staying here.
+
+Anna (54:12):
+And we'll for sure add some links to this in the show notes.
+
+Alberto (54:14):
+Thank you.
+
+Anna (54:15):
+I want to say a big thank you to Andrey, the podcast producer, and Henrik, the podcast editor. And to our listeners.
+
+Anna (54:22):
+Thanks for listening.
+

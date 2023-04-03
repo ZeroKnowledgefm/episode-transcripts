@@ -1,0 +1,933 @@
+Anna Rose:
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+This week I catch up with Kostas Chalkias co-founder and chief of Cryptography at MystenLabs. We dive into his background and then explore his work on the concept of proof of reserves, or as he calls it, proof of solvency. We look at old models for this, how ZKPs can be used in these protocols, the way that exchanges currently use them, attacks on some of those approaches, the security vulnerabilities, privacy issues, and general bugs that can be found in some of these systems, as well as how to better create proof of solvency protocols. For some context, proof of solvency means does this entity have the liquidity assets reserves that they say they do? Obviously, this is very relevant to our industry today, so it was great to get a chance to kind of dive into this topic with Kostas. Now, before we kick off, I just wanna let you know that we are rolling into our last week of ZK HACK.
+If you haven't checked it out yet, it's our annual online multi-week event, all focused on bringing you up to date with ZK tools and tech. It also brings together some of the best ZK brains to hack on broken ZK protocols. We have prizes, but more importantly, this is a great way to get cred within the community. It's been amazing so far with dozens of hackers hacking and hundreds, and maybe by the time this airs, thousands of workshop participants. Be sure to check out the website to see past workshop videos, puzzles, and some of the solutions, as well as sign up for the next few sessions and hopefully get a chance to try your hand at the current ZK HACK puzzle. You can find out more at zkhack.dev. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya:
+Today's episode is sponsored by Aleo. Aleo is a new layer one blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a roll up. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games regulated stable coins and more. Visit leo-lang.org to start building. That's leo-lang.org. You can also join Aleo's incentivized testnet3 by downloading and running a snarkOS node. No signup is necessary to participate for questions. Join their Discord at Aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose:
+Today I'm here with Kostas Chalkias, the co-founder and chief of Cryptography at MystenLabs. Welcome to the show, Kostas.
+
+Kostas Chalkias:
+Very nice to see you eventually, Anna. And I'm super happy I have the opportunity now that everything is super hot on the topics I'm working on. I know a lot of people actually in the industry know me by my nickname which is Kostas Kryptos. Okay. Because you remember right when we started this this podcast, it requires a few moments to be able to pronounce my name, that's what it is
+
+Anna Rose:
+There are a few takes that will have been cut by the time people hear this but I did, I did say it by the end. Okay.
+
+Kostas Chalkias:
+Yeah. Thank you
+
+Anna Rose:
+Kostas. Welcome to the show today. I mean, our plan with today's episode is really to talk about proof of reserves, a topic that you've been focused on for quite a while. I wanna hear, though, like, let's kind of rewind a little bit. Before MystenLabs, what were you working on a few years ago? Where did you start to get excited or interested in this concept of proof of reserves?
+
+Kostas Chalkias:
+Okay. First I will give a few hints on how I went into the cryptography space in general, right? Imagine I'm an immigrant in the US, I come from like a Greek university. I worked for a couple of European companies in the past, all of them on security and cryptography and all of my life that I can think after 2005 or 6 was breaking stuff.
+
+Anna Rose:
+You like to break things?
+
+Kostas Chalkias:
+Well, I was, I think I had an inclination into doing like some cool attacks in systems and all of this. You can even, I mean, back in the days, you could very easily like do all of these JavaScript injection attacks. You can even go to websites. You can learn how things work on the server side. But anyway eventually I ended up doing pairings, bilinear pairings, which is like one of the major primitives that is used in zero knowledge proofs since 2008-9 and I was hired at Corda. You might know Corda. Corda is from R3.
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+It was one of the first biggest investments in the space at the very beginning. They were like permissioned. Eventually they got like semi permissionless and all of this stuff, but there was a benefit there. The benefit was the guy who hired me was Mike Hearn.
+Mike Hearn is one of the first developers of Satoshi.
+
+Anna Rose:
+Oh.
+
+Kostas Chalkias:
+And I had the opportunity, like since 2016 to literally work on like hardcore blockchain cryptography. And obviously back then, because the company was backed by some of the most major banks in the world, I think all of the popular banks that you are aware of were part of the consortium who invested in R3 back then and I worked there leading all of their cryptography efforts for like two to three years. I remember myself starting the proof of reserve staff even before I joined Facebook, which means that back then we were doing SGX and claves and not zero knowledge proofs
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+And I remember myself being on the zero knowledge proof, the first event that happened. I was there with 100 cryptographers. I was the only person doing SGX. Everyone was pointing at me and then I said, oh my God, where am I going? It's now Canetti and Krawczyk and all of the like Daniel Bennaroch, and everyone was looking at me, okay, this guy's doing something different. However, we want to hear different voices.
+
+Anna Rose:
+What event was that? Was that ZK proofs?
+
+Kostas Chalkias:
+Yes, it was the ZK proofs, the first one that was organized back then by Qedit. But anyway, the zero knowledge proof topic actually attracted my attention of course and then I said, okay, I'm breaking stuff and then I realized I'm dealing all of the day with bankers and people who are doing like decentralized finance. Let's see, is it ever insolvent? Can we even prove this? Can we do anything to actually provide some evidence to the world, especially for exchanges and some centralized wallets, even custodians, right. Sometimes we need solvency for custodians as well, not necessarily exchanges. And I started like doing this work from 2016, as I said, and it's important because I think one or two years before I joined R3, Mike Hearn was literally an auditor. He was called by one of the major exchanges back then to do personal audit. So he went back to their database and he actually with his eyes checked the results of the database. Oh, these are the assets, these are the liabilities, I can prove myself, I put my signature that this company is solvent. Wow. And then I said, oh my God, is is this like, okay,
+
+Anna Rose:
+The most efficient way to do it?
+
+Kostas Chalkias:
+Yeah. We rely on experts and I rely on your like sayings, but this is not verifiable. There were a few people even like after the Mt. Gox case where they started building cryptography, they realized that personal auditing by real people and that they were considered experts is not enough. Right. This is not transparent. This is not auditable. You rely on someone's reputation that this is actually happening. The big four, like the big auditors weren't in the space yet. Like imagine all of these things were just a toy. There were not real assets back then. Now they have like more of a monetary value and they said, okay, let's use a very basic cryptography. Let's use Merkle trees. And with Merkle tress people can, someone like a company can just put all of the balances in a Merkle tree. And I will say, if I'm included in the Merkle tree, this was the, the very first like approach on how we can do like proof of liabilities at least.
+
+Anna Rose:
+Is this, is this the work you were doing or is this the work that was being proposed? Generally?
+
+Kostas Chalkias:
+So like the first proposals were even exchanged between some email threads even before my time, like 2014, 2015. The very basic stuff. I'm not saying that this is the one that we should use today but if these guys weren't there, like people like Greg Maxwell and and some other folks, we wouldn't be in a state now that we can have more privacy preserving techniques, techniques that are actually more secure and all of this stuff. So imagine 2014-15 is a very important day because Mt. Gox, the collapse of Mt. Gox and the rumors that they were insolvent.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+It's sparked the interest of some cryptographers, especially those in the Bitcoin space that says, okay, let's see if we can automate this process. And the automation started, as I said, with very simple Merkle trees but these Merkle trees were not as like the Merkle trees were using for membership proofs.
+What we do, we also have a summation up to the root. So you start, you have a Merkle trees with all of the balances of the users, like you have five Bitcoins, I have seven Bitcoins. We put all of them into leaves in this Merkle tree, and then we do the addition. So the next level has five plus seven, twelve and you go up and up and up. Eventually you go up to the root and the roots would have the total amount of the liabilities of the company.
+
+Anna Rose:
+Got it.
+
+Kostas Chalkias:
+Right. And we said, okay, what do we do with this?
+
+Anna Rose:
+Or the reserves, maybe not liabilities always.
+
+Kostas Chalkias:
+Yeah. I will explain. There is a huge like misconception here. When we say proof of reserves, if this is enough to actually prove solvency
+
+Anna Rose:
+Right here, you're talking about like the Merkle trees. This was sort of first attempt, I remember R3. So this is a 2017 sort of
+
+Kostas Chalkias:
+Yes
+
+Anna Rose:
+Of project?
+
+Kostas Chalkias:
+Right, exactly.
+
+Anna Rose:
+I vaguely remember.
+
+Kostas Chalkias:
+Well, it started earlier. I think it started even very close to the Ethereum. I mean when, when Ethereum was published R3 was in the like they were trying to build R3 back then.
+
+Anna Rose:
+Okay, I see.
+
+Kostas Chalkias:
+But in a different way, like more private and they wanted to actually explore, I don't know, different ways of public blockchains, but still a smart contract platform. I was there, I worked until 2019 and then I met Sam, Sam Blackshear, our CTO at Mysten
+
+Anna Rose:
+Who I've had on the show.
+
+Kostas Chalkias:
+This saves my life, not only at MystenLabs, it saved my life for me to go at Facebook.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+And I explain what happened. So we had an algorithm this was like a post quantum signature scheme and then there was a conference in Canada and I said, okay, of course it's a good publication. I'm going there. It was a nightly conference, not so famous, but it was, it was okay for the time being. And Sam was also there because what happened back then, it was David Marcus building the team of Facebook that will deal with blockchains and obviously some key members of the team and some is, I dunno if you know, but Sam is probably one of the youngest people being promoted at this level that he was before he left Facebook.
+
+Anna Rose:
+Oh, wow. Okay.
+
+Kostas Chalkias:
+He's very smart. But anyway, obviously Sam I didn't know this guy back then also attended to try and check, oh, is there any interesting presentation? And then he has seen the name of Mike Hearn, as I told you, the guy that was at Bitcoin and he said how bad this presentation can be. Right, the conference was not perfect. Right, there were many weak presentations at all of this and I was fortunate because Sam joined my session and then he went back to Facebook and said, okay, I met a guy that we should hire.
+
+Anna Rose:
+Cool. So he saw you give a talk, decided you would be a great addition to the team, and then he recruited you, I guess.
+
+Kostas Chalkias:
+Exactly, and it's very funny that Sam didn't actually refer me to Facebook. Someone has seen his post at Facebook and someone else got the referral bonus. It's not
+
+Anna Rose:
+Aww, bummer
+
+Kostas Chalkias:
+Yeah. We're making fun with Sam these days. But anyway, this was my first step to say, okay, I'm now in the UK. I used to work in London, R3 was like New York and London, but most of the engineering team was in London. It's a good opportunity for me to go at Facebook. Obviously they're building something new. I know they want cryptographers. The team should seemed really cool. I talked to Sam then I even talked to some of the leadership. Imagine getting someone as a transfer from a company where you are leading stuff and you are getting paid well, you are actually having your own team. It's not easy, right. Even if you say, I'm going to Facebook. But I was convinced like even David Marcus was a key player, and Evan Cheung, Evan, like the CEO of Mysten now, was also like the Director of all of the research team at Facebook.
+
+Anna Rose:
+Did you have any trepidation though going to a company like Facebook, now Meta, like at the time, this is 2018-2019, I guess.
+
+Kostas Chalkias:
+Yeah.
+
+Anna Rose:
+The reputation already of Facebook is like, it's a big company, but it's not, I mean, it, first of all wasn't really known as a cryptography company at the time.
+
+Kostas Chalkias:
+No.
+
+Anna Rose:
+And like, yeah. Did you have any worries about going to such a big org?
+
+Kostas Chalkias:
+I can give you like the full perspective here. I didn't, and I will explain why. Obviously this was like right after the Cambridge Analytica situation, which happened the year before.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+And obviously as a researcher, you want to go sometimes in companies that you know you can fix things.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+I didn't know of course if it was like Facebook to blame or i it was just because they missed something like in the flows. But anyway, it's like intriguing to to you, right? You want to go to a company that is big enough to support even having a team. This was one of my first requests back then. I didn't have a team directly, but eventually I did lead a team as I wanted and the fact that I was about to work in a startup inside Meta, Facebook back then, was also very good for me because I was very experienced with startups and I said, okay, it's a big company.
+as you say, they have their own issues, but at the same time they have the many benefits that I can have access to, like the best resources available.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+I can work on very important problems. It's a new blockchain. I've done it once. I've built one blockchain with Mike and all of the R3 team. Corda. I know how to do it again and to tell you the truth, at the same time, you know how it is with cryptographers and like senior engineers, you're getting offers from Apple, Google, Facebook and so on and then I had a few other options, a visa as well back then. And then I said, okay, I'm joining Facebook because in all of the other offers that I have, they're actually putting me as a security engineer or as a cryptographer where I don't know where, what is the project I will work on.
+But Facebook has had a dedicated role for Kostas and this is the reason that I picked Facebook. It wasn't necessarily money, it wasn't necessarily like the fact that you said bad reputation. They had a very clear role for me and I joined Facebook, super happy three years, leading staff, starting officially publishing proof of reserves, proof of solvency protocols on 2019. So the first year at Facebook, we already had the presentation back then in Amsterdam. It was like one of the first, no second or third zero knowledge proof event. I presented our first ideas how we can add privacy to the original schemes of proof of solvency. And since then I worked to show so many different things at Facebook. So from proof of reserves leading the zero knowledge proof story with Bobbin, now Bobbin is at Polygon.
+Leading so many different like compression schemes even on signatures with Valeria. Valeria is with a16z now. We had so many, I mean the team was one of the best you can see back then.
+
+Anna Rose:
+Ah, very cool.
+
+Kostas Chalkias:
+I'm not, I'm not kidding. Right. I was in Corda, I was dealing with like hyperledger fabric and like all of the Ethereum guys. I believe that Evan Cheung, because he was like the Head of Research back then, he managed to build a very solid team and I can tell you for sure because I was internal at Facebook. Right. The reason that Libra didn't launch wasn't technical.
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+We were already technically even a year ago before the Libra Project collapses and we were super happy with what we did and it makes sense right after the Libra collapse, you've seen a few startups popping up.
+Yeah. Like it's, it's MystenLabs, it's Aptos, it's Liners, it's even David Marcus' Lightspark, at least for almost L1s. There is a reason for this. The team was very, very strong and because Facebook wouldn't keep all of these people eventually, I mean nobody would work for a project that wouldn't fly
+
+Anna Rose:
+Ever launch. Yeah.
+
+Kostas Chalkias:
+Yes. Then I personally, when I realized that Libra will will not manage to do it for a while before I leave Facebook, I also worked on WhatsApp security. I have a few patents there and all of this stuff. I'm against patents, but you know, big companies, they have to do this for even defensive reasons,
+
+Anna Rose:
+Reasons I'm putting in quote marks
+
+Kostas Chalkias:
+I can, I can give you an example. I didn't know about this. Right. There is a reason sometimes you might be the inventor of some idea and there might be a company outside the US that they will say, no, no, no, we did it and now Facebook you cannot use it.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+So sometimes they, because of these potential threats, they go and patent. But anyway, this happened and with Mysten I think we had the best opportunity possible and there is a big reason for this is some of the research that we were either finished at Facebook or most of the times, especially now we extended after we left Facebook was so innovative that compared to the other blockchains that you could see here and there, you had an opportunity to actually build a system with high throughput, privacy whenever is required, some very cool cryptographic primitives. I had all of this experience with proof of reserves and working with the Libra Foundation with Corda Banks in the past. And then I said, okay, it's better for me not to stay at Facebook. It's better to me not to join another company. Now all of them are friends, right.
+I'm personally a person who likes the community. I want other projects to also flourish. But I said, okay, I will join Mysten because the team that Evan Cheung is now having is was literally one of the best I've ever worked with.
+
+Anna Rose:
+Wow.
+
+Kostas Chalkias:
+So we have five founders who all of them were almost like having a, one of the best promotion paths that you could see at Facebook. These guys couldn't be like fake. Right. There is some real substance behind it and then I left Facebook I joined Mysten as the Lead Cryptographer and obviously Co-Founder. And now we have again, I believe one of the most solid teams. We have four departments of cryptography. We have a zero knowledge proof dedicated department. We have a random Bitcoin dedicated department, we have an optimizations department and we also have an RFCs department.
+
+Anna Rose:
+Neat.
+
+Kostas Chalkias:
+So this is where I am at the moment. Right. Leading these four verticals inside Mysten.
+
+Anna Rose:
+Sounds good. Let's go into proof of reserves. So you've started to tease some of the early work. So I think we now understand the history of like when you started working on this.
+
+Kostas Chalkias:
+Yes.
+
+Anna Rose:
+Proof of reserves. Obviously we're recording this just a few weeks or a week after the crazy FTX fiasco collapse and all of that. The topic has become super relevant because in that case there were no proof of reserves and we are learning that reserves were not there and that's kind of terrifying. So this idea of proof of reserves, you do have it being used in exchanges. I want you to kind of go back into explaining what is a proof of reserve actually. You started with the Merkle trees, but like let's even go a bit higher than that. Like what is it for?
+
+Kostas Chalkias:
+I will explain what's the problem we're solving here, right? We have companies, we have exchanges, we might have custodian wallets and like all of these people who own money and they handle money on behalf of the users, for which the users do not have the actual key to the blockchain. Like someone else is controlling your key to make transactions on the blockchain. And this is what's happening usually on centralized exchanges like the FTX case back then with Mt. Gox and even like all of the major exchanges that we're aware of, people are not good at protecting their passwords, eventually sometimes you are lazy and what you do is actually you go there, it also gives you all of this flexibility to do the transactions without you remembering very complex passphrase and everything. And people felt really good with that until we realized the the problem.
+Right. The problem is what if the company, you're putting all of your money there by credit card, you're having some wires, you're sending all of this because you don't have a personal account. They control the Bitcoins, Ethereum, the whatever is the coin for you. But you don't know if they are solvent. And what solvency means is the money that all of the clients have in the exchanges, these are the liabilities of the exchanges are matching all of the assets that the exchange has in the outside world. Which means the assets, the real Bitcoins that I have on the network and I control the key for, I'm the exchange now, all of the other potential like assets that I have outside the exchanges, I might have some cash, I might have some bonds, I might have some real estate investments. I might have different things, but at the same time I want to ensure that that what if one day all of my clients, all of my customers come back and say I want to withdraw my money. Am I able to pay them back? And if you consider what are the functions involved here, it's like proof of liabilities. You need the proof to actually show how much money you own to your customers and the proof of assets. How much assets do I have like in my ownership?
+
+Anna Rose:
+Would you say then is proof of reserves, both of those things? Is the proof of reserve a proof of liability matching a proof of asset?
+
+Kostas Chalkias:
+Yes and sometimes we call it proof of solvency as well. So proof of reserves is probably quality proof of solvency. And this is divided into proof of liabilities and proof of assets. Sometimes people are confusing proof of reserve with just proof of assets because the word reserves
+
+Anna Rose:
+Sounds like assets. That's what I was thinking too. Yeah.
+
+Kostas Chalkias:
+Exactly. So what I use lately, I better use the wording proof of solvency and then I divide it to proof of liabilities and the proof of assets. And you can see different mechanisms even from the cryptography perspective, how to prove liabilities and how to prove assets. And I think this is causing the confusion even on Twitter. People can see like there are some very good solutions out there. And I can mention like start with bits has some great ideas. We know all of these Benedikt Bunz and Dan Boneh have some very good ideas to solve
+
+Anna Rose:
+For selective disclosure and, yeah
+
+Kostas Chalkias:
+Yes, exactly. And there is also Chainlink with solving with Oracles the problem of proof of assets. And I will explain why these problems are different. But anyway, let's stick to the point where you have to prove liabilities and you have to prove assets. How do you prove assets? Let's get this side first, right? There is a second parameter actually before I go there, which is liquidity. We know that the FTX case might not be, we don't know if it was truly insolvent actually this, this is like the court or like the legal system we decide, but we know they had the liquidity problem. This is a fact. Right? And sometimes I might say to you, right, let's assume you're putting your money into my exchanges. I'm an exchange now and you're having like 1 million in dollars in my exchanges and I go and buy a real estate, I go and buy a house and then if you say I want to withdraw my money
+
+Anna Rose:
+Yeah
+
+Kostas Chalkias:
+This money might not be liquid. I mean I cannot even, I need to sell my house first to give you your money
+
+Anna Rose:
+Fair. And I think in this case, especially with the case that just went down, like investments with long lockup periods for example, would still exactly look like asset on the balance sheet but wouldn't actually be liquid. So if you needed to take the money out, you wouldn't be able to
+
+Kostas Chalkias:
+Exactly. Exactly. And this is usually the main problem that even if you do cryptography and all of the fancy solutions, you need to define some function on what is liquid and what is not liquid. And then you might say I'm running in a fractional reserve regarding liquidity, however, in total I am solvent because liquid plus non-liquid assets surpass the liabilities and it's a problem, right? It's not easy to solve. And let's go and see what are the options that we have proof of assets first. Because proof of assets, as we said is like the assets that we have on chain. Let's assume these are the liquid assets. You have Bitcoins, you control keys for your Bitcoins and Ethereum and there are non-liquid assets which might be as you said, investments, bonds, even cash on the bank and all of this stuff. So there are companies like Chainlink and some others where they're building a set of like Oracles and probably they have some collaboration with auditors
+
+Anna Rose:
+To connect to the real world, right? Like that's, they're trying
+
+Kostas Chalkias:
+To the real world you need this. Yeah, you need this. And there is a question, can we do this without auditors? Probably with some zero knowledge proofs, but again, all of the system like the banking system and everyone who is owning this assets eventually. So your cash is under a bank, your real estate is probably under some agency or or something. They need to provide this proofs because otherwise how do you know that? So what's happening is, let's assume the simplest model is you have a set of Oracles, the set of Oracles is talking to some auditors. These auditors are auditing the actual reserves, the actual assets. So I'm not gonna use the word reserves again, the actual assets and these are giving like every few moments, they're giving a signal that these are the assets, these are the assets, these are the assets, we need these heartbeat, right?
+Because you know these are fluctuating and this is one of the other problems that we have now, what do you mean the assets at which timestamp?
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+Because even in one moment I can transfer funds or I can transfer some of my assets or I might acquire a new company. My assets are changing constantly. So for proofs of solvency, it's very important to define an actual timestamp, in which case you're doing concurrently the asset check and the liability check. And this is not very easy in the real world, how would you do it? Right, how would you actually say all of the other providers of these assets, banks, real estate agencies, bond providers, the stock market investment investment funds, how do you say to them, give me by this timestamp all of my assets and I will compare it with this liabilities. There is a process here and you need some time to organize it, but it is possible if we do it properly. It is possible. And there is another thing that you mentioned at the very beginning of this meeting, right? One of the issues is if you know how, however this timestamp and you have a friend in the other exchange, you might ask them, okay, tomorrow at seven o'clock I will be audited. Can you send me
+
+Anna Rose:
+Yeah. So actually I said this before we started the interview, but yeah, this idea of like a short term loan to move funds into an account at the time when you're actually doing this check and then you'd move them right out. And I think there's like a theory that crypto.com may have just recently done that, but that's all a little conspiracy theory. Possibly
+
+Kostas Chalkias:
+I won't get to do this, into the conspiracy and the rumours. I will talk as a cryptographer here, right? What can we do? Is there anything that we can do? Surprisingly there is a paper from Benedikt Bunz, Dan Boneh, Jeremy Clark, and like all of these popular like famous notable cryptographers where in their Provisions paper, it's called Provisions. It was the first scheme that I've seen I think is 2015, that they had an algorithm that said, okay, if proof of assets is happening at the same time for all of the exchanges, then there is a zero knowledge proof that we can create that all of them are solvent and they use this asset once. Right. You didn't double use this asset in my audit.
+
+Anna Rose:
+Yeah. Interesting. Okay
+
+Kostas Chalkias:
+So it is possible however this algorithm was only based on the facts that we can see on the asset that we can see on the blockchain. Because in the blockchain, you know, because imagine these are addresses that they're owning some assets and by zero knowledge proof you can use the object ID, the UTXO ID or whatever it is, and say this UTXO ID in zero knowledge proof is not used here and here it's used only once. It is possible.
+
+Anna Rose:
+Is it also possible to take like three snapshots in a certain period of time in case like almost to look for these type of short term loans? Although I guess actually if somebody knows the snapshots are coming, they could just make the loan longer
+
+Kostas Chalkias:
+Yeah, it is, it is possible. And this is like what I call continuous auditing. You need some continuous audit, right? Either this step is every few moments literally in an analog way it's very difficult how to do it per second, right? Because all of this requires some, some like computations, you cannot even do it every second. So you have to take this into account because if you are building zero knowledge proof systems for the staff, we also need to account for how, I mean the frequency of this
+
+Anna Rose:
+Yeah and it takes time
+
+Kostas Chalkias:
+It it's important right? It might take time and you know better, I mean with all of the guests that you have that some proving systems are not super fast. Even if it's not super fast, even if we say a minute, we cannot go less than a minute. How would you do that? Okay, this is one, this is one of the problem, right? First problem. How do you ensure that at the same time in one organization, all of the proof of asssets are happening at the same timestamp. The second problem is how do you ensure that these are not colluding? And even if exchanges are not colluding, not everyone is audited at the same time. Even if we could enforce it because it might be you be you in an individual who would be a friend of the CEO of the exchange for some reason you had a lot of assets and because we're having like assets outside the exchanges, you own the private key personally you can just rent it for a while, right? And then after the audit you will never be audited because you're an individual, who cares.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+They will return back to you the money and we have to figure out how to solve this and the way we can do it is with continuous analytics, if we see big transactions happening this is an alert and we have to do this. However, we also propose something else in one of our papers. The audit should happen in a timestamp defined by some set of auditors in the past.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+So imagine I'm coming to audit you now and I say to you, I will audit you for yesterday, not today
+
+Anna Rose:
+Yeah. Ah, that's nice. Okay.
+
+Kostas Chalkias:
+Now it's in the past, right? You cannot change the past and probably you have to find a way to prove what were your liabilities back then and what were your assets back then? And now you don't have the time to do all of this collusion thing. So there are ways to do it. We don't know how far in the past it is possible because you might have lost the keys
+
+Anna Rose:
+Yeah, yeah. There's things that could have had you lose it.
+
+Kostas Chalkias:
+Yes, exactly.
+
+Anna Rose:
+In a way also you're proving proof of liability and assets then. And you may have lost it. Like maybe you've totally gone out of wack since then and you're not proving it for now. Okay?
+
+Kostas Chalkias:
+This is true. However, a few things might be auditable already, right? If you had like some timestamp on the transaction that happened back then and even, you know, with some auditor supervision or even if you don't want to provide so much privacy and you want to reveal to the world, these are the assets, I own the blockchain, obviously you're losing privacy here. These are all of the liabilities I have for everyone. You can go and check at that day. Was this your balance? Are you happy with this? If you do the sum of the liabilities, is it the same with the sum of assets or at least lower than the sum of assets, then it would be golden but we need also some privacy. We cannot reveal people's like balances.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+And this is where the problem starts. Let's assume we finish with proof of assets.
+We understand the problems there. Let's go to the liabilities. Now on the liabilities part, how do you ensure that the company is adding the balances of of its user, the liabilities to their customers correctly? And I'm going to talk about attacks now, what zero knowledge proofs can do and all of this stuff. Plain Merkle trees might not surface because if you have a Merkle tree in theory where you're going up to the root, you can read your neighboring leaf, right? You can read the balance from your neighboring leaf to do the addition and go up and up and up and up.
+
+Anna Rose:
+Okay
+
+Kostas Chalkias:
+So in the original mechanism where our balances were just leaves of the trees and then you just go up its level, you know your neighbor and you are learning some value that someone in the network has. And you might be unlucky or lucky to be next to Mark Zuckerberg for example and you can see someone with 10 million dollars in Bitcoin. Why you should know as an individual what someone else is owning as liabilities to this particular exchange? So we have to hide this information. Okay, simple Merkle trees do not work and here is where zero knowledge proof is coming
+
+Anna Rose:
+So it's more for the privacy here that you're using, you're using ZKPs so that you can create this proof of liability without revealing everyone's accounts.
+
+Kostas Chalkias:
+Exactly.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+Well this was one of the first reason that it was proposed, but obviously you can also use ZKP for compression. But let's assume this is not a problem. Now compression is not a problem here. And then what you need for zero knowledge proofs. Okay, I can build the zero knowledge proof scheme that I take the Merkle tree and what I do is I blind the balances and then I use homomorphic encryption up to the root. So you know, this is encrypted of something and your neighbor has another encrypted of something. But if I add them, I know I have the encryption of these two values, I know one of them, but I know the correctness of the operation and then you can go up to the root and you know that the correct operation has happened. So here is one application of zero knowledge proof and obviously because we're talking about blinded values now, you apart from the homomorphic encryption, you also needs zero knowledge proofs to ensure that there is no overflow. So there is this called arranged proofs. You need to ensure that like the balance will not get up to some like very big amount and then it, because we have groups in cryptography, right? This will go back to zero and 1, 2, 3, 4 again.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+Like starting from the beginning. You need zero knowledge proofs to prove that the range of the addition of this homomorphic operations is correct, is not overflowing.
+
+Anna Rose:
+Got it. Just a quick question on the FHE that you're talking about here. Like since it's just simple addition, is that something that like current FHE systems can handle already? Because I know that like more complicated computation, like just generally FHE isn't like a fully developed space.
+
+Kostas Chalkias:
+We do
+
+Anna Rose:
+Okay. You say already today you can use the FHE that exists to do a scheme like this?
+
+Kostas Chalkias:
+Yes. And you don't need FHE in in practice, right? Even partial homomorphic encryption works because you just need addition. FHE is addition and multiplication.
+
+Anna Rose:
+Okay
+
+Kostas Chalkias:
+Here you don't need multiplication, you need only addition, which means that with very simple elgamal encryption, which is like additive, is adding the exponents, which are encrypted works and this is one of the systems that we proposed, originally proposed in the provisions paper of Dan Boneh, Benedikt Bunz and Jeremy Clark and all of these guys. And then we said, okay, they're proposing this. They didn't have a Merkle tree structure back then for them it was a flat structure, but we said okay, we cannot publish billions of information on chain, let's do the Merkle-ized option. And what we did is very plain Pederson commitments, not fully homomorphic encryption, just homomorphic encryption. Just addition and arrange proofs on top of them and now you can go up to the route and you know, all of the operations were correct.
+
+Anna Rose:
+So was this both for proof of assets and proof of liability or was this only for proof of liability?
+
+Kostas Chalkias:
+The Merkle tree approach is usually for proof of liabilities and I will explain why we need Merkle trees there. There is a reason I didn't finish yet with the proof of liabilities. The fact that, you know, you have a construction that in a zero knowledge proof way is adding the balances correctly up to some root is not enough. Why is not enough? Now I will explain about some new findings we had in the previous, this year actually financial crypto conference that we revealed that all of the proof of liabilities that at the moment most of the major exchanges, those who supported offer, they have vulnerabilities.
+
+Anna Rose:
+Okay. So here you're talking about like actual uses of this. So this proposal, this idea of proof of
+
+Kostas Chalkias:
+It's used
+
+Anna Rose:
+So it's already being used, it's in
+
+Kostas Chalkias:
+Yeah.
+
+Anna Rose:
+It's being used by these exchanges, but you found a vulnerability in that model
+
+Kostas Chalkias:
+Four vulnerabilities?
+
+Anna Rose:
+Four vulnerabilities in that model?
+
+Kostas Chalkias:
+Four vulnerabilities, I will explain what I mean here. Okay. Let's assume that you had the way to do the addition, right? We explain zero knowledge proofs, we explain Merkle trees. The first one is the original proposal from 2014-15 from Maxwell had a small issue where instead of committing to the addition of the two values, you can play games like breaking a bit the addition property and you actually commit to the maximum of the two values. So if we had five and five, I could say that the sum is five. So you can hide vulnerabilities, you can hide balances up to the root. And unfortunately, well this is public information now. For example, all of the audits that until 2018, 2019 Deloitte had were using this algorithm which was vulnerable.
+
+Anna Rose:
+Huh? Was this a bug? Was this a mistake? Why were they only taking the top the most, the biggest one.
+
+Kostas Chalkias:
+Okay. That's the best question I wanted to hear. So the vulnerability was actually published even before we find it. The problem is people didn't realize what they found and then, and then because I was at Facebook, I had all of the research supervision of what's happening in the space, I said, okay, let's see if this vulnerability actually applies today in the exchanges. And then I realized that they are doing it even with one of them, one of the big four auditors had an emergency when we reported it.
+
+Anna Rose:
+Oh
+
+Kostas Chalkias:
+I'm not kidding. They literally called me that we're going to have a Friday meeting. I don't remember the day and let's see, because Kostas, I can assure to you we didn't know there was a bug. They didn't know Anna, they didn't know that the algorithm they were using had the bug.
+
+Anna Rose:
+Oh, that's bad.
+
+Kostas Chalkias:
+What was happening is I personally believe that the auditors didn't know about this vulnerability. They didn't do it on purpose. I have a few evidences that the reason for doing this is because first the original algorithm with the Merkle trees was not published as a cryptography paper. It was published in some threads and in some forums and people never had the ability actually to do a proper security proof.
+
+Anna Rose:
+Got it
+
+Kostas Chalkias:
+Then there was a guy, there was a team, I don't remember the names of the authors, that in 2018 they said, okay, the Merkle tree summation is not correct. Right. They can actually play games here and prove different balances by committing to the max instead of the sum. But nobody paid attention. Probably the conference that it was published at wasn't, I don't remember which conference. Yes, maybe.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+It wasn't crypto, it wasn't Europocrypt, it wasn't like CSS
+
+Anna Rose:
+A zero knowledge summit?
+
+Kostas Chalkias:
+No,
+
+Anna Rose:
+My event, no?
+
+Kostas Chalkias:
+It wasn't.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+I think the title is called Breaking the Binding or something.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+But anyway, nobody paid attention. You know, the auditors also do not have cryptographers. I explained at the very beginning that even big companies like Facebook, they didn't have like unlimited cryptographers. Right. Even in university departments you could find more cryptographers than at Facebook at the very beginning or in an auditor who is an expert in cryptography would join an auditor for years and have like a big research team. It's very difficult. Even blockchain teams like sometimes struggle to find good cryptographers. So I believe they just got what they found in the forum and they just applied it. And that's why nobody could figure out this is actually exploited, can be exploited. This is the correct wording because I think at least in the Deloitte case, it wasn't exploited. They just didn't know
+
+Anna Rose:
+This was one vulnerability. But were there others?
+
+Kostas Chalkias:
+Yes, this was one, the Merkle tree summation was wrong. The others are, okay, what do you do with the proof of liabilities? You have the Merkle tree, right? And then you need the people to check their inclusion to this Merkle tree. If nobody checks, you are in exchange and you will say my liabilities are zero. And then Anna and Kostas never check if their balances are included
+
+Anna Rose:
+Theirs? Ah, yeah. Okay.
+
+Kostas Chalkias:
+Right. So you need interaction, right? Proof of liabilities cannot just be proven by just a commitment. You need people to actually check that my balance was there. Otherwise nobody knows if the balance that you are reporting is the correct one.
+
+Anna Rose:
+And yet you wanna keep everything private so you can't like have some other person checking these balances. You want it to be
+
+Kostas Chalkias:
+Yeah
+
+Anna Rose:
+The the actual owner of the accounts, I guess.
+
+Kostas Chalkias:
+Exactly. And what's happening is there are two options. Like I think Kraken is using one of them, so the auditor might have access to the balances.
+
+Anna Rose:
+Okay
+
+Kostas Chalkias:
+Right. Let's assume that not everyone in the world has access, but the auditor might have access. I'm not saying that this is the best application. I wouldn't do it just this. I would try to hide even from the auditor sometimes, from the solvency auditor, sometimes individual balances. But let's assume this is tolerable for now. The auditor goes there and in the system they check some balances. How do they know if this balances are real? If you don't ask the person who has the money, whose money is belonging to them, you don't know. Right? You need people and what auditors usually do, they do random subject. They literally called people, hey,
+
+Anna Rose:
+Okay
+
+Kostas Chalkias:
+Is it you with like 3000 dollars in FTX? And then I don't know how the sampling is happening. What I realized after talking to some auditors is they also create their own accounts to the exchanges.
+The exchange doesn't know that this accounts belong to the auditor. So they can definitely do random sampling between them right. Between their own employees.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+But this is, again, this is not enough. And to tell you the truth, I was never audited in the past, no-one of my friends was audited. We don't know if random sampling works from auditors like by phone call. What you can do however, is you can just publish this Merkle root, this commitment on the total balance of liabilities and then users can request a proof of inclusion and then you check if your balance at that day, assuming you remember your balance, is included in the total liability proof. And then we identified in the paper that if you have, for example, 1 million clients for the company to cheat in 100 accounts, like to not include 100 people on purpose, if 5% of the population checks they will be caught. If they try to cheat, they will be caught. Obviously you can cheat by omitting one account if you know this user will never check.
+
+Anna Rose:
+Hmm.
+
+Kostas Chalkias:
+Right. This is obvious. However, we have to talk with asymptotics now let's assume that this is not a real attack. The real attack is if they're doing this like continuously and they're actually removing many balances from the Merkle tree. If they try to remove many balances, we did the math and we realize that even with a small portion of people checking the inclusion proof, it would surface. Right? It would be okay.
+
+Anna Rose:
+Okay
+
+Kostas Chalkias:
+It would be okay. So these percenters who tell you the truth varies between depending on the population from 2% to 5%, I think if one out of 20 people was checking and the exchange doesn't know who is checking because this is a very important information and I will explain why this is important and what is the third attack that we found? Yeah, as I explained before, people need to do random sampling. Somehow they should check the proof of like inclusion, how? You just see a Merkle tree who is giving you the inclusion proof someone is to provide to you. But what's happening is this website sometime they have their own website and they say, here is the Merkle root. Anna sees this Merkle root, Kostas sees this Merkle root, but we don't know if it's the real Merkle root because if you refresh, I might see different Merkle root and if I refresh, I see a different Merkle root.
+
+Anna Rose:
+So this is like a Web2 website where you're just like checking exactly some And that could be hacked is what you're saying?
+
+Kostas Chalkias:
+Exactly. It's a Web2 vulnerability now.
+
+Anna Rose:
+Yeah. Yeah. Okay. Is that the third one then? This is the third vulnerability.
+
+Kostas Chalkias:
+Let's assume this is the second for a while and I will explain what the third one. So the second one is a Web2 vulnerability because we're not committing to a public bulletin board on the potential balance. People don't know if they're checking against the correct Merkle root, right? And we need to, what is the public bulletin board? Probably have to put it on Twitter, on Facebook, on a blockchain. You need the public bulletin board. The reality is the world doesn't have an approved public bulletin board today. We only say that it's blockchains, but people are not familiar with blockchains. How can I even check if I don't have a light client, if I don't run a full node, that this was literally something published on a public bulletin board. So I think we have to improve there, create some tools for the community that can be used across the exchanges that people very quickly can check their balances and they know that they check against the correct proof of liabilities. Right? The correct root. That's the second. As I explained before, there is a third one. When you join an FTX or any exchange website, you are assigned an identity, right? Some identifier. You have a user ID. How do I know that FTX is giving to me the same user ID with you or not? Or they're giving me, they're assigning me.
+
+Anna Rose:
+Like if it's independent or if it's
+
+Kostas Chalkias:
+Yeah, you don't know
+
+Anna Rose:
+Somebody else? Okay
+
+Kostas Chalkias:
+You don't know it. Which means that if there are people in their system that they happen to have the same balance and sometimes, you know, we have round bit numbers, you will have 5 Bitcoin and not 4.99. It is possible this is a theft attack to actually send the same inclusion proof to different people. Both of them will check, they will say my $5 are there, but this $5 is reused between different users now right? So you cannot sit on everything, but you can sit on equal balances now.
+
+Anna Rose:
+So this is duplication of accounts when there's an equal balance?
+
+Kostas Chalkias:
+Yes. And the proposal here is you should use something that is either picked by the user, like the user ID, I pick it, or you might use my phone number or my email as user identifier rather than a random user ID. Why they using user IDs? They try to solve this, the privacy problem? No, no. I cannot reveal your like email.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+Even to the auditor, I use a user ID. However, now you need to proof that this user ID is unique. Right.
+
+Anna Rose:
+Interesting
+
+Kostas Chalkias:
+Or we need some KYC provider that will give you a token on
+
+Anna Rose:
+That's unique.
+
+Kostas Chalkias:
+Yes. That is unique. Like it's your, it's your email, but there is a token over your email. So this is the third one. And there is another one that surprisingly was, I was super excited when I found it. A few implementations are truncating the hashes. So instead of using all of the output of the hash while you're going up to the tree.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+Like the 256 bits, they truncated these to 64 bits.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+Now it's brute forceable
+
+Anna Rose:
+Oh, really? So here the privacy could be leaked. Is that correct or no?
+
+Kostas Chalkias:
+No
+
+Anna Rose:
+Could you still? It's, it's like when you say brute force, what are you brute forcing? Are you?
+
+Kostas Chalkias:
+I can find two balances, different balances that they happen to go to the same hash.
+
+Anna Rose:
+Ah, I see. Okay. Why would they truncate it though? Why, why did they do that?
+
+Kostas Chalkias:
+I think they did it for performance reasons and it was a huge mistake.
+
+Anna Rose:
+Okay. Okay.
+
+Kostas Chalkias:
+And yeah, I even found a website. I think this website is not like live now. It was BHEX. I don't remember where this exchange was from, but if you search something on Google for broken proofs of solvency, you will find our full report.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+We have names like BHEX there, Deloitte, Coin Floor, Kraken, BitMax, anything from Armanino, there's so many different names and one of them was using short hashes completely everywhere I could, I could literally create a fake
+
+Anna Rose:
+Wow.
+
+Kostas Chalkias:
+A proof of liabilities for everything. So yes, these are the four attacks that you can find at the moment on proof of liabilities.
+
+Anna Rose:
+When you talk about these proofs, is this a situation where the proofs are being created and then there's an outcome and that's sort of the audit? Basically, I was kind of unclear, even going back to the first one, the bug, like who's running this? Is it the exchange runs these proofs and then the auditors would check this to make sure that it's accurate?
+
+Kostas Chalkias:
+Yes. So the exchange is publishing their proof of liabilities is computing their proof of liabilities and publishing the root of the proof of liabilities or whatever system they're using and their proof of assets. Obviously it can be the auditor as well along with the exchanges. And then the user element comes right afterwards. So after I see the commitment on the proofs, I request the liability inclusion, which means that you have an exchange in here. Let's assume that there wasn't an auditor. What you could do is you can use Oracles to give you some evidence of proof of assets. You can produce your own proof liabilities, no auditors involved. And then you publish this to public bulletin board, the users are coming and checking and if we said that if a significant amount of people check the probability that you cheat it on many balances is very small.
+Okay, let's assume that we can tolerate this. No auditor is involved. People are actually doing their own checks by their mobile phones or their website of the company. The proof of assets has been proved by systems like the chain link proof of asset, proof of reserves, they call it. I would say that the whole industry should change the name to tell you the truth. We should use proof of solvency and proof liability and proof of assets, proof of reserves is very confusing.
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+And then with this proof of assets system and the proof of liabilities, no auditor is involved computed by the exchanges, the users can audit it in a decentralized fashion.
+
+Anna Rose:
+Interesting.
+
+Kostas Chalkias:
+This is how, this is how it's working
+
+Anna Rose:
+And this is the ideal scenario. This is what you think should be
+
+Kostas Chalkias:
+This is the ideal if we don't want to include auditors. I will give you a very interesting like situation I came across, so back in 2019 or 20, I think it was Coin Telegraph, that they realized that Facebook is working on proof of solvency and I can tell you for sure, I think David Marcus even tweeted that the other day. I don't think there was any other team in the world that they did all of the analysis that we did on proof of solvency. We have at least four reputable papers in the space and we knew exactly where to focus, right. Literally the team was very experienced on this and something that I also had as a problem is when this article was published by Coin Telegraph some people, because you know what it reminds you the proof of solvency thing, it reminds you the infamous Enron scandal.
+Right, and in all of the cryptographic papers, usually we use this in some sentence, oh, there was Enron and it was like Arthur Anderson, like the audit company and people said they might have collusion between the auditor and the company. And that's why we want ideally to avoid the inclusion of the auditors but I don't think in real life this is possible. I think we need both. We need to use the proof of solvency as a like extra system on top of what the auditors are doing. So users have the ability now to audit the system by themselves even if there is no auditor or if the auditor is corrupted.
+
+Anna Rose:
+So just repeat what you have in mind here. So it is like a better proof of solvency than like, because you had found problems with the previous one, but obviously with all of those fixed, yes you'd want like a better system, but are you still using the same kind of thing with like FHE and the Merkle-ized Tree? Is it, is it still the same construction but just like without those bugs?
+
+Kostas Chalkias:
+This is the same construction, but we added a few elements there to make it more private and actually to add some extra privacy features. There is another problem with Merkle trees. If you have a Merkle tree, someone will know your number of clients just by getting information about the height of the Merkle tree.
+
+Anna Rose:
+Oh, interesting.
+
+Kostas Chalkias:
+If I know, if I know you're like doing the power of 10, like 10 layers, I know the maximum users is doing the power of 10, but is this an information that FTX and the other, now you're trying to protect the other organization, right? Because sometimes you don't want to reveal your client base numbers and you need to provide all of these evidences, but also do not expose your company's success.
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+It's, it's very tricky, right? It's very imagine for FTX, you knew that this month they didn't acquire many clients because you can see it from the number of users in the proof of solvency. And then you can go and short their token because they're not performing well business wise. This information shouldn't be known. And what we did is we replaced the Merkle tree, one of the like users that is easy to explain here with sparsed Merkle trees.
+
+Anna Rose:
+Oh yeah.
+
+Kostas Chalkias:
+So you cannot zero nodes in the trees and now you can extend the number of users to whatever you want. People do not know by checking the proofs how many users exist and in reality how many leaves, how many layers you need, right?
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+People in the world are 8 billion. You don't need the three bigger than 8 billion. Even if every individual had the tree. So you, you shouldn't imagine that sparse Merkle tree would be huge. It would be like an extra two or three layers compared to the standard Merkle three. But it offers this extra privacy perspective.
+
+Anna Rose:
+Even the cryptographic solution though that you've, the fixed one, this is a like random question, but does it actually output a total at the end? Like you talk, you know, you're using FHE, it's all private, but like yeah. Do you, when you actually do that last matching, are you seeing a value actually?
+
+Kostas Chalkias:
+No.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+You can hide the value. Why you can hide it? Because obviously it's an outcome of some homomorphic encryption edition and then you eventually have a Pederson commitment, or let's assume an algamal encryption of something. What you do is you have the proof of assets and by using systems similar, I mean regarding the output, also Perderson commitment, you can have a zero knowledge proof that my assets are less are, sorry, are more than the liabilities.
+
+Anna Rose:
+But that's it. That's the only proof. It just says it's solvent, not it has this kind of percentage solvency or something. It's not like
+
+Kostas Chalkias:
+You can do this as well. We have zero knowledge proofs here. Right. We have zero knowledge proofs here and sometimes you want to prove a surplus or you want to prove like some fraction, but this fraction is very close to 100%. Honestly, when I talk to the big four, some of the big four auditors, their tolerance level was 5%.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+Because they know some people might not check. And there is another issue that I didn't mention what will happen in practice, right. I managed to have access to all of these big systems because I did the experiments for Libra and and Facebook. There was another small issue, which is even synchronization internally, if you are in exchange, you need to actually get a snapshot of your database, but some transactions are in flight.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+What do you do with these things? Right? You need, you need to ensure that even if I don't manage to have 100% like accuracy, I can tolerate up to a point if continuously, because we were talking about continuous audits previously, right? If you receive this at a continuous level, it seems that something is wrong with your solvency but in practice you might need to have some tolerance, like a very small percentage just to avoid all of the synchronization issues.
+
+Anna Rose:
+Why did Facebook, Meta, why did you need this? Like why was this topic the most relevant one?
+
+Kostas Chalkias:
+Oh why? Yeah, because, because Libra would be the most audited regulated blockchain in the world. I mean what, what is this question? Right? I mean it's very clear and why, and I can tell you, and this is a very interesting story. When I was about to leave Facebook a bit like a few months before this happens, I remember talking to like the economist of Libra, Christian Catalini now Alonso, our Head of Economy in MystenLabs today. They even asked me, why don't you create a startup? And I literally had offers to create a startup about proof of solvency. But obviously I was doing this at Facebook back then because the order from David Marcus and all of the leadership is we need to have the best system for regulation and audits.
+
+Anna Rose:
+Got it.
+
+Kostas Chalkias:
+I'm not kidding here. Facebook spent a lot of money to improve on the community tools that we have today for proof of solvency.
+
+Anna Rose:
+Wow.
+
+Kostas Chalkias:
+We should credit Facebook for this, right? Because I don't know, I don't know about bad reputation and other things do, we mentioned at the very beginning, but internally, I could say to you like with with confidence that the work that was published at Facebook was like genuine and very like and improved the community like offerings that we have today for all of these things.
+
+Anna Rose:
+Yeah. I mean it was preemptive too, right? Because it was this sense like Libra was already going to be scrutinized and it had to be perfect.
+
+Kostas Chalkias:
+Yes.
+
+Anna Rose:
+It had to be super, super auditable. Especially it had this like basket of different currencies. Reserves were really important.
+
+Kostas Chalkias:
+Exactly.
+
+Anna Rose:
+Okay. Makes sense
+
+Kostas Chalkias:
+Exactly and I mean for Facebook it was super important. I was thinking that if we ever launch, we would have the better system regarding like tools for auditors and regulators.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+Well this never happened, but obviously we're still here. I know there is like a community effort, not only me, right? I think it's Eli from Starkware. There are many things like Dalia, Dalia also supported me a lot. I would mention this on proof of liabilities. This is now Chainlink, but I think we should have an RFC proposal for standardizing proof of solvency. If we don't do this, we will come up again into the, come back to these problems that I mentioned before attacks and all of these things. Right?
+
+Anna Rose:
+When you say RFC, what is this request for?
+
+Kostas Chalkias:
+Oh, request for call. I mean we need the, like the ERCs as we say for Ethereum. We need something as a community standard, a community proposal. To tell you the truth, I started this at zero knowledge proofs and if you see one of my papers is even mentioning proposed standard since then, we made many additions. I also found the attacks. I also talked to the auditors, I talked to some exchanges. Now I have more information. And because now the topic is super relevant, I think many other cryptographers should help. We should form a small consortium, like a small committee and try to define some rules. It's not a perfect solution as I explained, because of synchronization and some other issues that you might face. However, without this we have nothing. At least let's have a tool that can make the work of potential fraud or something more difficult to be performed.
+
+Anna Rose:
+And do you see this like once this standard say it happens, it needs to be implemented by all exchanges across the board in a way to avoid that issue of like a short term loan or
+
+Kostas Chalkias:
+I wish, I don't know if they're going to do it, I wish they will do it. And I know even Binance's CEO mentioned the other day that we need proofs of reserves. I totally believe that we should set something in place now, make proposals. I don't care if we're going to have options, but why we're very close to working solution now. Zero knowledge proof might improve on top of the Merkle-ization as well because we talk about Merkle trees, but there are other ways to prove membership as well. Right and I can see with the recursive zero knowledge proofs and many other things, we can even make a better proposal that works for both proof of assets, both proof of liabilities and actually provin that the assets are past the liabilities or at least prove the tolerance, right?
+
+Anna Rose:
+Yeah, yeah.
+
+Kostas Chalkias:
+Prove how much of a fraction reserve you have? Is it 80%? Is it 90%? Because sometimes we're talking about solvency, but you don't know exactly today how much money SBF needs for the solvency of FTX. Right. We believe it's some billions, but how many billions?
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+And what's the percentage of billion of these billions compared to the total valuation of the company or the liabilities? I think we can do it, it just needs extra, I don't know, motivation probably from regulators to tell you the truth, and Sui the protocol that we're building, the crypto primitives we're supporting is to enable this when it's ever, if it's ever required.
+
+Anna Rose:
+Yeah. Yeah.
+
+Kostas Chalkias:
+And for example, supporting zero knowledge proof verifiers on top of the chain, supporting intent signing. I should know if you're signing for transaction or for a proof of possession or for a proof of assets or for all of this stuff.
+
+Anna Rose:
+This brings up a little extra question, which is like, you'd have to do this for each currency, wouldn't you? Like each blockchain would need to run something like this? Because when you talk about accounts and being on chain, like it's not that it's joint across like Bitcoin versus Ethereum, even, like wouldn't you have to run it twice?
+
+Kostas Chalkias:
+It's a good question regarding the how do you do the summation, right? Yeah. Can you have one user having just one tree for all of the assets? This is a very difficult problem and because there is an exchange rate between them, which is defined by like different exchanges might have a different exchange rate. It's not easy to do this. At the moment what we have is individual Merkle trees per asset.
+
+Anna Rose:
+Yeah.
+
+Kostas Chalkias:
+I see how you can do it with the help of auditor or some Oracles probably that can define a particular exchange rate. But you should imagine there might be a fluctuation now, right? 1% or like 0.5%. I don't think we care a lot about this stuff. Right? This is happening in the real world. It's fine if continuously, however you see all of these glitches you have to take action. But yeah, we can make it one. Most of the solutions I've seen on proofs of liabilities, they're using different proofs per different currency.
+
+Anna Rose:
+Okay.
+
+Kostas Chalkias:
+Yeah. It's a good call.
+
+Anna Rose:
+Yeah. That would be more like you want some consistency though, I guess.
+
+Kostas Chalkias:
+Yes. There is another thing. Okay. It's, it's a good pass actually that you're giving me here. There is another small problem that I also realize that is happening. The small problem is pending transactions and in flight transactions and time locked transactions and also assets that are locked in Levels 2s or some like payment channels, right? What do you do with this?
+
+Anna Rose:
+Or Bridges? Yeah.
+
+Kostas Chalkias:
+Or Bridges, right? I think this is the reason what I'm saying, this is the reason we're in a very good state now. We have some primitives, some tools, they seem to work for particular cases, but we still need extra innovation
+
+Anna Rose:
+Oh yeah.
+
+Kostas Chalkias:
+On how we can combine all of these puzzle pieces into one solid solution.
+
+Anna Rose:
+Fascinating. Yeah.
+
+Kostas Chalkias:
+It's, it's not as, you might even have locked in an L2 more than the money that you have in L1.
+
+Anna Rose:
+True.
+
+Kostas Chalkias:
+Right. Which means that you need support on the L2 as well to prove ownership there. And even there, there might be situation with payment channels and fraud proofs where you don't know if there is no expiration of the, of the fraud proof period, like of the challenging period of the seven days. Like how, how do you do this? Even if I give you a snapshot, you don't know if this is the current
+
+Anna Rose:
+True, true.
+
+Kostas Chalkias:
+And especially in payment channels, the collusion thing might be super easy because there I might have given you the money, you might have already sent me the transaction to return me the money back. Right. It's literally a loan that is secure. It will happen. I mean you can, you cannot escape.
+
+Anna Rose:
+I can already hear, like, I can already see a few edge cases as well. Things like locked assets, burned assets, like things where you do have them, but you can't do anything with them. So they're not really assets you could ever have liquid, I guess you vested, but then it's still an asset. But yeah, there's a lot of edge cases here that you'd need to start to account for.
+
+Kostas Chalkias:
+There are even more, right? You might not participate in the lottery, you know that you won't, but the assets are held by the smart contract. The smart contract didn't show the result yet even okay. Even if you don't know, even if you know that you will win, for example, you need the challenging period to finish until you claim your winnings. You cannot provide the proof, right? It's, it's very difficult. yeah, we have a lot of work to do on it's not reality
+
+Anna Rose:
+It sounds like it!
+
+Kostas Chalkias:
+That's the reality and when people say that like, this will solve everything, it's not right. It's good to have, it's by far better than having nothing.
+
+Anna Rose:
+Yes.
+
+Kostas Chalkias:
+But we need to explore all of these particular edge cases, as you mentioned. Imagine we're talking for one hour and you already found the edge case, right? That's the ugly reality. But at the same time there is a good like positive outcomes from from the research side and I don't see why we should not standardize something at least.
+
+Anna Rose:
+Makes sense. Kostas, we are almost at time, but I do wanna hear a little bit more about what is going on on the ZKP front at Mysten today.
+
+Kostas Chalkias:
+So the nice like news, the good news is already on Sui we have support for bulletproofs and you will see actually there is a PR, literally now that is getting reviewed. We're going to have Groth16 as well. We're going to have verifiers on top of Sui. There is a benefit on Sui compared to all of the other blockchains because for some transaction types you can even avoid full consensus. Which means that we can have the transaction actually having an accompanying zero knowledge proof that will run in an independent and parallel-like fashion. And this is how we can enable, I don't know, using KYC per transaction. You can do private transaction, confidential transaction without waiting for a full consensus and getting to a block. Or even if a huge size of a transaction will affect the block size. The fact that we can parallelize things allows us to have a next bit of like startups that I believe will join Sui just because it's easier with us to like bump the network with zero knowledge proof per transaction without creating all of this like block restrictions.
+
+Anna Rose:
+So does this sort of open up new use cases where you'd need something like that?
+
+Kostas Chalkias:
+I think it's happening already. I think we, we receive some partnership requests where they can see why they have a small benefit to actually do on Sui. So what will happen is we have these like individual team. Now I have Francois Garillot and actually Francois had the presentation like the last few days on the zero knowledge proof conference. We presented our findings. We even managed to have a verifier on Groth16 that it combines the ARC works framework with BLST and we managed to have double the efficiency on the verification. Imagine we're not focusing as a blockchain on the proving, because for us, verification is what matters. And even if you can get like double the efficiency, it means that you can accept double the number of proofs, right. So we had some improvements on how we're doing like the pairing computations and paralyzation there and using the correct combination of existing complementation.
+And I think on the verification side, we have a very, very fast Groth16 verifier now on suite.
+
+Anna Rose:
+Cool.
+
+Kostas Chalkias:
+And obviously you don't stop there, right? Imagine I'm also one of the co-authors of Winterfell. I know Winterfell is used in Polygon, Bobbin is a close friend. We work together like in so many different topics and we're even having plans to augment Winterfell. Right. Even if we're working on individual, like different companies, research is different, right. People in research are friends.
+
+Anna Rose:
+Yes. Yes.
+
+Kostas Chalkias:
+And, and for me, like this is how I see Bobbin here and I know we've discussed on a lot of like improvements on top of Winterfell. I cannot guarantee like when we're going to have stark verification on Sui but I can tell you for sure that we already have like some work in progress on having optimizations on top of Winterfell.
+
+Anna Rose:
+Interesting. Cool.
+
+Kostas Chalkias:
+And this will be open source. Everything in Mysten is open sourced and generally we believe that we're going to have a very rich API. And personally because of my personal interest and I see the interest from many providers and partners, I don't see how a new blockchain will survive. Especially if regulation comes like faster than we expected without having support for these primitives at the core layer.
+
+Anna Rose:
+Wow.
+
+Kostas Chalkias:
+We need it. We need it. So yes, you will see a lot of things being published from our team in the next week. You will also see an extra blog post we're going to make how we made BLS aggregation faster.
+
+Anna Rose:
+Oh cool.
+
+Kostas Chalkias:
+Slightly faster but faster than what exists out there.
+
+Anna Rose:
+Nice. I'll be sure to include it in the next zkMesh. I don't know if you know about this my monthly newsletter where I collect
+
+Kostas Chalkias:
+Yes.
+
+Anna Rose:
+A lot of stuff. Be sure to send that to me because I sometimes miss things. But yeah, send them my way.
+
+Kostas Chalkias:
+I will, I will. Thank you so much for everything here and I'm super happy to help and give you some like, I don't know, progress reports on how the solvency sector is actually getting either promoted or if there is a coalition of all of the exchanges and the researchers to do something. Because when Binance says we need proof of reserves, I think they need to do a bit more research - what, which algorithm?
+
+Anna Rose:
+Yes.
+
+Kostas Chalkias:
+How we're going to use it. If you're going to provide privacy, these rules are not enlisted properly.
+
+Anna Rose:
+Cool. Well thank you so much Kostas for coming on and sharing with us proof of solvency, which we are now not calling proof of reserve anymore, proof of solvency I'm gonna go with it and yeah how kind of the history of this concept and now how we might have a better way to build those into systems.
+
+Kostas Chalkias:
+Yes and I'm super happy to help anyone in the industry, even if we're not partners. Not only myself, I believe Bobbin aswel and other people who worked here, Cornell University, people under GMU Visa, they are all eager to help on providing extra input if they want to build proof of solvency for their exchange for free.
+
+Anna Rose:
+Very cool. So thanks again.
+
+Kostas Chalkias:
+Thank you Anna. And I really appreciate your like even your knowledge. I'm surprised now that you managed to find the next case in half an hour. Wow.
+
+Anna Rose:
+Really? That was a new one. Oh, cool. Nice.
+
+Kostas Chalkias:
+It's, it's something, it's, it's not that it's necessarily new, it's something that I didn't expect people who realize very quickly. Right. But you did. Right. You understand now why we're not using Zero Knowledge, sorry. Proof of solvency everywhere because there are rich cases.
+
+Anna Rose:
+Cool. Well thanks again for sharing that with us. I wanna say a big thank you to the Zero Knowledge podcast team, Tanya, Rachel, and Henrik. And to our listeners, thanks for listening.
+
+
+

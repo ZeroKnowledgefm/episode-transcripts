@@ -1,0 +1,513 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this Podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:00:30):
+This week. Tarun and I revisit the topic of MEV with guests, Chris Hager, from the Flashbots team and Alex Stokes from the EF. This is not the first time we're covering MEV on the show. Over a year ago, we did an episode with the Flashbots team looking at MEV, that was much more of a primer and something I recommend listening to before this one, if you wanna find out just generally what MEV is. I'll add the link to that in the show notes. In this particular episode, we're gonna be teasing out more of the nuances around MEV and look at how the field has evolved since that last episode. We explore how the MEV space could look like after the merge, the concept of PBS or Proposal Builder Separation, what each role in the MEV landscape actually does and will do as well as what the MEV-Boost architecture looks like.
+
+Anna Rose (00:01:16):
+We touch on future ideas around MEV and democratization of rewards. We talk about the work that Tarun recently released on MEV, how Tornado cash sanctions affected the project and cryptographic solutions that might be able to prevent some kinds of MEV. This was a really nice deep dive, and I think it brings us up to date on this important topic. Now, before we kick off, I just wanna let you know about two initiatives happening in our community right now. The first is the ZK Whiteboard sessions. This is a new series of educational videos that we're releasing weekly. And they're focused on the concepts and terms that we talk about on the ZK front. This is a great place to start learning about Zero Knowledge proofs. If you don't fully understand what we're talking about in that context, check it out. This was produced by ZK Hack in collaboration with Polygon.
+
+Anna Rose (00:02:04):
+I'll add the link to that in the show notes and join our Discord, let us know what you think. I'm getting a lot of really good feedback on it, and I'd love to hear from you if there's some topics or concepts that we are missing, that you think we should cover in order to help you better learn what's happening in ZK. The second thing I wanna highlight is the ZK jobs board. Right now, there's a fresh batch of open roles from ZK focused projects posted there. So, if you're looking for a job or if you just wanna understand what teams are looking for, this would be a great place to check it out. Also, if you're hiring, be sure to add your job to the ZK jobs board today. So now I wanna invite Tanya to share a little bit about this week's sponsor.
+
+Tanya (00:02:42):
+Today's episode is sponsored by Polygon, introducing Polygon zkEVM. We all know that Ethereum needs to scale and Polygon believes that Zero Knowledge tech is the best way forward. Polygon's vision for zkEVM is simple. Developers can seamlessly deploy any Ethereum smart contract to a layer two and benefit from the scaling power of ZK proofs. It's also permissionless meaning anyone can use it and open source. Polygon zkEVM was built by Polygon, but it's for anyone who wants a cheaper and faster way to use Ethereum without sacrificing security or decentralization. They will be releasing a public Testnet soon, which will be an opportunity to test their work and make improvements. If you'd like to learn more about Polygon zkEVM, and stay up to date on the latest, then fill out the form in the show notes. So thank you again, Polygon. Now here is Anna's dive back into MEV with Alex Stokes and Chris Hager.
+
+Anna Rose (00:03:36):
+Today, we're here with Chris Hager from the Flashbots team and Alex Stokes from the EF. We're gonna be diving back into the topic of MEV. I wanna say welcome to both of you.
+
+Chris Hager (00:03:46):
+Hi, Anna great to be here.
+
+Alex Stokes (00:03:48):
+Yep. Hey Anna. Great to be here as well. Excited to talk about MEV today.
+
+Anna Rose (00:03:52):
+Nice. Tarun is joining us today to co-host this episode, so welcome back Tarun, it's been a few months since you've been on, so I'm happy to have you.
+
+Tarun (00:04:01):
+Hey, what's up. It's been, a laconic summer. I feel like the last time I was on this show everything was blowing up in the world and now it's sort of chilled out.
+
+Anna Rose (00:04:09):
+Has it? I think in the ZK space, like the last two weeks have been our 'whirlwind', but we'll get to that in a second.
+
+Tarun (00:04:17):
+Yeah. I feel like that's the only thing where there's been any kind of like, big drama. Actually, no MEV 'land' has had a lot of drama as we'll talk about today anyway.
+
+Anna Rose (00:04:27):
+Yeah, very cool. So last year I actually did an episode on MEV with James Prestwich. We interviewed Phil and Alex from the Flashbots team. I actually re-listed to that episode before doing this one, and I was kind of amazed at how little I understood about the concept back then and how I hope, I feel like, I definitely have been following it much closer since then. I feel like generally as an ecosystem, I feel like people understand it better nowadays. And so I'm very excited to do this interview where we're gonna dive back in to maybe tease out some more nuances about the MEV space, look forward at what's coming down to the pipeline, and also obviously talk about kind of the latest drama focused very much on like Tornado and ZK stuff and privacy and how this impacts things like MEV. But I think before we do that, I'd love to learn about both of you. So Alex, why don't you tell us a little bit about what led you to work on this problem?
+
+Alex Stokes (00:05:27):
+Oh boy. Okay, so I've been working on with, you know, all about Ethereum for quite a while now. I think my entry into this space was research, at this point, you know, several years ago into proof of stake and, you know, I'm sure everyone listening is aware of the merge that's about to happen. So that's all very exciting. You, you know, you Anna have given your experience of like, yeah, like, you know, I, I like had this MEV concept and I feel like I didn't quite understand like all the implications and then now there's like so much more and there's just like this, you know, this thread you can keep pulling. I feel like that mirrors my experience a lot where like, you know, I heard about MEV, there's all the work the Flashbots team has been doing, you know, for a year or so now.
+
+Alex Stokes (00:06:09):
+And either way, well, yeah. So where I first entered into, into MEV being relevant and important was for consensus. I don't know how much we'll get into it today, but essentially like, if you think about it, like when you, when you add blocks to the chain, some of them have MEV and this MEV like changes the incentives around, you know, extending the chain versus reorging the chain, and things like this. And yeah, again, I don't know how much we wanna get into that, but the point being is that actually there's like very deep, you know, profound implications for security of blockchains when MEV exists.
+
+Alex Stokes (00:06:42):
+And then you start thinking about this and you realize MEV is everywhere and it always exists and it becomes, yeah, at least for me, I've just become like obsessed with like first answering the question, what is MEV and then also understanding like security implications for, for the systems that, that we use.
+
+Anna Rose (00:06:57):
+Cool. What timeframe was that? When did you join the project?
+
+Alex Stokes (00:07:00):
+So I've been at the EF for four years now. And again, my entry was, yeah, way, way back when, like, I, I just started sort of contributing in open source capacity on early versions of, you know, now we have the merge, and its moving to Proof-of-Stake. And the early days there is even an idea to do, sort of this like Casper finality gadget on top of the proof work chain and even manage all the validators within a smart contract. So it was like, very interesting idea. And we've, we've come very far in our thinking around how to do this, but yeah, that was like sort of my initial intro, into things and yeah, this just, you know, this is like the most interesting thing I can certainly find. And, hopefully, you know, it there's like some very good benefit from it. So here I am, keeps me, keeps me engaged.
+
+Anna Rose (00:07:47):
+Um, what you just said, this is like a little aside, but like, was that finality gadget meant to deal with MEV? I actually never understood it that way.
+
+Alex Stokes (00:07:56):
+Well, I mean, again, this will probably be my, like my party line is that MEV is everywhere and it is always applicable but, um, I don't know. That's the thing, like, even back then, no one, like, we didn't even really have this term MEV. Right? Like there were, you know, I think people understood that you could, for example, have like DEX arbitrage and that could like have implications for like how people were like building blocks and how the change is formed and stuff like this. But it definitely wasn't thought about as this like almost abstraction that like we have, whereas very much, at least for me, it's like the way I think about it is like you put blocks on the chain and like the blocks have like MEV sort of hanging off of them. And like, this is like very important again for security, because it changes the incentives like very drastically.
+
+Anna Rose (00:08:38):
+Got it. All right, Chris, let's find out about you. What led you to work on this project?
+
+Chris Hager (00:08:45):
+I started at Flashbots about a year ago, 14 months. I was previously in, in active in blockchain for a number of years with decentralized exchanges, doing open source tooling for, some Ethereum projects for the new blockchain and others. Then I was doing a extended parent leave. And after that, like right in the middle of my parent leave, there was this whole development of the MEV papers and Flashbots, bringing up solutions to the "Gas Wars" and other problems. And I was looking for new, interesting things to work on and started sticking into Ethereum reorgs and writing some reorg monitor software that keeps track of ongoing and reorgs in, in deep detail. And so our, the paths of my project and Flashbots aligned and we started collaborating more and then I started full-time on Flashbots then.
+
+Chris Hager (00:09:46):
+First I was working on, on Flashbot protect and more of the user facing MEV protection products. And then at some point we just needed manpower on MEV-Boost and our PBS block streams. And I was happy to start there and really got, yeah, very deep into it and very excited about it. And it was just at the right time and all day, MEV-Boost specifications were co-developed with, the Ethereum foundation and the consensus client teams. And this was a very intense half a year, so far for me, diving deep into MEV-Boost and all the implications and other projects around.
+
+Anna Rose (00:10:31):
+Cool. You've both just mentioned MEV-Boost. What is that versus what was being built before? Like what what's different about MEV-Boost or is it just the formalization and the kind of the naming of what was being built before?
+
+Chris Hager (00:10:46):
+So before or the current Ethereum 1 setup it... uh, Flashbots is sending bundles to minors and other parties sending bundles to minors and the minors assemble the blocks in Ethereum 2. It's different in the sense that the proposers, the validators, they run the consensus client software and they fall back to a local execution layer software like Geth or another mind or other to produce the blocks. And they can reach out to MEV-Boost relays to provide blocks for them, but they do not know the contents of the block. So the transactions they are removed and the proposers have the choice of signing this block for a certain value that they relay is claiming this block provides. And after the signature, the proposer receives the block content for proposal. MEV-Boost here is just a small piece of open source infrastructure that runs on the proposer server. That is a relay multiplexer. So MEV-Boost is capable of connecting to many relays and asking many relays for possible blocks and providing the best to the proposer.
+
+Anna Rose (00:12:06):
+Okay, cool. But in what you just described, is this being built primarily for the post merge or is this something that's already being used today?
+
+Chris Hager (00:12:14):
+It's exclusively for Ethereum 2.
+
+Anna Rose (00:12:17):
+Okay. So it's only being used currently on like the Testnet mode and like, okay. So it's not, it's not live yet.
+
+Chris Hager (00:12:24):
+Yeah, exactly. I mean another way of, putting it is it allows connecting to a external builder network to receive blocks from other parties outside parties and that the proposers, the validators not being trusted. So that's why they signed the blocks blinded before the transactions. So they do not steal the transactions, basically the MEV from the transactions from searchers.
+
+Anna Rose (00:12:49):
+Okay.
+
+Alex Stokes (00:12:49):
+Yeah. And so I think, you know, I think Chris gave you a nice overview of like MEV-Boost and what this software is today. And maybe this will be like a helpful arc for just this episode generally, because I would like to, you know, provide some more context that this is like an implementation of this thing called PBS proposer builder separation. So, you know, this technique is, I mean, again, it's what Chris said, right? It's there's this like external builder network and proposers validators in this merged Ethereum ecosystem. They, you know, are the ones tasked with making the blocks, getting the blocks out to the network, all of this and all this talk about PBS that we hear is just recognizing the fact that like MEV is a thing kind of what I said a second ago. Like there will always be MEV, MEV like a reality we must deal with.
+
+Alex Stokes (00:13:35):
+And so because of that, we say, okay, are there things we can do to manage or mitigate some of the externalities of MEV and there certainly are at all layers of the stack, honestly, like from people using wallets to you know, these more like infrastructure providers, Chris mentioned the relays to all the way to the validators doing their job. And what we would like to do is say, okay, because we, you know, can likely have all these mitigations and, and ways to like help the situation generally. We can then ask, okay, can we take some of those into the protocol? And that's like, where I think we'd all like to go some years down the road, towards an enshrined PBS solution. And today, like this is part of the work Flashbots is doing is saying, okay, we're not going to put this into the protocol anytime soon. And so instead let's do essentially off-chain solutions that gives us room for experimentation and yeah, just time to like gather more data and see how the systems behave. And then that's, you know, I think ultimately what we're all trying to build towards.
+
+Anna Rose (00:14:32):
+Cool.
+
+Tarun (00:14:33):
+One thing I think that might actually be helpful for listeners who've probably who haven't heard about PBS before is maybe walking through this sort of, you know, verbally the sequence diagram of like how say like block producers, aggregate transactions, then relay them to a proposer. Then the proposer picks kind of the highest bid, because I think that would kind of make it a little easy to see why you need sort of this infrastructure for managing many builders in the future. I guess I just mean like the person who maybe for the first time is hearing about this might not even know that what the design space looks like. Right. And I think part of that comes from like what the sort of queries that are made are right. There's like the users submitting a transaction to block builders, there's a block builder, submitting a block via different relay is like maybe like kind of going through what the things are that make this kind of a complicated problem might be a good thing for listeners.
+
+Alex Stokes (00:15:32):
+Right. So we have thrown all these terms around so far, right? There's like proposers, validators, relayers, builders. There's the users who are using the system. There's, there's like all these actors and...
+
+Alex Stokes (00:15:45):
+Right. Searchers. Exactly. So there there's all these, these actors in, what's becoming a very sophisticated ecosystem and maybe it's helpful then just to like walk through, sort of this like pipeline there's, some of the Flashbots team members have been working on this like MEV supply chain diagram, which I think is really, it's really helpful for like understanding the different actors and kind of how these pieces fit together. So on the one end, you have users who are, you know, us using the chain. Let's say we want to like make some, you know, DEX trade. So we go do this, you know, in a pre-Flashbots world, let's say like, when we don't have this infrastructure for this thing that kind of looks like this PBS, this Proposal Builder Separation, I just broadcast my transaction to the whole world, right, the public mempool.
+
+Alex Stokes (00:16:32):
+And this is well, it's many things. It's very exciting, at least because now there are specialized actors, like Chris mentioned called searchers and searchers are these like again, very specialized, sophisticated players in the world. And all they want to do is like, try to find MEV. Um, they do this because like they can actually, you know, collect the MEV themselves. So it's essentially some reward for their job, their work. And, they do this. So with like my DEX example, there could essentially be like this arbitrage that the, the searcher's going to do. Um, one example is like, if I have my trade and I take like, say a Uniswap pool at a balance, the searcher can come and back, run me and basically restore the balance of the pair. This is like the MEV they could take.
+
+Anna Rose (00:17:18):
+Is this searcher a bot that's built by a unique, like an individual? Or is this like a tool set that's provided by the Flashbots libraries?
+
+Alex Stokes (00:17:28):
+Right? I think it mixed with both. Chris can probably say more.
+
+Chris Hager (00:17:32):
+Yeah. But it's mostly individuals or small companies that run bots that submit these transactions To the Flashbots infrastructure, which routed to the builders.
+
+Anna Rose (00:17:43):
+Okay, cool. Um, I do wanna throw back to another episode in case anyone's curious about this kind of stuff, which is, I did this episode with the dialectic folks project Blanc prop shop, and they kind of explained what it was to be the bot maker. Um, I don't know if they're making this kind of bot, but just that gave me a lot of context into like what the action of a lot of this stuff actually looks like anyway, sorry, Alex continue.
+
+Alex Stokes (00:18:08):
+Well. Right, exactly. So yeah, there are teams, you know, like you talk to Dean and his team, and this is exactly, you know, some of the work they do is they are one of these like searcher teams, searcher funds, like, however you wanna think about it, but essentially again, yeah. They, they write software and the software looks at the public mempool. So that's sort of where I was in the arc is we now have a transaction in the mempool and you know, these searchers, it could be individuals, but usually they're teams who have these bots, this automated software that watches the mempool. And it's like, okay, you know, I have the current Ethereum state and given all the transactions I see right now, maybe one of them, you know, emits some MEV and then what I want to do then is make my own transaction that captures as MEV, perhaps for myself.
+
+Alex Stokes (00:18:48):
+Um, again, the design space of what happens to the MEV is quite big, but, that's a future conversation either way. The searcher then would try to collect this MEV. And this is now like where Flashbots entered the scene is like, what happens is when we have the situation, as I just described, you have many people competing for this MEV, right? So you now have all these searcher teams all over the world. It becomes highly competitive. And before Flashbots, the way that you would do this is you would essentially need to outbid everyone in the public mempool. And with Ethereum today, what that means is you end up with, you know, I think believe Chris mentioned "Gas Wars". And what that looks like is, you know, I declare I'll pay X to get my MEV extracting transaction on chain.
+
+Alex Stokes (00:19:31):
+Someone else sees that and they turn around and make their own transaction, because they want the MEV so then they say, well, I need to outbid you to get on chain. So they'll bid a little bit more. Right. And then now I can turn around and do the same thing. And then the other person does the same thing. Right? And then now you have these like wars where literally what happens is, you know, if the, if the size of the opportunity is say, like, you know, this much Eth someone will bid, you know, in the limit they bid, you know, that much Eth minus just a little bit, because otherwise they wouldn't get anything. And this is again, one of these externalities that we've been talking about because now, you know, let's say I separately went to like, go vote on some like dow proposal.
+
+Alex Stokes (00:20:06):
+The gas is suddenly like through the roof for the whole mempool rate and, and that's bad. So Flashbots came onto the scene and said, Hey, we can start to build things that look like this PBS infrastructure we'll keep talking about today. And a lot of what that did was say, okay, for searchers who want to do this type of thing, there's now this like essentially off chain auction that provides them access to block space, almost separate from like this public mempool. And by doing that, you sort of silo, you like firewall off this, like the gas games that searchers can play. And yeah, there's, there's a ton more benefits that, I'm sure Chris could get into, but essentially by doing so you hope to reduce, you know, this situation where the, the, the gas is suddenly spiking for users who otherwise, you know, might not care about this, like searcher bidding war. They can just use the chain as they, they would otherwise. Um, and is this idea of like firewalling, this activity off is, helpful because it's like, this is sort of like the design primitive of PBS. Like, this is what we aim to do is like, do this sort of thing. Like if there are these, these externalities that the protocol sort of generates, then what we hope to do is, is push them to a place where we can control them, or at least like, reduce their, reduce the onsides.
+
+Anna Rose (00:21:15):
+Just one question is the searcher, the proposer as well, or is it like that split that you're talking about between proposer builder, like where does the searcher come in?
+
+Alex Stokes (00:21:25):
+Right. So you have searchers and then the next step. So now we have searchers and searchers have found these opportunities. There's this word bundle. We'll probably keep using. Chris mentioned where essentially the idea is to extract the MEV this way you need to like, have a certain sequence of transactions. And so with Ethereum, you basically can submit one transaction. That's like the primitive that you have with the protocol. So if you need, you know, to have a sequence of things, then you need to have quote a 'bundle', which is just many transactions in a particular order. So anyway, searchers do this, they then make these bundles, the bundles go to these actors called builders. And the distinction here like may blur over time, but essentially their distinct jobs, the thinking is that, you know, searching is so competitive that these are very specialized sort of activities.
+
+Alex Stokes (00:22:13):
+So like, there'll be, you know, searchers that specialize in just arbitrage or just liquidation or, well, then there's like the long tail of all sorts of things. But you can imagine that, like, you know, you, you get these, these teams of people that are like very focused on one very type of thing. They're not going to also be very good at say, building full blocks, which is what the builders in this MEV-Boost or this PBS world do. Mm. So now you have builders, builders are making full blocks. Maybe they're taking like, you know, a collection of bundles. They get from like different searchers. They're filling the rest of the block with say, just regular transactions from a public mempool, which could be whatever they don't necessarily need to be MEV transactions just whatever's out there. They've now built a full block. Now we get to the names sake of proposer builder separation, which is now the builder has built a block and they have to get this to their proposer.
+
+Alex Stokes (00:23:00):
+Right? So the, there are, especially like you have to be a special sort of actor on within the protocol to actually propose or like, you know, include a block in the chain. These are the validators. The way Ethereum is structured is every so often there's a slot, which is just a chunk of time. There's one validator per slot. That is the proposer. They, and only they can seal the block. They can sign it with, you know, in cryptographic signature way, um, and the special way only they know how can they seal the block and then make it, you know, available for inclusion into the chain.
+
+Anna Rose (00:23:33):
+And then once it does that, then you have like some percentage of validators that have to approve it.
+
+Alex Stokes (00:23:38):
+You're not wrong. So basically the way to think about it is that there's one validator, every slot, I use this, this word slot. So there's one validator, every slot who can propose a block and then essentially, you know, we can get into the details if you want. I don't think they're super relevant. The way to think about it is that we then went literally every other validator to like basically a test or like, you know, they, they should produce some proof that they also think this block should be in the chain. Okay. Um, and you've, you've talked to other quote, Eth2 people, we've moved away from this terminology, by the way. Just I have to insert the plug. Okay. But if you, if you talk to the consensus people, this is, you know, this is what we say is that, you know, you have validators at testing to the chain.
+
+Alex Stokes (00:24:22):
+And right. Like again, for other technical reasons that are important, it's like sort of blocked, you know, sort of chunked up into groups of validators called committees. But point is, is that yes, you produce a block and then for it to be given sort of weight in, in the chain as being canonical over another one, you then have everyone else, attest to the block. And if you imagine a sort of like, mm, I don't know, maybe like a zipper or like, you know, maybe a better, better analogy is like having something kind of like freeze. Like if you imagine there's like an ice cube with like a puddle and then it like freezes towards, like, you have this, this process of finality that runs along the chain and we're looking at the details of it in some, some detail right now.
+
+Anna Rose (00:25:04):
+Nice. I do need to do an episode on post merge Eth soon, because I can tell I'm rusty on this. I'm very much in like the Cosmos Tendermint model still. So I'm always thinking like two thirds of the existence anyway, but I, with so many validators, I understand it's possibly being done differently.
+
+Alex Stokes (00:25:21):
+There's different trade offs we've made in the design space and yes, I'm sure you could have a whole episode just on that alone.
+
+Anna Rose (00:25:28):
+Sounds good.
+
+Chris Hager (00:25:29):
+And I want to say there's a brilliant overview of the whole PBS, implementation here. And MEV-Boost is kind of a stop gap solution towards full PBS. That takes a few years probably until it's actually ready and MEV-Boost the MEV-Boost approach is something we can have right now. And we just, can deliver that at the merge. One missing piece here is the relay that we haven't talked about. So a builder, the block builder can also be a relay in itself. Being a relay means, providing the builder API, there's an Ethereum foundation repository called builder specs that defines a certain API on how the proposer reaches out to a block builder or a relay to receive, to request a block and then submit the signed block and then receive the payload. And a relay is nothing else is only implementing this API.
+
+Chris Hager (00:26:24):
+And it can be only for one included block builder, or it can be a relay that accepts blocks from many block builders and only provides the best block to the proposer, or maybe a block based on certain preferences and MEV-Boost, on top of that is a way to connect to many of these relays as one proposer, the proposer needs to configure specific relays that it trusts to receive the blocks from because there's certain trust needed towards the relays because they can, for instance, withhold, the payloads, which leads the proposer to missing the block proposal. So there is a certain amount of trust needed from the proposer to the relay.
+
+Anna Rose (00:27:12):
+Does the MEV-Boost actually make something faster, more accurate, cheaper? I'm just curious, like what's the actual tangible impact.
+
+Chris Hager (00:27:22):
+It's just a really multiplexer really like, okay, the consensus client, you can hook up any consensus client to any single relay, not all of them do the signature verifications, but you can hook them up to a single builder. And MEV-Boost is just a piece of software that allows the proposer to use many relays.
+
+Tarun (00:27:42):
+I, I guess I had a question in terms of like registration, like DNS style, like how does a relay register and is there some sort of like notion of a registry? I, I guess I'm thinking of this from the perspective of like, you know, when I have this sort of P2P network, like say like a Kademlia type of thing, right? You still have to sort of effectively do some peer discovery. Is there like a, a specialized peer discovery protocol here for relayers to register?
+
+Chris Hager (00:28:10):
+Well there was a strong argument against these registries because the proposals should know exactly which relays they want to trust and to configure. So they are configured manually. So the proposer in its Beacon, client software, Beacon software configures a relay by a domain and a public key of the relay and ensures that all the bids delivered by this relay are signed with the proper key. So right now a proposer needs to trust and, and manually configure each relay.
+
+Tarun (00:28:45):
+Do you envision that changing if there suddenly you end up in a world where there's fewer proposers, but like a larger set of block builders, cause like you could imagine that proposers might actually miss out on quite a bit of revenue if they actually are unable to find all the block builders, um, I'm, I'm giving this as more of a hypothetical, but I'm just, you know, it is something that even at like every single layer, one faces this challenge of like, how do you do peer discovery amongst nodes? And I was just curious if you think at some point that that will be important.
+
+Alex Stokes (00:29:15):
+So builders are very incentivized to make themselves known, right? Like if builders cannot reach proposers, then they can't do anything. But yeah. I mean, I, to your point Tarun, like I, I would hope that we move more in this direction where while there's a number of things we can hope to achieve, but yes, like Chris was saying today, like this is a very sort of static manual process. Everyone involved would love to see, you know, a very sort of open permissionless ecosystem for each of these different roles I just described. And then you can imagine like, as we build that out, what that looks like is, yeah, there is some sort of peer to peer discovery protocol. Um, you know, we're a big fans of like using gossip in different places. And then you can imagine, right? Like I wanna come online as a relay or a builder and then I'm like gossiping, some registration and, you know, hopefully that starts to move towards this world.
+
+Alex Stokes (00:30:02):
+That's not okay. Go to Flashbots, you know, you know, relays.flashbots.net and figure out where the relays are and, and this sort of thing. But again, it's like to my understanding, like Flashbots is saying, okay, you know, there's this very important thing we need to do, which is like, have some PBS solution and MEV-Boost is that thing. And so the question's like, how can we do that? You know, in the next month, um, they've been working on it, you know, for much longer than that, but at this point, right, the question is like, what can we do? And, you know, I think they've made the right decisions to this point and saying, okay, let's build it this way or that way with the idea of being to like, have something ready. And then, you know, everyone I know is, is very much, you know, ready for the, the next step, which is starting to decentralize more and more of these pieces.
+
+Chris Hager (00:30:46):
+Yeah. Just note hear that Ethereum health and chain lifeness is our top priority. And it's important for us to align the current steps towards that because there is some security implications of adding additional relays or translating relays includes themself to the proposers because there is certain verification capabilities that need to be developed for that to be totally safe. So that's another topic that we maybe touch on later.
+
+Tarun (00:31:16):
+Yeah, for sure. For sure. I guess the one question I maybe given that you mentioned liveness here is suppose I'm, an Eth validator. And I initially had MEV-Boost turned off because I took the OFAC list too seriously or something. And then I turn it on later. Um, should I expect extra latency or bandwidth requirements for me that are like quite dramatic relative to running a stock validator. I'm just like, how much beefier do I need my setup to be for running, running it or versus not.
+
+Chris Hager (00:31:50):
+Uh, not at all. Like the benefit is, uh, two requests to the relay, one to get the header and one to submit the signed block and receive the full payload. And the, the size is at most a few hundred kilobytes once per proposal and the delay you can configure your maximum allowed relay delay in MEV-Boost, but the Flashbots really responsive in milliseconds. And I think even a few seconds is still on the safe side.
+
+Anna Rose (00:32:20):
+I wanted to ask, like who's running the MEV-Boost. Is that the validator? Is it the proposer who's actually using this tool?
+
+Chris Hager (00:32:28):
+Yes. This is just the small slice of software that runs next to the Beacon node. Okay. To the consensus layer client.
+
+Anna Rose (00:32:35):
+And then I have another question is like, would the validator actually be running different parts of the stack? Like, would they also be running a builder role? Would they be doing a relayer like, I'm just trying to figure out, like, would it make any sense for them to actually run more than just like their validator plus MEV-Boost?
+
+Chris Hager (00:32:53):
+It's conceivable that large staking pools would be interested in running their own relays, um, just for more control, maybe more data visibility and other things. Um, but for solo stakers, it's not, not a realistic option because it includes a lot of infrastructure and also trust from the block builders and the searchers because they trust the builder and the relay with the plain text transactions that contain the MEV extraction and that they want to profit off themselves. It will be hard for small actors to, um, basically build profitable blocks that are comparable to the bigger relays.
+
+Anna Rose (00:33:34):
+And kind of like one more thing on what you said, Alex, like on merge day, like, is this all in place, like those different roles being distinct in the way you've described them? Or is that still sort of theoretical?
+
+Alex Stokes (00:33:47):
+No, I mean, I would say they're in place, so I mean, we definitely have validators and we have, you know, they'll be proposers then. And then the question is right. Like,
+
+Alex Stokes (00:33:57):
+Will there be builders? who are the builders, I guess this...
+
+Alex Stokes (00:34:00):
+Right well, okay. So this is a good question. I mean, you know, the, I think it is early days for this MEV-Boost ecosystem and, uh, yeah, I think it's, you know, TBD as to exactly how it evolves and that's part of the fun, there are a number of organizations that have committed to be in relays. I think they might all build blocks as well. And, you know, again, kind of like I was alluding to a second ago, I think everyone involved in visions this like more decentralized network eventually where you can have permissionless building, right. So you could have just, you know, specialized builder actors that are here and then that's where they do need the relays to connect to the proposers. And yeah, maybe just taking a step back, you know, like the reason we go to all this trouble in the first place is to support these like smaller validator actors.
+
+Alex Stokes (00:34:43):
+Like you can imagine just like foregoing this entire network and just having like, you know, one huge builder organization directly connected to one huge, you know, staking pool or some validator organization. Uh, and they just do this and this may happen. Uh we'll we'll see, you know, how things shape up. Um, but we definitely have this like very core value in Ethereum that like, you know, validation, for example, should be within reach of like most users, right? At least we should like strive towards this ideal cuz it helps decentralization. So we do this and then you, you know, given the previous claim, right, that like, you know, there are these returns to scale with MEV, MEV extraction and all of this. And then consequently larger pools are like best positioned to do this. Well, um, we wanna ask, okay, can we, can we help these smaller stakers that we wanna sort of support in this way? And this is why I think we have the decisions made for MEV-Boost and like PBS broadly are for exactly this is like, we want anyone to be able to have these MEV opportunities, uh, access to them. Right. Regardless of the scale of their like staking operation.
+
+Anna Rose (00:35:48):
+Interesting. We talked about this on the episode with Dean and I think we talked about it on the previous episode, which like this idea of accelerationism like here, you're saying this is gonna happen anyway. Let's make sure it's not just the big players who have access to this thing. Does this still follow that philosophy? Would you say? Is that kind of what you're, what you're angling for?
+
+Alex Stokes (00:36:06):
+Certainly. Yeah. I mean accelerationism is a, is a very interesting word, but Uh, you know, I think there's certain things where it's not clear what the best options are. Like, here's the thing, like if we perfectly understood how to like solve MEV at the core protocol layer, like we would just like have a protocol hard fork that does this. Like we would just sort of ship and shine PBS. There are a number of questions that I don't think we have answers to in part, because I think we just need like more experience, more data of just like observing the landscape. It would be silly to, you know, pick one particular version of this design. And then what happens, you know, is no one uses it or like, you know, there's some like back door loophole that like sort of harms the integrity of like of what we're trying to accomplish. So yeah. I, I think we'll see. And in the meantime, yeah, it's, it's just sort of saying, yeah, what's the best we can do before we can answer those questions. And MEV-Boost is like a great step in that direction.
+
+Anna Rose (00:37:02):
+Hmm. Um, I wanna ask you about like sort of general opportunities once there is this move to proof of stake when it comes to MEV. I mean, I think I've already sort of alluded to some of them where it's like validators running extra roles. You've alluded to it basically like new ways that they could improve what they're doing. Maybe even like access some of these funds. But I feel like I've heard and I'm, I don't know if this is actually something you're working on, but this idea that like, if you look at MEV in a POS system, if you start to incorporate some of this or enshrine it or like put it into protocol, like, could you actually democratize some of the MEV or like give it out more to validators, like in a more even way, rather than having these sort of like unique prop shops who can invest all that time to like do a lot of this work, that's gathering a lot of it. Is that actually something you're thinking about? Is that possible? I've literally just like heard it. I don't actually know if it's doable.
+
+Alex Stokes (00:38:01):
+Anything is possible. Okay. Um, okay. You're touching on like a very big topic. Um, I think the way that like the researchers in this space would refer to it as is MEV smoothing. So the idea is right there is MEV like MEV exists. And now the question is like, what can we do? And, uh, one thing we've kind of touched on is the fact that it, it provides these sort of, you know, economies of scale where if you're good at extracting MEV, that's like some extra revenue you can use to improve your staking operation. You then have these like large pools because obviously this compounds and then that harms to centralization. So, uh, we wanna ask, okay, as you know, crypto economic researchers, can we again mitigate that situation, try to make sure it doesn't get there. What can we do? Um, and an obvious sort of, you know, intuition is what you said, Anna is just okay, if there is this MEV and like people can take it for themselves.
+
+Alex Stokes (00:38:52):
+Like, is there a way we can almost like, sort of, you know, smear it across everyone else, the whole validator set, uh, so that you then don't have this, like, at least as sharp of a return to scale on your efforts. And yeah. And this is kind of what, I mean, when I say there's a bunch of like open, I think research questions around like how you'd actually wanna do PBS in, in the protocol. Um, but yeah, like at a high level, the idea is you can imagine that, you know, if there's so much MEV in a block, rather than that go directly to the builder or the proposer, you know, there'll be some split between them, but rather than it all go to like just the singular actors, you can again put it in the sort of protocol escrow or something. Um, this is very much like if, if people are familiar with 1559, the, you know, the transaction mechanics on Ethereum today, there's like this base fee that's burned.
+
+Alex Stokes (00:39:40):
+And a way to think about that is like the protocol is taking the base fee and, you know, it turns around then and like burns it, but that's a choice. There can be other choices and at least, you know, broadly speaking. And so this is a similar thing where with MEV smoothing, you would have this ability to say, okay, rather than payout MEV directly, the protocol takes it and then does something with it. And, you know, there's a whole design space around what that something is. Uh, but yeah, it's a very interesting question. And I think people would like to see it come to the network at, at some point, because yeah, it, it does seem to reduce, uh, for example, we've talked about reorgs and so like, you can imagine that if you can reduce the, like the burstiness of MEV, because the way to think about it is that like MEV is not smooth.
+
+Alex Stokes (00:40:26):
+This is why we wanna smooth it out. Like, you know, it could take until for example, an Oracle update on chain for there to suddenly be this huge liquidation opportunity. And that could only happen, you know, once every say a hundred blocks. And what that means is that if you're extracting me then like that on that a hundred block, you care very much about getting your, your transactions on chain. Right? And so instead we could imagine smoothing this out, um, and making the whole process more democratic in that sense and by doing so you reduce, you know, the incentives to, to for example, try and reorg this liquidation out things like this. I believe Tarun actually just had a paper on this. I don't know if you wanna plug that.
+
+Tarun (00:41:03):
+Yeah, yeah, yeah, for sure. Uh, thanks. Um, I guess in general, it's very hard to design these things without this concept of like off chain agreements of like why wouldn't people collude off chain to, to avoid kind of the tax in some sense, because you could view this redistribution as you know, maybe if there's someone who's a searcher and also a proposer, they may view that, uh, as an individual, as, as a form of a tax, but assuming you can find a way of doing it. And so that will require cryptographic solutions as well as economic solutions. It's not like a single, it's not like obvious exactly what the best way of doing it is assuming you have that, uh, this paper just shows sort of this thing that like you can avoid these really bad equilibria where people just unstake all of their assets and go earn yield elsewhere.
+
+Tarun (00:41:56):
+Um, but also you can have a lower inflation rate. And so you can, you can actually have lower block rewards if you redistribute MEV. And so assuming there's like a sufficient quantity, um, and then, you know, there's a way of quantifying that, but that part was actually, I think the more surprising thing is that, Hey, maybe this is an alternative to having a super, super inflationary schedule to keep people shaking. And so I think that that's part of the design space that I think will probably be explored, but first we need to actually have like cryptographic solutions that you know, will make it so that it's expensive enough for you to kind of cheat in these systems.
+
+Anna Rose (00:42:37):
+Interesting.
+
+Tarun (00:42:37):
+Which it's not right now, at least
+
+Anna Rose (00:42:41):
+Is this something we want is a lower inflationary schedule? Like, is that something that like one should aim for as a protocol designer?
+
+Tarun (00:42:48):
+Have you ever seen the ultrasound money meme? I feel like that's the entire thing is about doing that.
+
+Alex Stokes (00:42:54):
+There's demand out there. Okay. Someone would want this.
+
+Anna Rose (00:42:56):
+Yeah. Okay. Okay.
+
+Alex Stokes (00:42:57):
+But even like you get, like, I don't know, like Tarun's point is I think good that like you can imagine MEV as this like subsidy and I think this is like my own meme I want to start spreading is that like we should use MEV for public goods and this is exactly what we mean is that like, if we can find a way to like, you know, have the perfect arrangement of signatures and hash functions and all these things, like if we, if we can use the tools we have available, then like it's possible, we can actually use MEV for like very good things by having the protocol take it and then using it in like a positive way.
+
+Anna Rose (00:43:25):
+You still need to motivate people to run it though. So I, I do think there needs to potentially be incentive at the level of the validator.
+
+Alex Stokes (00:43:33):
+And there, and there can be. And then the question's like, okay, if there's like this much, MEV then like half of it maybe goes to protocol. I mean, all of these arguments are for 1559 and like this, this works great. Right? So the thing to keep in mind on this arc is that like many people who use these systems are interested in the long term game. They're not just here to like sort of have this like one block profit and then completely exit. And I think a lot of these things start making a lot more sense when you can say, Hey, maybe, you know, block by block, I'm not taking as much revenue. However, uh, you know, the system overall is much healthier, much more secure and so it can keep going for longer.
+
+Anna Rose (00:44:07):
+Cool.
+
+Tarun (00:44:08):
+One last thing I think is in general, right? In almost all forms of this industry, we've always generally seen pools of capital converge to the things that lower their variance and payoff per time like mining pools or staking derivatives. And so it's, it would be kind of surprising if MEV is the only thing where people are not willing to trade off some instant reward for lower variance and rewards over the long term. And so if there is a mechanism for it, I do think there's demand for people doing that.
+
+Anna Rose (00:44:42):
+Um, this is actually a question. So I chatted with James before this interview and asked if he had any follow up questions. And he asked like, if the MEV fee is actually sidestep 1559 currently. And so I wonder like, because what you've just described is like this of actually sharing the preface. That's not gonna happen at time of merge. I'm assuming. So in the meantime, are the fees, the MEV fees actually like undoing what 1559 tried to do.
+
+Alex Stokes (00:45:08):
+Right. I would say no, but it's also not clear. And this is part of the trickiness to PBS generally is that you can always sort of have these off chain agreements. Uh, I think Tarun, just, just mentioned this. Right. And the idea is that basically, you know, you're right. Like maybe this does feel like a tax. Like why, why would I use your silly protocol? Like, you know, here's this liquidation, we could have software that doesn't even touch, you know, the core protocol that facilitates all of this automatically. Like you could do all of this. And then the question's like, yeah, why would you use this? Um, for 1559 in particular, like it's mandated by the protocol that you must pay the base fee. Like the only way to get the MEV is to like use block space. And the only way to get block space is to like pay the base fee like that that's in part, you know, why there's this decision to burn the base fee?
+
+Alex Stokes (00:45:56):
+Because like it's there it's is essentially just sort of like siphoned out of supply. And like, it, it's this very strong, like forcing function that, you know, it's hard to like move around. So yeah, like to first order, I would not say that like MEV side steps this in any way. And again, this is where a lot of the complexities and subtleties around, like the sort of the more open research questions of PBS is like, we want the same mechanism here where it's like, there shouldn't be a way to sidestep the thing we do. Um, and if there is, it should be very expensive or just like not worth someone's time.
+
+Anna Rose (00:46:28):
+Hmm. I wanna move to the topic sort of, of like Ethereum versus other places. I guess the question here really is like, do you only work on Ethereum? Do you work on, I'm assuming all EVM compatible chains, are you only looking at the Ethereum main chain as your focus point or like, are you paying attention to the rollups to the sort of, yeah. bridged, EVM, compatible chains, curious what your thoughts are there?
+
+Chris Hager (00:46:58):
+I noted Flashbots in general is paying a lot of attention on other chains on L tools on rollups. And so in particular, our research part of our organization, we do have also have a lot of, uh, collaborations with other projects happening on, on the research side. Product wise we are Flashbots is mostly focused on Ethereum for now.
+
+Anna Rose (00:47:21):
+Okay. But could one use it on any EVM compatible network?
+
+Chris Hager (00:47:25):
+Yes. I mean, not, not even only EVM compatible, like the MEV-Boost system is potentially transferable to, uh, other setups as well.
+
+Anna Rose (00:47:35):
+Okay. But it would, I guess it would have to follow the model that like the relayer, like the builder you'd have to have some of that infrastructure right for it to work.
+
+Chris Hager (00:47:44):
+Yes. Okay. But that's, that's independent of the EVM.
+
+Tarun (00:47:49):
+Yeah. Another way of thinking about it is like right now, all this stuff is done off chain anyway. And you know, like if you think that the current state of Flashbots, it's just like completely an off chain service, right. That does, and this is just kind of making a more transparent version of that because none of these things are enshrined in consensus and you can't really, unless you, you know, go to the complexity of trying to like really slow down the chain.
+
+Anna Rose (00:48:15):
+Um, I have a little follow up to this, which is like, so when I did the last episode, what I understood, what actual technology was coming out is like, you'd be running like a guest node and you'd get almost like a patch. At least that's what Alex at the time was describing this as. Um, and so I'm wondering, like, do you still describe it that way? Would you still describe it as like it's a patch on existing client infrastructure?
+
+Chris Hager (00:48:39):
+No, not anymore. This changes from if you're in 1 to if you're in 2, if you're in 1, it was a patch to Geth yeah. That's called MEV-Geth that provides another API to receive bundles and to merge them into the blocks in if 2 it's a whole kind of a side car system where MEV-Boost runs on the side of the proposer and the Beacon note calls into MEV-Boost and uses this whole off chain builder network to request blocks. So it's more of a, like an add on side car add on approach, I would say.
+
+Anna Rose (00:49:10):
+Got it. I guess the, the follow up to that is what percentage of the current network is actually using what you do have. So this is before proof of stake, like enters the fray, but like, do you know what percentage of the network is using it? Because as I understood it, like the minors had to run this for it to kind of be useful. And so, yeah. Where, where are you at?
+
+Chris Hager (00:49:31):
+So you mean now in Ethereum 1?
+
+Anna Rose (00:49:34):
+Yes. Like 70%? Or something?
+
+Chris Hager (00:49:35):
+Not quite sure. Yeah. I think in the ballpark of 70%,
+
+Tarun (00:49:38):
+Yeah. It's like 70 to 85% in that range. Um, they did have one sort of vampire attack that sort of, uh, was unsuccessful since the last episode. I can't remember the name of that thing that did that, that like they basically forked off MEV-Geth and added a token and then it, oh, you know, unsurprisingly, like at, even there we go. Right, right, right. Attracted hash power for like a month and then had this like big collapse.
+
+Anna Rose (00:50:05):
+Okay. So that's 70 to 85% for this to function in the proof of stake world. Does it also have to have that kind of like network share for it to work and do kind of expect that to inevitably happen with what you just described, this sort of sidecar action. The fact that like the validators need to be sent, but like doing something in addition to just running the node software or the validator software.
+
+Chris Hager (00:50:29):
+Well, it's a good question. My feeling is that staking pools will gravitate towards, uh, extracting MEV as a form of higher rewards to their users as well. I'm not sure how big the relayer diversity will be. So for sure not all the proposers will connect to the Flashbots, relays and proposals can connect to many relays at once or to a certain subset of those. So if you're talking about the number of proposers that will connect to any relay or tap into any external builder network, my personal feeling is that it will be the majority, but, uh, it's very vague. I really don't know.
+
+Anna Rose (00:51:08):
+Something to check back in on.
+
+Alex Stokes (00:51:10):
+Right. I think we'll see, you know, we'll know a lot more, even in a month or two. And the theoretical argument is that people went to MEV and, you know, with proof of stake, Ethereum, this is definitely like the most straightforward way right now. Uh, putting aside any sort of bespoke relationships you would have as like a large staking pool or some very specialized searcher or something like this.
+
+Anna Rose (00:51:30):
+Got it. I know you just mentioned that you're doing research into roll up stuff, but as I understand, like right now, there is no real MEV to be had on rollups as they are because sequencers kind of do that. Would you agree with that? Do you feel like already today on the roll up front, there's actually places where people can start building things or does there need to be some sort of decentralization of the sequencer community before that happens?
+
+Chris Hager (00:51:57):
+I do not think that just having sequencers mitigates MEV, like there is still MEV around.
+
+Tarun (00:52:04):
+For sure. In fact, a lot of the sequencer models have a separate relay function. There might be a way in which you could have a single sequencer use a MEV-Boost style network to do the relay to the main chain or a multi relay. So like, let's suppose that there's two base chains that are both storing data for the same roll up. Not, not saying that this exists right now, but you could imagine a world where like, Hey, like a roll up is like we want redundancy or we wanna like split our, you know, main data between two chains because we're willing to take that security trade off. You could imagine there is a relayer network for doing that. Um, the question is like, does it need to be an incentivized relayer network or not? Uh, which that part gets a little more complicated for layer twos versus MEV. In the MEV case, there's just like clear revenue that can flow through to all the participants.
+
+Tarun (00:52:58):
+Whereas in the layer two case, there's a lot more incentive to sensor. It's potentially a, a much higher set of valuable transactions before they go put in. Whereas in the MEV case, you don't have that much time to reason about it. Also, you're sort of like computationally bounded in terms of like production time, but, sorry, these are just like, kind of off the cuff guesses of this. But I, I do think like people will use these like relayer network type of things once they're like really hardened for other use cases other than MEV.
+
+Anna Rose (00:53:29):
+Interesting.
+
+Chris Hager (00:53:31):
+And just the site note here, the relay itself, at least an honest, relay is not a profitable endeavor. Really. It's more of a public good. So for instance, the Flashbots really itself, it does not extract any value or provide any profit to those who run it. It's really the block builders, sharing their profit with the proposers where the proposers will receive the majority of the value of the MEV. But there really is mostly just neutral infrastructure.
+
+Anna Rose (00:53:59):
+And I guess this is why you're not sure how many would be running, because there needs to be like there's no incentive. So it will be altruistic.
+
+Chris Hager (00:54:06):
+It's low incentive and it's high effort. It's like a complicated piece of software. It needs to do block simulations to verify the submissions from the block builders to make sure only proper blocks if the correct payments make it to the proposer because the proposer kind of blindly trusts, what the relay is telling the value is, and I honest relay needs to work very hard to make sure that everything is in order with the blocks it proposes to the proposer.
+
+Anna Rose (00:54:35):
+So I know that we've mentioned a few times this like cryptographic solution and I wanna do quick throwback to an episode Tarun and I did with the crew from osmosis. There they had made a proposal for using something like threshold decryption, which is a cryptographic solution to hide the order in the mempool thus like removing some sort of MEV. Um, is there a part of your team, is this something you're looking at or working on? Is this something that you think yeah is relevant to this or is a potential solution?
+
+Chris Hager (00:55:05):
+It's certainly an area of collaboration and research. I think it's not clearly inside the Flashbots team to figure that out. It's more of a broader collaborative effort to think through possible solutions of using threshold cryptography to, uh, solve some of the problems. And I personally am not an expert in that, but even then there is still certain open questions. There is some still somebody who sees the transactions first and can act on that information. There is still the block after and the person who has the first right to submit the next transactions. So not all problems can be solved I think, but I'm sure Alex has more insight into the ongoing research on, on using threshold encryption.
+
+Alex Stokes (00:55:55):
+Maybe some, I don't know, I'm not sure. I think it's as greater mitigation, at least some people might claim. Definitely. I think it's like Chris said, there's this like, you know, broad, collaborative effort across many different teams and organizations in this space broadly, uh, to figure out how we can use cryptography to, you know, mitigate different externalities of MEV, uh, you know, a lot of the PBS stuff I've kind of been gesturing that, you know, would have these economic incentives reinforced by cryptographic instructions to like, you know, bias the games we want versus like some other games and either way with threshold encryption in particular. Yeah. I don't know. I guess I'm personally not convinced because it's, it's like Chris was saying like what happens is if you have this construction and your in your MEV system, then all it really does is push the MEV in to like the boundaries of like the, the encryption process. And this is like, generally, like, this is why MEV is like such a interesting and also like pervasive concept is like, you can think of ways to like, um,
+
+Anna Rose (00:56:52):
+Squash it out over here, but it's gonna pop up over there.
+
+Alex Stokes (00:56:54):
+Yes.
+
+Anna Rose (00:56:55):
+Like Whack-a-mole.
+
+Alex Stokes (00:56:56):
+So like exactly. Like if you wanna be academic about it, we can say there's this like law of conservation of MEV, right. That like MEV is always there and you can't like, you can't spend it well, okay. Maybe you can bend it, but you can't break it. Like you can't get rid of it. It's just, it'll be there. You can move it around. You can, you can deploy some solution that pushes it to the edges of your solution, but there's still the edges. And like we live in an open world that seemingly very complex, there will always be an open boundary that we are dealing with. And so in that sense, there's always a MEV and the question is now, okay. Yeah. Maybe there is some like radical cryptographic instruction. I think the more, uh, let's say exotic ones I've heard are, are based on cryptography. That's like very far away from being production ready. Um, yeah. There's things like homomorphic encryption, like witness obfuscation and, and techniques like way beyond my understanding that like, you know, I've, I've heard people throw these terms around. Um, yeah. So, so we'll see. I mean, definitely like if there is, you know, I expect there to be ongoing progress and cryptography broadly and very much, many of those techniques will be applicable to the systems we're talking about today.
+
+Tarun (00:58:04):
+I just add one thing to Alex's, uh, stuff, which is basically this sort of idea that there's no way of removing MEV. I feel like somehow, even though we're in 2022 is still controversial, because people are still always trying to do it. And then, you know, when they do it, they don't realize they introduce some like centralized. Cudgels like, you know, in a lot of the fair ordering things, they kind of implicitly assume some sort of fallback, Oracle fallback, ordering person who is like effectively centralized. And I think one important thing is that, you know, we still haven't actually figured out how to correctly define what, A... the concept of MEV is other than in particular sub cases and B... what the laws of transference are like given two different mechanisms for, uh, people to reveal their MEV. Maybe one is, you know, right now, right?
+
+Tarun (00:59:00):
+We have an auction. And so people bid on their bundles, but you could imagine a world where it's a totally different type of thing. And there's some calculation that tells you, like you submit a bundle and then it waits for, you know, K different bundles. And then the algorithm says like, okay, here's K prices. You can either buy it now, like eBay or not buy it. Um, which is a very different version than kind of like, Hey, we have an auction where you have to compete to reveal your prices. And the question is we don't even have the basic lingua franca mathematically to compare. What's the difference between me giving you prices versus you bidding in an auction for these types of things. And until you have that, you can't even really say like, Hey, we're doing any reduction because we haven't proven that the mechanism changing mechanisms has any economic impact.
+
+Tarun (00:59:49):
+We kind of are like, oh, this thing is just harder because you can't see the bundle right here at this point. But that doesn't mean that there's not side channel information implicitly leaked from that at all. And until we actually have some way of comparing mechanisms, I, I generally think any claim that you have a clear reduction mechanism should be assumed to be false because it kind of assumes that the entire system is exactly the same, like, uh, Mutatus. Um, I don't know my Latin well enough to, to remember the, the exact phrase like Mutatus mutandis or something, whatever, like stayed in the same place. And so, so, so at some level, I think that's something you should always kind of keep in mind when evaluating these things is like, sure, maybe the threshold encryption does actually work on a single block before, but the fact that you are still using an auction means that you've created some other inefficiency and maybe the posting prices thing is more efficient for a threshold encryption versus an auction. Those types of basic things aren't even known. I think like that these are the types of things. I'd say it's like a quite large complicated system. It's and it's very hard to just like switch one box with another and be like, ah, we solved it.
+
+Anna Rose (01:01:04):
+Okay. I now wanna move on to the topic kind of, of the day, the last few weeks there's been, you know, something kind of crazy happened in the ZK space OFAC, an organization that I was not really aware of before this day has sanctioned a smart contract or collection of smart contracts in the form of Tornado cash, Tornado being a mixer on Ethereum, based on zero knowledge proofs. Um, this came out while I was at Zcon in the middle of a bunch of ZK researchers. So that was a good moment for that to happen. But I think like personally, I've been digesting it over the last few weeks, trying to like take in what people are saying, but also kind of hold steady until I can find out a little more, we know a little bit more, but I know that it hit you guys. So like the MEV question and like what addresses are potentially blacklisted came up in your conversation. So maybe you can share a little bit about what happened and how you've reacted, I guess, to this.
+
+Chris Hager (01:02:12):
+So, uh, the Flashbots infrastructure, we have been complying with OFAC for one and a half years now, already, initially, because we do have public, uh, unknown teammates living in the US and Flashbots has a US company. And it would introduce huge liabilities to the team members to not be compliant. So there is not for us now, a place to walk back from OFAC compliance because the implications are severe. If you're talking about 20 years jail time, this is, uh, not something that we can, a risk we can put on team members and yeah, we can also not walk easily back.
+
+Anna Rose (01:02:53):
+What does it mean to follow OFAC guidelines though? Like what does that actually mean? Literally.
+
+Chris Hager (01:02:59):
+Yes, it's kind of hard because there is no clear guidelines, but at the very least there's a certain set of addresses where you cannot facilitate transactions. This is my understanding. This is, uh, some legal opinions we have received. Um, there is, I think some clarity how deep it goes, how deep you have to inspect transactions and what you can do, what you cannot do.
+
+Anna Rose (01:03:24):
+So like OFAC has sanctioned the contracts, but in your case, did the Flashbots team take that to mean any address that has ever interacted with the Flashbots contract would be on that blacklist?
+
+Chris Hager (01:03:38):
+No, that's not the case. What the Flashbots projects did was, um, most of our projects are open source and we added a pool request to add more addresses to the OFAC blacklist in the public repositories
+
+Anna Rose (01:03:51):
+That was already there.
+
+Chris Hager (01:03:52):
+Yes. And, and as was in particular on the RPC endpoint and the community raised a counter pool request to remove all of the OFAC sensoring in this repository and bringing a lot of visibility into OFAC sensoring in general, and then mixing this a little bit up with how MEV-Boost is censoring, uh, automatically, and by default and starting a broader debate with, uh, conflicting certain projects, but still talking about now the mergers in one month, what does OFAC compliance mean for like Ethereum in that time span?
+
+Anna Rose (01:04:31):
+Yeah. How are the addresses that were like added? How are they actually decided on because you, so you said it's not every address that ever interacted with the contract, so what is it like, where would that selection come from?
+
+Chris Hager (01:04:44):
+I think that's just the addresses that the OFAC puts out. I'm not sure. To me, it is now I'm on the first day after two weeks of vacation and I have been, I have been following the discussions around, but, uh, I don't have the detail knowledge where the specific number of addresses is coming from.
+
+Alex Stokes (01:05:01):
+I least I can provide my understanding, which is that, uh, there's a particular list put out by the treasury with OFAC. Um, there's some acronym SDN, but essentially this is what you're referred to when they quote 'sanctioned a smart contract' is they added the address of this thing onto this list. And, uh, to my knowledge again, I, I don't know the details, but what I believe is that Flashbots has just taken this list and just dropped it in as sort of like, uh, what we will not do is allow any transactions into our products that, uh, you know, interact with anything on this list. And again, to my knowledge, this doesn't mean anything that's interacted with those addresses, right? It's not this like transitive thing. Um,
+
+Anna Rose (01:05:45):
+Okay. I guess that is the question though. That's where it becomes, like how far away would that potentially expand
+
+Tarun (01:05:52):
+The moment a government can define a transitive closure is the moment that I will say the education system actually worked for once.
+
+Anna Rose (01:06:00):
+Why?
+
+Tarun (01:06:02):
+Cause like, have you ever read any of these types of sanction documents? On crypto stuff like the actual legal language, the way people define things, suggest to me that they sometimes conflate, uh, public key with a physical address. And if you're already at that level of education, I, the idea that there's a transitive closure over the graph of all interactions of these addresses with each other, seems like a big stretch for, you know, little old lawyer in who works at, you know, the treasury department.
+
+Alex Stokes (01:06:34):
+But we don't know until, you know, this has come to some sort of legal situation we don't know. And that's why everyone is concerned. And that's why there's been a lot of, let's say drama over the last couple weeks is, uh, because then yeah, like you do have to say, okay, um, let's say we have, you know, people we care about, like we have teammates who are in these jurisdictions then like suddenly like we're going to comply. Like I don't, I don't think it's that controversial to say like, we're going to like, you know, avoid legal risk where possible. And then the question is, yeah. How, where does it end? Like what's the extent of, of this stuff. And I think that's where it's just not clear yet. Um, simply because there either hasn't been information or, you know, some cases we won't know, until there's like regulations actually formed and that could take many years. Right. So.
+
+Tarun (01:07:16):
+I do think if that anyone proposes something that's transitive in any sense, like there will be lots of lawsuits because that, that will be the thing that causes, you know, the like trial that goes to the Supreme court because people will be like, how many hops is too many hops. Yeah. And like, it's, it's just like, you know, there's no way that doesn't end in just like legal warfare.
+
+Anna Rose (01:07:38):
+Yeah. I did notice like a lot of the feedback against it did come from folks that also don't live in the states. I mean, I, I basically saw the, the counter to the pull request and some of the conversation in there, I mean, there were some people who were really talking about like throwing it up in the air, you know, like we will not touch this. If this continues, you had a solution as far as I understood, which is like releasing some sort of open source version or what was that exactly.
+
+Chris Hager (01:08:06):
+So the concern was that at the merge, there might be only the Flashbots really serving plots. Okay. And the Flashbots, really not including transactions that fall onto the OFAC sanction list. And that could mean that, uh, assuming 80% of proposers use, uh, the Flashbots relay that 80% of the network will, uh, have some blocks with, uh, some sanctions, um, to put it in a perspective though, if you remain surprisingly resilient in that way, because even if 80% of the network uses a sensoring relay, then a sensor transaction still gets seen on average every five blocks or off the five blocks. If there's 95% of the network using relays that comply with OFAC it's one in 20 blocks. Our response to this crisis was that we released the relay source code that we are running on our Testnet since some time and developing the plan was to do that all along. But, uh, this accelerated the timeline. It's not, not in a final state. We wanted to get it a little bit more final, but it's an important conversation and discussion and discourse. And we believe that multiple relays is a step in the right direction. And to facilitate that direction, um, we provide a, I would say, a solid and somewhat tested base code for other groups to start relays on their own and, and to create more diversity and more competition.
+
+Anna Rose (01:09:33):
+I think obviously this topic is so much bigger than what we can get to in, in this episode. We don't have that much time left in the episode anyways. So just to note for the listener, I will be doing an episode focused on Tornado and, and what's happened since then for the ZK space. So you can look out for that. Um, like always, I don't tend to do news on this show, so I don't try to like jump right away to catch something. I'd rather wait and see kind of be able to gather quite a bit of info, figure out who I wanna talk to and then we'll do an episode like that. So yeah, no stress, Alex, Chris, I realized like, you know, I don't wanna put too much on, on the two of you to like answer it all today.
+
+Tarun (01:10:13):
+Yeah. So I guess like, you know, we went from sort of people spamming the blockchain in 2019 with PGAs and probabilistic gas auctions to kind of the orderly, but off chain sort of solutions of MEV that sort of really rose in 2020, 2021. And now we're kind of moving to this, uh, new world where most clients can be much more aware of MEV. And so I guess the real question is, you know, where do you see the next year or two? And what are the kind of the innovations in both MEV on the engineering side, as well as on the sort of research side that you're most excited about or think will kind of like come to fruition? Um, maybe let's start with Chris.
+
+Chris Hager (01:11:02):
+I think like in general, getting the infrastructure into a more stable state, getting additional capabilities into the Beacon nodes, perhaps for additional safety mechanisms, moving more towards a peer-to-peer network and gossiping. Um, moving more towards a more trustless setup is like vague high level goals that work is going and progressing towards. There's also a lot of ongoing research on PBS, on sinking slot finality, but this is all on a multi-year horizon. So in the short term, it's more the hardening, uh, additional security guarantees and the development of the honest relays that provide neutral infrastructure to connect proposers and block builders and users and searchers for me.
+
+Anna Rose (01:11:53):
+What about you Alex?
+
+Alex Stokes (01:11:56):
+Yeah, I mean, I, I think that was a nice summary that Chris gave. So basically, you know, this MEV-Boost represents a version of PBS and we generally want to build out this vision, right? So like we all have a shared sort of destination, which is some enshrined PBS and how do we get there while we'd like there to be like a very healthy, competitive market of all these different roles, uh, and you know, with competition, we'd hope to sort of reduce the externalities of, of these games generally. So that's, I think like, uh, you know, sort of a sort of quote, word map as to where we're heading and maybe taking another framing of it is like, I would like to, uh, have people think about this as layers, right? So, you know, modular blockchains is like this new hot thing. So the reason why is because we can say, okay, like, how are you going to actually scale these systems while it turns out if we like separate out their distinct functions in two layers, we can specialize the layers and then hopefully have everything work better together.
+
+Alex Stokes (01:12:52):
+So I'd like to then say, okay, let's apply this thinking to like the MEV world. And I think what we'll see there is like, similarly, there'll be these like, you know, different chunks of functionality that specialize and become their own, you know, rabbit holes in their own way. So, so something I'm, I'm very, uh, I'm very excited and looking forward to is like research around, uh, the layers of the stack closer to the user. Like we've, we've talked a lot and this episode about what's the protocol and how's the protocol relate to this that maybe for consensus and things like this. Uh, but we've almost, you know, we've talked very little about, about the user. Like we mentioned threshold cryptography, for example, and it's applications. And the reason we went to that is because, you know, the MEV goes all the way up the stack to like the person actually making that transaction.
+
+Alex Stokes (01:13:31):
+There is no MEV unless there's a transaction. Right. And so the question then is like, okay, like, can we improve upon the status quo? Um, and yeah, certainly can, there's actually, I think a lot you can do. Yeah. That's the whole episode itself, but a lot of very exciting research, like, you know, so to give an example, you, you could imagine that, you know, if I'm a user and I give you this DEX trade and you background me, rather than the searcher taking all the value of the background, they give me half or something like this. Right. And then the question is, okay, like, can we generalize this? Can this go across all sorts of like ETH applications, different types of MEV, um, you know, can we generalize in the sense of like having everyone do this and yeah. Then, then you just there's like this whole world, I think that we'll see in like a year or two and be like, oh yeah, like our thinking around this was like, so sort of, uh, early, and, and now there's this like really interesting complex, uh, landscape out there.
+
+Anna Rose (01:14:24):
+New thing. Cool. Well, I wanna say, thanks, Chris and Alex for coming on the show and sharing with us kind of an update on MEV. What's new, what you're thinking about. Um, I do have one last thing, which is like, I think this episode will air pre merge. What's your outlook? What are you gonna be doing? What are you gonna be thinking about? What are you gonna be waiting for?
+
+Alex Stokes (01:14:46):
+Yeah. This has been a long time coming. Uh, I'm very excited. I think at this point, I'm, you know, cautiously optimistic that things will go very well. It's something that we've generally been waiting for as a community for like quite a while. Right. So it's, it's definitely a huge milestone. And, uh, yeah, it's almost this thing where it's like, I have some trouble seeing past it because it's just like such a big thing that is about to happen. Um, but yeah, very, very exciting time and yeah. Uh, you know, as we've laid out, there's, there's ton of more interesting, you know, uh, questions in the MEV space. So it's not that there won't be a lack of things to do.
+
+Anna Rose (01:15:24):
+Nice.
+
+Chris Hager (01:15:25):
+Yeah. I would second that it's not like we are now resting and relaxing and waiting for the merge, but it's like still an ongoing big push on all fronts on multiple teams, including research, including the client teams and all the implementers builders relays. So until the merge, it's, uh, gonna be an intense period and hopefully then a little bit of breathing room and then start the journeys to the next goals.
+
+Anna Rose (01:15:49):
+Wild. Current date for the merge is September 15th, which is by the way also the date of the ZK summit, 8. Um, so it would be really cool if it happens on the same day. I feel. I want to say thanks again to both of you. Thanks. Tarun for coming back.
+
+Tarun (01:16:04):
+Thanks for having me, you know, it's been a while, but uh, good to come back for, uh, a topic I've spent a lot of time thinking about.
+
+Anna Rose (01:16:12):
+Cool. Thanks Alex, Chris.
+
+Alex Stokes (01:16:14):
+Yeah. Thank you, Anna. This has been great.
+
+Chris Hager (01:16:16):
+Yeah. Thanks. Great. Uh, talking with you all,
+
+Anna Rose (01:16:19):
+I wanna say a big thank you to the ZK Podcast team. That's Tanya, Rachel, Henrik and David as our guest editor this time and to our listeners. Thanks for listening.
+

@@ -1,0 +1,414 @@
+Anna (00:07):
+Welcome to zero knowledge, a podcast where we talk about the latest in zero knowledge research and the decentralized web. The show is hosted by me, Anna,
+
+Fredrik (00:19):
+And me Fredrik
+
+Anna (00:27):
+This week's episode, we chat with Ren Zhang from nervous, about his work on consensus algorithms. We revisit the topic of consensus, chat about an earlier work he did on evaluating proof-of-work consensus protocol security, and explore his more recent work on NC-max. Now, before we start in, I first want to let you know about the ZK summit. The event is happening November 23rd and 24th. This is a biannual event that I put on. It's made for researchers, cryptographers, practitioners, founders, and developers, working on zero-knowledge topics, as well as students and ZK enthusiasts. If you count yourself among these people, I think you will enjoy the programming that we have planned for you. It's a two day event, tickets are available now. So add the link in the show notes, and I do recommend you buy your tickets as soon as possible, because we actually have some discounted tickets available this week until November 15th. So yeah, hope to see you there.
+
+Anna (01:25):
+And before we start in, I also want to thank this week, sponsor Least Authority, Least Authority is a security consulting company known for their dedication to pushing the limits on how to build privacy, respecting solutions. Their name, least authority derives from the principle of least authority or the principle of least privilege the security best practice requiring system components to only have the privilege necessary to complete their intended function and not more. This aids in limiting the potential attack surface and minimizing the extent that vulnerabilities can impact a system. Now, given the privacy is at the core of their work and mission, Least Authority recognizes the importance of privacy in DeFi and other decentralizing technologies and the role it plays in preserving the balance of power. And they support this through a growing list of security reviews, building distributed systems and regular contributions to open source software projects, to find out more about Least Authory's, work, visit leastauthority.com. There, you can also check out their security audit reports, and if you want to talk to them about the security of your DeFi project, do get in touch with them at: contactus@leastauthority.com. I'll add the links in the show notes. So thank you again, Least Authority. Now here is our interview with Ren.
+
+Anna (02:41):
+So in today's episode, we will be revisiting the topic of consensus and we have Ren Zhang, who is a researcher at Nervos. So welcome to the show Ren.
+
+Ren (02:52):
+Thank you so much for having me.
+
+Fredrik (02:54):
+Welcome.
+
+Ren (02:55):
+It's my honor to be here.
+
+Anna (02:56):
+So quick recap on how this episode actually came about. We had an episode with Ittai Abraham back in April on the topic of consensus. And I think it was right after that episode, Alan, who was also on the show before contacted me to say, "Hey, I have a colleague at Nervos who you should really talk to if this is a kind of a topic of inquiry that you're exploring" and that was you Ren. So it's very, it's kind of a long time coming that you're supposed to join us on the show. And I'm really happy to get to dig in. Thank you. I think as a precursor, like it might, it might not hurt for people to listen to that episode with Ittai if they hadn't heard it before. So I'll add the link to that in the show notes.
+
+Fredrik (03:37):
+So we have some really interesting topics lined up for today, digging deep into consensus stuff. But before we dig into that, let's talk a little bit about you maybe, what's your journey into, into this space and what gets you excited about this research?
+
+Ren (03:52):
+Yes. I was doing research in peer to peer network in my master's study. And after I got to COSIC where Alan and I get our PhDs, I started to like look around to try to find interesting topic for myself, the journey it takes around two years. And I have to say I failed. So I prepared several topics and asked some senior members of the group. Like, which one do you think is the most interesting? And they all recommended the same thing. They recommended me to do research on Bitcoin. Saying like "the best time to study cryptocurrency has already passed" according to them. Oh, but maybe you'll, you will still get a PHD out of it. That was 2014.
+
+Anna (04:40):
+Oh my gosh. No way.
+
+Ren (04:42):
+Yeah, that was the time I started doing research in Bitcoin and cryptocurrencies and it turns out the field last more than they expected.
+
+Anna (04:50):
+They thought it was when they said that was were they actually thinking, not that like the most exciting part of it had passed, but that the entire trend was going to go away. Is that what they were sort of hinting at or?
+
+Ren (05:00):
+Yeah, I think at that time it seemed that the entire trend was going away. The price of Bitcoin was dropping every day and there are fewer and fewer paper about Bitcoin in the field, but who knows what will happen later?
+
+Fredrik (05:15):
+It kind of makes sense because Bitcoin is actually kind of simple. Like if there isn't, its a simple concept. It wouldn't feel like there's decades of research to be done on it. But here we are a decade later and people are still going and publishing papers. So...
+
+Ren (05:33):
+Especially for the Bitcoin network, because at that time the Bitcoin network was relatively small. There are like 600 nodes, like the bigger the network, the more interesting research questions you can find in it. So at that time, people believe Bitcoin network is not very exciting.
+
+Anna (05:50):
+Okay. But you decided to go with this anyway.
+
+Ren (05:53):
+Yeah, because it's, there's a chaos, whenever there's a chaos, there's opportunities,
+
+Fredrik (06:00):
+I guess that leads pretty well into the first paper that we want to talk about today, which is this paper that you co-authored of sort of, um, it's called "Lay Down the Common Metrics: Evaluating Proof-of-Work Consensus Protocols Security." Yeah, I think, um, and I, you know, disclosure to the readers, I haven't read the paper, but I read the abstract and it's out there pretty interesting. And I, what, what caught my eye, especially is it, you talk about how people analyze consensus algorithms and how sometimes those analyses are wrong. So can you talk a little bit, you know, generally, what is the paper about what, but what did you discover in it?
+
+Ren (06:40):
+Yeah, there was a time I was obsessed with selfish mining attack. So I was trying to find a solution to that attack to find a consensus protocol that is immune to that attack. And I, I've tried to design a dozen of protocols and try to evaluate their security and all of them are not perfect. I wasn't satisfied with any of these solutions, so I didn't publish any of them. Years later, I discovered that these ideas that I believe are fraud are published by other people. And they claim that their protocol is secure. They are better than a Nakamoto consensus, better than Bitcoin's consensus protocol. So that makes me feel like this is wrong. People need to be notified that these ideas are flawed. They open new attack vectors that the designers are not aware of.
+
+Anna (07:37):
+But these, these other folks who actually published it, they didn't know your work. It wasn't that they saw your work and then took it. It was like they came to these conclusions on their own, right?
+
+Ren (07:46):
+Right, right. Because all these ideas are relatively simple and straightforward. Intuitively all of them make sense. But, if you dig deeper, if you're truly analyze their security, you will discover the problems. Got it. In particular, what angers me is that many of these papers analyze their security via simulation against a specific strategy. There's this paper in 2013, called Majority is not Enough. It is the one that proposes the selfish mining attack and this papers that claims to be better than Nakamoto consensus, they analyze the security of their protocol against this specific strategy. I show that, you see this strategy doesn't work in our design. However, I argued that this is not a security proof. Maybe that your system, your new design would inspire new attacks that specifically targeting your, your design makes it more vulnerable to a new kind of tech. So in order to argue the security, you need to find a more rigorous way. Like either you'll prove that no matter what the attacker's strategy is, you cannot gain more profit or cause more damage, or that you managed to cover all the attacker's strategies saying that no matter what the attacker do like within this strategy space and the strategy space is complete, you cannot cause more damage. That's the correct way to do a security analysis from this perspective.
+
+Fredrik (09:19):
+Yeah. So, I mean, this is a common problem where people don't honestly and straightforwardly talk about their trade-offs, but they say like, Oh, we invented this new thing and it's secure against to this thing. And then they forget to mention that actually we had opens up a bunch of other attacks, but they did fix that one thing.
+
+Ren (09:41):
+Right. So, uh, I'll assemble a group of these kinds of protocols and analyze their security via Markov decision process and wrote this paper.
+
+Anna (09:52):
+Do any of the protocols that you touched on in the paper, would we know them actually? Like, I mean, I guess it's written up, so if they are, we can talk about it.
+
+Ren (10:03):
+Yeah, there is a protocol called Uniform tie-breaking protocol, that is implemented in Ethereum. Okay. But I think all the Ethereum developers and researchers, they are aware of the vulnerabilities of this protocol. So that is not a very big problem. And also there's a protocol, Rootstock, that implemented a protocol very similar to the Reward Spitting protocol, mentioned in my paper. Another relatively famous protocol is FruitChains. What are they called? FruitChains.
+
+Anna (10:34):
+FruitChains.
+
+Ren (10:36):
+Designed by Elaine Shu . FruitChains claims to be incentive compatible. They are resistant to selfish mining attack. However, my paper shows that they are, they only have stronger resistance than the Nakamoto consensus against selfish mining attack. If each block is confirmed after like a hundred blocks, if you use six block information, same as Nakamoto consensus in Bitcoin, then it's actually more vulnerable to selfish mining. So the problem is on the Nakamoto consensus as Fredrik asked, is that it doesn't have the perfect chain quality, which means that an attacker possesses less than 50% of mining power can securely invalidate the last few blocks in a blockchain. That's why Nakamoto consensus only provide probabilistic security guarantee. So for this new designs, who claimed to be more secure than a Nakamoto consensus, we believe they need to satisfy one of the two requirements. Either they achieve better Chain Quality, or they resist better against three kinds of attacks, which basically summarizes the existing attacks we are aware of against the consensus protocol.
+
+Ren (11:49):
+If you claim to be more secure than a Nakamoto consensus, you're either achieve better Chain quality or you're resistant against three attacks. The first attack is "selfish mining attack". The second is "double spending attack". The third is "further forking attack", or we call it censorship attack. And accordingly we divide all these protocols into two groups. The first group they claim to achieve better Chain Quality. And the second group they claim to achieve stronger attack resistance and analyze their security accordingly. And our framework is Markov Decision Process, which enables us to model the behavior of a strategic player in a partly stochastic environment. Basically a strategic player means the attacker and the partly stochastic environment means that the environment is relatively fixed. It respond to the attacker in a known way. There are some uncertainty that, if the hacker do this, with this probability, this thing will happen with this probability, that thing will happen. So we try to explore like if they are hacker is allowed to do anything he want like. He can choose which chain to mine and when to publish his blocks. How many blocks to publish. What's the best the attacker can do in terms of attacking Chain Quality or this three attacks I mentioned.
+
+Anna (13:15):
+But in your model, you are actually analyzing both. Cause you said that you had two categories. What was it again? The first one?
+
+Ren (13:21):
+The first one is called Better Chain Quality protocols.
+
+Anna (13:24):
+Better chain quality. And the other one is these particular...
+
+Ren (13:27):
+Attack resistance protocols
+
+Anna (13:30):
+So its either the Chain Quality or these attack vectors specifically, but in your model, are you doing combinations of these things or are you always like focusing in on one?
+
+Ren (13:39):
+Like there are two different criteria you can think of it. As long as you beat Nakamoto consensus, in one of these criteria, you win.
+
+Anna (13:51):
+I see. But you might have a less secure chain in the end. Like there might be some new attack vector. That's not clear
+
+Ren (13:57):
+If you are a better than Nakamoto consensus in Chain Quality, then you naturally have better attack resistance. Oh, you do? Okay. Yeah, because the fundamental problem with Nakamoto consensus is that, it's Chain Quality is not perfect. However, if you cannot achieve Chain Quality, some protocols claim that they can still be better than at Nakamoto consensus because they are, they have higher resistance against known attacks. Got it. So we split the protocols into two groups. The first groups claim that we are better than Nakamoto consensus in Chain Quality. So we don't need to analyze the attacks. The problem is solved.
+
+Anna (14:35):
+Yeah. They actually are potentially better than... yeah.
+
+Ren (14:38):
+Right. They are superior every way. So there's the story ends...
+
+Anna (14:44):
+Who falls in that one?
+
+Ren (14:46):
+There are, there are some, there are some protocols claim that they are superior, but, um, they don't, they don't claim they are superior like in all aspects, but for convenience, we just put them in that group. But the second type of protocols, they say that, we share the same Chain Quality with Nakamoto consensus. But it doesn't matter because we have a Novo incentive mechanism.
+
+Anna (15:09):
+Those ones that you wanted to check, if their Chain Quality is in fact equal still.
+
+Ren (15:15):
+No, basically they use the same Bitcoin backbone protocol. They use the same backbone protocol. Then the chain quality is the same. Okay. But they claim that, Hey, although we use the same backbone protocol, we can resist better against all these attacks. So I would like to check, like, whether you are truly better.
+
+Anna (15:35):
+Is in, in this case, are you analyzing whether their chain quality is the same or whether they actually can defend against these attacks? Because I understood it that like, if they try to improve in this one direction, they're opening themselves up to new attacks.
+
+Ren (15:49):
+But that's within the attack resistant protocols. So there are two groups. The first group is "Better Chain Quality Protocol". The second group is "Attack Resistant Protocols". "Better Chain Quality Protocol", they modify, they modify the bitcoin backbone. Let me put it like this. There are two simple rules. If you look at the essence of Nakamoto consensus can see two very simple rules. The first is longest chain, or the second rule says that if you received two competing chains that have the same length and you're always mined on the first one you received. So the bitcoin backbone protocol can be summarized in the simplest version into this two rules. If you follow these two rules that you'll have the same Chain Quality with Nakamoto consensus, okay, there's no need to do any further analysis. So in terms of chain quality, if you modify this to rules, then I will put you in the "Better Chain Quality Protocol". If you don't modify this to rules instead, you'll modify the reward mechanism. You use a new incentive mechanism to encourage people to not do selfish mining, to not to censorship attack. Then I believe you are an "Attack Resistant Protocols".
+
+Fredrik (17:03):
+I think to make it more concrete, what are examples of protocols that, that do either, right? Like, so either tries to modify the chain selection rules or the ones that like examples of those that try to change things in the mechanism.
+
+Ren (17:19):
+Sure. Let's give one example in better chain quality protocols. I think the most interesting example, some for some people is the most counter-intuitive example is that there's a protocol, we called "Smallest Hash Tie-Breaking protocol".
+
+Anna (17:33):
+Smallest Hash Tie-Breaking protocol.
+
+Ren (17:36):
+Yes. I gave you that name because I don't want to name any specific project. In this smallest hash tie breaking protocol. I call it as SHTB protocols for simplicity. The designers believe that if I always mine on the chain whose tip has the smallest hash, then all honest miners will mind on the same chain, they naturally converge. So the honest mining power will never be split. Whenever there's a fork, they always mine on the same chain so that the protocol becomes more secure. That's their intuition. So this is a "Better Chain Quality Protocol" because it modifies the first receive policy in a Nakamoto consensus. It always requires miners to mine on the chain that they first received, but as SHTB, they always, my other chain tip whose hash is the smallest.
+
+Fredrik (18:26):
+And that, that intuition makes perfect sense to me because as you, like, anytime we talk about time in programming, you know, you're going to be wrong. If you're talking about "first received", like that will obviously be different for everyone. So it's essentially just a random bias among what people might not because there's network latency and a bunch of other stuff involved in what "first received" means. So is there any problem with the smallest hash tiebreaker again, in your analysis, have you uncovered anything or is the intuition actually just right?
+
+Ren (19:01):
+The intuition is not right. So in some extreme cases, it performs slightly better than a Nakamoto consensus. However, for most of the parameters that we analyze, it actually performs worse than Nakamoto consensus because it enables two new attacks. The first one we call it "catching up from behind". For example, if you're an attacker, you'll have a secret chain, your chain has one block and the honest chain has two blocks. In Nakamoto consensus. You usually just give up because the honest chain is longer and there's no way you can catch up. However, in SHTB, if your chain is smaller and the longer chain tip has very large hash, then you can keep mining because you know that if you find the next block in your secret chain and you release both blocks, despite the fact that you release later than the honest chain, with very high probability that your hash is smaller than the honest chain tip.
+
+Ren (20:05):
+So that all honest miners will switch back to your chain. They will give up their previous chain and mine on your chain. So this SHTB enables this new attack behavior and the attacker can choose when to adopt this behavior. It's like putting a new tool in the attacker's toolbox, which is why it weakens the protocol security. The second attack is that assuming that you have a secret block, the hash of the block is very small. You're a very small miner. The hash of the block is very small so that you can be certain that, with 99% probability, the next honest block's hash will be larger than your hash. Then you can say, okay, it is now safe for me to withhold the block. I will mind secretly out top of my block. However, on the other hand, if you're a small miner and you discover a block whose hash is relatively large, so that, you know, with very high probability, if you withhold a block, you will lose the block race. Then you may choose to release the block because SHTB, you can accurately estimate the success rate of a selfish miner attack. It gives the attacker more information to choose when to withhold the block and when to release the block. So this also put a new tool in the attackers toolbox because the attacker is equipped with several new tools that can attack the political with higher confidence. That weakens the security of Nakamoto consensus
+
+Anna (21:40):
+So that was one example, I guess that that's an example of a "Better Chain Quality Protocol", but I'm still a bit confused because didn't you say before that if there was a "Better Chain Quality" then it was secure. Like you were like, I think I'm sort of going back to that earlier thing you had these two categories, those that you didn't analyze, but you kept saying that if they had the better chain quality than you didn't analyze them, I'm confused.
+
+Ren (22:05):
+Yes. If they have be"Better Chain Quality" we don't analyze their incentive mechanisms.
+
+Anna (22:11):
+But in this case, what does it have? It doesn't have better chain quality, or it does have better chain quality?
+
+Ren (22:16):
+This protocol claims to have better chain quality, but it failed.
+
+Anna (22:20):
+Okay. Got it. I understand then.
+
+Ren (22:23):
+Because, because it analyzed it's security via simulation. I see. There's the main message you shouldn't, you should never analyze your security via simulation, I guess the one specific attackers strategy. Because your protocol may inspire new strategies, targeting your protocol.
+
+Fredrik (22:42):
+So, if we go back to the examples, what's an example of the second category of where you change incentive mechanisms.
+
+Ren (22:49):
+The second I can give, um, several examples, um, I will talk about "Subchains". This is a protocol published by Peter Rizun, Dr. Peter Rizun on a journal called The Ledger. In this protocol, like miners are allowed to publish blocks with smaller hashes. There are two hash targets. There's a bigger target. There's a smaller target. In Bitcoin, you're only allowed to publish your blocks, if the block is smaller than a predefined threshold, the smaller target. But in Subchains, if you didn't find a block, but the hash result of your block candidate is smaller than the larger target. You can also publish this block candidate. Let's call it "weak block" so that they hope that the blockchain is composed of a chain, including blocks and a "weak blocks". The benefit of this is that they hope that transactions can be confirmed faster before it is included in blocks,
+
+Ren (23:49):
+It is included in week blocks so that the block interval is actually smaller. The blocks get all the block rewards. The week blocks. They do not get anything. It's just a tool used to synchronize transactions. However it participate in the consensus protocol in terms that whenever there are two competing chains, the fork is resolved by comparing the length of these two chains. Both blocks and "weak blocks" are counted in the length. In Nakamoto consensus they are two chains of blocks, in Subchains they are two chains of blocks and weak blocks. The only difference is the weak blocks don't get any block reward. This protocol belongs to a subgroup of protocols, we call "reward lucky protocols". So they don't care which mining product is honest, which mining product is malicious. All they care is which mining product is lucky. Lucky in terms of its hash result is smaller.
+
+Ren (24:48):
+They only reward these blocks whose hash result is smaller and "weak blocks" don't get any rewards, but they still participate in the consensus protocol. So the problem with this subgroup of protocols, the problem with all "reward lucky protocols" is that lucky block candidates are not necessarily the good ones. So this kind of discrimination in terms of reward issuing allows a new kind of attack.
+
+Ren (25:17):
+It works like this: Whenever the attacker discovers a weak block, it will withhold a block. Hoping that the honest miner may find a block so that I can use my weak block to invalidate the block mined by the honest miners. Because the "weak block" doesn't get any reward anyway, there's no risk of withholding this "weak block". It's like, I've got a new tool to attack the system and this tool has no cost. I can do it anyway. I don't have anything to loose. And whenever the attacker discovers a block, if the attacker doesn't want any economic risk that he can publish the block as an honest miner. So again, this protocol enables an attacker to calibrate the success rate and choose a more rational, more accurate strategy to attack the system.
+
+Fredrik (26:12):
+Interesting. How, in both of these examples, as you put it, you put another tool in the attacker's toolbox and people are doing it sort of accidentally by introducing more complexity. They're like, "Oh, I want to simplify this. Or I want to make this path more optimal, or I want to introduce these other concepts that makes X, Y or Z simpler". But then actually through the introduction of that new thing, that's actually another thing that an attacker can analyze. It's a thing that they can withhold. It's a thing that they can get more information from. So that their, their attack is potentially much more successful.
+
+Ren (26:55):
+Yeah, I totally agree. I think complexity is the enemy of security. So if you're on the more secure protocol, usually the first thing you should do is to try to simplify the protocol, to see which things you can cut, which is why, NC-Max is based on Nakamoto consensus. We try to start from the very beginning without introducing any new attack vectors.
+
+Anna (27:18):
+Were there any other takeaways or like ideas that you gleaned from your kind of creation of this new model to evaluate consensus protocol security?
+
+Ren (27:29):
+So there are several insights we would like to stress with this study. The first group is about how to analyze the security. You should never analyze the security of a protocol via simulation of a single attacker strategy, because that is always dangerous. The other thing is that, you should not design a protocol that is too complicated, that even you, the designer cannot analyze it. This is usually dangerous because complexity is the enemy of security. And regarding our results on the incentive mechanisms, we discovered that there is no incentive mechanism that discourage all three kinds of attack. If you reward all the block candidates, if you reward all the mining product, regardless of whether they are honest or malicious, then it actually makes double-spending risk-free. For an attacker, as I will always get the reward, anyway, why not try to double-spend, because even if I failed, I can still get rewarded.
+
+Ren (28:30):
+If you forfeit rewards from all suspicious mining products, like whenever they are competing chains, none of them get any block rewards. You're actually introducing a tool for the attacker to censor the network that can say that if you include these transactions in your blocks, I will try to invalidate your block. Even if I failed. As long as I find something, I can forfeit some reward from you to force rational miners to join the censorship attack in order to avoid economic loss. If you reward only the lucky blocks, the lucky blocks are not necessarily the honest blocks. So that it gives the attacker opportunities to only perform honestly, when they are lucky and perform dishonestly when they are not lucky. To sum up, we discovered a trade-off. We call it "rewarding the bad or punishing the good".
+
+Anna (29:25):
+Okay. So you just gave us two examples, but you obviously have analyzed probably many others and in the paper, can you see it, or do you have other work where you actually show your analysis using this model on other chains or other concensus protocols? I should say
+
+Ren (29:43):
+There are seven protocols covered in this common metrics paper, but this line of work continues after my work recently. There's a paper called SquirRL. It extends the method based on Markov Decision Process. The problem with Markov Decision Process is that it can only model protocols with a small number of states. If the protocol becomes more and more complicated then it is out of the computational capacity of a MDP.
+
+Anna (30:14):
+Okay?
+
+Ren (30:15):
+So these researchers, they adopt the Deep Reinforcement Learning to model more complicated protocols. Deep Reinforcement Learning is a technique used in AlphaGo, the famous Go Game. It enables us to model far more complicated protocols and they get some interesting results.
+
+Anna (30:35):
+Has anyone, I mean, I, I realized that it's such a different model from POS, but I'm wondering if any of the tools or findings that you found could be used for any of the like Proof-of-Stake models or is it so unrelated that we can't, we can't actually put those in the same category?
+
+Ren (30:52):
+I think it is related. So in general, I don't see any difficulties in applying Markov Decision Process or Deep Reinforcement Learning in analyzing Proof-of-Stake protocols. But the thing with analyzing Proof-of-Stake protocols is that it doesn't have this simple result where you can just assemble a group of protocols and let them race to, to know who is the first, who is the second. You can't put them in the same constraint. Proof of Stake protocols, they usually have different security assumptions, which means each protocol plays a game in its own rule. So you cannot just unify the rule and force them into the same field. So there are some complexities in that aspect. But in general, I think it's interesting to apply a Markov Decision Process or Deep Reinforcement Learning when analyzing Proof-of-Stake protocols.
+
+Anna (31:45):
+Do you, in your own research, do you actually explore that?
+
+Ren (31:48):
+Perhaps later, but not now.
+
+Anna (31:50):
+On the horizon? Got it.
+
+Fredrik (31:53):
+I'd be keen to dig into more of the Markov Decision Process or Deep Reinforcement Learning aspect of it too, but then we probably need a whole other hour. Um, and so, yeah, we should probably move on to talk about what you teased earlier: that is NC-Max. So this is a consensus algorithm that you and some other people designed, right? That's the second paper that we're talking about today. Give us the high level. What is NC-Max? What does it try to do?
+
+Ren (32:27):
+Sure. Perhaps I should start from the story behind.
+
+Anna (32:29):
+Sure.
+
+Ren (32:30):
+We all love Nakamoto Consensus. We love Nakamoto Consensus for three reasons. First, is that it has a minimum set of security assumptions. Unlike Proof-of-Stake protocols, which usually have different security assumptions, Nakamoto Consensus has a very small number of assumptions. The benefit is that the protocol is well understood. There are dozens of papers analyzing Nakamoto Consensus so that we are perfectly aware of its advantages and disadvantages. The second advantage of Nakamoto Consensus is that it minimizes the communication overhead. In Nakamoto Consensus, specifically in Bitcoin, if you discover a new block, you can propagate the block as a compact block of around 13 kilobytes. And that's it. One message to confirm a group of transactions. This is the theoretical bound. You cannot get any better than this: one message to come from a group of transactions.
+
+Ren (33:28):
+All other protocols are more expensive in terms of communication. The third thing we love about Nakamoto Consensus is that it's chain-based, which means all the transactions has a global order, which doesn't have duplicate packing problems as in DAG protocols. If you're on DAG protocol, then very likely simultaneous blocks will contain a lot of duplicate transactions and it takes either some computational power or some communication cost to remove these duplicates. The problem with Nakamoto consensus is that it's throughput is very low, which is why many protocol designers abandoned Nakamoto consensus or even abandoned proof of work in order to achieve higher throughput.
+
+Anna (34:10):
+Is this like scaling is a speed of being able to like actually just do process transactions. That's what you're saying. When you say throughput?
+
+Ren (34:17):
+There are two scaling metrics. The first is throughput. How many transactions can be confirmed within the second? Yeah, the second is latency mainly that was the time difference between the time I broadcast the transaction and the time I can see that the transaction setup. Got it. So the main problem with Nakamoto consensus it's throughput.
+
+Anna (34:39):
+I see.
+
+Ren (34:40):
+So from my perspective, like before you give up on the Nakamoto consensus, check the network. Let's examine what's the bottleneck of this low throughput. Can we do something on this bottleneck rather than abandoning the chain-based structure, totally? So I think the, the main difference between me and other consensus protocol designer is that they don't have a background in computer networks. When I did my internship at Blockstream with Peter Wuille and Gregory Maxwell, we discussed a lot about how Bitcoin propagates blocks and transactions, which eventually lead to this research.
+
+Ren (35:16):
+So in general, from a very high level, when we look at a nodes bandwidth, we can split it into three different parts. The first part is used to synchronize transactions, which is actually the part we want. We want to maximize this part. The more transactions we can synchronize per second, the higher the throughput. The second part is the bandwidth consumed by the consensus itself. We would like to minimize this part, which is already achieved by Nakamoto Consensus. The third part is idle. Now there are some time that we're not transferring any transactions. Neither are we transferring any blocks
+
+Anna (35:53):
+Ah, the word you just used is idle. So like when nothing is happening. Got it.
+
+Ren (35:56):
+The problem with Nakamoto Consensus is that in order to maintain its security, the orphan rate must be low. If we want a very low orphan rate, then because all the block intervals follow exponential distribution, then we have to have a very low average block interval. The long average block interval leads to long idle time. So despite the fact that the network can actually transfer like 2,500 transactions per second, most of the time the network is idle because if we reduce the block interval, there will be more often than the protocol will be less secure.
+
+Fredrik (36:40):
+I think we've, we've talked about this on the podcast before, but in the context of Ethereum, but just a very recent episode, we talked about how the mempool works and like how transactions are distributed there. And when we look at actual mining nodes of like, what does their mental look like? They're actually pushing through, you know, on the networking side, they're pushing through thousands of transactions per second, as you say bit, but they're not all being included in a block because they're like competing transactions and people outbidding each other on DEXs and whatnot. So it's, it's, it's not a networking problem in like getting the transactions around. It's including them in a block and giving miners enough time to process that block and like continue to build on the next one. That's the problem,
+
+Ren (37:26):
+Right? In Ethereum, the bottleneck is also a computational one, which is why Nervos choose to use the UTXO model we'll cover that later. Our solution to this Bitcoin's long idle time problem is that we want to find the bottleneck that leads to the high offer rate. We want to accelerate block propagation and lower the block interval and increase the block size. Not that we don't have to increase the block size or lower the block interval indefinitely. As long as we manage to find a sweet spot that the block interval is low enough and the block size is large enough that all the nodes bandwidth is exhausted, then that's it, we've accomplished the job. If we manage to exhaust the node bandwidth, then we don't have to introduce DAG protocols. What is the bottleneck of block propagation latency? We discovered that the bottleneck of block propagation is actually fresh transactions in the blocks. "Fresh transactions" are defined as the transactions that haven't finished their propagation before they are embedded in blocks.
+
+Ren (38:37):
+The transaction usually propagate to the entire network in 15 seconds. So assuming the block interval is 10 minutes for all the transactions that are broadcast in the first 9 minute and 45 seconds, all of them finished their propagation before they are embedded in the block. However, if there are some transactions that are first broadcast in the last 15 seconds and they're embedded in the next block, then it is possible that some of these transactions have not been synchronized to the network. They have to be propagated along with the block. The problem with this is that if I'm a node, when I receive the compact block, the compact block all the truncated transaction hashes. You can think of it as a compressed version of other transactions. When you receive a compact block, if there's no fresh transaction, you can forward this compact block directly to your downstream peers. However, if there are some fresh transactions, you'll have to first query this transactions from your upstream peers. And then only after you receive their reply, can you forward this compat block to our downstream peers. So this extra round trip of synchronizing this fresh transactions actually becomes the main obstacle in accelerating block propagation.
+
+Anna (39:56):
+Wow. Was this super well-known or was this part of the research you were doing to like figure out what this was?
+
+Ren (40:03):
+It's known by the Bitcoin core developers, but this is not a big problem in Bitcoin because in Bitcoin, most of the blocks contain no fresh transactions. So in Bitcoin, whenever a block is first broadcast, it can be synchronized to 90% of nodes in the network within 600 milliseconds, which is great. However, if the block size is larger or the block interval is shorter, then there are more fresh transactions in the blocks. So how do I remove, how do I eliminate all this fresh transactions? Our solution is: first, we decoupled transactions synchronization from transaction confirmation. Like, in each block, there is a field of, we call it transaction proposals zone, all transactions must first appear in the, in this transaction proposal zone as it's truncated hash. So the previous transactions zone, or we call it transaction commitments zone. So the transaction must first appear in the transaction proposals zone on only after two blocks, can it be embedded in the transaction commitments zone
+
+Ren (41:09):
+So the benefit of that is that whenever you, as a node receives a new block, all the committed transactions are already synchronized. You can forward the compact block directly to your downstream peers. Only afterwards you curry the fresh transactions in the transaction proposal zone. And after you receive these fresh transactions, you'll forward there's transactions to our downstream peers. So that the extra round trip of synchronizing this fresh transactions is removed from the critical path of the block publication. And the transaction validity in this transaction proposal does not affect the block validity. There can be missing transactions. There can be malformed transactions or even double spending transactions. All of this doesn't matter because a later miner could just skip these transactions and only commit to the transactions that are valid and that they have already received by having this two step confirmation mechanism, we managed to remove the fresh transactions and we can make sure that all the blocks are synchronizing the network within 600 milliseconds. So this enables us to reduce the average block interval to two or three seconds. Well also maintain a very low orphan rate.
+
+Fredrik (42:28):
+It sounds pretty interesting. So just to recap, I guess the fundamental or the simplified version of it is if I think about it, that as you said, like, let's say a Bitcoin block is 10 minutes, 9 minutes, 45 seconds of that. You can submit that transactions and you know, it will be distributed to the entire network. And if, if your transaction came in that period and was included, then that's not a fresh transaction to anyone because everyone has already seen it by the time the block comes out. Right? So essentially what you're doing is restricting the set of transactions that a miner is allowed to pick from to this zone where it will have been distributed to the entire network. You know, before it's in a block. So it's essentially, like in the Bitcoin example, a Bitcoin miner is only allowed to include transactions that were received within the first 9 minutes, 45 seconds.
+
+Ren (43:26):
+Right. You can only commit transactions that are proposed two blocks before.
+
+Fredrik (43:31):
+So it goes even further back than that. I see. And the other thing that, that had me thinking about this is it sounds very similar to PBFTs phases. So in Practical Byzantine Fault Tolerance, you have pre-prepare, prepare and commit and so you have these three phases, it sounds like you have a very similar structure here. No?
+
+Ren (43:53):
+That's why I always say you can think of it as a Proof-of-Work version of HotStuff. HotStuff is a more obvious pipelining protocol. There are actually two techniques you can use to parallel the processing of transactions in any consensus protocol. The first is called pipelining that is used in NC-Max and, similarly, inHotStuff
+
+Anna (44:29):
+I think we actually talked about that in episode with Ittai talking about HotStuff.
+
+Ren (44:34):
+Yeah. The second type is called concurrency. The benefit of pipelining versus concurrency is that the security analysis is a lot simpler because you don't have so many simultaneously mined blocks. You can just analyze the security with a previous old techniques and everything remains the same. And it has stronger functionality because a global order of transactions is still maintained.
+
+Anna (45:00):
+Kind of wanted to ask the synchronous versus asynchronous question. But like, I don't know when to ask it, is it in the concurrency part or what does it before?
+
+Ren (45:09):
+In general, all Proof-of-Work protocols are synchronous protocols.
+
+Anna (45:13):
+Okay. That's actually good to hear. Cause I was, I was just thinking like listening back to the old episode, we talked a lot about that, that spectrum and the partial synchronous, but in this case it was synchronous. So, but NC max, would you also consider that synchronous then? Given that you've added this pipeline and concurrency kind of updates
+
+Ren (45:32):
+Like that comes to the part actually I love the most about NC-max is that there are other protocols that decouple transactions synchronization from transaction confirmation, like Prism. Prism is another example that decouple these two things. But the benefit of NC-max is that the transaction commitment zone and the transaction proposals zone is re-coupled in the same block structure, which greatly simplifies the security analysis because NC-Max still follows a Bitcoin backbone protocol. The use is the "longest chain" plus "first receipt rule". So all the previous security analysis Nakamoto consensus can be directly applicable. All the previous analysis on Nakamoto consensus are directly applicable to NC-Max so that we don't need to prove any extra things. Like all that the security proofs hold. We have an extra security improvement. Is that, in NC-Max, selfish mining is not profitable.
+
+Anna (46:29):
+Okay.
+
+Ren (46:30):
+This is a tiny trick, but that requires a relatively large security proof. If you're interested, you can check the paper.
+
+Anna (46:38):
+I actually was about to ask you, like, you know, given that your previous paper was all about sort of finding the issues with these, like the new threats, were you able to find any new threats that NC-Max actually introduces?
+
+Ren (46:53):
+Actually, there, there is a threat. There's a threat that is overlooked by previous work that NC-Max is able to mitigate. It's called "transaction withholding attack", and the attack works like this: If you're a miner and you want to perform selfish mining, but you don't want anyone to discover that, what you can do is that you make a block that all the transactions are fresh. So that your blocks actually propagate slower than all the other blocks, which gives you some time to perform selfish mining, but nobody can accuse you because you said, "okay, I released the block immediately after it is mined. It's just, the transactions are synchronized slower than other blocks". In NC-Max that attack is more difficult to launch because if you want to launch that attack, you have to first propose this fresh transactions and then hope that two blocks later, you can find a block to commit these transactions. You cannot launch the attack immediately. You have to launch the attack only when you have two blocks mined at a specific distance. That's why this attack is more difficult to launch in NC-Max than in Nakamoto consensus.
+
+Anna (48:04):
+My question was more, is there new attacks that you can't mitigate?
+
+Ren (48:10):
+I don't think so because NC-Max follows the same Bitcoin Backbone protocol and it uses the same "longest chain" plus "first receipt rule" and relatively the same block structure. It meets all the security assumptions of Nakamoto Consensus.
+
+Anna (48:26):
+Got it. So we just covered this relatively recent work of NC-Max. Now I'm wondering you work at the company Nervos. That's a network. I'm really curious, like how does this work relate with the Nervos system? We have had Alan on in the past? Maybe you can tell us a little bit more about how this work is incorporated into the network.
+
+Ren (48:45):
+It's very simple. A Nervos CKB use NC-max as its consensus mechanism. Okay. Wow. And also Alan's work the, the relation between Alan´s work and Nervos CKB is also very simple. Alan designs the hash function, eco sound, which is used as the Hashcash puzzle of the proof of work algorithm. Okay. So that's our relation with the new project, but, um, I think the consensus protocol is the most boring part in Nervos CKB it has, it has some more exciting features in it.
+
+Anna (49:20):
+Yeah. Tell us a little bit about Nervos. If, if you want, since we have never actually talked about it on the show.
+
+Ren (49:25):
+Sure. There are three things I think worth mentioning from a perspective, worth mentioning about Nervos design. The first is that we use UTXO model. UTXO model is easier for user defined tokens. In Ethereum, one of the source of many security vulnerabilities is that all the user defined tokens are stored in an ERC20 contract. Like all the account balances are stored in the same contract, so that if you crack this contract, you can basically arbitrarily modify the user's balances. So an UTXO model allows us to give the access control back to the user. Your asset is stored in your own UTXO, and you can decide what signature algorithm you use to unlock these assets. So there is no single point of failure in terms of smart contract.
+
+Anna (50:20):
+So wait, Nervos is smart, like you actually can run smart contracts on Nervos, but it uses UTXO instead, actually like, are there other projects that do that? I always, obviously, cause I've learned mostly about Ethereum first, but like I always assumed you needed to have an account model to do the smart contract stuff, but I guess not...
+
+Ren (50:39):
+No, you don't need an account model. There are other products that do that. I think we are one of the earliest
+
+Anna (50:44):
+I see. I'm kind of trying to picture what that actually looks like. Like what, how does a smart contract run on a UTXO?
+
+Ren (50:50):
+Oh, we'll come to that later. Like user can define their own "log script". So in Nervos script are split into two kinds of script. The first is called log script, which you can think of it as the lock of your apartment. The second is called type script. You can think of it as the furniture in your apartment. The actual code that you're running to execute a smart contract. The benefit of separating lock script and typescript is that it removes a lot of vulnerabilities. In Ethereum, basically who can modify the smart contract, who can modify the variables is mixed with the code of how to execute the function. In Nervos CKB, these two kinds of scripts are separated so that it's difficult to attack and you users can define their own log script. You can say that I prefer Schnorr signature. The other can say that I prefer like ECDS signature. These are all flexible. This is the UTXO model of Nervos. The second new thing about Nervos is that it is its economic model. The native currency is the storage space. In Ethereum, you pay a one-time fee for storage and that's it. No matter how big the storage is, it can be stored on chain without any fee forever. In Nervos CKB, we use a different economic model that each UTXO has some number of storage space and all space has interest. If you use that storage, then the interest goes to the miner. If you don't use that storage, then you got to keep the interest.
+
+Anna (52:30):
+Oh, so there's no, there's no fee to the user, but like the miner will make more.
+
+Ren (52:36):
+There is fee there, there is transaction fee.
+
+Anna (52:39):
+No, no, but I mean like the interest you're describing, like it's not that like, it's not that the user is paying for storage, right?
+
+Fredrik (52:45):
+Yeah, exactly. Like this is state rent, but it's not like to keep my contract alive. I have to keep sending the contract money. Like you're paying by being inflated essentially.
+
+Ren (52:55):
+Right. Yeah. And there are transaction fees and what's interesting is that you can pay transactions fee with any kind of asset you want. There is no gas mechanism when the couple of the transaction fee estimation from the consensus mechanism, as you may know, many attacks of Ethereum comes from the tight bond between the fee estimation and the consensus mechanism. And we think that is not necessary. Let's remove it and see how it works. The third thing about nervous is that it used RISC-V as the virtual machine of a smart contract RISC-V is a hardware instructions set, which means it's very, very powerful. You can program with any programming languages you want, including solidity, and you can implement any cryptographic primitive you want, which facilitate cross-chain operations and algorithm update because in many cross-chain operations, different chains use different signature algorithms. But in Nervos that is not a problem because you can always refer to the library.
+
+Fredrik (53:59):
+Is there, an efficient way to compile the RISC-V to like x86? Or does this mean that your miner is essentially have to buy RISC-V CPU's?
+
+Ren (54:09):
+I'm not an expert in this. So I I've been told it's, uh, currently slightly slower than EVM, but they are optimizing it.
+
+Fredrik (54:18):
+Okay. I assume that's in an emulated mode then, because if you were running RISC-V on like actual hardware, it would be
+
+Ren (54:25):
+Right. The back of envelope estimation is that it is 50 times slower than running on hardware. And I've been told that it's simpler to implement than Web Assembly, the RISC-V instruction set. And that's it.
+
+Anna (54:39):
+Hmm. So maybe to wrap up, um, I'm curious about what kind of research you work on right now? Like, do you have anything in the pipeline coming up? What are you, what are you excited about?
+
+Ren (54:48):
+There's one big thing I really want to do, is to write a paper called "Lay down the Common Metrics 2.0".
+
+Anna (54:56):
+Oh. And what would you cover in that?
+
+Ren (54:58):
+There are many new protocols coming out in recent years and some of them still make the same mistake of using simulations as a security analysis. I would like to analyze their security and discover new attacks in these protocols.
+
+Anna (55:13):
+Cool.
+
+Fredrik (55:15):
+All right. Very cool. Thank you very much for coming on the show. It was a great pleasure talking through these different, both attack vectors and interesting models as well as NC-max. So thank you very much.
+
+Ren (55:26):
+Thank you.
+
+Anna (55:27):
+And to our listeners. Thanks for listening.
+
+Fredrik (55:29):
+Thanks for listening.
+

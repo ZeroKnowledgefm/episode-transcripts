@@ -1,0 +1,645 @@
+Anna Rose (00:00:05):
+Welcome to zero knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+Anna Rose (00:00:27):
+In this week's episode, my guest cohost Kobi Gurkan, and I chat with Mary Maller, a ZK researcher at the Ethereum foundation. We talk about her journey into cryptography, her work on trusted setups, universal SNARKs look up tables and the work she and Kobi did on aggregatable DKGs. What it's like working at the EF and more. But before we kick off, I wanna invite you to check out the zero knowledge linktree. People are often asking about ways to get deeper into ZK research, or just meet more folks in the ZK community. Through these channels, you can find a lot of ways to jump in. For example, there's a ZK telegram group, a ZK HACK learning hub over on discord, a ZK jobs board, where we have listings from some of the best teams who are hiring and more. So I've added the link to that in the show notes.
+
+Anna Rose (00:01:14):
+Now, if you've already started building something in ZK and could potentially benefit from some early funding, I also wanna highlight for you the upcoming ZK Tech Gitcoin side round. So it's running from June 8th [correction] through 23rd, and it's a CLR matching round happening on Gitcoin. Here, you can post a grant and collect donations from the community. This is then matched based on your quadratic voting score. In a nutshell, you get more matching funds. If you have lots of small donations, rather than a couple big ones, the initiative is led by the ZK validator and 0xParc, as well as our awesome matching partners who are coming from the ZK community. We will have at least a 100K in matching for this round. We're still putting it together, but by the time this airs, it should be a little bit more finalized, but be sure to get your grant in and choose the tag ZK tech to be eligible. As mentioned, it starts on June 8th [correction], but you should actually try to get your grant in a couple days before. If you are just curious to see what kind of projects are out there, do head over to gitcoin.co/grants. Once the CLR matching round starts and look for the ZK tech side round there, you could contribute to these projects as well. Now I'll invite Tanya to share a little bit about this week's sponsor.
+
+Tanya (00:02:27):
+Today's episode is sponsored by Penumbra. Penumbra is a cross-chain shielded pool and decentralized exchange, allowing users to shield assets from any IBC connected chain and privately transact stake, swap and market make without revealing their personal information or trading strategies to the world. Penumbra labs is also building in public. Visit penumbra.zone to learn more, use the Testnet, and join their discord. Find out more at https://penumbra.zone. So thanks again, Penumbra. Now here is Anna and Kobi's interview with Mary Maller from the Ethereum Foundation.
+
+Anna Rose (00:02:58):
+For today's episode Kobi Gurkan and I will be chatting with Mary Maller from the EF welcome Mary.
+
+Mary (00:03:08):
+Hi!
+
+Anna Rose (00:03:09):
+Mary. I've been wanting to have you on for a really long time. I think you know that I first saw you give a talk at Zcon 1 back in 2019 in Croatia. And I think I approached you after that talk, being like, come on my podcast but I'm so, I'm so glad that so many years later, many years later you are here. I'm so happy to have you here. And I'm very excited to dig into your story, but before we actually do that, I do wanna reintroduce Kobi to the audience. This is the first time Kobe's gonna be co-hosting. I felt that since this was a very ZK heavy, very kind of potentially dense episode that I should bring on someone who can help me dig in properly. Kobi you were on once before, right?
+
+Kobi (00:03:53):
+I've been,
+
+Anna Rose (00:03:54):
+Or twice?
+
+Kobi (00:03:55):
+I think two or three times?
+
+Anna Rose (00:03:57):
+Three or three times?
+
+Kobi (00:03:59):
+Plumo, trusted setups,
+
+Anna Rose (00:04:00):
+Oh yeah. ZK Hack. Yeah. Okay. Well, we did one full episode a few years ago, and then you've been on some of the combo episodes. It's true. The last one we did was the ZK Hack episode end of last year. I think it's worth it to introduce you to the audience if they don't know who you are. We actually work together on the ZK validator and on ZK HACK, but you wear many hats. So maybe you can just let people know what you're working on.
+
+Kobi (00:04:23):
+Yeah, very, very happy to. So I, I think that some people know that the main thing that I'm working on these days is called Geometry it's new research unit that also funds companies. So I'm heading the research there. So that's something that I'm pretty excited to, to be doing. And yeah, I'm also doing cryptography at Celo and of course our work in ZK Validator where we try to get validators running in many different networks. Yeah. And ZK HACK, which exposes advanced cryptography to implementers and in a way that they can see the bad sides of when things break which I think is a great way to learn. So yeah,
+
+Anna Rose (00:05:14):
+Totally. If anyone isn't aware of ZK HACK. ZK HACK, also just like it's an, it's like a space to learn and jump in it's it's kind of made for the very advanced users and then the very beginner at the same time. These event series that we do, we have a discord. So we'll definitely add links to that in the show notes. If you wanna check it out, let's now start in on the interview with Mary. I wanna start where kind of before Zcon 1, maybe like going a little bit further back, what were you doing before that point and kind of what got you excited about this space at all?
+
+Mary (00:05:49):
+I started in this space really during my PhD. So I don't know how many people know this, but I did my PhD with Sarah Meiklejohn, Jens Groth, obviously Jens is a very big name in the zero knowledge space. So when it became a matter of, you know, I get the opportunity to work with Jens Groth and zero knowledge. I was very excited about this. I delved straight in, I would say that I was just some degree self-taught in the sense that, that like I have this project on trying to make something which is non malleable. So you can't do man in the middle attacks and things like that. So that was how I learnt just like taking the Groth16 paper and being there, like, can we make this simulation extractable what does it mean to be simulation extractable? And that was actually quite successful.
+
+Mary (00:06:38):
+So it's now called GM 17 typically, it's not like the most used thing out there because the Groth16 is still faster. But if you do have an application where you really care about strong simulation extractability, then it would be a good thing to do. After that, I did an internship at Microsoft research and this was with Markulf Kohlweiss and he sort of introduced a problem to me being what we call now adaptability, can we generate a SNARK where the trusted setup is something which is much nicer looking than the setups, which we've seen at that time. At that time we had the Zcash setup. I was well aware of the fact that this was possibly not the best way to do a setup. It was it was not play replaceable, I think is a big thing. It's like all of the parties had to stay online throughout the whole process of generating the parameters.
+
+Mary (00:07:34):
+And this meant that you could only scale to, well, they thought six parties. So the question then became, can we do better? Can we make it so that players can come and players can leave? And once they leave, we can use whatever they've produced. So I worked on that throughout the internship and I sort of came back and was there like, yes, we have this problem. And he of course solved it immediately. In the sense that we had a SNARK, which could be updateable in the sense, parties can come and parties can leave. And I was very excited about this and I came to Zcon 1 being there, like, by the way, I have this really cool thing that I think everyone should use. At this time I think we hadn't even necessarily realized that the most powerful thing about SNARK was that it was universal. I learned that by talking to people and universal basically means that you can use the same setup for multiple different SNARKs. For those that aren't aware,
+
+Anna Rose (00:08:32):
+But like the problem you were trying to solve was the trusted setup problem, right?
+
+Mary (00:08:36):
+Oh yes. Very much.
+
+Anna Rose (00:08:37):
+It wasn't the universal part that just sort of, was it almost like you had to make it universal in order to solve the trusted setup problem, but you hadn't named that part of it. Is that what you mean?
+
+Mary (00:08:48):
+Pretty much. I mean, I think nowadays people do these sort of two phase setups where they have like the first round where they generate the first set of parameters and the second round where they generate the second, the set of parameters. And we were very, very set on making it just one round.
+
+Anna Rose (00:09:03):
+Yeah.
+
+Mary (00:09:04):
+So that you would just have the initial powers of tau phase essentially. And the reason for this is that we thought it would be really nice if you could have a kind of setting where the parameters, which you're using are continuously improving, you're getting more and more users it's perpetual. And eventually if you don't like the parameters you're using, you can update again, like this was what we had in mind, and this is something where in order to get it such that it can support that you actually almost do end up with something that's universal. It doesn't seem, I can't see a way of having one without the other, in that setting, there might be something, but it certainly didn't come naturally. The nice idea we had of the parameters continuously updating, I think is not something that people have gone for in practice.
+
+Mary (00:09:54):
+I think in practice, people have been more keen to have a, you do your setup, you finish your setup, those are the parameters you work with.
+
+Anna Rose (00:10:00):
+Yep.
+
+Mary (00:10:00):
+But the universal thing people really do care about because it means that if you do have a bug in your system, you can fix it. Or if you want to move to a different circuit, which is maybe more efficient, you can do that. Or maybe if you're just like a smaller player and you don't know how to run a trusted setup, that's not something you have to do. You can use someone else's.
+
+Kobi (00:10:23):
+So this works that you're referring to with the Groth and Kohlweiss what was the universal SNARK that had a series of quadratic size, right?
+
+Mary (00:10:32):
+That's the one, that's the one which I was there. Like it solves the problem and the quadratic nature of the setup made it actually quite a real problem. So it was sort of, I went away and thought a lot more about the problem after sort of talking to people at Zcon. Right. But yes, if you were okay with a quadratic setup and terabytes were for parameters, then this could be an option for you.
+
+Kobi (00:10:58):
+Right. Right. So it was pretty groundbreaking in terms of what it got, but it never got used in practice because of that property, as far as I see. Yeah.
+
+Anna Rose (00:11:07):
+I feel like a lot of our listeners probably know what a trusted setup is, but we should maybe just declare that we've done a whole episode on this, but this idea of basically creating the parameters for SNARK, you do it like right now, it's usually done in like a finite period of time so that the SNARK kind of kick off. You just sort of said though, with the universal one, you can kind of make changes. So maybe can we kind of explore what universal means here? What do you mean? You could like change the circuit or something after the fact, I guess you could do that without actually running another trusted setup, right?
+
+Mary (00:11:40):
+Yes. So what I mean is that when you're building a general purpose SNARK, so a SNARK, which you would be able to run for many different types of computation you can sort of split it into two phases. One of the phases is where you describe the computation that you're actually trying to prove. So this computation might consist of a Merkle tree, or it might consist of it consist of an encryption scheme. Or maybe you're trying to prove that you tallied a bunch of votes correctly or that sort of could be anything. The other part is generating your parameters. So what we do is we are basically able to create a disconnect in a universal system. We're able to have it so that the parameters that you generate don't even know what computation you're trying to prove. So you can run the two completely independently, which then means that if you want to change the computation, you don't have to change the parameters.
+
+Anna Rose (00:12:39):
+Do you still have to run one part of the trusted setup, then?
+
+Mary (00:12:43):
+You still have to do something which, which I sometimes call a deriving phase. So you have to take the parameters which you already have and then you have to run a deterministic computation. So no randomness is used in order to generate the reference string that you will eventually use. But the important thing here is that it is not in any way trusted. You don't need to do an NPC here. You don't need any other players. You can just locally run the computation and work from there.
+
+Anna Rose (00:13:13):
+It's the social aspect of trusted setups that has been kind of the bane of people's existence, right? Yes. Like the fact that you have to organize people. And, and the reason also that we do that is because this idea of like incorporating lots of different inputs from lots of different people, the feeling is no single person could corrupt it or know it or share it, or, you know, this, the reason you want many participants is to give that sense of trustless. I guess you call it. Or like any individual can say that they've contributed. Therefore they know that it's been done correctly. And this is a way to build trust within the community that this thing has been done. Right. But it's super hard to organize Kobi. You and I worked on one of these for Plumo. Yeah. And it ran for a few weeks, maybe
+
+Kobi (00:13:59):
+Few weeks or months. And then I think,
+
+Anna Rose (00:14:01):
+Yeah. And and it was, I mean, it was actually kind of fun to do, but it was also definitely a coordination job of like getting people together to do it at the same time. And it's definitely something tricky.
+
+Kobi (00:14:13):
+And especially when you're working on large parameters. So in circuits like Plumo or the Filecoin one, it's very hard to get participants or many participants because it takes a lot of time and it takes good hardware to participate. So it, it becomes challenging for everyone to participate because, you know, if ideally I want to trust it, then I could just participate, but not everyone can at this point. Yeah. So it makes it less practical. And that's why universal SNARKs are really important.
+
+Anna Rose (00:14:44):
+Are awesome. Although with universal Snarks you still do have to do a trusted setup. It's not like it wipes out the trusted setup. It just, you only have to do that one time. What was it like before though? Like, was it every time you wanted to do any sort of update, you just have to go through the entire process again.
+
+Mary (00:14:59):
+Yep. I mean, I don't think it was done to be honest. I think just people didn't use them.
+
+Anna Rose (00:15:05):
+Yeah. Okay. So, but with this advent of the universal SNARK, like what did that become? What, what did that evolve into?
+
+Mary (00:15:14):
+So I'd say eventually it evolved into systems like Marlin and Plonk, which lots of people are interested in and using for lots of different reasons in sort of getting there. I would say the first thing, that idea that we came up with was Sonic, which was the first universal SNARK, which was like, I'm going to say efficient enough that it could be used in practice. It was a valid option.
+
+Kobi (00:15:42):
+Sounds right.
+
+Mary (00:15:42):
+Yep. With Sonic kind of like the, I would say the thing that I was really struggling with for a long, long time is that there is kind of an inherent quadratic nature to SNARKs. Like they almost always end up looking a little bit like a matrix computation. So you have your X and you have your Y and then you have to try and try and say something interesting about this matrix. The matrix is sparse typically. So you have all of these quadratic parameters doing all of these constraints, but actually you are only using a linear number of them. And this was really, really annoying kind of the way we got around it in Sonic is we sort of said, okay, I only want to have a linear number of parameters in my common reference string, because I don't want that to be terabytes long.
+
+Mary (00:16:33):
+I'd prefer to keep it in the megabytes, preferably. But there is like another way in which you can embed polynomials into a system. And this is using the random oracle model. So you can take a polynomial, you can commit to it, you can hash that polynomial, and then you can use the hash as like a challenge point to evaluate at. So I'd say probably the key tool we were using in Sonic was to have this separation to have, we're gonna have a set of parameters in the reference string. One parameter got from random Oracle, and then we can get our quadratic proving system without actually having quadratic costs appear anywhere in the system. And this is the setup that, well, not the setup, setup means something very specific here that the, the kind of methods that Plonk is using the kind of methods, that Marlin is using the kind of methods that more recent one ones that people have been introducing. I think one, one that came out on eprint the other week was called Vampire is using, it's like always the same. You have your set of powers of tau and you have your challenges, which you get from a random oracle.
+
+Anna Rose (00:17:48):
+Mm. I just wanna go back a little bit. So in Zcash, there were two trusted setups. One was called Sprout. One was called Sapling. I'm just trying to figure out timeline wise. When I saw that talk at Zcon 1, you were working on universal SNARKs, but had that been actually incorporated into Sapling?
+
+Mary (00:18:07):
+No. So I think previously I possibly had my timeline wrong. I think the time when I first met the people at Zcash that might have been in FC, so probably 2018. Okay. Or could, it might have been 2019, but by way, it was earlier in the year, at the time, I think the motivation for Sapling or the key motivation was that Ariel had found a problem with the first setup. Oh yeah. So they were very keen to run the second setup as soon as they had a workable solution and a reasonable cover story in order to do so. The cover story at the time being, we're going to upgrade the groth16 because it's more efficient and we are going to do this as a chance to get down our circuit size and all the rest of it. This is what they were telling the community at the time. I think behind closed doors, they were panicking.
+
+Anna Rose (00:18:58):
+Yeah. That actual, that story. There's a episode I did years ago is Sean Bowe who talked through a lot of that stuff. And actually in the recent ZK Hack puzzles, we actually got a chance to explore what that bug was in one of the puzzles. It was kind of cool. We'll add links to all of this in the show notes. If people wanna wanna check it out,
+
+Kobi (00:19:21):
+Mary, you actually were part of proving the security of the Sapling MPC, right?
+
+Mary (00:19:25):
+Yes. So they were using slightly different parameters to Jen's original parameters. In particular they had tried to make them suitable for the two round setup and the original scheme he had wouldn't have quite worked for that. So it sort of came up to me and was like, here's our security proof. Can you check it, can you make sure it's correct. And I remember looking at it and being there, like, it's gonna be easier for me to prove this from scratch than to than to audit this particular proof. So that's what I did. I went straight into the generic group model, which is, I would say if your scheme is insecure in the generic group model, then it is insecure in any model. It's like the base line for security. It's also probably one of the easiest models to analyze things. So that's what I went into and I'm there, like in the generic group model, can I find a floor. They also, at the time were using a random Beacon just at the end of the setup, in order for the security proof to go through. Basically I didn't do that.
+
+Mary (00:20:35):
+I didn't see what the random Beacon was for. I still don't really see what the random Beacon is for. So don't worry if you don't wanna use a random Beacon for the groth16 setup, it's fine. You don't need one.
+
+Anna Rose (00:20:47):
+Was it through doing that work that you came to this idea of the universal SNARKs? Or was it more like, was that a separate problem that you were solving like more from scratch?
+
+Mary (00:20:58):
+They were both quite separate.
+
+Anna Rose (00:20:59):
+Okay.
+
+Mary (00:21:00):
+I mean, the reason why I was like had in mind, the way I wanted to prove the groth16 setup was from all of the work that I had done on setups for the universal setting. So it's not as if I was coming into it with no knowledge about how setups run. I was like very much in my comfort zone. But equally I wouldn't say that there is a link more than that.
+
+Anna Rose (00:21:23):
+Mary, I have one question and I know we're now kind of deep into the story, but I, I am so curious. Like, what were you doing before this? Like what did you study to lead you to this kind of working with Jens Groth in general? Were, were you just like, you love math? Like what, I'm just kind of curious what you were up to before.
+
+Mary (00:21:42):
+I did a maths degree at University of Bristle.
+
+Anna Rose (00:21:45):
+Cool. And what, why cryptography?
+
+Mary (00:21:48):
+I've never had an answer for that. It sounded cool.
+
+Anna Rose (00:21:50):
+Is it sort of like, is it puzzle breaking or is it,
+
+Mary (00:21:55):
+It doesn't even really know what it was at the time, to be honest.
+
+Anna Rose (00:21:57):
+That's so cool.
+
+Mary (00:21:58):
+I mean, like I had read the odd book here and there, but like certainly when I started my PhD, it was because it looked fun though I hadn't reasoned more than that.
+
+Anna Rose (00:22:08):
+Nice. I've always been kind of curious about what got people excited about the topic. Do you feel like today is in doing this work? Like, what is the kind of the thrill that you get as you crack one of these things? That's sort of what I'm trying to understand.
+
+Mary (00:22:25):
+It's really satisfying when it works.
+
+Anna Rose (00:22:27):
+Okay.
+
+Mary (00:22:28):
+Most of the time it doesn't work.
+
+Mary (00:22:33):
+I'd say for every successful attempt, there are about a hundred, at least unsuccessful attempts, but when it does work, it's like you feel good.
+
+Anna Rose (00:22:42):
+Nice.
+
+Kobi (00:22:43):
+Yeah. I guess as a side comment from, for someone that apparently just stumbled into cryptography, it seems like that you, you understand it really well because I personally learned a lot from you on how to get into these things in a very deep way. So yeah. I, I think that's a really cool experience.
+
+Mary (00:23:05):
+I mean, thank you.
+
+Anna Rose (00:23:06):
+I wanna go back to where we were in this story. So Sonic. I, I remember when that came out and it was quite a breakthrough. Was that ever implemented? Did anyone actually create the Sonic implementation and used it?
+
+Mary (00:23:21):
+So there were certainly proof of concept implementations. I mean Sean, who I should say was like a key person in designing Sonic as well. It's not, it's not like I was like alone in that we were very much team effort. Sean did an initial implementation for the paper and I think there were some people that sort of looked into implementing it afterwards as well. And certainly it was one of the initial basis that they were thinking of for Halo 1 before the follow up works, came out. But I don't know whether anything ever made it into production. I think because like literally the year after people were there, like we can do it even better. So, okay. The people who had been working on their implementations for possibly a bit put out, but they that they went with the newest schemes here offer than the older one,
+
+Kobi (00:24:06):
+As far as I remember the, the Matter Labs team had the good implementation. But it was never use in practice.
+
+Anna Rose (00:24:13):
+Yeah. Okay. What did people build on from there? Like you mentioned Marlin and Plonk, but like what was the part that needed to sort of be optimized more?
+
+Mary (00:24:22):
+So when we had Sonic, initially the kind of setting we had in mind that we were thinking of was just, I'm going to prove a hundred proofs from different parties. And these hundred proofs are then all going to go to a miner. Who's going to run some extra computation. And after the miner has run the extra computation, we're then going to have something which is actually succinct, which you can actually verify very quickly because it's been aggregated trying to explain this model to like external people and to reviewers and this sort of thing. Didn't work very well. It didn't work at all. In fact, we we tried but what did work was coming up with an alternative scheme, which was like actual universal, actual succinct from the very first time that you prove anything which we did come up with a way of doing that in order to sort of, I guess, get people to realize the significance of the result, but our way of doing that was very proof of concept. Like you're talking a hundred. I don't think it was as much as a hundred, but it could have been as much of as a hundred group elements and lots of pairing equations and lots of proover effort. Like it was very much a, oh, you want it to be like, you prove it in one, go, okay, here's a hammer.
+
+Kobi (00:25:48):
+It's possible.
+
+Mary (00:25:50):
+It's possible. So what the follow up works we're doing is they were taking our, I guess setting where I had applied a hammer and being there like, look, you don't need a hammer. There's like smarter ways of doing this.
+
+Anna Rose (00:26:04):
+Where were they taking the techniques that they brought into it? Was it sort of like known cryptography techniques? Was it coming from different fields? Potentially?
+
+Mary (00:26:15):
+I think so. Initially I would say the two main mindsets that were solving it were Ariel who came up with Plonk, which was using this sort of permutation type argument where the permutation argument he had certainly seen in Sonic, but the way of that he instantiated it was using Lagrange polynomial. And that was coming from the IOP world. Ah, interesting. The other person who found a way of doing it and the method looks completely different is Alessandro Chiesa. And this was Marlin. And he was like if we use IOP techniques, which he had been working on in Aurora, which was a post quantum system, then again, this is something which we can use in this setting in order to do things smarter. So yes, it came from still zero knowledge space, the ideas that were being applied, but different zero knowledge spaces
+
+Anna Rose (00:27:12):
+And both Plonk and Marlin are in production. Now this is just a, a check Aleo is using Marlin, right? Yes. It's funny. Cuz like I always associate Marlin with Pratyush Mishra.
+
+Mary (00:27:24):
+Yes, he was I mean he's all of them he's made it work really. Okay. He's well not only implemented it, but was every single part of the Marlin paper Pratyush had an input in.
+
+Anna Rose (00:27:35):
+Nice. That's sort of brings us at least research-wise to today. Were you working at all on either of those projects as well? Like after working on Sonics, did you kind of continue on that work or did you shift directions?
+
+Mary (00:27:51):
+So I was working on Marlin. I was one of the authors there. Cool. I would say possibly a sub author compared to more important people. And most of the time I spent my time with my mind being blown, being there, like this is a really cool way of doing it. I learned a lot. Okay. It was it was an awesome experience. I would say after Marlin came out, I went away and was there like job done, problem solved. Isn't this great. Meanwhile, other people were there like this, this prover is pretty slow I mean, obviously it's a million times better than what it was before, but still, if you're wanting to prove something with millions of gates, SNARKs can be pretty heavy. I'm sure most of the listeners will be aware of this. And I would say that there were one of the key things that people have been looking at more recently as like a potential solution to this is look up arguments, the people at Aztec, they were there.
+
+Mary (00:28:47):
+Like if we do a lookup argument, then we can get all of these boolean gates much, much cheaper. They introduce Plookup as like a way of doing this. And it really works. I mean, it is not a perfect solution because you have to find a way to integrate your lookup scheme nicely. But in terms of getting your cost down is one of the most effective techniques that people have found. And the people in Halo too, which is another direction, which the field has been moving in, by the way, I'm happy to, I wasn't involved in that, but I'm happy to talk about it more if you want to have also found that if they apply lookup gates and this is really good for their system as well.
+
+Kobi (00:29:28):
+So I think one of the changes that we've seen when moving from btcv14 and groth16 to Sonic, Plonk and Marlin is that they were all talking different languages, right? Like the original groth16 was around, we're using R1CS where people got used to additions being very cheap. But when you moved to Sonic and Plonk, that radically changed, that's also one of the reasons that you had to introduce lookup arguments, right? Because the things that were cheap before are not cheap anymore, you, you cannot do a lot of additions in one constraint anymore.
+
+Mary (00:30:13):
+Yes, this is absolutely true. And groth16 additions are free. You don't worry about the cost of additions. So lots of people had really optimized their computations to be described with as many additions as possible and as few multiplication as possible, because this is what worked with the proving system in a universal SNARKs would've very much surprised me if addition were free, just because you have to be able to describe your computation, right? And if you can't describe your computation in the setup, you can't, its universal. Then the prover is going to have to describe it somehow. And the result of this is that additions have a cost and yes, for Marlin and for Plonk, the cost of an addition is pretty much the same as the cost of a multiplication. And this means that all of these lovely optimized arithmetizations are not quite so nice anymore. It hurt.
+
+Anna Rose (00:31:10):
+Really wait, it actually takes away from is it because those arithmetization are, they're expensive in the first place and now they're kind of useless?
+
+Mary (00:31:20):
+It's just that they were free before and now they're not.
+
+Anna Rose (00:31:23):
+Oh, okay. What is Arithmetization? Probably should have asked that first
+
+Mary (00:31:32):
+The way of describing a computation in a form that a SNARK can read it.
+
+Anna Rose (00:31:37):
+Ah, okay. So before it was free, but then they did they optimize it or they just used it a lot and now it's not free?
+
+Mary (00:31:46):
+Multiplication have never been free and still aren't free, but additions, as in like your linear constraints used to be you didn't pay for them in terms of proof of cost. So yes, people did take advantage of this and they did optimize for it. And if they had a multiplication gate, which they could describe as an addition gate, then they always would. But I would say really the change is that you have to pay for them at all. Because even if you hadn't optimized for multiplication or expensive additions are free, you're still in the situation where you have to pay for both multiplication and additions. And this is going to have an overhead.
+
+Anna Rose (00:32:26):
+Got it. I wanna ask you going back to the story, like at some point you start working at the EF at the Ethereum Foundation. What were you working on when you joined? Like what were you still working on this work that you took with you into the EF or did you kind of change directions at that point?
+
+Mary (00:32:45):
+I spent a little bit of time looking into DKGs when I first joined the EF.
+
+Anna Rose (00:32:49):
+Okay. What are DKGs?
+
+Mary (00:32:51):
+Distributed key generation. It's again, a trusted setup. This was why I was there. Like, ah, this seems like something that I'm, that I'm into, but it's a different sort of trusted setup. It's more a trusted setup for a threshold system. So something where you might want three out of five parties to be able to sign a message. But not two out of five parties in order to run a threshold system, you would typically have to run a trusted setup in order to get your public key that people can sign under.
+
+Anna Rose (00:33:22):
+Ah, okay.
+
+Kobi (00:33:23):
+Mary, actually we worked on something together and aggregatable DKG. So maybe it would be interesting to talk about why that's interesting and why that was needed.
+
+Mary (00:33:34):
+Oh yeah, that was a, that was a really fun project. Actually. An aggregatable DKG is basically a DKG where all of the different parties transcripts can be combined into a single transcript. So if you sort of end up with a hundred transcripts and you would sort of pay the same cost for verification and for communication as you would for one transcript. And when you consider the fact that these transcripts contain encryptions, basically of every single party in the system's private inputs that they're going to need, they're quite big. Each transcript is, you know, sizable. So being able to aggregate them down gives you huge savings. It's a really nice thing to be able to do.
+
+Anna Rose (00:34:23):
+Where is the savings for this actually? Is it savings in terms of the size of the output of this? Or is it saving like, is it savings in what you have to do to it?
+
+Mary (00:34:33):
+It's savings in terms of communication. So the amount that you have to communicate is not only smaller, but it becomes something which you can use gossip networks in order to communicate, which is sort of quite nice. The other saving is for the verifier. If at the end of the trusted setup, you have somebody that wants to check that everybody has contributed correctly. Then the cost of doing that is much cheaper than it otherwise would be.
+
+Kobi (00:35:09):
+So the one of the motivations could be that you have a random beacon. Whereas some instantiations of it were using threshold signatures. And if you have, let's say a network of validators that need to produce these random Beacons by producing threshold signatures, then you're in a situation where you have to do this setup every time the valor set changes. So having something that is easier faster, that is one good way to, to make that more practical or safer or better.
+
+Mary (00:35:49):
+So for a threshold system, there's sort of two things that you need. One of them is the public key, which you would be generate verifying your random beacon output against for example, the other would be the secret key being that you do actually want people to be able to compute the random beacon output if they cooperate and people shouldn't be able to do this just by, you know, waving their hand. So should have secret key information in order to produce their share of the output and sharing the secret key is also something which you need to do during the trusted setup process
+
+Kobi (00:36:29):
+When you generate this case. So it has few, let's say popular uses. And one, one use that we've just said is a random beacon, but there are other uses that people have been talking about. So for example, threshold signatures and threshold encryption. Yeah. And there's been also a lot of work around this. So it's a topic that people are very interesting in it. Even Groth had recent works around this, right?
+
+Mary (00:37:00):
+Yes. He also had a non interactive DKG. So the scheme that we were describing is also a non interactive DKG, but it is sharing a different type of secret to the one that Jens Groth is sharing.
+
+Anna Rose (00:37:15):
+So you, when you started at, at EF, you were working, this was sort of the new problem space that you jumped into. Is this still what you're working on primarily or like, yeah, I'm just kind of curious what other work or what, what you're working around on now?
+
+Mary (00:37:29):
+So there's sort of two directions I've been working on sort of recently, one of which is related to this, one of which is I dunno, how many of you have heard of the Frost DKG? We did do a security proof for that. And the reason why I was aware that maybe we wanted a security proof for that was because I had already been looking at this aggregatability property beforehand and read the frost security proof and was like, we can, we can do this better. Mm. The other thing that I have been looking at is back into SNARK land and that is lookup tables. I sort of okay. Finally noticed that maybe, maybe these are something that it would be nice to do better.
+
+Anna Rose (00:38:15):
+Oh, how do you do them better? Like, just from what you had described, it's like a lookup table is you have the outputs of a lot of inputs. So like what does it mean to, to change that or, or make that better? Is it like the reading of it to be faster or, yeah.
+
+Mary (00:38:31):
+So the motivation for doing a lookup table is always prover of time.
+
+Anna Rose (00:38:36):
+Okay.
+
+Mary (00:38:37):
+Like, the verifier doesn't care, cuz the verifier is constant time. If anything, the verifier would rather there wasn't a lookup table because it's a little bit more, more work for them. But when it comes to prover costs, they can make quite a big difference. Our primary aim for the lookup table was prover cost. Can we get the prover cost to be, I'm gonna say better. Certainly there's not that much prior work on specifically this topic, there's lots of prior work on like related topics. Like zero knowledge sets or, or actually even accumulators, but for specifically lookup tables, I would say the main one that I'm aware of is plookup and the issue with plookup is that your prover time is linear and the way which they're able to make the prover actually run faster is they make it so that the linear costs that the prover is paying for the lookup is the same as the cost that they're paying for the circuit itself by making it so that they're working over the same quotient. I realize quotient is jargon to most people, but don't worry if you dunno what a quotient is.
+
+Mary (00:39:51):
+So I would say where we have been able to improve on that is we've been able to make a look up argument with very fast prover time, which doesn't need to work over the same quotient as the proving system itself. It can work over a different quotient.
+
+Anna Rose (00:40:05):
+Is quotient a technique? What can, can you help me understand what that is? So you you've changed the quotient. So I think we might need to explore it.
+
+Mary (00:40:16):
+Okay. So when you are like designing a lot of the SNARKs using Plonk type techniques or Marlin type techniques one of the things they use all the time is not the standard basis for polynomials, but the Langrang basis. So a basis where you are saying this polynomial evaluates to three at this point and five at that point and 10, at the other point, like you're describing your polynomial in terms of its evaluations at certain points. The quotient polynomial is basically the polynomial that evaluates to zero at all of the points that you're interested in.
+
+Kobi (00:40:56):
+Sometimes people call it the vanishing polynomial,
+
+Mary (00:40:59):
+Vanishing, polynomial, same thing. Yes, actually probably better terminology.
+
+Anna Rose (00:41:04):
+And that's the quotient polynomial?
+
+Mary (00:41:08):
+It's a polynomial that you typically want your proving system to vanish over. So in this way, you can see as a question, cuz you take a polynomial mod vanishing polynomial.
+
+Anna Rose (00:41:20):
+Oof. Okay. When you talk about changing, which quotient you are doing to look over
+
+Mary (00:41:26):
+Vanishing, polynomial is better. It's better
+
+Anna Rose (00:41:28):
+In every way. Are you choosing a different polynomial then? Is that sort of what you're saying? Like a better polynomial for the lookup table?
+
+Mary (00:41:35):
+I wouldn't necessarily say that it's better, but I would say that it is different and this in particular means that we are not constrained in the same ways that the plonk up argument is we don't have to try and make it so that our constraints nicely match up with our, with our vanishing polynomial. We can use a different vanishing polynomial if we want to.
+
+Anna Rose (00:41:58):
+Cool. That word does help. It is. I think it is better in this sentence.
+
+Mary (00:42:03):
+It's probably what everyone else calls it all the time. And I just missed the, missed the bus. Sorry.
+
+Anna Rose (00:42:09):
+No, I don't know. I think it's really good for us to hear that though. And, I mean the language of a lot of these things I think is something that does throw people off. So I think actually like teasing that out helps. I definitely think I understand a little bit better. You're not improving the lookup table. You're improving the approver's ability to use it.
+
+Mary (00:42:28):
+Yes, we can make it so that the prover for our lookup table is basically log sized in the in the number of entries rather than linear sized. If you were to consider it as a standalone protocol. Cool.
+
+Kobi (00:42:43):
+I'm very excited about this.
+
+Anna Rose (00:42:44):
+Yeah. And so this is, this is ongoing work.
+
+Mary (00:42:47):
+Yes. This is ongoing work. We plan to go public very soon. Hopefully it'll be public before this podcast goes live.
+
+Anna Rose (00:42:52):
+Oh, cool. So is this it's gonna come out as a paper?
+
+Mary (00:42:56):
+Yes. We've called it Caulk.
+
+Anna Rose (00:42:59):
+Caulk. Yes. Is this related to plookup? It's plonk derivative?
+
+Mary (00:43:05):
+No, it's related to wordle.
+
+Anna Rose (00:43:06):
+Okay. To what. I think what I'm curious about here is like, so the publishing of this type of work, you, you put it up as a paper is the expectation that like this will be adopted by teams that are using these techniques. I'm kind of curious about like the motivation as you publish this stuff. Like, is it sort of like, this is additional information that people could use if they're implementing it or do you think that this is actually like, is the EF going to be implementing it? Is it something where you're like, we're already doing this, you should know. I'm sort of just curious about work like this.
+
+Mary (00:43:41):
+I mean, when you are putting a paper online, you never know, actually you you sort of go in there with your sales pitch, I guess sort of saying why you think it is useful but actually why it's actually useful is something that you often find out later after, you know, other people have seen the work. Other people have talked to you about it and you discover what it works for. And maybe some of the things you thought it would be really awesome for actually it doesn't work for, but maybe some other things, which you haven't even thought of is a really good application for when you first go online. You just, you just don't know.
+
+Anna Rose (00:44:16):
+Cool.
+
+Kobi (00:44:17):
+And I think to your credit, you' been working on lot of problems that are very applied in the sense that they're very close to actual pressing industry problems. So I think that causes some of your work to be applied very fast, which is cool. And I guess like that was one of the other questions that I had, or you had another line of work, right? That is about inner pairing products and SNARK pairs, which are kind of related, right?
+
+Mary (00:44:49):
+Yes. So I, one of the ways which we've discovered is like really useful for trying to get the cost of SNARKs down in a different direction to look up tables is SNARK aggregation. So in halo 2, they're doing this in a really cool way. They're sort of saying we can take the cost of a Bulletproof SNARK where the verifier is linear and this would typically be a problem. But by doing, you know, a SNARK of a SNARK of a SNARK of a SNARK of a SNARK, we only have to pay that linear cost once. So if we are, for example, wanting to prove that a blockchain is correct since it's inception, then this is like, this will work for that. This will work really well.
+
+Anna Rose (00:45:30):
+Is this SNARK recursion? You just, you call SNARK aggregation.
+
+Mary (00:45:33):
+Yes, this is recursion.
+
+Anna Rose (00:45:33):
+It is okay.
+
+Mary (00:45:35):
+Um an alternative to recursion is to just do one layer of recursion. So rather than do a SNARK of SNARK of SNARK of SNARK, you instead do a SNARK of 10,000 SNARKs
+
+Anna Rose (00:45:47):
+Ah, you batch them, batch them into one.
+
+Mary (00:45:49):
+Into one. And we found that you are able to batch groth16 proofs really, really effectively using something called an inner pairing product argument. So an inner product argument is something we all know and love. It's been used in the discrete log setting when there aren't pairings since 2016, when Jens Groth and other people came up with a really cool way of doing it. And the nice thing is that the actual, like maths of how you do that, what's happening on the happening under the surface works exactly the same way for pairings. So if you see a pairing as like a multiplication, and you want to say that this pairing equation is satisfied, you can do that within, an inner product argument. And the nice thing about groth16 is that the verification consists only of pairings. So then if you want to have a SNARK of 10,000 SNARKs, you can run an inner-pairing product argument. And by doing that, your proover costs are really very, very reasonable because you end up paying, I think six times, if they remember correctly, six times the cost of natively verifying the 10,000 SNARKs to prove and logarithmic costs on the verifier side. So this is like a really fast way of aggregating. The downside is that we do have to use trusted setup, SNARKs, which hurts we don't know a way to do it for Plonk or for Marlin.
+
+Anna Rose (00:47:21):
+Okay.
+
+Kobi (00:47:22):
+Although for SNARK Pack, you could have used other universal setups that already existed. Right?
+
+Mary (00:47:29):
+So for SNARK pack, we don't have to do a separate setup for the aggregation scheme itself. So if we already have our trusted setup, SNARK then we don't need to do more setups. We can just take a couple of universal setups and use those to do our aggregation, but the base layer SNARK, which you're aggregating, I won't say that it has to be trusted set up because for example, if you wanted to use a crypto 2018 paper, it would work fine for that but you can't use random Oracles basically. Or if you can, then we don't know how to do it.
+
+Anna Rose (00:48:03):
+Mm. Is this is called SNARK pack.
+
+Mary (00:48:06):
+Yes.
+
+Anna Rose (00:48:07):
+Are there other projects that are also doing that sort of like multiple SNARKs into a SNARK? I feel like I have heard that maybe
+
+Kobi (00:48:14):
+Falcon uses it.
+
+Mary (00:48:15):
+Yes, but they're using SNARK pack.
+
+Anna Rose (00:48:17):
+Oh, they are? Yeah, that's
+
+Mary (00:48:18):
+Right. Yeah. Yeah.
+
+Kobi (00:48:19):
+One, one topic that always comes up when you're trying to use any new cryptographic protocol or system, is that you suddenly stumble upon a cryptographic assumption, something like the generic group model or algebraic group model, or even, you know, these older ones the qpower and <inaudible> exponent And all those. So how should the users of cryptographic protocols approach into choosing what's reasonable to use? Why should they should worry about the generic model or embrace it? How, how do you think about it?
+
+Mary (00:49:00):
+Oh, this is very much a, I would say a matter of opinion in the sense that if you talk to a different cryptographer, you will almost always get a different response. So this is very helpful for practitioners. I'm well aware of that. If you talk to sort of someone that is very theoretical, they'll probably tell you that standard model is the only thing which is secure. And it's the only thing you should use and you should use so most standard assumptions going, probably just restrict yourself to, you know, discreet log and RSA, and you are good. If you talk to people that are more applied, then you will hear very different opinions. And honestly, I think that this is quite telling because the people who are talking to practitioners, the people who are implementing things, the people who are seeing things deployed, the people who are really on the front line of protocols that are going to be attacked protocols that are going to be facing real adversaries, who potentially want to steal very large amounts of money.
+
+Mary (00:49:59):
+For example, generally, don't worry about the generic group model. They worry about lots of things. They worry about how interaction might cause a problem. They worry about synchronicity. They worry about how complicated the scheme is. That's a big, big concern they worry about, especially for snacks and they worry about how easy it is to audit the scheme. They worry about how much documentation there is. They worry about how many people have looked at it. There's so many concerns that people are thinking about, but people don't ever sort of turn around and say, what if the generic group model gets broken? And I think that is mostly because in 20 years it hasn't been broken. I mean, you can think of some very contrived examples where technically you can come up with a scheme, which is secure in the generic group model, but isn't secure in the standard model. But when it comes to protocols, which are being deployed, protocols that people are looking at, this is not where the attacks lie. Maybe this will change. Yeah. Maybe someone will come up with an awesome attack, but the same could be said for any assumption.
+
+Kobi (00:51:06):
+Yeah. I remember that people were pretty excited or at least some people were pretty excited about a group proving that groth16 was now securing the algebraic group model. But it was already deployed before that in ZK production, as far as I remember. Yes. So that's, that's very much agrees with you what you're saying.
+
+Mary (00:51:28):
+I mean, the algebraic group model does have some nice features being that you do boil down to a computational assumption, which then means that if you are trying to, if you're sort of trying to say, what security properties am I getting, you can end up with something which is less pages and pages of algebra, or it can be more pages of algebra. It can go either way. But for some settings, like being able to say, because of this assumption, we don't need to worry about these components in the system. That's, that's quite nice. But yeah, I do think that there is lots of dangers when it comes to implementing SNARKs, especially when it comes to getting the security proofs. Right? Yeah. That's another thing I should, that should definitely say, please don't trust my security proofs when I'm the only person that's done the security period, because, because I'm very human, please check them. But I don't think that the generic group model should be top of your list of concerns. It should be on the list, but quite low down the list.
+
+Kobi (00:52:30):
+Yeah. I completely agree. I think that nobody really knows how to audit circuits. For example, today it's really an art it's manual work and an art in the same time, I guess
+
+Anna Rose (00:52:44):
+You had just sort of mentioned SNARK pack, but there is another paper that you published quite recently called SNARK block. Are these connected? Is this an extension on this work?
+
+Mary (00:52:56):
+They are connected in the sense that SNARK block is using SNARK pack. Okay. So the purpose of SNARK block is to try and create a a block list. So a way in which you can have some anonymous system where you still have some authority who is able to detect malicious behavior and block people from the system, if they are misbehaving. The nice thing about this setting is actually in this setting, all of our trusted setup concerns go away because we actually do have a trusted party. Namely the person who is in charge of blocking users, okay. Or not blocking users, because the people who are running the proof is actually the users themselves.
+
+Anna Rose (00:53:43):
+It's like a white list for provers kind of.
+
+Mary (00:53:46):
+Yeah. So this is a way of having users be able to prove that they are allowed to be part of the system without revealing who they are. But at the same time, if they, for example, start spaming the network or behaving other malicious ways, the authority can say, this is malicious behavior. I'm going to remove you from the list. And after that, they should not be able to prove that they are allowed to post anymore.
+
+Anna Rose (00:54:17):
+Okay.
+
+Mary (00:54:18):
+The sort of key technical challenge in that was to try and create a version of SNARK pack, which is zero knowledge, which actually making it zero knowledge is very easy because groth16 proofs have this really nice property that they're re-randomizable. So if you want to add in a bunch of randomness to the system, in order to make it zero knowledge, that's easy. Proving it was a different story. Proving it took many, many iterations. We got there, but it was, it was tricky.
+
+Anna Rose (00:54:47):
+Where I'm kind of curious where some of these ideas come from, like you're working at the EF, is it sort of like generated through work that the EF is doing? Is this more like in collaboration with ..., because the other co-authors here are in different universities? And so I, I'm kind of just curious about what that work looks like and how these things kind of come about.
+
+Mary (00:55:09):
+So the EF gives us lots of freedom. Cool. Like as a general role of thumb, we try to be involved in the community. We talked to lots of the developers. We listen to see if there's anything that they want. Occasionally they'll come up with a protocol and be there like, is this secure? Or that sort of thing. So there is sort of that I would say frontline as well, but there's also a large fraction of our time where we're allowed to decide what we think will be useful or interesting or relevant to the community and look into those kind of areas. And I think that the reason why we are allowed to do this is because a lot of the goals of the Ethereum foundation, a lot of what they're trying to do is try and make the community as a whole successful try and make it so that all of the technologies that the blockchain space is creating is something that will stand the test of time is something that will last is something that people will use. So they do want projects which will help the community. They do want things that will move science forward. They do want things which will, you know, enable more applications, enable more people to enter the scenes or the rest of it and research in areas, which are, you know, possibly something they wouldn't immediately have in mind for their next update is one of the key ways of doing this.
+
+Anna Rose (00:56:29):
+One question I have here though, is like a lot of the systems, the ZK circuits and systems, like they don't actually work on Ethereum as it is today. Right? Like there's these limitations of Ethereum. So I've always been kind of curious, like, do you ever have that in your mind? Or they like, don't worry about the constraints on Ethereum proper. Just like go for it.
+
+Mary (00:56:52):
+Oh no, we worry about it. I mean...
+
+Anna Rose (00:56:54):
+You worry about it.
+
+Mary (00:56:55):
+Oh, it's I mean, don't get me wrong sometimes I sort of look at it and go, okay, this is such a cool thing that we're gonna go for it. Anyway. I know it can't run on our system, but but you know, there are some fairly difficult limitations. I would say for a lot of the researcher that I'm doing, being that they don't allow target group operations. And this is just because we've not been able to get the pre-compiled through. Actually we don't even support BLS pairings at the moment, we're still using BN-256, which is not reaching 128 bits of security is the reason why people are very keen to upgrade that. So we have just one group that we can use. We can't do target groups. We have to, I mean, technically you can, but it would be so expensive that you never would without pre compile.
+
+Mary (00:57:49):
+We can do hash functions, we can do group operations. And we can check whether a pairing equation is equal to zero, but that that's all the functionality that we have and trying to get things to work with that functionality. There are some things which can, and in particular, most SNARKs can, so Plonk would be able to, Marlin would be able to, and you look up argument, we'll be able to but our work on SNARK pack and on SNARK block and actually on distributed key generation, all of these are requiring target groups and this would be a problem,
+
+Anna Rose (00:58:28):
+But there are, I mean, there are other systems, like there are even EVM compatible systems where they have where you are able to use some of this. So I feel like it's still in a way usable, like right off the bat, even within a somewhat Ethereum. Like if you think of all EVM as somewhat Ethereum, then,
+
+Mary (00:58:47):
+I mean, one of the things you can do is because you have it that Plonk is usable in Ethereum. You can always take the system that you want to have and prove it in Plonk. If you really want to get it on chain, this would be an extreme solution, but it's, it's an option.
+
+Anna Rose (00:59:07):
+Okay. I this actually leaves me to another question I have, which is about implementation. And like, we just talked a little bit about the constraints of specifically Ethereum mainnet, but how are you working with developers themselves with the engineers? Like what's the, what's the collaboration like from where you are and are you actually implementing as well?
+
+Mary (00:59:30):
+Yeah, I do some implementation only have a proof of concept, but sometimes I do proof of concept and from the proof of concept, this is then something which I would expect somebody who is, you know, potentially better trained than me to be able to work with and integrate into, into larger systems.
+
+Anna Rose (00:59:50):
+And did that change with you working at EF? Like had you been doing that before, or is that something you're doing more now?
+
+Mary (00:59:57):
+I had looked at it a little bit before, mostly in Python, but it was something that I was very keen to change upon joining the EF actually I mean, friendly place. It's not as if anyone came up to me and was like, you must learn to code, but I thought that in order to, I guess, be relevant and in order to be able to talk to the engineers and understand a lot of their concerns, being able to code is such a big part of that.
+
+Anna Rose (01:00:23):
+Totally. What language do you work with then?
+
+Mary (01:00:27):
+So I sometimes work in rust. Thank you to Pratyush for making the arkworks library. I would not be able to do it without that and I sometimes work in Python. I've not, I've not mastered C. Please. Don't ask me to use C.
+
+Anna Rose (01:00:42):
+Do you have engineers in your team? I just, I think of the Zcash story and like Sean and Dara, when, when Ariel was there and that combination of a researcher and the implementer sort of in the exact same project in this exact same space. Do you have something like that in the EF as well, where you're like going back and forth with engineers or would you say like, it was more how you said it before, where it's like you put a paper out and then somebody's going to implement it. You have a sort of initial implementation and then someone runs with it. I'm just curious about that.
+
+Mary (01:01:14):
+It's a bit less formal than that. I would say. So occasionally when there's like a project, which we do decide to take on, then we will sort of be in more contact with engineers. One example of this at the moment, being that we are looking into single secret leader elections, which is a building block that we're really hoping to use for ETH 2 eventually the idea being to prevent DDoS attacks. And this is using a shale argument. And for sort of explaining how that shuffle argument would work, what we would want to use all the rest of it. I did do a proof of concept. And since then, one of the engineers in our team called George has been taking it on and sort of actually making it decent, making it good. And here's someone that I would say is a, a real implementer. So yes, we do have collaboration with actual engineers. We do talk to them, they are in the team, but it's not as if we sort of have dedicated people assigned to implement our work. It's more, we see first where things are actually likely to be used and where we sort of could actually do of the resource rather than sort of pre-assign it.
+
+Anna Rose (01:02:27):
+One of the topics that came up on some of these earlier episodes where we talked about that relationship was the back and forth. So like the researcher providing some ideas, but then the implementation providing ideas back, I think Halo is a great example of that, where it's like coming from engineering, they found the trick that then was proven more by research.
+
+Mary (01:02:48):
+I think that this might be a case of Sean being too modest. 
+
+Anna Rose (01:02:52):
+Oh, because, oh, cuz Sean doesn't see himself as a researcher somehow.
+
+Mary (01:02:57):
+Yeah. I mean, when I was working with Sean, we had exactly this, it would be like, I would go to him with this idea. He would go to me with that idea. He would come to me with this idea. I'd go to him with that idea. There was very much that, that back and forth, but and you know, working with engineers in general is really nice. I like doing it. You do sort of get to see a perspective that you otherwise wouldn't and it does ultimately work make your work better sort of, regardless of the engineer, but working with Sean is something quite special
+
+Anna Rose (01:03:23):
+Oh, nice. Maybe it's the definition of researcher and engineer, which is the problem here is maybe like there's a lot more people that are combo both, I guess, applied cryptographer is kind of both.
+
+Mary (01:03:36):
+Yeah. The idea that people talking to Sean come up with good ideas is not surprising.
+
+Anna Rose (01:03:41):
+I think it's the last point. I'm really curious to hear what kind of like upcoming work. We, I know you mentioned a few fields, a few spaces that you're working on right now, but like what could we look forward to from the work that you're doing and maybe yeah. If there's any new research for us to look out for.
+
+Mary (01:03:58):
+Oh, I mean, I don't want to say what I'm going to be doing six months from now. I don't plan that far in advance, but well, but do you look out for Caulk it should be coming in the next couple of weeks.
+
+Anna Rose (01:04:07):
+Very nice.
+
+Mary (01:04:08):
+We're very excited about it.
+
+Kobi (01:04:09):
+So I also know that you've been working on another topic, which is achieving consensus and that is work that you've been doing with the same group that we've kind of worked on in aggregatable DKG. So can you talk a bit about that work?
+
+Mary (01:04:27):
+Yes. so this is really a follow up work. So for the aggregatable DKG, we were talking about how do you do a DKG in synchrony? So assuming that you have some kind of clock that can time people out, if they don't respond quickly enough as a follow up and the lead author on this is Gilad Stern. So if you want to know lots of technical information, then please, please talk to Gilad. But the idea is to make it so that we can take the aggregatable DKG that we have in the synchronous setting and use it to create a EKG in the asynchronous setting, which is much more challenging, just because you need to be able to communicate even against parties who might never respond or might respond maliciously. And the way we do that is through a leader election, but the leader election is like, you choose the leader after you already have all of the transcripts, which the leader could be part of. And it's describing how you come to agreement for that.
+
+Anna Rose (01:05:31):
+Hmm. This is for, I mean, when, when you're talking about consensus, this is for validator choice, I guess like validate this is the validator groups and trying to create the block production, I'm assuming. 
+
+Mary (01:05:43):
+So it's not specific to blockchain, so. Okay. So you could use it in other systems, but if you were in a blockchain system, then yes, you would say validator.
+
+Anna Rose (01:05:51):
+Okay. Maybe, can you gimme an example of like where it works today and where you want it to work in like more real world examples, like maybe it is networks we know or maybe situations.
+
+Mary (01:06:03):
+So this is specifically for generating public keys. Like an example would be generating a public key. If you want to do threshold BLS signing, actually this scheme would not work for threshold BLS signing. We would need to have a special purpose signature scheme, but the signature scheme is, you know, pretty efficient. You could work with it if you wanted to. So this would be a way for parties to agree on what the public key is, which they're going to want to sign under. And it's a way for them to do that in for example, internet settings, where there's not necessarily that obvious a communication channel. And it's certainly not easy to have like a leader or timeouts or the sorts of things that we often like to assume to make our life easy.
+
+Kobi (01:06:49):
+Cool. Yeah. I think one, one good way to look at it maybe is that in a synchronous setting, you assume that parties will respond,
+
+Anna Rose (01:06:58):
+Online at the same time, kind of
+
+Kobi (01:06:59):
+That, and that they will respond in some known amount of time. And because you need that to hold you set, you set very large timeouts and that practically makes, makes things slower. And in an synchronous protocol, you don't have to worry about that as much, which could also be a performance boost in some cases, which is nice.
+
+Anna Rose (01:07:24):
+This is kind of cool that you do need these different tools, like the tools we know will have to evolve also to be able to work in these new systems in the way that you're thinking about this one. Is it often in the context of blockchain or is it often not like the example you just gave was just like on the internet? Are you still thinking blockchain, asynchronous environments?
+
+Mary (01:07:47):
+So I'm always a little bit thinking blockchain, but I'm not sure that my co-authors were
+
+Anna Rose (01:07:51):
+Who are the co-authors on that? You sort of mentioned one, but
+
+Mary (01:07:56):
+So Gilad Stern, Ittai Abraham, Philipp Jovanovic, Sarah Meiklejohn and Alin Tomescu.
+
+Anna Rose (01:08:03):
+Philip from the validator. He's also part of the ZK validator with us. Cool. And that's already published though, right? That's not upcoming. Is there more work in that direction that you're looking at?
+
+Mary (01:08:15):
+Uh yes. We are sort of hoping to come up with something which can do can do BLS signatures, but that's ongoing. So I don't want to, don't want to promise just yet.
+
+Anna Rose (01:08:25):
+Nice. Well, Mary, I wanna say a big thank you for coming on the show.
+
+Mary (01:08:30):
+Oh, thank you for inviting me.
+
+Anna Rose (01:08:31):
+Kobi, thanks for coming on as a co-host too. It was a pleasure. I feel like very lucky to get to be kind of in, in a conversation with the two of you, to be honest. I mean, the, the levels at which you guys are working, I don't think all of our listeners fully know it, but I'm really also glad that we get a chance to show them. It's sort of a look into what's going on deep, deep in a zero knowledge proof in the world of ZK development and research. So yeah. Thanks so much for coming on.
+
+Mary (01:09:01):
+Oh, I mean, thank you so much for hosting these podcasts. There are an amazing effort.
+
+Mary (01:09:07):
+You've got that up for years as well. Haven't you?
+
+Anna Rose (01:09:09):
+Yeah. It's... We're in year four. It's wild. So I wanna say a big thank you to Tanya, the podcast producer, Henrik, the podcast editor, Chris who worked on research for this one and to our listeners. Thanks for listening.
+

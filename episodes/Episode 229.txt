@@ -1,0 +1,477 @@
+AnnaRose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web as well as new paradigms that promise to change the way we interact and transact online.
+
+AnnaRose (00:00:27):
+This week, I chat with my friend Robert Habermeier from Parity about XCM, the cross consensus messaging format. It was a fun episode and had me diving back into the Polkadot world. We talked about the ways in which XCM allows parachains to speak to one another passing messages through the validators on the relay chain. This is the Polkadot native interoperability protocol and fits nicely into the series I am doing on bridges. One small correction for the listener though. I know for sure that I mixed up the terms XCM, which stands for cross consensus messaging with the term XCMP, which is cross chain message passing. I definitely hope I didn't make this more confusing that and that the information description about XCM actually comes through. Now, before we kickoff, I just wanna highlight the ZK Jobs Board, a place where you can find a new job working in ZK.
+
+AnnaRose (00:01:16):
+And specifically, I wanna highlight one job post, which would have you working with my team over at the ZK Validator. We are currently looking for a junior researcher who is interested in exploring and writing about zero knowledge tech, proof of stake governance, and general meta blockchain topics. Specifically the ways that these intersect with privacy, if this sounds like something you would be interested in, check out the job ad and the show notes and get in touch. One more note on the validator. We are actually live now on Moonbeam and moon river as collators as well as Polkadot and Kusama. So if you're listening to this and happen to have some of those tokens and wanna delegate to the ZK Validator, you can find us on the list of collators on the moonbeam application or on the list of validators on Polkadot.js. Now I'll let Tanya the podcast producer share a little bit about this week's sponsor
+
+TaynaK (00:02:05):
+Today's episode is sponsored by Polygon Miden Polygon Miden is a layer-two scaling solution for Ethereum. Miden relies on ZK STARKs to roll up thousands of layer, two transactions into a single Ethereum transaction, which increases throughput and reduces fees at the heart of polygon Miden is Miden VM a touring complete STARK based virtual machine, which provides a level of safety and support of advanced features currently not available on Ethereum. Visit polygon.technology to learn more about polygon Miden and other Polygon solutions. So thanks again, Polygon Miden. Now here is Anna's interview with Rob from Parity
+
+AnnaRose (00:02:43):
+Today, I'm here with Robert Habermeier from Polkadot a guest who I've had on the show. A number of times, a friend I've had for many years and someone who has sometimes co-hosted the show with me as well. Welcome back to the show, Rob.
+
+Rob (00:02:57):
+Thanks. Yeah, it's good to be here.
+
+AnnaRose (00:02:59):
+Today we're gonna be doing a bit of an update on Polkadot a look back as to what's happened since we had you on many, many years ago. And then I really wanna dig into XCM the, what I've dubbed the interchain messaging protocol, but I believe you have probably a better definition for this.
+
+Rob (00:03:18):
+Yeah. XCM stands for cross consensus messaging and we view it as something that, especially over time, we'll be able to bridge a lot of different ecosystems. In the beginning, it's mostly gonna be focused on communication between parachains that are attached to a relay chain. So sort of blockchains in the Polkadot world. And for those to talk to other parachain based ecosystems like Kusama.
+
+AnnaRose (00:03:42):
+So I, I just used the term XCM, but there's also like XCMP, there's like a few different like terms. What, what do they all mean, actually?
+
+Rob (00:03:52):
+Yeah, absolutely. And it's, it's worth noting for future reference. If people are gonna listen to this in the future that we very well might change the name of XCM to something else, to a bit more, something a bit more catchy. So, okay. In the future that might not be called XCM. And I think it's important to sort of start from the top down. What XCM is stands for cross consensus messaging is just a format and a protocol, and it's not the actual data transfer of messages. So that's what we would call XCMP, which is cross consensus message passing or crosschain message passing. That's the mechanism by which parachains in the Polkadot ecosystem actually just send basically pieces of raw data among themselves, right. And they could send any kind of bytes, but we've also created this cross consensus messaging format, which attaches semantic meaning to those bytes and would be used as a standard within the ecosystem for the different types of actions that chains might take with each other.
+
+AnnaRose (00:04:56):
+Hmm. I think we're gonna have to dig into this. But before we do that, I actually wanna hear a little bit about what you have been doing since we last had an interview with you, which by the way, was I think two years ago or more, it was like 2019 actually. And it was summer. So I don't know if you can go back to that and like so much has happened since then. Do you wanna just sort of give us a brief on your lot, the last two and a half years, three years almost <laugh> what's happened. Rob's been going on?
+
+Rob (00:05:26):
+Let's back the clock. I mean tons, tons of stuff. Really at that time, when we were speaking in the summer of 2019, our focus was mostly on building substrate. So the build your own blockchain SDK that we built mm-hmm <affirmative> and the consensus mechanisms and the research of how Polkadot parachains would actually work. So at that time, we didn't have anything beyond sort of a prototype of how the parachain's protocol was going to function. So in 2019, what were were we pulling together? We were building a pluggable consensus and substrate. We were building the web assembly execution stuff for building what we call run times for ENCO the business logic of a chain. We were working on productionizing, libP2P and this was shortly before the launch of Kusama, which went live in the fall of 2019.
+
+Rob (00:06:24):
+And Kusama network is the Canary network for Polkadot essentially where code can go live in production with real value, because these are proof of stake protocols without being the same level of stakes as the Polkadot main network mm-hmm <affirmative>. So in short, in 2019, you know, we were just getting the ball rolling. I mean, I think Polkadot kind of a unique project in many respects in the sense that we've built pretty much the entire technology stack from the ground up. I mean, that includes networking web assembly, execution, web assembly, interpreting the block format, the gossip protocols. I mean, absolutely everything is sort of code that's built in house. So we've been cultivating over that time, a lot of expertise, but in terms of what has actually been done, I think today is actually a very good day for us to speak about XCM because today is the day that XCM just got enabled on Polkadot.
+
+Rob (00:07:18):
+Cool. So it has been enabled on Kusama for a few months, some, I think three or four months mm-hmm <affirmative> and parachains have been able to open channels with each other and send messages. But today a runtime upgrade was passed by governance and enacted on Polkadot, which enabled chains to do the exact same thing on Polkadot. So we have the first value sort of flying between parachains now. But in the meantime, since 2019, we basically built the entire parachains protocol. So we finalized a lot of research and built the production implementation of this protocol. So that's for the parachain blocks to actually be built, to be sent around, to validators, to be validated, to be, you know, the whole data availability layer and the security protocol, approvals and disputes which I have a, a very long blog post kind of summarizing all of this. So we don't have to go into all of it, but we dealt all of it. Yeah, it was shipped at the end of of last year and slowly we're rolling out all the remaining features.
+
+AnnaRose (00:08:25):
+Wild. Do you think it's different the way that Polkadot came to be versus some of the other protocols where like, like, I, I think of some of them where you, you see kind of like new ideas emerge and then they get implemented after the fact, do you feel like a lot of this was all sketched out and now it's just delivering on what was sketched out or do you actually think that it, like some of the strategy techniques, concepts, have they evolved as you did it, like, did you hit basically through implementation the need to actually change anything that you'd originally planned for?
+
+Rob (00:08:56):
+Oh, I mean, AB absolutely. So for one, one of the big differences that Polkadot is not a guest fork we have our own code bases and that kind of goes back, I think, to the whole spirit of, of Parity, which was formally SCOR, which was the first really serious alternative Ethereum client implementation done in, in rust and kind of the thing that brought rust to the blockchain space. So we are kind of blockchain node writers at heart, which gave us a lot of, kind of grounds to just implement a lot of this stuff again and do it our own way and take lessons learned from having written blockchain nodes in the past, in terms of, you know, learning as we went. Absolutely. I mean the fun, but also annoying thing about developing is that you encounter reality. Yeah. And sort of all of the fractal and nested complexities that arise there.
+
+Rob (00:09:42):
+I mean, you know, you can talk about, oh, we're just going to execute this piece of code. It's like, well, okay. You know, do you do that in a separate process? Like what if the machine goes down, what are you persisting to disk? What do you have to, right. And those kinds of things are very hard to encapsulate in the minimal assumptions that are usually brought in when you're just writing a paper. Right. Mm-hmm <affirmative> when you're writing a paper, you're just say, oh yeah. When only one third of the nodes are faulty and they can be arbitrary, it's like, sure, great. But in practice in engineering, right, you have to be very careful about like, well, make sure nobody can send a message packet that takes all the notes down. Like, mm-hmm, <affirmative> be very careful about the types of resources you're using. What are your practical memory limits and things like that. So we had to adapt for sure. I mean, the thing that was described in the Polkadot white paper was a lot more akin to optimistic rollups are now.
+
+AnnaRose (00:10:31):
+Wow. Whereas, so wait, it was more like game theoretical. Like it wasn't like the security was this like fraud proof, like things between the relay chain and the pair chains.
+
+Rob (00:10:40):
+Yeah. It was kind of, kind of similar to that. And there were a lot of, there was a lot of detail that hadn't been explored yet with respect to like, how do the chains get finalized? What are the necessary preconditions for finality? What kind of fork choice rules are you gonna have to make sure that, you know, bad blocks get avoided and, and things like that. So the term that, that we use to describe what we're doing now is to explain to people or for more of that roll up ecosystem is, is sort of a, a cut and choose roll up where we use sort of random sampling and eager checking to make sure that the the state transitions of parachain blocks are actually valid as opposed to a fraud proof mechanism where we just make some kind of underlying economic assumption that, Hey, if nobody has called this thing bad by now, it's probably good. We actually have a more eager checking of like, Hey, this many people checked it. And if some of them disappeared, we enlisted more people to come check it and so on. And if anybody disputed it got escalated to everybody. And now we know that those people have all signed off on the block being good. Therefore we can finalize it. So in the security model, it's much more similar to something like a ZK roll up than it is to something like a an optimistic roll up.
+
+AnnaRose (00:11:53):
+And yet it's not ZK like you're you never did. It's not actually cryptographically. I wanna say, like, it's not a validity proof. It's not, you, you still are doing some sort of checking. It's a sampling basically to ensure that
+
+Rob (00:12:04):
+It's yeah, that's right. It's you could do ZK rollups in this model. Of course, the classic issue with ZK roll ups is sort of complexity of the circuits that you're creating in the Polkadot model people. What we make available is the witness data that you need to be able to check that the state transition was valid. And then people actually have to go check that and make sure that the thing really is valid, as opposed to that just being executed on the the layer one consensus mechanism.
+
+AnnaRose (00:12:34):
+Hmm. How does this model, the kind of new one that's come about? Like I've done these shows with Celestia talking about data availability is the relay chain, the data availability chain, like, is that where these kind of roll up, like things are storing something.
+
+Rob (00:12:50):
+Yeah. They're storing, they're storing data in the validator set of the relay chain. So we don't do a light client availability sampling, which is kind of a underlying economic assumption that there will be enough light clients around. We just say, well, these are the validators of the relay chain. And one of their tasks is to make data available. So we do an erasure coding where any one third of validators pieces can reconstruct the whole data. And before a parachain block can be considered included, two thirds of validators have to sign off that they have their piece. And so there's this erasure coding and chunk distributing mechanism. That's part of the relay chain parachains per call. So the, the, the relay chain kind of provides a number of services to parachains, but most importantly, it's data availability, security and fork choice rule. And this fork choice rule is, is quite important because we've actually integrated the fork choice rule of the relay chain together with parachain or roll up validity, which means that you can very eagerly process messages between parachains, even before, you know, they're valid, because if you find that they're invalid, you just fork away from the, in the invalid block,
+
+AnnaRose (00:14:08):
+Isn't that really painful? Isn't that like a big process to do that? Or is it like made very simple?
+
+Rob (00:14:14):
+It's not manual it's, it's totally automated. And it happens under good network conditions within a couple of seconds. The bad block is abandoned and a new block is built in its place.
+
+AnnaRose (00:14:26):
+Have you actually ever seen a bad block
+
+Rob (00:14:30):
+On the main nets? No. On our test nets. Yeah, we wrote for, I mean, before we launched this, we wrote a test network with a thousand globally distributed validators. And we actually wrote malicious validators that would try to attack it in multiple different ways. Like, let's say not distributing chunks or distributing bad chunks or the data being invalid or giving off, you know, saying stuff was bad when it's good saying stuff is good when it's bad. Mm. And we would just run these attacks at a very high rate. So we had, you know, test nets that were reorganizing every 10 seconds for weeks on end. Wow. And we found a number of issues that way. But we had it running for weeks on end before we, we launched on the maintenance.
+
+AnnaRose (00:15:14):
+Is there, like in, in this system, do you care about MEV stuff? Like, do you follow those conversations about MEV? Does it like, like, what does it even look like in the Polkadot ecosystem?
+
+Rob (00:15:28):
+Very unexplored territory. I think there are, there are people trying and XCM kind of is the Keystone piece that you need for that. Because there is some latency in messages actually being passed between chains. So you can see that a message, like, let's say a buy order or something like that is in flight from one chain to another, and that creates front running opportunities. But the other kind of interesting thing and the foil to that is the control that parachain developers have over their own protocol that they can write their own rules for how blocks are legally created. You know, for example, one of the popular ideas these days is there shouldn't be a transaction ordering transactions should just be batched, right? Mm-Hmm <affirmative>, they all get the same price if they're in the same block and things like that. So that kind of changes the me landscape because every change is going to be different. I think it's gonna be really cool what people are going to come up with as ways to sort of front run XCM messages or trigger XCM messages to, to extract value asynchronously as opposed to synchronously. Mm.
+
+AnnaRose (00:16:37):
+I mean, I think this leads us then to XCM I like you just defined at the beginning of the episode, this difference between XCMP and XCM, and I know you also mentioned the names may change, but can I, can I associate XCM with something like IBC? Like, is it just it's the rules, it's the standard and then XCMP is the action or like the relay somehow?
+
+Rob (00:17:01):
+Yes. I, I think that's, I think that's fair. One metaphor that we use is XCM is to XCMP as rest is to restful for HTTP server development. So it's like restful just refers to how you answer requests, like sort of being stateless and request in response out. Whereas the rest API itself is the API
+
+AnnaRose (00:17:27):
+Mm-Hmm <affirmative> XCM is the API XCMP is the action or
+
+Rob (00:17:32):
+Just the data, it's the data and the guarantee that the data will arrive.
+
+AnnaRose (00:17:36):
+Okay. I I'm, I'm kind of assuming that most people listening do kind of understand what Polkadot looks like that. I mean, we've already started kind of diving in, but like there's a relay chain there's parachains connected to it up until now on Polkadot at least there was no way for any tokens to move between parachains, I guess, unless they had a, like a unique bridge that they had created. Is that true?
+
+Rob (00:17:59):
+Yeah. There were sort of like side channel bridges, or more like ad hoc bridges that teams had created. But they didn't have the same level of, of security guarantees. So one of the key aspects of XCMP is that every parachain can create essentially a bridge to every other parachain. We call them channels. And the security guarantees of every single parachain are the same. Mm-Hmm, <affirmative> the maximum the same, you know, highest level of security possible. And so that same level of security is applied to the, the messaging between them. Right? So you don't have a weakest link problem, and you can process messages, very eagerly also
+
+AnnaRose (00:18:38):
+When you, but when you talk about like, so it's messages, I, we sort of, you said like there were bridges where you could actually move tokens. I'm assuming one of the main use cases for XCM will be moving tokens, but you don't call it token movement. It's not a bridge, it's this messages how what's actually happening. If you were to use this to move a token across, are they, are they just sort of like, it's an automatic path, but you're still building, you're still building something on either side, like locking and unlocking or minting or burning or whatever.
+
+Rob (00:19:09):
+Yeah. There are a couple of different paths. So just to explain that sort of message and action dichotomy it's like you get a you get a check in the mail, right. And you can deposit that check and you can do what you want with that check, but that's kind of independent from the post office, right? The post office just delivers pieces of paper, but then there's this common language of like, you know, the language of checks and the language of English that we know how to interpret and check the signatures on those things. Okay. so XCMP is the, like the postal system and XCM is like, you know, the fact that we can understand what a check as a document is. So when it comes to token transfers, that's one of the things that you can do with XCM and there are a couple different ways to do it.
+
+Rob (00:19:50):
+So one way is teleporting as we call it. And that's the burn and mint thing. Mm-Hmm <affirmative>, we have a notion of trusted teleporters, right? Like which chains do other chains trust to actually mint and burn their token, right? Like when they're, you know, they don't have control necessarily over the code, that's executing on someone else's parachain or roll up that might have its own governance system. And it's the same sort of security guarantee that you would have with upgradeable contracts on, on Ethereum or some other smart contracting platform. It's like the code could change out from under you mm-hmm, <affirmative> don't necessarily know what's going to be running a year from now. So teleporting is like, you need to, for sure trust that this chain will not mint and burn irresponsibly. Then there's also another type of transferring, which is referred to as reserve transfer where you actually have another chain that act as the sort of canonical reserve for some token, like in the case of dot it's, the relay chain, the reserve manages accounts for other chains on it. So then they can just talk to the reserve chain and have them move around account balances within the reserve chain. So one of the common good pair chains that's being built is and has been launched already is state mine, or statement on Polkadot state. Statemine is the Kusama version of it, which is just sort of like a generalized asset reserve chain. You can create a token on there and then it'll automatically have that reserve functionality for the token. And then that token can be used anywhere in the ecosystem.
+
+AnnaRose (00:21:24):
+So one of the, the ideas that's come up here is this idea of fragmentation of like, say, if you're using multiple bridges bridging the same asset from like, say between two chains, you have multiple bridges, actually it's synthetic on, you know, end up synthetic on one side. And if you have multiple versions of that, it can cause this fragmentation, which can cause like interesting arbitrage opportunities. But I think it's also kind of weakens a lot of the, the underlying thing here. You have this reserve concept. So would there basically be like USDC on state mine, and then everything else is always referring back to that through XCM specifically like not through other bridges. And this is like the canonical USDC for the network. Is that like how you kind of envision it?
+
+Rob (00:22:10):
+Yeah, pretty much. So I mean, USDC as, as an example, what chains would have essentially is claims on the USDC that lives on statement and they don't necessarily, you know, you don't have like wrapped B wrapped a USDC you're wrapped a wrapped BSDC. You're just kind of using statement as a trusted reserve for the, for the USDC token, but
+
+AnnaRose (00:22:34):
+Don't, you run into the same problem if there are other bridging technologies, I guess so. Right. Like if you're bridging also usdc from Ethereum with another bridge, and then you'd have the statemine version of it, then you have the same kind of fragmentation on parachain XYZ, I guess. Like, if there, if both, both sides are coming over.
+
+Rob (00:22:52):
+Yeah. I suspect. So, you know, that's kind of a problem for the market to handle.
+
+AnnaRose (00:22:56):
+Would there be a problem though, if you had multiple hops, so like you have sort of your, your canonical thing on state mind, it moves to parachain a and then using XCM you're, you're also moving it forward to another one. Are those hops actually created any sort of issue or is it always somehow pointing back to the original source?
+
+Rob (00:23:19):
+Yeah. The way that that kind of application would work is that you, you would always touch base at the state mine or statement chain. Okay. so like any hop is actually a hop to the reserve and out, ah, not a hop from one chain to the other. Now, in the case of teleporting, that's not how it would work. But in the case of reserve asset transferring, that is
+
+AnnaRose (00:23:42):
+Okay. And you sort of mentioned so trusted teleporters, do those actually mean like the parachains themselves are trusted, is that sort of like, you will have whitelisted some parachains to have these transport things, but you may actually have other parachains that are not white listed that are still transporting stuff, but you just don't recognize. Yeah. I actually don't understand how you can make it trusted. Like it almost sounds like it's guarded then.
+
+Rob (00:24:07):
+Well, by way of example, in, in the Polkadot and Kusama ecosystems the only chains that are trusted teleporters of dot and Kusama tokens, respectively are what we call the system level common, good chains. So that would be stuff like statement where it's like, these are the only chains that the governance of Polkdadot trusts to correctly middot or Kusama tokens. Mm. Right. And burn them in mid them correctly. Now you can probably establish sort of side channels or O other methods. I mean, one of the other features of XCM is that you can just do arbitrary function calls from one chain to another. Right. So you could imagine two chains sort of just setting up a, a protocol by which they mint and burn each other's tokens. And, you know, it's, it's, it's up to the governance of those parachains of those ecosystem decide which other ecosystems they trust to correctly mint and burn their token. Hmm. That's what I mean by trusted as in, like, it's not allowed to be done unless it's opted in to, by the governance of the issuing
+
+AnnaRose (00:25:18):
+Chain, but I don't really understand where, so like some is, is this sort of rule built into XCM? So like it says that these pairachains can make this choice, or is it sort of like the parachains themselves just like, decide this and exclude other ones. And I actually don't understand how they could exclude other ones. I think that's my question here.
+
+Rob (00:25:38):
+Mm-Hmm <affirmative> well, if it kind of depends on like, well, what's the taxonomy of a token, right? Because what the token is usually used, like, let's say we have some token on a parachain it's usually used for some kind of service or process on the issuing chain. Right. And what ultimately matters is like the token that you have on another chain is this through some sequence of actions, a valid claim on those services or underlying assets that are stored on the issuing chain. Right. And for that, the issuing chain, if the token has to eventually recognize that foreign token as being its own. Now, if it's a reserve, then it's always keeping track of the balances and knows exactly how much every other chain has. And if it's teleportation, like if some chain comes to me and says, Hey, I have a thousand of your tokens, I would like to teleport them over. It's like, I, you don't have the authority to do that. I don't recognize those. Which means that those tokens that exist on another chain are effectively worthless. Right. They don't actually correspond to a claim on services or assets,
+
+AnnaRose (00:26:45):
+But how do you block that? I I'm just sort of thinking if it's a, like a smart contract paraachain and like one could create a smart contract. That's like acting as one side of one of these bridges. I mean, maybe this is where I'm, I'm thinking about it wrong. Like, I always think of it like smart contract that like, you know, there's a smart contract on the other side and they're, they're kind of talking to each other, but like maybe actually with XCM, it's different. Like, am I, am I a little off base in how these teleporters are actually working? Or are they sort of functioning in that way? I think you hear me coming from like bridges as I've understood bridges. Okay. And this is where, yeah. I need to, I think I need to sort of rethink this a little bit.
+
+Rob (00:27:25):
+Mm-Hmm <affirmative> so, first of all, you can build any kind of ad hoc protocol over XCM because it supports arbitrary touring, complete function calls. Right. And one of the things that it does is it supports like a fee payment mechanism, right. For like paying for gas on other chains and and stuff like that. So, but what I'm talking about with reserve assets and and teleported assets is sort of the, what are the things that are first class within XCM and the way that we've approached chain design with substrate is this modular approach where, you know, you, you have different components, like let's say a smart contract executing component, a governance component, or things like that that you kind of package together. And that's, that's your chain. One of those components is an XCM executor. Ah,
+
+AnnaRose (00:28:17):
+Okay.
+
+Rob (00:28:18):
+XCM is actually it's a programming language and it's not a, to complete programming language, but it is a programming language. And there's an X CVM that cross consensus virtual machine, which executes those instructions and what you do when you're enabling a chain built in substrate to use XCM is you attach the XC VM to your chain and make it a part of your chain. And you say, this is the thing that handles incoming XCM instructions, and it'll execute the commands that are given to it by other chains. And then it'll pass some of those things onwards. Like if it's this function call, it might, you know, you might create some kind of custom adapt. It says, treat function calls as smart contract calls, or you might say, treat them as buy orders or treat them as sell orders. Right. Or treat them, you know, any kind of thing like that. So it's pluggable, as in, you can plug your own logic into it, but there's this sort of like base level virtual machine that you can bring into your, your chain.
+
+AnnaRose (00:29:14):
+I wanna kind of go back. So this actually makes more sense. And this is where it also does look a bit more like the, I like the IBC model that I know, which is also sort of like, you, you just sort of turn it on. It's not, you're not deploying like individual bridge contracts and, and that's sort of maybe where I was thinking there's
+
+Rob (00:29:30):
+Kind of a funnel.
+
+AnnaRose (00:29:31):
+Yeah. So, but, but the question here is like, does the XCM or XC VM maybe like, does it have in it whitelists and black, like, does it already decide like this is a parachain, this is a native parachain token. They are allowed to exist in these places. I assume not. I assume this is like much more, what is it? Permission list. And you sort of said like each chain can decide what they feel is a trusted teleporter, but I still don't understand how you couldn't have sort of a rogue. I don't know if it's whatever the agent is acting in between these two things. The one like, like, I just don't understand why you wouldn't be able to inject these tokens into this new parachain. Like how does it stop it? Cuz it seems like it's very permissionless. Like you've basically just turned on. Yes. This teleporter is on. Yeah. What's what's preventing it.
+
+Rob (00:30:22):
+Yep. This is a good question. I know. I think I know exactly the thing that I need need to explain and it's sort of addressing, right? Like how does one chain refer to and recognize another chain? So there's a notion of an origin, right? The, or the originator of a message. Mm-Hmm <affirmative> so if you look at just a single smart contract system, the origins are accounts on it, right. They're referred to by, on Ethereum, 20 byte, hex strengths, right. And those are either hashes of public keys or hashes of a bunch of contract creation parameters. Now, when you're talking about receiving messages from other chains, like you need to know which chain you're receiving it from and what account on that chain and that's how you do permissioning. Right? Mm-hmm <affirmative> so if you get a message, certain origins are gonna be authenticated to do different things.
+
+Rob (00:31:14):
+The way the origin system works it's sort of like file paths or URLs and there's sort of a universal origin, which is like, that's the world overall. And then you have consensus mechanisms within that. So you'd have like Polkdadot or Kusama. Those are like zones of sovereignty. And then you have parachains under those. Right. And then you have accounts under those mm-hmm <affirmative> and you're kind of flexible, like, you know, how chains determine their own origins, like, and what origins live on their chain is, is up to them. Right? So you could have smart contracts be valid origins under a chain because it's just a sub origin under their own chain. But one of the responsibilities of XCMP is maintaining the origin. So a message comes from parachain a and is sent to parachain B over XCMP parachain B receives the data.
+
+Rob (00:32:10):
+And it also receives the origin along with that, of where that message came from, you can have relative origins as well. It's like, you know, I, if I'm referring to my neighbor, I don't need to say the country town. And, and you know, zip code, I can just say, oh, that's Joe from three houses over. So you can kind of do the same thing with origins where it's like, this is a relative origin. This is from parachain X in your sphere of of influence. So, okay. Coming back to how can chains actually disallow, teleporting, essentially what they can do is they can configure which origins are allowed to teleport their asset to them. Right. So, oh, I, I would say, oh, like I trust Joe to burn tokens on his side and send them to me. But if I get a message from Bob or Alice or Eve that says, Hey, I burned tokens here. They are credit them to this account here. It's like, I never gave you. I never gave you the keys to my house. Right. To do that. Yeah. Yeah.
+
+AnnaRose (00:33:14):
+Who are
+
+Rob (00:33:15):
+You exactly. And it doesn't matter. Like, so Joe doesn't have the ability to give Alice or Bob or Eve my keys. Right. Like that permission that's, it's not a transitive permission because ultimately those tokens have to be reclaimed or reclaimable on on my chain now Joe could do something stupid. Right. So Joe has the ability to burn and, and mint tokens on on his side. Right. And he could kind of create a system where like, there are further tokens and derivatives on top of that, that other chains are allowed. Right. But that's Joe's problem. Right. And okay. If we didn't think that Joe would do a good job with that, then we shouldn't have given him that ability to mint and burn tokens in the first place.
+
+AnnaRose (00:33:57):
+But what if he did it sort of stupidly, but like now it's gotten away from him. There's these derivatives it's sort of all over the place. Would it be that like another chain could basically like maybe not Joe, but one of these other ones would make a claim then back to you saying, oh, no, but it's like from Joe, does that, is there any impact of like a connected origin? Would the parachain, the original parachain actually be able to recognize that as bad? Or could they ever accept it? Like if it's a derivative on a derivative, it's like been synth, Maybe it's synthetic, but it is from Joe.
+
+Rob (00:34:30):
+Well, I think the question at hand is like, can they trick Joe into, into doing something wrong? Right. Because if ultimately someone comes to me and says, Hey, I have this derivative token of your token, please credit me your tokens to my address. It's like, I'm not gonna do that because that's different. It's true. So they have to kind of trick Joe into doing, doing something wrong with those derivatives. But you know, you can also have other defenses like you know, keep track of what the total issuance of the token was in the first place. Right. And like, make sure that it never got, you know, it never exceeds that, right? Like there's no infinite money printing going on or, or anything like that. So you can have some kind of like guardrails, but I mean, one stuff is out into the broader, like complex touring, complete ecosystem, you know, you can't really keep, keep track of like who everywhere has claims on what if you're using a teleport based system.
+
+Rob (00:35:24):
+That's why it should only be used in, in rare circumstances. The default should always be maintaining reserve balances, but you can also have, I mean, your, your own chain is a reserve for like some parachain is gonna be a reserve for its own token probably. Right. That's the, the pattern that we're seeing of urgent, but you can also for secondary tokens issued on other chains that aren't the primary token of the chain, you might use statement or state mine, or like smart contracts can also be reserve you know, asset reserves for their own tokens and things like that.
+
+AnnaRose (00:35:54):
+That was actually, yeah. I, I was thinking if there was like, you know, like an ERC 20 type thing, which I think exists, right. Are there like these XCM twenties,
+
+Rob (00:36:03):
+XC twenties. Yeah.
+
+AnnaRose (00:36:05):
+What if there are things like ERC twenties on these existing parachains? So there's the parachain and that's their reserve, that's their base token. But then if you start building on top of it, does that create more problems or would you still say like the reserve can still exist on that first chain where it's been deployed?
+
+Rob (00:36:22):
+Yeah, definitely. I mean, it's, it's kind of a design decision. That's up to the smart contract author, but we are seeing some standards start to emerge with like ERC 20 S plus extra stuff. Right. That's necessary to make the, the token more compatible with the XCM environment and kind of cross chain native. But there, there are upsides and, and, and drawbacks to any approach. And one of the issues, if you're using say a smart contract as a reserve is that you end up probably paying more for gas, right. Whereas if you have a specialized chain that does nothing, but reserves, those reserve operations are gonna be relatively cheap, but then they live somewhere else than the actual logic of the token. And so these are the kinds of decisions that cross chain application authors are gonna have to have to make.
+
+AnnaRose (00:37:09):
+Is there a, like a entity that actually does the relay of messaging in XCM?
+
+Rob (00:37:14):
+Yeah. The 'X' in XCMP it XCMP is part of the relay chain protocol. So what we have deployed now is, is something we're calling XCMP light. So part of the parachain validity function of like, Hey, was this block valid? One of the outputs of that function is what messages were produced and to which chains and, you know, those messages themselves are only valid. If they have channels open to those chains and those channels have capacity. What happens is the messages right now in XCMP light, just go onto the relay chain. And then those are some of the required inputs into the next block on the receiving chain. So the receiving chain has to pull messages out of the relay chain and process them, and then tell the relay chain, how many it's processed now. One of the protocols we're working on is proper off chain version of XCMP, where the only thing that would appear on the relay chain itself is a hash of the message. And then these messages would actually be part of the data availability protocol so that they're stored and distributed across all validators. And that allows for less data to be stored on the relay chain itself.
+
+AnnaRose (00:38:27):
+Hmm. But in this case, so the validator is the relayer, there's no other agent. Yeah,
+
+Rob (00:38:32):
+That's right.
+
+AnnaRose (00:38:33):
+Is there like a sequencer for these messages?
+
+Rob (00:38:36):
+Our parallel to sequencers is COAD
+
+AnnaRose (00:38:40):
+Okay. That is co yeah, you're right. Okay. So that's the collators
+
+Rob (00:38:42):
+Has to pull out. Yeah. They have, there are certain requirements, right? Like to make sure that queues actually get processed, is that like, I don't remember the exact details of the rules, but you know, if a queue is building up, you basically have to process messages faster than they're coming in. And process from Polkdadot's perspective could just mean buffering on the Parachain side doesn't necessarily mean acted upon yet, but taken out of the relay chain and put into the parachain so that we don't get queues filling up all the
+
+AnnaRose (00:39:08):
+Time. Got it. And I just realized, I sort of like, I, I know, I know what a collator is, cuz we run them at the ZK validator, but maybe we should define what a collator is. Cause I don't know if we did.
+
+Rob (00:39:17):
+Yeah. So we have a a system where there are basically two main roles and validators are kind of generalized data availability and validation, right? The execute web assembly, blogs. They only need to know how to check stuff is good. And to keep stuff available. The collators are the ones who are actually authoring parachain blocks. So they keep an eye on a me pool on a transaction pool. They bundle up blocks, they execute the state transitions. They produce the proofs that the blocks are good. And then they ship those off to valid to check. So we have this kind of duality where the collators are chain specific, right. Every chain is gonna have its own collator logic, you know, based on the types of transaction that it does.
+
+AnnaRose (00:40:03):
+And, and do the collators touch the messages actually like in what you've described, like there's the XCM module already in the parachain that allows it to communicate with others. But this is maybe where I like are the messages being bundled up in what the collator doing and then like written to like sent through the collator to the validators that are actually sending this to the other ones. Okay. So they are, yeah. Okay. So that's, they are the sequencer there.
+
+Rob (00:40:31):
+I guess I was nodding
+
+AnnaRose (00:40:33):
+<Laugh> that
+
+Rob (00:40:33):
+One appear in the audio. 
+
+Rob (00:40:37):
+The co-leader send the outgoing messages that were produced by the execution of the block, to the validators and then validators who do check that block check that it does indeed produce those messages. And co-leader have some flexibility in what messages are produced, but only as much as allowed to them by the logic of the parachain of that roll up. And they have flexibility, some small flexibility in the number of incoming messages they process, they have some small flexibility in the transactions that they include in the block. They have some flexibility on when they author the block. Exactly. and things like that that do give collators some influence over the messages that are produced and the messages that are processed.
+
+AnnaRose (00:41:22):
+Hmm. Do you think there's an MEV out there where it's like this cross chain MEV where it'd be like being able to slow down or prevent, or I don't know what a sandwich attack would look like here, but like actually affect the messages on one side and like affect how that goes in.
+
+Rob (00:41:38):
+There are gonna be analogs to it. I don't think it would be exactly the same, but there will definitely be analogs to it where, I mean, an analog to something like, like flash bots would be based on users submitting sort of suggested execution and transaction orderings to collators, but it would likely end up being parachain specific. I mean, for instance, it might be the case in many pair chains and indeed it is the case. If you're using defaults and substrate that incoming XCM messages are processed before any transactions are executed. Right. So it's up to the chain. Authors decide how much flexibility they want co-leader to have in that. And the more flexibility that co-leader do have in it, in, you know, interleaving incoming messages with transactions and stuff like that, that opens doors for more MEV stuff to be done.
+
+AnnaRose (00:42:30):
+Hmm. Like now I'm trying to follow it through. So you're like, you have a mess and I guess I still have this. I, I I'm. So from, and especially maybe cuz of the interviews I've done, I'm so always thinking of like this bridge where like, it's like from point a to point B, but here it's like from it's bundled in with the whole consensus, right. It's not just this message is it's not just a token transfer and ma like, can you help me kind of like weave through that so that I, I, I would understand how it goes from like one side to another and, and back potentially,
+
+Rob (00:43:08):
+This is one of the reasons that we kind of make a distinction between the message passing layer and the messages themselves,
+
+AnnaRose (00:43:15):
+By the way, I know I've totally been saying XCM and XCMP wrong, and I'm so sorry <laugh> to the listener and to you is
+
+Rob (00:43:22):
+Why we're thinking about changing, changing the names. Okay.
+
+Rob (00:43:26):
+<Laugh> anyway. That's why it's kind of important to make these decisions because whenever you're engineering, anything, you kind of need black boxes. You need tools that you know, what they do, and not necessarily all the intricate details of, of how they work. And from the perspective of someone who's writing an application, doesn't really matter that much how a message is delivered. You just care that it arrives that and how fast it arrives and how much you have to pay for it. So that's all stuff that's abstracted in the XCM P protocol. You know, we, we guarantee that messages do arrive, except there are some sort of edge cases where parachains go down, like, you know, their lease ends, right. And the parachain doesn't continue anymore. Or if they're closing channels, some messages at the very end might get dropped, sort of the bridge is down.
+
+Rob (00:44:19):
+It no longer exists. Right. Mm-hmm <affirmative> so that's just, but for the most part, as long as both chains are up and the channel is still open, then messages arrive and they arrive within a couple of blocks. So from there you can have any kind of acknowledgement or callbacks or anything else that you need built on top of it in, in protocols protocols there. So one of the kind of cool things about XCM is that it is, as I mentioned, a programming language, so you could kind of write like if thens, right. Or you can do if then else, right? It's like, I will try to do this thing. And then if it succeeds, I'll do that, which means like send a message back mm-hmm <affirmative> or you can do else, which is, if it fails, then do that. And you can kind of string together these long sequences of conditional instructions that need to be executed on some remote chains. So essentially it's like you are programming the other chain to do certain things and can build a bunch of protocols on top of that that are more complex.
+
+AnnaRose (00:45:24):
+Wow. Does that kind of mean that you don't have to, you don't have to be programming on both sides then I obviously I'm still always thinking like smart contract, but like say you have a smart contract platform. You've created a contract. It interacts with XCMP I think I'm saying this, right? Yeah. It it's basically where you can code in what it will do on this other chain, but then do not then have to also go on that chain and deploy something. Or can you, can you just use this programming language to go over there, do stuff and bring back whatever you need.
+
+Rob (00:45:54):
+You can use it for a lot of stuff now it's not touring complete. And one of the reasons for that is because of fee payment, because then you can predict ahead of time, how much you're actually gonna have to pay the other chain to execute all the instructions that you're sending it, but you can build pretty versatile applications that are just making use of XCM
+
+AnnaRose (00:46:14):
+Without like having to deploy something on another chain. Yeah.
+
+Rob (00:46:18):
+I mean, these it's it's meant for, because if we look at our design philosophy, it's like, we don't want every chain to have smart contracts or maybe even to have smart contracts as they're. Right. So then you need some ways of executing conditional logic on chains that are not smart contracting platforms. Now four chains that are smart contracting platforms, you might have less complex XCM programs for interoperating with them because the logic can just be handled by the smart contract that you're sending the message to on the receiving chain, but for chains that are just doing basic stuff, they can, you can make use of, of XCM to, to enable more complex interactions with those chains that do have conditionals that do have air handling that do have alternate cases.
+
+AnnaRose (00:47:03):
+Can you imagine, I, I wanna use, I wanna do a privacy case. I sort of wanna, like, this is often what, what I'm trying to bring up when I talk about these bridges, but it's like, so imagine there's a privacy parachain, privacy focused para chain that does something, maybe it has like a private swap or something that's like, it does something very, very simple. And then you have, we're gonna call it like parachain a, which is actually where you're starting from. You could use XCM, you could basically send something over this messaging protocol to this privacy part. So parachain a is a smart contract platform in your smart contract itself. You have written some XCM. I don't know if you can do that, but like you basically written some of the like XCM code to execute some sort of swap. So you like, I'm wondering if you can do this, could you basically take a token on parachain A, send it through XCM, do the swap, like execute the swap on the other side privately and then send back whatever you got. I mean, obviously it would reveal on both sides, what you've done, but like, could that happen?
+
+Rob (00:48:10):
+There are probably use cases that are similar to that in, in that specific example. I mean, it runs probably into the issues of like, well, if you know how much went in and how much went out, it's,
+
+AnnaRose (00:48:21):
+It's not private
+
+Rob (00:48:22):
+Yourself, but there could be things where like like if you have something like an account abstraction, right? Where like smart contracts are acting on behalf of users, you have a user producing some kind of zero knowledge proof sending it to parachain X, which then forwards the zero knowledge proof over to the privacy pair. Chain is determined that something is happening like a swap or something. And then you often have in these, in these types of private systems, you have some type of token it's, it's not really a token, but in crypto, in the cryptographic world, you would call that a token. But I don't want to confuse that with like, you know, crypto coins. Mm-Hmm <affirmative>, mm-hmm <affirmative> this is mm-hmm <affirmative> it, it's some kind of little identifier that indicates like it's an identifier. Yeah. Like it's an identifier of like the thing that has been deposited or the trade that has been done, or the LP tokens that are owned or, you know, something like, and that could be sent back over XCM right. So you could kind of have transparent cross chain custodianship of claims that exist in urology ecosystems.
+
+AnnaRose (00:49:32):
+Wow. That's pretty cool. Your example's a lot better than my example. <Laugh> my example didn't make sense at all. <Laugh>
+
+Rob (00:49:42):
+It's a joint effort. Yeah.
+
+AnnaRose (00:49:43):
+Thanks. <Laugh> that's cool though. Is it almost like you could have one side, one parachain be your shielded one parachain be your transparent and this like XCM is the shielding and UNS shielding of it. Oh, by the way, I don't wanna use shielding on shielding anymore. I wanna use cloak and decloak. That was the one that I wanna start using, but I don't know if it's gonna happen.
+
+Rob (00:50:06):
+Cloak sounds kind of nwar.
+
+AnnaRose (00:50:08):
+<Laugh>
+
+Rob (00:50:09):
+I feel like I wear trench coat. <Laugh> Hey, do you wanna see some tokens?
+
+AnnaRose (00:50:17):
+Oh, for me it's it's pure star Trek. My friend it's Romulans.
+
+Rob (00:50:22):
+Yeah.
+
+AnnaRose (00:50:22):
+Come on, man. It's the ships. It's the cloaking technology that like is very, very valuable, but yeah,
+
+Rob (00:50:29):
+I guess. Yeah, that's true. Like the Harry Potter and visibility cloak. That's what I
+
+AnnaRose (00:50:33):
+Thinking like that. Okay. Okay.
+
+Speaker 4 (00:50:35):
+<Laugh>
+
+Rob (00:50:38):
+I'm not saying Harry Potter wore a trench coat and like JK Rolling if you're listening, please don't take that the wrong way. <Laugh> yeah, but I don't know exactly how, how it would work. And I think these use cases still have to have to emerge, but XCM is kind of flexible enough where you could do stuff like that.
+
+AnnaRose (00:51:01):
+The fact that you said you could actually send a proof over XCM so it's quite, you can send quite complicated things. It's not just like, like, and that's actually, maybe another question is like, what kind of stuff can be sent because this sounds like it could be anything it's not like you can send token transfer, you can send, like, it's not like there's some limited sets of things or is there actually,
+
+Rob (00:51:24):
+You can send messages through XCM that are like invoking any function on any smart contract or any subcomponent of any chain. And then you can even put the results of that into like a holding register and then forward that along to another chain mm-hmm <affirmative> so you can have like multi hop. You could have XCMs that say like, well, I want to call this function on this smart contract. And if that exceeds succeeds, then I wanna even send that over to yet another chain. So what you can do is you can set up these multi hop instructions that are just automatically UNW by the protocol. And you just have a lot of data and, and operations flying around as a result of that.
+
+AnnaRose (00:52:04):
+But this almost sound like, are you kind of wrapping data? Does the proof live off of it? And you're just sending it like an identifier that relays back to this thing, or is it actually being sent the actual proof
+
+Rob (00:52:16):
+You would send the proof, but it would just be part of the call that you're making to some other chain you're saying like, I wanna call this function with these parameters. And that function is like, I accept proofs that correspond to this circuit, that proof that right. And so that proof is actually getting submitted into the system somewhere else in some other chain, okay. Then it's getting sort of hopped along and then it eventually makes its way into the endpoint. So the user never actually has to call that function on that smart contract directly now, zero knowledge proofs. You always have to create them off chain part of the problem, but it's not the case that you necessarily need a user to submit them to the chain that it process this them directly. Mm.
+
+AnnaRose (00:52:56):
+But you have to verify them, like that's, it's the verification part that I'm curious about, like where is that happening?
+
+Rob (00:53:03):
+That would happen on the chain that receives the XCM. But I suppose that's where you could get into those types of if then else situations, right. Where it's like, if the proof, if it, like, we're gonna send this message that contains this proof over to this chain, and then this chain is going to check whether that proof is valid. And if it's valid, it's gonna like update some internals. And then if that works, then we do one thing because we know that the, the proof actually was valid and otherwise it didn't work. Right. And then we go into some error path where it's like, Hey, actually that proof was garbage. And I mean, you pay for the execution time. So like, if you're a user submitting garbage proofs, you're just, you, you just pay for that. Mm-Hmm, <affirmative> nothing happens and you've wasted your money and others' time.
+
+AnnaRose (00:53:48):
+Hmm. Is there any work in, and this is maybe not to you, this is more of like to the foundation and stuff, but like, could XCM have in itself built these like provers and verifiers, like, would that be where you'd put it into that pallet somehow? Or would you need to build these things on each side? Always
+
+Rob (00:54:08):
+For now, you'd have to build them on, on both side. I think the challenge would be coming up with a reasonable abstraction that can cover like lots of different use cases or a more dense abstraction. That's focused on a particular, very common use case. XCM is meant to be an upgradeable format. In fact, we've got, you know, XCM V 2 being upgraded to XCM V 3 now ish. And, you know, there's sort of a version negotiation thing that chains can do. So it's reasonable to expect that once we know what those things are, that lots of chains are gonna want to do with zero knowledge stuff, then those might get included at XCM more directly at a higher level. Otherwise people are just gonna have to build them in with the more generic side of XCM.
+
+AnnaRose (00:54:51):
+Let's talk a little bit about XCM V3, because you just mentioned that that's happening, but like what, what is V2 so far? So what's been deployed on Polkadot of today. V2.
+
+Rob (00:55:03):
+Yeah, that's V2.
+
+AnnaRose (00:55:04):
+Okay. And what's on Kusama right now. That's also V2, I guess.
+
+Rob (00:55:10):
+I believe it's V 2 as well. Yes.
+
+AnnaRose (00:55:13):
+Okay. But tell me what V3 is. What's different like, or, or maybe like, tell me what everything we've talked about is that all V2
+
+Rob (00:55:22):
+For the most part, I think some of the, some of the more complex fee payment stuff and error handling stuff is V3, but the stuff like reserve and teleports reserve transfers and teleports and stuff, that's all in, in V two. So what V3 is it's support for XCM over bridges, right? So it's cross consensus messaging. This is saying like, Hey, a parachain on Polkadot can talk to another parachain on Kusama over a bridge. And then, then there would be relayers, right? Because we're going over a consensus divide, or could even talk to a chain in the Cosmos ecosystem that's built on substrate or implements. XCM however, in the near term, the easiest way to add XCM to a cosmos chain of ... To be implementing your chain in substrate or being sent over to, to Ethereum. So it kind of adds some primitives that are useful for for bridging and it's, it adds support for NFTs. So not just fungible tokens, but NFTs over XCM being transferred. And it's got this new multi-stage fee payment thing. That's more in the nitty gritty, but it, it just, it's a more ergonomic way for chains to pay for execution on others chains.
+
+AnnaRose (00:56:44):
+Like how do you imagine actually XCM working with other bridges though? So you just sort of said there that it could almost be like, would it almost be like, you'd get a bridge, like a nomad or an AXR that would actually implement XCM somewhere in itself that then would allow it to interact with whatever their bridge to, could you imagine that being a way or, or would you say that there'd be like a brand new bridge that builds itself on top of two XCM endpoints? Like maybe one within Polkdadot and one outside of it?
+
+Rob (00:57:16):
+Yeah. It's you need any kind of bridge that can support arbitrary data. And I know that quite a few do it's actually not really the bridge that's most important. It is the the adapters that are written on both sides, so that you're basically putting this virtual machine and execution of XCM messages on both sides of the bridge. Now of course you have to reason a lot more about security assumptions, and you have to be a bit more aggressive in how you configure that virtual machine so that it's not doing things that might be weaker cuz it's coming from another consensus environment. But it, it's kind of funny. The bridge itself doesn't really matter too much. Now I think light client based bridges are kind of the best for this. And the reason for that is, well, I don't like multisig bridges in the first place. I mean, nobody does except for mm-hmm <affirmative> people who like making a lot of money and 
+
+AnnaRose (00:58:12):
+Moving quickly <laugh>
+
+Rob (00:58:14):
+Yeah, moving on. Yeah. But like light client bridges are actually like secure, but the problem is they're very gas heavy and kind of, it's expensive to do light client proof checks, but those who can actually pass data quickly and securely. So that's great. It's just kind of expensive for the L one that that's doing the light client bridge implementation, and then you have optimistic bridges and optimistic bridges are great four use cases that are more like fungible where you can do market making essentially and say like, Hey, you know, when like we can, we can just sort of market make tokens that haven't actually arrived in. Then when they do arrive after the fraud period, then we'll collect a tidy profit on that doesn't work so well for like arbitrary programming of in the message, right? Cause like how do you market make a program? You can market make a token transfer pretty easily, but mark and there probably will be use cases that can make use of optimistic bridges. But that's, that's the thing that I would, I would be concerned about a little bit with the user experience. Essentially.
+
+AnnaRose (00:59:18):
+I wanna do a quick, I know we already, we covered this like much earlier in the episode, but I do wanna just very quickly revisit the trusted teleporter part because I feel like, I think I actually understand better now how this whole thing is working. And I, I think the question that I have now about this is like, I think your, the reserve transfer makes a lot of sense where with XCM, you're not, you're not doing multi hops. Like you'll often just be going back to that reserve through XCM P but with the teleporters, this is like the native tokens. You don't use the term reserve here. So I am wondering if you do have like multi hop through these trusted teleporters, if that's something that's expected behavior or if you're also with the teleporters, always coming back to the canonical one in between.
+
+Rob (01:00:05):
+So with the teleporters, the only thing that really matters is the ones that are right next to the issuer, right? It's like what, who does the issuer of the token who's supposed to like be the sort of protector of the token? I mean, a blockchain is the issue where it's, you know, it's supposed to make sure that there's no infinite money or anything like that, who does it trust to mint and burn tokens. Right? And then those chains can delegate that trust in other ways. But ultimately it's, it's their responsibility. They have to be trusted not to delegate that in irresponsible ways. If that makes sense.
+
+AnnaRose (01:00:42):
+Yes. But I, I guess it's not satisfying somehow. Cause I'm like, well, what if they're not trustworthy?
+
+Rob (01:00:49):
+<Laugh> then you shouldn't delegate them as a, as a teleporter,
+
+AnnaRose (01:00:52):
+But I'm trying to picture like, what's an example of that. Like, and as a teleporter, the teleporter in this case is a parachain. So you have parachain B that decides parachain B is okay, but parachain B is gonna like send these tokens out elsewhere. How do you know like, what if you don't know that? Or if it happens after, or it gets 51% attacked or something like something changed,
+
+Rob (01:01:12):
+They can't get 51% attack. Cause they're all under the same security mechanism. So you can't 51% attack one without, for 51% attacking all of them at the same time. And there's this, all this fork choice stuff. Right. So they're kind of two broad answers to that. So one is like, well, what is, what is actually using trusted teleporting in practice? And the answer for that is like system chains. So one of the goals with Polkadot is to offload a lot of relay chain functionality like governance and staking and and, and maybe some other stuff like even data availability onto parachains, right? And these will be system level parachains that are like totally controlled by Polkdadot's own governance. And those chains can and should use real thought, right. And they should use it relatively without friction. So that's one of the main use cases of trusted teleporting.
+
+Rob (01:02:00):
+You might also have like multiple parachains that are developed by the same developer team or have the same rough community or even share a token. Right. And then those chains should treat each other as like like you have, might have unions of parachains that all use the same token. Right. And then they're all tele teleporters for each other. With respect to like the, the question of maintaining token balances accurately across many chains, like preserves are the best solution for that until we have something like spree, which we talked about in the last episode, but that's sort of about attaching trusted code to the parachains, execution that we know handles token transfers correctly. So then you don't need to mess around with this like teleporter stuff because the balances are kind of outside of the parachains control, even though they're spread across the ecosystem, but the spree stuff is pretty far away. So I didn't wanna mention it in too much
+
+AnnaRose (01:03:01):
+Detail now
+
+Rob (01:03:01):
+We have, and now I have that's okay. But you know, that's, that's not, that's not on the, on the immediate roadmap. It's something that will happen eventually and it'll be pretty useful when it is there, but until it does, then the reserve is the best solution.
+
+AnnaRose (01:03:17):
+I think the way I've been thinking about the teleporters is I did not think of it on the system level. I did not think about it as taking functions, putting them on parachains. And of course you'd want the same. Like that's very trusted. I get that. I think I was thinking of it like synthetic actually just regular synthetic tokens. And that is maybe a last question here is like, what about that? If you have statement and you're using, you're like sending them somewhere else. So they're, it's like a synthetic version, I guess, on a different parachain. That makes a lot of sense because state mint is made just to have those reserves. But what about sending around other parachain tokens like their native tokens as synthetics on new chains? Is that what you talk about? Like reserve transfer? I, I, I think I've been thinking very much on that synthetic front, like this, the synthetic tokens, not these like internal almost canonical tokens like that. That, yeah. I don't know if I just made any sense. I don't know what my question is here. Really. It's more like,
+
+Rob (01:04:20):
+Well, I think I know, I think I know what you're kind of getting at and I mean, essentially what you would have on some para chain is a sort of synthetic or wrapped version of a token. Right. And mm-hmm <affirmative>, but that corresponds to a claim within the reserve. And then instead of adding more layers, you just go through the reserve to make sure there's only ever one layer across multiple chains. And like there are gonna be different reserves for different tokens. And this kind of makes sense because if you think about like, if you're taking something like a DeFi protocol on Ethereum and you're adding a new token to it so that it supports well, what do you, do you add the address of the token? Well, in this case you would add the reserve, right? How do you from, ah, yeah. Where this defi protocol exists, reference the reserve of that token so that we can handle wrapped versions of it.
+
+AnnaRose (01:05:15):
+Okay. Yeah. Makes sense.
+
+Rob (01:05:17):
+And then you can just, that, that would just be an XCM origin pretty much, which is the, the asynchronous or crosschain version of, of an address.
+
+AnnaRose (01:05:26):
+You just said your favorite word. <Laugh> asynchronous. Rob, is your Twitter handle? Tell me what asynchronous means to you?
+
+Rob (01:05:35):
+Well, it means a bunch of stuff. I think it's funny, first of all, <laugh> it just sounds kind of catchy. Asynchrony is gonna be one of the biggest trends. Like I kind of view it as something that's slowly but surely blowing everybody's minds and it's gonna change the way that they think about developing on, on blockchains. But what asynchronous really means is like being disconnected from time. Mm-Hmm <affirmative>, I think that's a very cool concept, right. Because if we're talking about building communities with new rules and that's what blockchains are kind of for is allowing people to create their own rules for interaction. It's like, well, how do you take time out of it? Or how do you make it more about just the way that people cooperate? I don't know exactly how that would look. But I think it's an interesting sort of subversion of what people are used to, for example, and how people work, right? Like wake up at nine, get on meetings, have calls, have lunch, right. And the whole asynchronous economy is gonna flip that on its, on its head, everything is 24 7 in the blockchain world. It's there when you need it. Not when it needs you.
+
+AnnaRose (01:06:52):
+Hmm. That's cool lifestyle. So, but that's the asynchronous lifestyle that's but, but you, you just said, it's also like gonna change the way that people do development. What do you do you mean like the way they work together or do you mean like the way like the blockchain's working?
+
+Rob (01:07:07):
+Yeah. That aspect is more about how blockchains will work together, how people will develop applications. Right. The immediacy will be kind of removed from it. It's kind of, so synchrony to me is a concept that's very closely tied to, to centralization, right? Because if something is instantaneous, it's on demand, then it's under the same umbrella, but the default should be for things to be disconnected. And that you opt into systems where things are more tightly coupled, right. For when you need them. Like if you're building, I dunno, video streaming services or chat platforms or online games like, well you need some degree of coupling, but that's not the default. And the shift to an asynchronous landscape in the blockchain world is about breaking those couplings and then reintroducing them where they're valuable.
+
+AnnaRose (01:07:54):
+Hmm. Where do you see like a more asynchronous system working better? Like you said, you said video streaming, but like let's use a Blockchain context, would it be like a trade should be synchronous, but a settlement can be asynchronous or something?
+
+Rob (01:08:09):
+Yeah. That, that's an, that's an example. Gaming should be synchronous the game development and the structure around the company that produces the software or the, the DOW say or something like that is, can be asynchronous. Right. I think it's, it's about preventing bureaucracy in some way, but it's all very vague. I mean, I don't want to sound like an absolute asshole, so <laugh>, I'm
+
+AnnaRose (01:08:37):
+Gonna,
+
+Rob (01:08:37):
+I actually, I just think it's kinda an interesting concept that 
+
+AnnaRose (01:08:41):
+I think it's interesting too. I've liked your .... I've liked your, your Twitter handle and I am glad you, you came on the show and shared a little bit of your thoughts about "asynchronicity". Is that how we call it?
+
+Rob (01:08:52):
+Asynchrony
+
+AnnaRose (01:08:54):
+Asynchrony? Well, Rob, I wanna say a big thank you for this like journey through XCM over XCMP and yeah. Thanks for exploring all of this, these questions that I've had for a while. I am really excited to use it, cuz I guess I can now as of now on Polkadot, I could actually send some things around. Is there, is there actually anything built with it already that we could like use?
+
+Rob (01:09:21):
+The channels are opening right now, the first channel was just sending, you can send tokens to statemine and then you can send them back. But now the channels between parachains are starting to open. That'll take a, at least a few days, but probably a few weeks for them to be solidified.
+
+AnnaRose (01:09:37):
+Cool.
+
+Rob (01:09:38):
+Yeah. Good to be here. This was fun. We should do this more often. I wanna cohost again, flip the table.
+
+AnnaRose (01:09:45):
+Yeah. Well we'll try to find something in the next few months. But yeah. Thanks again, Rob, for coming on.
+
+Rob (01:09:52):
+Cheers.
+
+AnnaRose (01:09:53):
+I wanna say thank you to the podcast. Editor Henrick, the podcast producer, Tanya. Chris, who helped with research on this one. And to our listeners. Thanks for listening!
+

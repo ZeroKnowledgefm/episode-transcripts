@@ -1,0 +1,810 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week, Kobi and I chat with Trent and Carl from the Ethereum Foundation. We chat about their work on the KZG ceremony and dive back into the topic of trusted setups. We cover what they're for, how they've been run, and then look at how this ceremony is different from the previous ceremonies we've covered. Before we kick off, I want to let you know about the upcoming zkSummit9 event happening on April 4th in Lisbon. Once again, we bring together the top teams and researchers to talk about their latest work and the most cutting edge implementations in the ZK space. So, mark your calendars, apply to attend and join us now. Tanya will share a little bit about this week's sponsors.
+
+Tanya (00:01:07):
+Aztec network is building a next generation encrypted blockchain powered by Ethereum. The team is proud to announce Noir, the world's first universal ZK language. Noir makes it safe and intuitive to write ZK circuits and encrypted smart contracts. Aztec is now hiring engineers and cryptographers to build an execution layer, enabling scale and privacy for crypto applications. Join the team making encrypted Ethereum a reality. Learn more by visiting aztec.network/careers. So thanks again, Aztec.
+
+(00:01:39):
+Anoma's first fractal instance. Namada is launching soon. Namada is a proof of stake L1 for interchange, asset agnostic privacy. For privacy, Namada deploys an upgraded version of a multi-asset shielded pool circuit, otherwise known as MASP, that allows all assets fungible and non fungible to share a shielded set. The MASP circuit's latest update enables shielded set rewards directly in the shielded set, a novel feature that funds privacy as a public good. Visit namada.net for more information and join the community on discord at discord.gigi/namada. So thanks again, Anoma. And now here's our episode.
+
+Anna Rose (00:02:21):
+So today we're here with Trent and Carl from the Ethereum Foundation. Welcome to both of you.
+
+Carl (00:02:26):
+Thanks for having us on.
+
+Trent (00:02:27):
+Thanks for having us.
+
+Anna Rose (00:02:29):
+I also want to welcome Kobi who's going to be co-hosting this one.
+
+Kobi (00:02:32):
+Hello.
+
+Anna Rose (00:02:32):
+So today we're going to be revisiting the topic of trusted setups. This is a topic we have covered quite a few times on the show. I will add some links in the show notes to the previous episodes. I mean, I did one full episode just on trusted setups two or three years ago. It's going to be kind of fun to dive back into it. Today we're going to be talking about the KZG ceremony, which is a ceremony initiated by the EF. It's kind of a unique episode because we're actually doing an episode on it while it's running. So that's a new one. I guess anyone listening can actually potentially participate and we're going to find out a little bit more about this. So maybe before we kick off into all of this, it would be great to get to know you two. Trent, why don't you tell us a little bit about yourself, what you work on day to day, and why you're working on a trusted setup.
+
+Trent (00:03:22):
+Sure. So I've been in the crypto space for a couple years now, since about 2016. I used to work in architecture and design. That's what I went to school for and that's my training. Got into Ethereum and pretty quickly fell down the rabbit hole and worked at a couple different companies like ETHGlobal, Whiteblock, and then eventually made my way to the Ethereum Foundation where I do network coordination or upgrade coordination. So for example, EIP-1559 and the merge. These are the sort of things that I'll be getting the community to engage with, helping them understand what these protocol changes are, helping them engage in the process, things like that. So that's what I am doing day to day. And then this is sort of a special project, the ceremony that we've been working on since last May, I believe.
+
+Anna Rose (00:04:13):
+Cool. And what about you, Carl?
+
+Carl (00:04:15):
+Yeah, so I'm a researcher with the Ethereum Foundation, mostly focusing on the proof of stake side of things and all the fun challenges that go along with it. I've contributed a lot to the specifications that is now Ethereum Proof-of-stake. And I guess my specialty is focusing on side projects or like, not the primary research, not the main specs but things that are very important to the ecosystem but need extra work. So for example, the launchpad and all the deposit flow for validators, I think many people would be familiar with. I did a bunch of work there and on wallet standards, etc. And now my latest focus has been on this KZG ceremony and EIP-4844 more generally.
+
+Anna Rose (00:05:00):
+Is this both of your forays? It's like first forays into ZK land or had you been doing stuff like this before?
+
+Trent (00:05:07):
+No, I've never worked on a trusted setup before. Well, I mean, I've participated in them, but not
+
+Anna Rose (00:05:11):
+Okay.
+
+Trent (00:05:11):
+I haven't run one or, yeah,
+
+Carl (00:05:13):
+I mean, in terms of doing anything beyond having discussions learning, sure, yeah, exactly. Learning the lots of discussions with my fellow researchers in the EF and other people in the space trying to understand all the latest protocols and how we can apply them and tweak them and improve them. But I guess this is my first like, output that would be meaningful to most people.
+
+Anna Rose (00:05:35):
+Cool. One side note, like Kobi and I, we've mentioned this a few times on the show, but years ago we ran or co-ran, I mean, Kobi really built a lot of this. I helped and we actually had some other folks with us as well, but we co-ran a trusted setup. And Kobi, I was just thinking about that trusted setup. So, this was for Plumo that went on forever?
+
+Kobi (00:05:56):
+Yes.
+
+Anna Rose (00:05:56):
+That was like a year
+
+Kobi (00:06:00):
+And like it was I think, let's say orders of magnitude less participants than there are already in the live KZG ceremony. But there are good reasons we can talk about that.
+
+Anna Rose (00:06:11):
+Yeah, I'm really glad we did that though. I mean, it just kind of gave, for me at least, it was like real insight into what it means to run one of these things. I want to talk about the KZG ceremony. What is this ceremony maybe starting from like a person who's potentially like, wants to participate in one of these things? Likewhere is it, what is it? What's the plan for it?
+
+Trent (00:06:36):
+KZG ceremony is, if we're thinking about it, literally it's an event that goes on for a couple months or at least it's planned to and it is literally; the Ethereum Foundation hosts a sequencer which passes data between a number of participants. They perform some computation send the data back to the sequencer server, and then you repeat the process until we hit a time limit or the output has been judged to be sufficient in some regard. So that's like literally what's happening. There's just data being passed around and you perform computation locally. But if you think of it more from a high level, ceremonies generally are about coming to consensus on a process. Same thread you'd see in consensus mechanisms, how they're trying to come to consensus on the head of the chain.
+
+(00:07:30):
+There's people participating and there's incentives and things that people are trying to do possibly to corrupt it. It also fits into that sort of area of crypto broadly where it's this group or distributed community of people who are trying to come to consensus on this, in our case a string of data. And so there are a number of things that you can do to improve the process around coming to consensus around whether this string is legitimate, whether the process to create this randomness was credible. That's maybe more of the high level perspective. Yeah.
+
+Anna Rose (00:08:05):
+And I think like listeners of this show, I've mentioned this a few times, so the thing that these ceremonies are trying to output is called an SRS. Can you tell me what does that stand for?
+
+Carl (00:08:15):
+The structured reference string
+
+Anna Rose (00:08:17):
+Yeah. I think every trusted setup, every ceremony will output something like this. The SRS is meant to be public, but every contribution that you just described from individuals is meant to be private.
+
+Carl (00:08:32):
+Yes. It depends how you define contribution here.
+
+Anna Rose (00:08:34):
+Okay.
+
+(00:08:35):
+So people add a secret, some randomness to the file that is meant to be private, but then they contribute to the ceremony or add a contribution by mixing in this randomness with everyone else's contributions.
+
+Kobi (00:08:49):
+The way that I like to look at it, which is that, you know, every participant gets like the current SRS, right, and shift a little bit in a way that the others can see and then if you have one that does not reveal how they shifted it, then everything is secure because we can predict that shift.
+
+Anna Rose (00:09:07):
+Mm. You just mentioned a sequencer. In other trusted setups, we usually had something called a coordinator. Are we talking about the same thing?
+
+Trent (00:09:17):
+Yes.
+
+Anna Rose (00:09:18):
+Why? Why the name change?
+
+Trent (00:09:19):
+Actually not sure..
+
+Anna Rose (00:09:22):
+Is it because they're sequencers and rollups maybe?
+
+Trent (00:09:26):
+No, no, no, no. That's almost
+
+Carl (00:09:27):
+A mistake
+
+Trent (00:09:27):
+Yeah
+
+Anna Rose (00:09:27):
+Okay. Okay.
+
+Carl (00:09:31):
+After the fact. I think it's more just to like, not overemphasize the power that this entity has. They're not some privileged entity in the space, and in essence, all they're really doing is deciding who goes next. So they decide on the sequence of things. Coordinating sounds a little bit more like there's someone pulling the strings in the background
+
+Anna Rose (00:09:49):
+I see, I see.
+
+Carl (00:09:50):
+When this entity server really has much less power than that.
+
+Trent (00:09:55):
+Yeah. I guess sequencer is more of a passive framing of just like, okay, we take stuff, we pass it to somebody else. We are not, like, I guess, I mean obviously there is some coordinating type activity happening, but maybe it's just a personal choice, not personal, but like, we just sort of settled on that.
+
+Kobi (00:10:12):
+Yeah. Actually, I'd love to take a bit more into like the role of the sequencer here because I think that in different setups, the sequencer or the coordinator had different powers, like you say. And when we look back at the original setups, like the ZK setup, there really was a coordinator and it was Sean or someone eventually it was Jason, I think, and that person actually chose who goes next and that went through a mailing list and there was kind of this assumption of if, you know, someone gets censored or, you know, if the Google mailing list hides the messages from someone, they can make an public outcry and they can get like included in that way. Right. And this came up to me because you were kind of equating it to consensus protocols in some, like, for some analogy, and maybe there is a bit of difference because the sequencer is even less trusted wherein consensus protocols maybe you have more power to sensor or whatever.
+
+Carl (00:11:15):
+Yes and no. In that the, one of the hard things about consensus protocols is deciding on the order of things because different people have different views, different nodes of different views of the order that messages came in. So it's, the reason we end up with short term forks on-chain is because from different perspectives it might look like one version of reality and from another person's perspective of another thing, and they're both maybe honestly telling the truth as to what they saw happen. And then the consensus protocol like helps realign things here. And so what's happening in the case of the sequencer is we get rid of a lot of those problems by having this entity that who's going next and this is what the order is. So they're like, in some ways it's less trusted in some ways it's like really helps out promote the protocol here and like it wouldn't be a designed that would be okay with in a standard blockchain consensus setting.
+
+Kobi (00:12:07):
+Mm-hmm. Right.
+
+Anna Rose (00:12:09):
+Given the amount of participants kind of already in here, I'm assuming the sequencer is automated, right? Like it's not, there is no person anymore at the other end
+
+Trent (00:12:19):
+There's nobody clicking a button right now.
+
+Anna Rose (00:12:22):
+Except
+
+Kobi (00:12:25):
+I mean, I think like right now there are like 4,000 people in the lobby, so that would be a lot of clicks.
+
+Anna Rose (00:12:30):
+That would be a lot of work. Actually, now I'm curious, and we probably did cover it on one of those episodes years ago, but what was the first setup to automate the coordinator? Was it the 2nd Zcash one or was that like, was it a later one?
+
+Kobi (00:12:44):
+I don't think the second Zcash was also automated, actually.
+
+Anna Rose (00:12:47):
+You think that might have been manual as well?
+
+Kobi (00:12:49):
+I think so.
+
+Anna Rose (00:12:50):
+I believe Ignite must have been
+
+Kobi (00:12:53):
+Right. I think Ignite and the Tornado.
+
+Anna Rose (00:12:55):
+Okay, Tornado for sure. Because that was like a 2 minute one online.
+
+Kobi (00:13:00):
+Were there any others that you've looked at while designing euros?
+
+Trent (00:13:04):
+We did. Yeah, that was, because I was completely coming from, you know, starting from zero, so I did quite a bit of research. I've probably forgotten a lot of the like, little details and specifics, but yeah, that's what I did. Or mid-last year was kind of trying to get an overview of everything that had taken place before. Interestingly, this isn't one of the things I looked into as whether the sequencers are automated or not.
+
+Carl (00:13:29):
+It's been interesting as like lots of these details aren't super obvious and some of the previous
+
+Trent (00:13:33):
+Yeah.
+
+Carl (00:13:34):
+Ceremonies it's not
+
+Trent (00:13:35):
+It's really hard to find all the specifics. Yeah.
+
+Carl (00:13:37):
+Yeah. Even just simplest questions like how many powers or like exactly what the calculations look like, those kinds of things. You gotta go digging in code and old GitHub repos and that kind of thing. In order to understand this
+
+Anna Rose (00:13:51):
+So in some of the later ones or like the more recent ones, there's sort of this like parallelization, this is what in the Plumo one that we did, we had like multiple participants running it at the same time. And I'm just wondering with the one with the KZG, is this fully like sequential as someone's contributing their entropy and their contribution, you cannot have anyone else contributing at the same time?
+
+Trent (00:14:13):
+Well, so they can generate the entropy beforehand, but doing the computation has to be sequential.
+
+Anna Rose (00:14:20):
+Okay. So it really is like, basically there's a participant adding their contribution, sending the baton, the sequencer then sends it back to the next participant, and that just continues.
+
+Carl (00:14:32):
+Yeah. So, and we can get into but the design philosophy later, but what some of the other ceremonies have done in the past is say you have a thousand points to calculate
+
+Anna Rose (00:14:42):
+Yeah.
+
+Carl (00:14:42):
+You do pipelining so as you've processed the first hundred points, you send those back, the sequencer starts verifying those and passes those onto the next, the, the next participant. So you don't like, although it's a sequential process, you can sort of break up that sequence. But a little bit of the way we've tried to design the ceremony and some of the fortunate things we've had around the requirements of the ceremony means that the benefits we get from doing that are relatively small. We gain other things by not doing so.
+
+Kobi (00:15:09):
+Yeah, actually in Plumo we did even something a bit more complex where, you know, one participant works, let's say on the first chunk of the ceremony and another works on the second chunk and then they switch places and then that one works on the first and that the other one works on the second. So it's like how to further their execution. But like, we can talk about the parameters later, but yeah in the KZG ceremony, it's so fast, how much time does it take to contribute? And it's not really useful to do this chunking?
+
+Carl (00:15:39):
+No, that's exactly it. So I mean, in browser we have multiple implementations of the software you can use to contribute. The one in the browser wasn't Blob running rush code under the hood that takes something on the order of 12, 15 seconds.
+
+Kobi (00:15:55):
+Wow.
+
+Carl (00:15:55):
+And if you do it from, from a CLI on my machine, some of them are sub 1 second to contribute.
+
+Kobi (00:16:02):
+Wow.
+
+Anna Rose (00:16:03):
+I don't remember exactly how to word this, but when you talk about this very short duration, I'm assuming this has something to do with like, whatever the size of the circuit or thing that you're using this SRS for is smaller. And I realize I might have worded that wrong. So yeah, why can it be so quick?
+
+Carl (00:16:23):
+So in this setup, we don't actually have a circuit because this is not a traditional ZK application and so this is just a commitment scheme. So we need like almost the precursor too before you put it in a circuit. We literally just need the powers. And by powers here we mean some secrets, secret squared, secret cubed, literally black powers as you think in high school math. And fortunately the way the KZG commitments scale relative to our needs and relative to the needs of EIP-4844 means that we only need very few powers. So some of the previous ceremonies, which have been four ZK setups, have had, for example, 2 to the 28 powers. In our case, the setup we really need only has 2 to the 12 powers so only 4096 powers of top.
+
+Anna Rose (00:17:13):
+There were also, I mean, there was a really complicated setup where, like for Aleo, where they did different setups for different parts of a SNARK. In this case, is it just a single setup for a single part of a SNARK or will there be like a f a second one is there is this one in a few?
+
+Trent (00:17:32):
+That's what you'll usually see as like a phase 1 and a phase 2. And Carl, correct me if I'm wrong, but I believe we're just doing the phase 1.
+
+Carl (00:17:39):
+Yeah.
+
+Trent (00:17:39):
+There's no circuits that happened in the phase 2 part of the ceremony.
+
+Anna Rose (00:17:43):
+I see.
+
+Carl (00:17:43):
+So like in many other trusted setups, you would do basically first a Powers of Tau setup or something very similar. And then you would fine tune it after that to be specific for your use case depending on your proving system. In the case of the KZG commitments, we don't need that second phase. We can directly use the Powers of Tao
+
+Anna Rose (00:18:01):
+One question is why do this setup? Like there are a lot of setups that have been done, there are SRS's that other projects could potentially use. So like why do a new one? Is it so unique? Does it have something, some characteristics that the others don't?
+
+Carl (00:18:19):
+I think an important thing technology is no one, I mean, aside for it's about a bit fun, you should really avoid doing a ceremony. It's like always a potential point of failure in the protocol. Yeah, exactly but sometimes the things that the setup enables because of the algebraic structure that you're creating here means that we can do many great things in cryptography later. What we've seen is there have been many other that there've been other setups in the past, not specifically for example, for the curve we care about. So Ethereum already uses BLS12-381 as its curve for BLS signatures for validators in Ethereum Proof-of-stake, it's already in a lot of the clients and we have really robust implementations of the software. We've done some optimizations under the hood where we care very specifically about having a set number of points.
+
+(00:19:10):
+So lots of these previous Powers of Tau setups have, for example, 2 to the 20 odd points and we specifically can have in the case of what we using for 4844 initially is 4096 points. If there was 4097 points, there are actually ways we could break the cryptography and the reason this is true is we're skipping some checks. So one of the things that you see happening a lot in improving systems and with, in the ZK setting is called degree proofs. Which is you're basically checking that a polynomial is only so big that there isn't more data hiding somewhere, or that this is the end of what was committed to. And the way we ensure that this is the end, you instead of checking you can prove it's the end, but instead of checking it's the end, we just like, there are no more points. So instead of having extra points where you could cheat the system, you run out at 4096 and then there's no, we don't have to do this proof every time we need to use this commitment device.
+
+Kobi (00:20:11):
+That's a really good point because like when I'm reading papers like let's say all the new lookup arguments, they sometimes, let's say skip the part where the add degree checks because they say, you know, you have a setup of the required size of the size of the table that you have. And this is basically exactly what you are saying here. You don't need to do the degree checks if that's all you have.
+
+Anna Rose (00:20:32):
+Hmm. In that case though, is the output of this very much only for the use case you have in mind? Or could other teams use it?
+
+Carl (00:20:41):
+Other people could use it, but it's going to be unlikely to be useful outside of a KZG commitments-
+
+Anna Rose (00:20:47):
+I see.
+
+Carl (00:20:47):
+-set up you're not going to use it in a general SNARK just because it's too small unless you have some very tiny SNARK you wish to use it for. Because of this optimization because we've done this, there isn't actually one set of powers that we're calculating. So the ceremony, if you dig into the files or the specifications, it's actually four ceremonies pretending to be one where we're running four mini trusted setups for different numbers of powers. So 2 to the 12, which is 4096, 2 to the 13, 2 to the 14, 2 to the 15 powers. And the reason here being that if 4844 ever has larger demands down the line, we can then change the setup we're using to one of these other ones which we've run where we have more powers available, but again, run out exactly when we need it to run out so we can skip these degree proofs. But by having these four ceremonies in one, we sort of like cheat and get around these
+
+Anna Rose (00:21:41):
+Possible futures.
+
+Carl (00:21:41):
+Yeah.
+
+Anna Rose (00:21:42):
+You wouldn't have to rerun it then, like you would be able to use these outputs for future.
+
+Carl (00:21:48):
+Yes and this is, I mean, I'm going to say it's updateable, but that seems a bit ridiculous to say because it's almost trivially so. We can always just, there's very little that's going on here in relative to some of the other requirements you might need for a SNARK setup or something like this. This really is a trivial construction.
+
+Trent (00:22:06):
+I think the other reason why it's important for us to run our own ceremony, for example, if there was something else that could slot in exactly. If another blockchain had run something and it happened to fit our use case exactly. I still think we would want to run our own for a couple different reasons. The main one being the Ethereum Community possibly hadn't participated in that ceremony. And so the trust assumption is you need just a single honest participant, but if you as a, you know, general member of the Ethereum Community didn't have an opportunity to participate, you have no way of verifying that the assumptions of how these, this other ceremony was run. You don't know necessarily how the code was written. Not that anybody's really necessarily digging into our setup but they at least, right? Copious, but the average contributor is just opening the browser and they, you know, they'll add their entropy and then go on about their day. So yeah, this goes back to the idea of like building consensus and specifically in the context of a specific community. So everybody has the opportunity to actually participate in something that's going to go directly into the protocol. And you can be sure that if you're using Ethereum, if you're using the Ethereum network, that you can verify that your contribution was included, and at least you know that you were honest and you discarded your secret. That's the, that's another reason why I think is important.
+
+Kobi (00:23:32):
+Yeah
+
+Anna Rose (00:23:33):
+That actually makes sense. So it's, and it's funny, we have not mentioned the term multi-party computation yet but just for listeners who are familiar with that, that is what this is and that's that idea where if one participant is honest, then one can be assured that the output is correct or is protected. But in your case, would you, I mean, you kind of mentioned that you felt like the Ethereum Community had not been able to participate, but like Tornado is pretty Ethereum focused, I guess you weren't able to use the output of that anyways, so you had to kind of redo something like this.
+
+Carl (00:24:05):
+Yeah, so I mean, it ties into that. I think many of us have participated in these, these previous ceremonies, not only for Ethereum, but for other chains and protocols. But not, I think many people in the wider community, I think is one of the issues here. And then the second thing is, again, because we have this like very important trust assumption about the running out of points at precisely the right time, if we use another setup that is longer and we use it as a start, right, we'd build on top of it which is something you could do for if they had an updateable setup or something like that. If we were to use that and their ceremony was bigger, then that violates our trust assumption already. So like it's already not particularly helpful and would already allow you to, like, it's not adding anything if you can't verify that it has this property of running out of points precisely when you need, when someone dishonest would need them.
+
+Kobi (00:24:54):
+Yeah, I would maybe challenge that a bit in the sense that you could always like take the chunk that you need and build a top of that and then you would gain something and yeah, I think those are all like extremely convincing points to me.
+
+Carl (00:25:10):
+Yeah, no it's, I agree. It's not quite as simple as that. We actually spent lots and lots of time debating this of over the previous few months as to like, where should we start for some of these exact reasons. But it's also easier just not to have any questions about where do these, like funny numbers come from or whatever, like the numbers when the ceremony started every secret was one. That's perfect and you could check that yourself as like, yeah. It's easy to, to have that argument.
+
+Kobi (00:25:36):
+Nothing up my sleeve. Right.
+
+Carl (00:25:38):
+Exactly.
+
+Kobi (00:25:39):
+Also, compared to other setups, I think that the KZG ceremony team or group that was working on a put a lot of emphasis on creating multiple implementations or like creating a spec that anyone could implement. And that also seems like a really appealing point in enhancing the trust in ceremony. Right?
+
+Carl (00:26:00):
+I think this is something we've done that's quite radically different. So with Ethereum Proof-of-stake, this was all written with these specifications first. And so there wasn't any like more enshrined client over any of the others or that kind of thing. Myself and many other researchers at the EF and wider ecosystem were writing specifications and then other people implemented those and we learned a lot from that. And from the perspective of how it enables more people to a easily understand what's happening, which I think is important in a Proof-of-stake or in a consensus protocol, but also really important for these ceremonies. You can explain things in normal natural language. You don't have to implement optimizations in these specifications. It just says like, here's what you need to do. Which I think is really, and then the second thing is this allows for a lot of clients to exist. So we started the ceremony, like there was no other code besides for like what the specification set. So we started this whole idea with the specifications and from there, like encouraged many people to write to implementation. So from almost day zero we had multiple implementations of this code. And like we are seeing more and more pop up as this, the ceremony progresses and we are really trying to encourage more people to write.
+
+Kobi (00:27:12):
+Is there a ChatGPT based implementation yet?
+
+Trent (00:27:16):
+Not that I know of.
+
+Kobi (00:27:18):
+Okay.
+
+Anna Rose (00:27:19):
+That's quite unique for these types of things. Is it the first time that that happens that there's like multiple clients or multiple implementations of a trusted setup software?
+
+Carl (00:27:30):
+It's the first time where there've been multiple to my knowledge at least, it's the first time there've been multiple viable implementations. In many other cases there've been people who have modified one of the other clients that exist or written their own crypto components or sometimes even reverse engineered and written their own implementation to like help convince themselves that this is secure under like, similar premises. But I think this is the first time where it's been this like multiple client first approach. Where there's like, there isn't a canonical way of approaching of contributing or anything like that. We already want people to sort of find their own path a little bit here and ideally have as many different clients implementing the software as possible.
+
+Anna Rose (00:28:10):
+It sounds so directly inspired by just the way that like the POS, the merge, like all of that had happened where there was multiple client teams building off a spec, sharing knowledge. Is that sort of now built into the philosophy of a lot of builds like this? If the community has to come together, there's always going to be an attempt to get a lot of different teams building the same thing?
+
+Trent (00:28:33):
+I think it's definitely a good thing to aim for and we'll probably get into this later, but we're also very lucky that it's pretty straightforward and simple to actually write an implementation.
+
+Anna Rose (00:28:45):
+Okay.
+
+Trent (00:28:46):
+For example, like later, we might talk about like how many contributions we have currently and how many we expect in the future. A lot of this comes down to the fact that it's a very small amount of computation that you have to do. Similarly, creating a client implementation is, I mean, Carl has said like, you could do it in an afternoon. I don't know if it's that quick, but it's a lot faster than writing, you know, some of these other multi-phase ceremonies.
+
+Anna Rose (00:29:09):
+Got it. How many contributions have there been so far and how many do you expect? Maybe we can actually talk a little bit about like what you've also learned along the way. What's worked? What broke? I'm really curious to hear.
+
+Carl (00:29:22):
+So I have the dashboard up here. As we're talking, we have just under 7,300 total contributions.
+
+Anna Rose (00:29:29):
+Okay.
+
+Carl (00:29:29):
+Which I think might make us the largest ceremony ever so far
+
+Anna Rose (00:29:32):
+Already
+
+Kobi (00:29:33):
+In terms of number of contributors, I guess. Yes,
+
+Carl (00:29:36):
+Right? Yes, yes, yes, yes. Absolutely. In terms of number of contributors
+
+Anna Rose (00:29:41):
+I think we did the longest running possibly. Yeah.
+
+Kobi (00:29:45):
+Yeah. And like the biggest curves, you know
+
+Anna Rose (00:29:48):
+Forever, right?
+
+Trent (00:29:50):
+Yeah and while we're like going through this and I'm realizing like, oh, you know, we have a ton of contributions, but it's not necessarily, you know, you want to be able to compare these things to apples to apples. And so I was thinking of like, is there a metric where you can combine like the total amount of compute time and the number of contributions? Because you know, yes, it's nice that we have a really large number of contributors, but we're just lucky that it's a tiny computation so, and you know, other ceremonies, it's super impressive that they've been able to get the number of contributors that they have with, you know, when they're passing around multiple gigabytes and you have to schedule, it's much more intensive for us. You know, we just have this website and people show up to it. So we're very lucky in that sense.
+
+Kobi (00:30:38):
+Yeah. But you are right like that you know, in the amount of trust that you need to have in this ceremony is much less because, you know, like you say, you know, just need one honest participant and if you have 7,000 already, then you're really in a good shape. So that's nice
+
+Carl (00:30:54):
+Yeah, I think it's actually something that's changed over the years in terms of like what ceremonies mean or what trust of setups mean and that's the emphasis on how much trust is needed. In the beginning there was like, it really was trust these 6 people in a room.
+
+Anna Rose (00:31:08):
+Yeah.
+
+Carl (00:31:10):
+And now we are at the point where it's like, trust 7,000 odd people. And I think that's got a very different meaning because at this point, like it's not that you have to trust someone to do the right thing, it's that you have to trust not everyone to have like, pulled apart the code and like figured out how to extract the secret themselves. because most of these implementations don't just show you your secret. They like do some extra hashing and randomness mixing, etc.
+
+(00:31:36):
+So it's like many extra steps. And like after that you need everyone to collude. So already at the current point, I feel like we're getting very quickly to the point where it's like, it's not really a trust thing and it would be very unlikely that everyone were to get together to reconstruct the secret and reshifting to a realm where it's more about like, are there common bugs in all the interfaces or is there a mistake in the ceremony in the cryptography? Something like that. It's like the trust model has changed a lot over time
+
+Trent (00:32:06):
+And I think that's why, I mean, crypto, our industry is notorious for redefining existing terms or, you know, misusing existing ones. But I think that's why we've chosen to lean so heavily on ceremony and not trusted setup because this is very different from what the, this 'ain't your daddy's' trusted setup kind of thing of like, this is very different from 6 people in a hotel room in Colorado. This is, everybody can participate. It's relatively accessible. You just need a browser and some time to keep checking the page.
+
+Anna Rose (00:32:39):
+Tell me about like, some of the learnings, like the participants, like, I'm guessing they're creating entropy, like you said, kind of randomness on their own. Are there any like, cool examples? Are people meant to share this somehow? Like how they got it? Obviously not share the random number, but like share their method.
+
+Trent (00:32:58):
+So the interface uses, we've gone a little bit be beyond what's like the base case, the bare minimum of what you would need. So we have three sources of entropy if you're using the web browser. So you're moving around your mouse and the interface is taking snapshots of your mouse cursor at certain points in time. You also input some text entropy and we encourage people to either do keyboard mashing or include random characters so that they don't remember it. And then the last one is the browser actually generates it locally, generates some randomness locally in the background, so you don't even see this part of it. So maybe we'll get into exploits later, but if somebody really wanted to compromise their contribution, they would have to pick apart the interface and withdraw or like, take out all three examples of entropy that they've crafted. The Sapling setup had, I always reference this example of they went up in an airplane and measured radiation from the Chernobyl piece of cloth, which is very evocative and like really awesome. We're not expecting everybody to get to that level. But yes, we, we are seeing a couple cool examples. Like somebody is making a cat toy and then playing with it with their cat and then extracting the randomness from that.
+
+Anna Rose (00:34:14):
+Cool. Have there been any hiccups in the rollout of this?
+
+Carl (00:34:17):
+No. In general it's gone fantastically, like really, there were so many ways that this just hiccups. I mean we've tested this a bunch locally and it's been in audited separately by multiple people, but it's very different that from actually testing it with thousands of people actively trying to get involved. So from that perspective, we are really happy. One thing that is been interesting to see is we've employed something a little bit different to most ceremonies and that's, there isn't a queue to participate. So when you would like to join, using whatever interface, you're going to do it, be it the one of the hosted websites or you a CLI interface, etc. And you sign in with either an Ethereum account or GitHub address account. And from here you have got to contribute and you get put in what we call the lobby.
+
+(00:35:06):
+And the lobby is you and everyone else who's trying to contribute at the same time. And then what everyone does is it says like to the sequencer, hey, how about now? Like, can I contribute? And the sequencer is like, nope, someone else is already contributing, they're cool. And then you come back 30 seconds later and you're like, okay, what about now? And so everyone is like constantly asking the sequencer if they can have a turn to contribute and so I think a lot of people have been buttoning up, up against this thing where there's this, this notion of a lobby where you can be in it for quite a while where the lobby is like, as you're currently speaking, there's almost 4,000 people trying to contribute next. And you can be in quite a while waiting. And it's not necessarily a queue, so your wait doesn't necessarily get shorter over time.
+
+Anna Rose (00:35:52):
+Oh.
+
+Carl (00:35:53):
+It's like a constant chance of you being included to to contribute next.
+
+Anna Rose (00:35:57):
+Oh wow. Okay. Like the people in the lobby are not in order
+
+Carl (00:36:00):
+No.
+
+Anna Rose (00:36:01):
+They're just pinging randomly and one of them's going to get accepted. So there is a chance that you just enter into the lobby and immediately get to contribute.
+
+Carl (00:36:09):
+Yeah. And we've had people who like, so we've had a bunch of people complaining because I've been in the lobby for a while, and then others who'd be like, oh, I just rocked up. And it was like a five minute thing.
+
+Trent (00:36:18):
+Yeah.
+
+Carl (00:36:18):
+Thanks. This is all so great.
+
+Trent (00:36:19):
+A range of experiences.
+
+Anna Rose (00:36:20):
+Okay.
+
+Trent (00:36:21):
+Yeah. Yeah. Managing expectations around that has been, I think something we could have done a bit better and explaining what's supposed to be happening. And the fact that waiting here is not something that, like, if the lobby's big, you should just go away, like come back later. Yeah, that's not nice to hear. But that's, that's kind of just the way these systems work. And I think this has been the source of a lot of frustration for a lot of people. And then the second thing is like, the way most people seem to be contributing because it's the, just the quickest and easiest is via the website hosted at ceremony.ethereum.org because that's a browser implementation browsers aren't used to like constantly staying online and like speaking to another piece of software in this case the sequencer.
+
+(00:37:03):
+So when like browsers don't, aren't very good at regularly checking in to be like asking at the appropriate time, like, hey, can I contribute now? So we've had some like de syncing errors or like the computer puts some tabs to sleep or something like that. So we are still trying to like get to the bottom of all of those in terms of what's happening there. And that's like accentuated by the fact that you could be waiting a while because this lobby's currently pretty big with lots of people trying to get in.
+
+Anna Rose (00:37:27):
+Has the sequencer had any trouble? Like could the sequencer go down at some point and need to be restarted?
+
+Carl (00:37:33):
+I really hope not.
+
+Anna Rose (00:37:35):
+Okay. That would be bad.
+
+Carl (00:37:36):
+Yeah. Yeah. I mean, it would be bad from like a UX perspective and a thing it has, it hasn't gone down and we've like rarely chose a beefy machine to run this on.
+
+Anna Rose (00:37:46):
+Okay.
+
+Carl (00:37:47):
+When we're discussing like what resource do we want, it was like basically what's the fastest machine with the most cause crazy amounts of RAM and the best guarantee internet connection you can get. So it really is a powerful machine. So we haven't seen anything there, but like one thing we have found, for example, is the upgrades. Like, so the sequencer, we can improve the experience. So right now, if you have one of these hiccups with your browser or something like that, you get logged out and you have to go back back to the start and like sign in with Ethereum again. And that's like not a very pleasant process. So one of the upgrades we have in the pipeline is to basically be able to keep you logged in. So the sequence will just mark you as being in an idle state. And then when you start your browser comes alive again, it will then like, take you out of that idle state, which I think be a lot better UX for for many people.
+
+Anna Rose (00:38:37):
+Does the browser have to be open and visible and that you have to do something once you get into the position to contribute? Or is it automatic?
+
+Carl (00:38:45):
+So that's all automatic and happens in the background, but exactly like what the browser needs to do? We don't really know because different operating systems and different browsers do different things in terms of putting tabs to sleep.
+
+Anna Rose (00:38:55):
+I see, I see. Okay.
+
+Carl (00:38:57):
+So like I would recommend having it like maybe in the corner of your computer or like something like that
+
+Anna Rose (00:39:02):
+And like checking in on it
+
+Carl (00:39:03):
+Maybe. Yeah, I'll try to open 20 tabs in front of it, but I mean, again, if that does happen and your browser does go to sleep, we can always bring it up again. But I mean, yeah, so one of the things I was trying to get to earlier is like in terms of you ask about hiccups of the sequencer is in order to implement this change where the sequencer doesn't immediately lock you out, we are going to have to restart the sequencer, which is going to kick everyone out of the lobby.
+
+Anna Rose (00:39:26):
+Ah, that's what it would do. Okay.
+
+Carl (00:39:27):
+Yeah. So it's like a little unfortunate that like, it's going to be, if we're to do it now, 4,000 people who have to like leave and come log in again but again, these are like some of the small changes we might have to make, to make everyone's UX a bit better.
+
+Kobi (00:39:41):
+Yeah. So the logging out thing happened to me a few times already and because I always have to move my computer around and like change tabs. So just before this episode started, I started waiting again. So maybe I'll get lucky and during the episode of the able to contribute
+
+Anna Rose (00:39:58):
+That would be cool.
+
+Trent (00:39:59):
+Kobi wants to speak to the manager
+
+Kobi (00:40:05):
+Aren't I doing that right now?
+
+Trent (00:40:09):
+Yeah. The best we can say is just wait a little bit longer.
+
+Kobi (00:40:13):
+Fine.
+
+Anna Rose (00:40:14):
+So I have this question, I mean, when I was putting together questions for this, I thought of asking if this has anything to do with this on-chain ceremony that we had talked about on a recent episode with Dan Boneh where the sequencer or coordinator is actually on-chain, if I remember correctly.
+
+Kobi (00:40:32):
+Yeah.
+
+Anna Rose (00:40:33):
+And as far as I can tell, this ceremony is not that, right? It is the sequencer. It's still like, like you described, like it's a beefy machine. It's one machine. It's not like a decentralized thing.
+
+Carl (00:40:45):
+Yeah. So the, this is entirely off chain and users like more traditional web constructions for making all this happen. The reason this, that the idea of an on-chain ceremony is possible is because again, the sequencer's role is just to decide on the order of things and to decide whether someone's contribution is like actually a valid contribution. They didn't just make something up and say flower when you expect a set of points. So you could do this all on-chain and submit it to a smart contract, or you could come up with all sorts of fancy constructions for verifying this. Whether the chain data basically serves two purposes. One is verifying that things were done correctly and the second is making the data available to everyone so that it's, you are able to just download it and use it when you want. But the reason this is not super useful in our case is that our ceremony is sort of just too big to be able to fit on Ethereum right now.
+
+Anna Rose (00:41:36):
+Okay. Too big in terms of participants or contributions?
+
+Carl (00:41:39):
+No. Too big in terms of like the number of points.
+
+Anna Rose (00:41:42):
+Oh still? Okay.
+
+Carl (00:41:44):
+Yeah. So although our ceremony is like super tiny and like we keep getting all excited about this, it turns out that like if you look at Ethereum, Ethereum just like even more slow than the sequencer is tiny, although the ceremony is tiny.
+
+Anna Rose (00:41:55):
+Okay.
+
+Trent (00:41:56):
+They would've overloaded the gas limit, right?
+
+Carl (00:41:59):
+Yeah. So if we just do like the call data for 4096 points, it's like just bigger than a full block. And I mean like full as in 1559 full, like 30 million gas in a block. So it doesn't fit in a full block which means like the cost of contributing would be very high
+
+Trent (00:42:17):
+And we'd be taking capacity for the entire network for like four months which is probably not endearing to people.
+
+Anna Rose (00:42:26):
+Would this ceremony be able to be run on a rollup then? Like, or on another L1? Like where it isn't a constraint?
+
+Carl (00:42:33):
+Possibly and this is actually one of the really fun things I realized a while ago and that's that, so the thing with rollups is they need this data availability. They need to guarantee this data. And that's in essence, like they need to put this data somewhere and that data in the case of Ethereum is on like the Ethereum base layer. And that's like the whole point of this Danksharding and EIP-4844 approach is to provide more space for that. But if we just use Ethereum as it stands now, the rollups run into the same problem where it's like if you were to use a rollup, it could do the computation really efficient, but the data itself still wouldn't fit inside a single block. But if we had 48044 deployed, then we would have the space to do this. So it's like a cursive problem, like how do you bootstrap having enough space to start this? So in the future if we were to like rerun the ceremony there, there is a chance we could do it on-chain assuming like the rollups weren't using all the space, et cetera, et cetera.
+
+Anna Rose (00:43:29):
+Oh, interesting. Okay. I think this is actually a good point for us to start talking about like why you're doing this ceremony at all. You've mentioned this EIP-4844, and I'm assuming this is what this enables, but yeah, can you explain what that is and how you need this SRS, like why you need a trusted setup to enable that or to work with that?
+
+Carl (00:43:51):
+So to understand EIP-4844, you need to understand like Ethereum's vision for scaling moving forward. L2s are the vision we see for Ethereum moving forward in terms of providing blocks small compute to, for everyone to be able to fit their transactions and NFTs etc on-chain. But computers useless if we don't have the storage to back it up and L2s have this problem where in order for like their trust assumptions to remain true in terms of like what happens when there are malicious people, malicious sequences on L2s or something like that, this data needs to be provided somewhere else and it needs to be provided with a level of assurity that a sequencer on L2 simply couldn't provide. So what the sequencer, an L2 sequencer does is they take all this data and they put it on Ethereum, on the Ethereum base layer on Ethereum L1, and this works great, but now we are having these like L2s massively scaling the compute for Ethereum, but they're starting to run out of space.
+
+(00:44:54):
+And the costs then for the L2s be they ZK or optimistic the costs for them start rapidly growing when they have to put more stuff in the blocks than there are space in the blocks, et cetera, et cetera. So the idea behind protodanksharding, also known as EIP-4844, is that we have a bunch of data next to the Ethereum chain that is broken up into blobs, and we call them blobs because from the chain's perspective, we don't really know, understand at all care what's in them. But it's just an arbitrary amount of data and EIP-4844 users KZG commitments to commit to this data so that it is, like we have approved much like you could use Merkle trees for state and traditional blockchains or Ethereum right now, you do a similar thing, but with this new commitment device
+
+(00:45:45):
+And then later on, if anything goes wrong with the rollup, the rollup can prove things about this data. So these blobs make this data available to everyone. so data availability is something that's discussed a lot. So the validators, you're looking at the current state of the chain check that the data really isn't these blobs and that they were able to download it, it's available for everyone. So if you're using an L2, you want to see that your data made it into one of these blobs and you can download the blob yourself if you really want to make sure you have it. And then if the sequencer on an L2 tries to cheat you or ZKProof fails, etc, we can go back and find out like, here's the data to prove what did or didn't happen and that's sort of the vision for scaling Ethereum now.
+
+Anna Rose (00:46:31):
+Yeah. I want to ask you something here first, I want to just get a clarification. You had said the KZG commitment, is that what you called it?
+
+Carl (00:46:37):
+Yes.
+
+Anna Rose (00:46:37):
+Like
+
+Carl (00:46:37):
+Yes.
+
+Anna Rose (00:46:38):
+So you said that KZG, it's like this whole ceremony is for commitment, so it's not for a SNARK, is it? Or is it a SNARK? Like I think this is where the terms you're using. I'm just curious if it's like, in this case, the ceremony, the whole thing, is it just for this commitments and it's not really a full SNARK,
+
+Carl (00:46:56):
+It'a not a SNARK, it's purely for committing to data.
+
+Anna Rose (00:46:59):
+Okay.
+
+Carl (00:47:01):
+So you could use a SNARK as committing to computation.
+
+Anna Rose (00:47:04):
+Yeah.
+
+Carl (00:47:05):
+In some ways and this is doing a similar thing and the reason we use this over like some of the other commitment devices that we've seen as I was saying earlier Merkle trees or maybe so Merkle trees wouldn't work, for example, because they become quite expensive to prove in SNARKs. So if you have ZK-rollups now we are trying to offer them this data. If they can't prove things about this data, it becomes very hard to reason about. So that's why these kinds of hashes wouldn't work. We could swap out a SHA hash or something like that for an arithmetic hash, which would be more favorable inside a SNARK. But then one of the other requirements we have is for the like future visions of where we'd like to take all of this all all these data blobs is to take them and extend them out using erasure coating.
+
+(00:47:56):
+So we take each, like each amount of data and we like massively extend it and we commit to that extension. And the way we do that is by footing a polynomial through it. And this polynomial happens to use the, we can use the same cryptography that KZG relies on under the hood which is also like commits based on a polynomial. Hence why there, there are powers in the Powers of Tau that we're using, right? Like a polynomial CXX squared whatever. It's the same thing we have that are the powers in these Powers of Taus. So that's like the sort of commitment device that we're building here. And the fact that there's those like synergy between our like future visions for how we would like to commit to data and extend this data and ultimately do data availability sampling, which I can touch on in a moment. It would require these polynomial extensions anyway, so we are using this cryptography or similar things anyway and then this really just like is a cherry on top that it's the same thing and works really well with that.
+
+Kobi (00:48:50):
+Yeah. So actually I have a question about EIP-4844 itself because you're creating KZG commitments on BSL12-381 and you put it as data blobs that are not easily accessible to the rest of the chain or to smart contracts and others. And also, like there are no pre-compiles to use BLS12-381. Like there is this long-standing 2537, I think that wasn't deployed yet. So how can people actually use for it EIP-4844 on-chain? Or is this purely for data storage?
+
+Carl (00:49:28):
+So I mean, the answer is that we need to get that EIP merged, more included. I think everyone's on the same page there. It's just hasn't reached the top of the priority list of client developers because it is very useful for that also for verifying the signatures we have and could be used for some other fun cryptographic things. So definitely need that. The way the 4844 vision works is sort of twofold. It does two jobs. One is first making sure that data's available to everyone.
+
+Kobi (00:49:55):
+Yeah.
+
+Carl (00:49:56):
+When a new block is proposed, all the side data, all the validators go and download it and check that it's available. And only if it's available do they attest to it which is like part of the roles of a validators, are testing to things and so this allows us to like ensure that this data is there and allows like end users to go download this data.
+
+(00:50:14):
+But then in order to like prevent the state blowing up for these validators, otherwise you just have like more and more data you have to look after these validators are actually allowed to forget this information after a certain amount of time. So you can just delete blocks that are older than a certain amount of time. This allows like validators to have a constant size database that they care about for these, these data blobs and then users must download this data that they care about and the sequences on all these L2s or download this data and then the second role here is like if something goes wrong in in an L2 and we need to start having fraud proofs or like we need to have debates basically and resolve things as to like what reality is.
+
+(00:50:58):
+things need to be then proved against these KZG commitments.
+
+Kobi (00:51:01):
+Yeah.
+
+Carl (00:51:01):
+So if I say like, something went wrong and the sequencer stole my money or something like that, I have that the transaction I downloaded a week ago or whenever when the transaction actually happened and I saw that data blob go on-chain and then I go to if they're in main chain and I say, here's the data, I would like reprovide the data because the chain might not have the data anymore. I reprovide the data and the KZG proof that this is the correct data. And from there we can verify like this commitment was correct and like resolve this conflict.
+
+Kobi (00:51:33):
+So do I understand correctly in that case that like for it, for I think we saw that it includes like a point evaluation precompile?
+
+Carl (00:51:42):
+Yes, that's correct.
+
+Kobi (00:51:43):
+Okay, cool. That's because I think I saw that the Scroll team was planning to use this, like they wrote a blog post about how they would show that the commitment that they get from their SNARK, which is on BN 254, and the commitment that you get from the data blob, like they would use this proof of equivalence to show that basically they committed to the same data, which in their case would be a list of transactions. Do you know if that's like the common use case for rollups? How far to use this like to show that the list of transactions were included or the data and transactions?
+
+Carl (00:52:16):
+I mean, so from a like protocol designer perspective, I get to like wave my hands and say like, that's up to the rollups but my understanding of the landscape as we speak is like, yeah, that's basically what will happen and like what is the intention of many things is basically a list of transactions.
+
+Kobi (00:52:33):
+Okay, cool.
+
+Carl (00:52:34):
+And potentially the proofs to go along with them in the ZK setting. One of the the interesting things is that when, like, based on Ethereum usage right now, there's going to be so much data available when EIP-4844 launches that we're expecting people to just do silly things and like throw memes on-chain just because you can because data's going to become really cheap again. I mean, it'll be temporary until rollups scale to use this. But it'll be fun to see that landscaped play out.
+
+Anna Rose (00:52:59):
+Going back to the ceremony, I just wondered what happens if, and I know like there's over already 7,000 participants, everyone's created their own, they've added their own entropy. But what if somehow the toxic waste of this ceremony was discovered, what could anyone actually do? So you talked about it's like it's for KZG commitments, like what could it break, what could some malicious actor actually do if they found that collection of entropy that you're not supposed to know the private stuff.
+
+Trent (00:53:32):
+Right. Maybe I can just, the context is like they would have to extract every single contributors.
+
+Anna Rose (00:53:37):
+Yeah, I know
+
+Trent (00:53:38):
+All three forms of entropy
+
+Anna Rose (00:53:40):
+I get it
+
+Trent (00:53:40):
+For context for people it's very unlikely, but if they did, they could forage broad proofs, I believe for L2s committing back to L1 and that would be bad.
+
+Anna Rose (00:53:51):
+This would only work for like the optimistic type things, or is it?
+
+Carl (00:53:55):
+If the toxic waste is discovered, it allows anyone to make like arbitrary arguments about what data was committed to in EIP-4844 in these data blobs. And so in the context of L2s, this could mean that you could lie about the transactions and with optimistic rollups you could then say that different transactions were included and no one would have any on-chain way of proving that this wasn't the case. And in the ZK setting you could say that, oh, like maybe the ZK has, like here's the proof that they committed to, you could say here's a different proof and submit it, and it would like also be look equally valid to the chain. So like you lose the ability to like uniquely commit and prove to things that that happened. So it really becomes the Wild West in terms of L2, like data security after that point. Now at that point, we require social recovery to get us out of that bind because that's like, is really terrible from an LP standpoint.
+
+Anna Rose (00:54:50):
+Okay.
+
+Kobi (00:54:50):
+Yeah, exactly. So I think like maybe if we could invade in the scenario, even for a ZK-rollup, you could lie about the fact that the data is available and you will not be able to replace, let's say the sequencer or others and people's money might get stuck until you've like figured this out socially.
+
+Carl (00:55:08):
+So the data availability is an interesting one because that's the job of the validators. And so like they would still, you still have to be providing data to them. You could be providing fake, you could lie about what the data really is and change the data after the fact, but you still have to provide data. And when we switch over to full Danksharding then like every node on the network, not only validators would be sampling this data to check that is actually there.
+
+Trent (00:55:36):
+So there is one case that I can go into. Obviously it's very unlikely that everyone has leaked their entropy and you know, decided to collude and corrupt the ceremony. But there is a case where you know, we go through these, this many months of contributions and then there's a final output and then Carl turns malicious or something and decides to, you know, output this faulty or corrupted version of the ceremony, which he claims is a ceremony, but actually isn't. And then, you know, in this scenario, the client teams are also like, we trust you Carl, good job. Thank you for this output. And then they put it into clients without doing diligence. So one small step that we can take in advance of this actually being included into clients is this social signaling around, okay the ceremony is done, everybody is going to signal that they've run some verification script, that this is the output that we're all expecting, that we were all included in.
+
+(00:56:31):
+And yes, okay, we're all thumbs up, good to go and my contribution is actually in this transcript. So that'll happen, you know after this special contribution period or sometime, sometime between the end of the ceremony and before client releases are actually cut for whatever the upgrade is, that includes EIP-4844. So that'll be really important when it comes time, you can do this now, but you're checking it against the current state, not the end state of this ceremony. So when that time comes I encourage everybody to, you know, not just do your part of contributing to the ceremony. That's step one but step two is doing this run a script locally and okay, yes, I've verified that my contribution is included.
+
+Anna Rose (00:57:14):
+Interesting but participants don't have to, this is more just like you're going to encourage a lot of people to come back and check it.
+
+Trent (00:57:21):
+Right, you don't have to but the, it's sort of part of this whole, like Carl mentioned earlier of like, once we get beyond, you know, X thousand participants, you're only improving the credibility of the ceremony in small degrees and this is one way where you can improve the credibility of the ceremonies, having many people attest to the output of the ceremony as being valid and credible and legitimate.
+
+Anna Rose (00:57:45):
+Cool.
+
+Carl (00:57:46):
+One of the cool extra things here is that because we are using people's Ethereum addresses to like verify like as some kind of anti-Sybil attack mechanism we have a built in signature scheme as in you can sign messages with your Ethereum account and using this, like you signed your contribution as well. So you could see that like Anna.eth was contribution number 6, 7, whatever. And because you can verify this and there's a signature there as long as I trust you to also have control over Ethereum account, I can verify that this was your contribution. So it's like additional levels of verification that we have built in here, which is he sort of get for free by having people use the Ethereum accounts.
+
+Anna Rose (00:58:28):
+Do you think there's a lot of like farming happening? This seems to happen with a lot of these projects where it's like, even if there's like no promise of an airdrop, no sign of an airdrop, there's nothing but people are just like jumping in in mass and so they won't just run once, they wouldn't just like run this once but rather run it like, I don't know, a hundred times, are you noticing this is there anything you can do to like, stop that
+
+Trent (00:58:52):
+A little. Like I've seen a couple indicators that maybe some people are, you know, pursuing that path. At the end of the day, it's all good entropy. This is all stuff that will only help the ceremony unless it's like you know, somebody colluding with this specific intent to, you know, keep around their secret and then try and corrupt the ceremony later on. Did notice a bit of it, it seems happened with the recent Namada ceremony.
+
+Anna Rose (00:59:19):
+Yeah.
+
+Trent (00:59:19):
+We'll see if that ends up being the case for ours. It's definitely, we weren't expecting this level of attention this early, so this kind of plays into the issues of like, we have some troubleshooting and the lobby wait time is really, really long. It's a good problem to have but we definitely weren't expecting this amount of attention, you know, in the first 3 or 4 days.
+
+Anna Rose (00:59:39):
+By the way, I don't think it happened with Namada, but I think it it like people were trying to, right?
+
+Trent (00:59:44):
+Right, sure, yeah
+
+Anna Rose (00:59:44):
+Because theirs is actually quite coordinated like
+
+Trent (00:59:48):
+Yeah, yeah, yeah. They had tokens and things. But the other safeguard we have against this is that we do have a cutoff of you had to have sent, if you're using Ethereum addresses your anti-Sybil login if you had made three transactions before Friday last week, the 13th that's our cutoff point so you can't
+
+Anna Rose (01:00:10):
+Ah, you can't go back.
+
+Trent (01:00:10):
+There is
+
+Anna Rose (01:00:10):
+Yeah yeah
+
+Trent (01:00:11):
+Right, you can't get to start like farming a bunch of addresses now, send a bunch of transactions and then use that as a legitimate account. So there is, we do have at least that safeguard.
+
+Anna Rose (01:00:21):
+Okay.
+
+Trent (01:00:21):
+However, they won't stop somebody who's been doing stuff like this for years, right? Yeah. If they've been farming, they're going to, you know, they'll have it,
+
+Anna Rose (01:00:28):
+They'll have it set up.
+
+Carl (01:00:29):
+This is something that we've known and expected and part of like the discussions that Trent and I have been having and have happened after the last while with the community is like, what, where do we set these constants at? Like how do you decide that like having sent 3 or 4 transactions in the past is the right number. The decision here was to rather keep it on the lower side to be extra inclusive and have more community members particularly people who may have only joined after the switch to Proof-of-stake for moral energy reasons or something like that. Like just to try encourage, like have as many people as as possible at the cost of having more people, like potentially try, just contribute multiple times, etc. And we're like very okay with that and that's part of the design of the ceremony, I'd rather err on that direction than excluding people from participating.
+
+Anna Rose (01:01:18):
+Cool.
+
+Kobi (01:01:18):
+I was looking around at the ceremony sequencer returns and I saw like parameters that I wasn't expecting. So you mentioned that, you know, you bundle a few setups in one here actually, but from what I know, if you do like KZG and you skip the degree checks and you don't need more than one G-point, let's say in every setup, so how come you have 65 of them in the ceremony?
+
+Carl (01:01:48):
+You're right, we don't it's more of an incase thing. They're so cheap and almost free to include. Like 65 is such a small number of G2 points that we decided just to include it in case someone finds a use for it later.
+
+Kobi (01:02:03):
+So what 65 points are there? Like you have thousands of G1 and 65 G2. So what is the structure of those?
+
+Carl (01:02:11):
+It's the same Powers of Tau so it's just reflecting those increasing powers just in G2
+
+Kobi (01:02:16):
+Okay. I mean they're just like so much less, right?
+
+Carl (01:02:20):
+Yes, yes, yes, yes. But again, we, as I say, we don't really have a use for them, it's just in case we decide we could do something fun with it later or in case someone else comes up with a use case.
+
+Kobi (01:02:29):
+Very interesting.
+
+Anna Rose (01:02:30):
+Cool. So you've told us that like the plan for this is a couple months and then it would be included in the next update, but what is the timeframe for EIP-4844? Like what do, maybe you don't want to predict it here, but like what's the larger trajectory aand roadmap for this?
+
+Trent (01:02:46):
+Yeah, giving timelines always backfires, but withdrawals is the next main focus and that'll sort of complete the loop of proof of stake and give us a full proof of stake functioning system that people can enter in and withdraw the validating, participating in validation. But once that's done and you know, there are dev nets currently and client releases hopefully in the next few weeks and then it'll move into Testnet upgrades, things like that. Once withdrawals is done within the next few months then a lot of people have signaled that they're very interested in seeing 4844 be really hardened and implemented in clients. You know, there's, there's already a ton of ongoing work currently. So one thing that we've been really fortunate to do over the last year or two is start to develop parallel tracks for contributors. So the merge was ongoing and people were already working on 4844. Same thing with withdrawals, getting the initial spec going. So 4844 has been in development for a while in terms of like ideation and client prototypes, things like that. It's really exciting to be working on core protocol Ethereum at this time, because we can start to parallelize these massive upgrades and big changes to the protocol that will bring significant benefits. So once withdrawals is done in the next I won't give a date for that either, but the big focus directly after that is the next upgrade, Cancun
+
+Anna Rose (01:04:07):
+That's what it's called
+
+Trent (01:04:08):
+Pessimistically, that would be Q3 of this year. Yeah.
+
+Anna Rose (01:04:12):
+Okay. So I want to say thank you to both of you for coming on the show, sharing with us the KZG ceremony, how it works, what it's for and how it's going. Yeah, thanks so much for that.
+
+Kobi (01:04:24):
+I'm still in the lobby. It only got larger
+
+Trent (01:04:31):
+Oh man. I'll see what we can do. I'll pass along your request.
+
+Kobi (01:04:35):
+No, it's fun. I'm happy to wait.
+
+Carl (01:04:37):
+The lobby seems to be most empty at midnight UTC
+
+Kobi (01:04:40):
+Okay.
+
+Trent (01:04:41):
+Yeah, and it's slowly, you know, I think we've peaked in terms of attention these first few days and it's slowly balancing out, but that's still like several thousand people in the lobby. So maybe wait a week if you really don't want to like, babysit your tabs and then you'll have a better time of it.
+
+Kobi (01:04:56):
+Sounds good.
+
+Trent (01:04:57):
+Thank you for having us.
+
+Carl (01:04:58):
+Yeah been fun
+
+Trent (01:04:59):
+We should also give a thank you to everybody else besides us who worked on this. This isn't, it's not the Trent and Carl show. There were probably two dozen people involved in various aspects of this and the project wouldn't have happened without them contributing to the front end, the interface working on the actual crypto that runs in the background, working on the sequencer, the people that worked on the audit. So I won't list them all because I'll probably forget somebody. But massive thank you to everybody who put in time and love into this, this project.
+
+Anna Rose (01:05:33):
+Cool. All right. I want to say thank you to the ZK podcast team, Rachel, Henrik, Tanya and Adam and to our listeners. Thanks for listening.
+

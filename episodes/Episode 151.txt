@@ -1,0 +1,411 @@
+Anna:
+So this week, I want to welcome John Adler. Who's the co founder of Lazy Ledger and Fuel Labs to the show. He's an applied researcher and protocol designer, and also a fellow Canadian. So welcome John.
+
+John Adler:
+Thank you for having me.
+
+Fredrik:
+Welcome, welcome.
+
+Anna:
+And John you've been actually recommended. I, you know, people have sort of mentioned your name to me a couple of times to have you on the show. And so, I mean, I think one of the ways we can start this is actually to understand what are you actually working on right now? I usually, we usually do the background first, but I want to hear more about what you're up to right now.
+
+John Adler:
+Right? So there's kind of two things that I am working on. The, one being Lazy Ledger and the other being Fuel Labs. So Lazy Ledger is a new layer 1 blockchain that is specifically optimized for just data availability and ordering, and it doesn't do execution. And this is a brand new, completely different paradigm to all the blockchains that currently exist and that are proposed. And this allows us to be more scalable while retaining good security and decentralization guarantees. The other thing I'm working on is Fuel Labs, which is building an optimistic roll-up called fuel on top of Ethereum and it's optimized for performance rather than a short term ease of use. So it uses things like the UTX old data model and parallelizable verification, so that you can get much higher transaction through, but on the same hardware.
+
+Anna:
+What were you doing before this that would have led to this? Like how did you discover that these were the problems that you wanted to tackle?
+
+John Adler:
+So, funniest story is that I initially got into the blockchain space through pushes from my old grad school advisor. I was in grad school at UoT doing Formal Verification research. And he kind of got really into this whole Bitcoin and Ethereum stuff. One picture he really likes to show his students is him in front of Mt. Gox in Japan, you know, the day that it happened. And there's a guy with us, you know, sign, give us or Bitcoin or whatever. And then he's, he's right there. So that's kind of a picture he likes to show. So that's kind of where I got my first taste of crypto. Then I joined Consensus, I think two years ago around to do Layer 2 scalability research. So this was plasma channels and stuff. And while doing that research just like a month after I joined, Mustafa Al-Bassam had published his paper coauthored with Vitalik Buterin on fraud and data availability proofs, and that kind of set the entire direction of the research that I was doing and showed that data availability was a big problem. That fraud proofs are real. And this led into the direction of optimistic roll-ups and lazy ledger eventually.
+
+Anna:
+Who was your, you sort of mentioned this professor, but who was that?
+
+John Adler:
+Who, who was it? Andreas Veneris.
+
+Anna:
+Okay. I don't know if I've, if I know him, but I was wondering, cause you didn't say his name, you just said sort of set up a professor.
+
+John Adler:
+He doesn't do too much novel blockchain consensus protocols research. His group right now is more involved in like oracle research and crypto economic stuff, as opposed to, you know, the consensus protocol stuff that a lot of professors publish.
+
+Anna:
+Got it.
+
+Fredrik:
+So one of the main things that we're here to talk about today is Optimistic Rollups and this is part of what you do with Fuel, and I can see how Lazy Ledger also sort of fits into that story. But before we dig into anything super specific, I think we should talk about what Optimistic Rollups even are. We've mentioned that term on the podcast before, but we never really had a good explanation of it. So if we just start high level, what is the 30,000 foot view of of Optimistic Rollups?
+
+John Adler:
+So the very like a one line or one sentence description of Optimistic Rollups is that it's like ZK Rollups, which I'm sure most of your listeners are familiar with given the name of this podcast as like ZK Rollups, but instead of using validity proofs, or Zero Knowledge Proofs, do you use fraud proofs. That's the one sentence description and of course this oversimplifies things and it kind of is the grossly oversimplified diversion that is missing critical details that without those details, it doesn't work.
+
+Anna:
+I think we've mentioned fraud proofs before, but can we actually define what that is? Like what, in this context is a fraud proof?
+
+John Adler:
+Sure. So a fraud proof is a proof that something is invalid. So a validity proof is a proof that's something is valid and a fraud proof is a proof that's something is invalid. So the way a fraud proof works is you get a claim and then you wait sometime a period until you see a fraud proof. And if you don't see a fraud proof within that timeout, then you assume it's valid.
+
+Anna:
+And the fraud proof is that created automatically, or is that created by like some agent that's watching
+
+John Adler:
+Someone watching needs to create the fraud proof.
+
+Fredrik:
+And so I guess this is why they're called optimistic in that I think of optimistic in the sense of optimistic updates on like when you used to build websites and there weren't good frameworks for this and you send off an Ajax request and then you could either update the UI. As soon as you sent the AJAX request, or you could wait for the server response to come back and say, yes, this was successful. You can now update the UI. And the optimistic update is you just update it right away, assuming that the server will succeed in its request. And so I guess it's the same thing here where you're you execute a transaction and then you just assume that it's going to succeed. That's the optimistic part, but the server quote unquote, which is like the verifiers, they might come back with a fraud proof saying, no, actually this didn't work out. And then you have to roll back your assumption or your, what you thought was going to happen.
+
+John Adler:
+In many ways. Yes. That's a good description.
+
+Anna:
+Doesn't it sort of, and I know that these have been lumped together. I know there are distinctions, but like plasma, wasn't it sort of working under this principle of like at first declaring it correct. And then having some game theory, potentially rebut that? Is this similar?
+
+John Adler:
+Yeah. So plasma and channels, both use fraud proofs.
+
+Anna:
+I see, but Optimistic Rollups are new. I mean, they're considered sort of a class of their own. Why?
+
+John Adler:
+Because Optimistic Rollups for riders guarantees a certain cost, but guarantee is nonetheless that channels and plasma can provide. So I can go over them briefly now, which is that channels don't have open participation and they have certain constraints on liquidity, right? You need a thing that's like inbound liquidity to receive a payment. Plasma is inherently permissioned and you can have arbitrary, smart contracts running on plasma. The reason being is that plasma doesn't use general purpose fraud proofs. It uses specifically an exit game around owned assets. So if you don't have a concept of ownership for something, for example, the union slap contract, no one owns it. And that case plasma doesn't really work very well with Optimistic rollups it has open participation that plasma has and channels don´t. It doesn't have the liquidity liquidity constraints that channels have, it's permissionless and it uses general purpose fraud proofs so that you can run any smart contract on it, potentially.
+
+Anna:
+With plasma ever designed with the idea of actually running smart contracts on it as well. Was that originally the idea?
+
+John Adler:
+Yeah. The original plasma paper, I think it described that you could run smart contracts, but the original plasma paper didn't really describe a concrete system that was more of a very, very high level abstract idea, the kind of concrete instantiations of plasma, plasma, MVP, minimal viable plasma, which was only around payment UTX, those just accounts, account balances basically, and then plasma cash, which was also based around payments and maybe potentially some predicate scripts around that. But none of these were designed around, you know, the potential of general purpose smart contract.
+
+Fredrik:
+And I'm curious to dig into how you achieve these two properties. So you mentioned open participation and not needing the liquidity. And so maybe recap for the audience, like if you open a channel, you sort of say on chain, each participant perhaps says I'm going to lock up 10 Eth and they both lock up 10 Eth and then they can both like go plus minus 10 each in their off chain transactions. And they can send a million transactions off chain, but they have to move within these limits that they've said in the, in the beginning. And then when they say, okay, all my transactions are done, they settle back on chain. And then the actual ending balance is moved to like properly settled. So how do you move off chain without actually doing this lock up process and having this, you know, I have to lock up X with this person in the channel and like this, this participation stuff, it seems like this on chain lock up thing is sort of inherent to how you take things off chain. So how do you actually achieve those properties without doing that?
+
+John Adler:
+There's a really easy way. And you use, what's called a blockchain. You may have heard of this technique, you know, blockchains allow us, I mean, I'm saying, I'm saying this partly as a joke, but partly because this is actually what you do. You know, the point of a blockchain is you can order transactions and you prevent double spends. A blockchains allow open participation and they allow participation that doesn't require capital lockup. So we can briefly go over plasma cash in this context. And it might make more sense of why you can't do things like Uniswap with channels. So the way I kind of think about plasma cash and not many people really think about it this way, which would is curious, but you can think of it like a bunch of channels with a particular allowable update. So your channel is proceeded by unanimous agreement as all the channels participant needs to sign off on a new state.
+
+John Adler:
+So imagine you had some channel construction where one of the allowable updates was one of the channel participants could completely give up ownership to a different user. That's not even part of the channel. You know, like you are Alison Bob and then Alison Bob sign and update that now it's Charlie and Bob that are in the channel. Now this doesn't work in reality because Alison Bob could also sign a channel update and give it to Dave. That's how I know Dave and Bob are the channel owners. So essentially you can kind of double spend this transfer of ownership. And the way to prevent double spends is while you just use a blockchain.
+
+Anna:
+The off chain has to be a blockchain. Is that what you mean?
+
+John Adler:
+Yes. Yeah. So the, what happens off chain has to be a blockchain and plasma cash is that. Is a blockchain that orders this transfer of channel ownership in these, the plasma cash clients.
+
+John Adler:
+So, so in the sense of Plasma Cash is kind of like a, you know, a bunch of channels and the new just change the ownerships around which wouldn't work with channels usually. But if you put these channel ownership transfers into a blockchain, which is what the plasma cash in is, then it works. So from this, we can kind of see why you couldn't really build a Uniswap without a blockchain using only channels is because, you know, you have a union swap, this is some shared state of Alison Bob are trading on a uniswap inside a channel, and then there's, you know, they bring in Charlie and they say, Hey Charlie, here's our latest uniswap. Well, Charlie doesn't know that's the latest channel state or that doesn't know that I've also brought in Dave. So you need a blockchain somewhere.
+
+Anna:
+I think we've covered at least two, maybe three ZK rollup constructions. And in those, I don't know if it's all of them, but at least two that I can think of a ZK Sync and Hermes. They have some sort of like, validator, even if it's not the traditional validator that we think of, they're kind of these agents that are making sure that whatever's happening in there is somehow correct. And they are like the consensus builder within this other blockchain. Yes. So I do know that that mostly exists in ZK rollups but actually, John, are you familiar with ZK Rollups that don't have any sort of validator type role?
+
+John Adler:
+I think ZK Rollups use provers as opposed to validators and the kind of proof of stake sense.
+
+Anna:
+That's fair to say. I mean, I'm, I'm using the word validator here is like just...
+
+John Adler:
+Some block producer.
+
+Anna:
+Checking body that could either be, yeah...
+
+Fredrik:
+The approver would be validating the transactions by submitting a proof that they're correct.
+
+John Adler:
+Yeah. The validator for most ZK Rollups would be the smart contract on Ethereum, it'll would actually verify the proof.
+
+Fredrik:
+That's true. Yeah. When you talk about a validator on a proof of stake system, it's, it's the same kind of thing, right? Where the validator isn't actually guaranteed to produce something valid. That's why you have all these other economic systems in place. Just like the prover isn't actually, you know, guaranteed to provide a correct proof. And so the smart contract that verify it's approved, but in a proof of stake sentence, maybe the prover is more like a volunteer. I don't know. Confusing terminology.
+
+Anna:
+Yeah. Okay. So, but let's go back to your story. So like Plasma Cash, it did have then like some sort of group of provers.
+
+John Adler:
+Yeah. Plasma cash, and the rollups would have block producers for the blockchain because they are blockchains. Yeah. So they don´t need sunblock producers and plasma and plasma MVP and plasma cash are both inherently permissioned because of the data availability problem, which we can talk later on in this podcast, but rollups are permissionless, which is a very great distinction.
+
+Fredrik:
+What implication does that have? Because in, as far as I know the permission aspect of plasma, and this was widely debated once they were starting to get popular, like, Oh, we can't have this because it's permission. And then other people saying, well, we can't have it because the only thing you can do censor people, and if you find yourself being censored, you can always exit back to the chain and you have this whole sequence of events to prevent any malicious behavior. So is it really a problem that they're permissioned or, or is it just that it's a needlessly cumbersome to have them permission?
+
+John Adler:
+So before we talk about permission and there's a very good question, I'm actually, we should kind of go over some and then there not too distant future we'll probably want to define scalability and scaling as we contrast ZK Rollups and Optimistic Rollups. But for now to answer your question is that we should define permissionless and trust us. So permissionless is just, you know, you don't have to ask for permission. So if you have a single operator on a plasma, it would be permissioned, no, rollup. If you have, if anyone could make a state transition on the rollup, this could take the form of, you know, anyone could be a block producer or anyone can force some state transition. Then you know, it's it's permissionless. And the other facet is trustless. Trustless. I actually wrote a paper on this while I was at consensus a while back to kind of try and formally model the word trustless. And I came up with two facets. So one is state liveness.
+
+John Adler:
+And the other one is state safety where state liveness is basically you consume your state in a finite time and state safety is no one can consume your state without your authorization. So state liveness you can move your coins. And state safety is no one can move your coins. And we see that if a system has both state liveness and state safety that is Trustless. As long as you can keep moving your coins and no one can steal your coins then you don't have to trust the people who run the system. To go back to your question, plasma is permissioned, but it can still be trustless.
+
+John Adler:
+Is that you can, you can always exit your clients from the plasma, even with the plasma operator sensors you now, why is that a problem or is it it's a good thing? Mind you it's, it's better than having it being trusted. Like a side chain. You have to trust a regular side and you have to trust that the majority of the block producers on the side chain are honest, are those your funds can get stolen and plasma, you don't have to trust them. You don't have to trust their plasma operators. So it's better than a side chat. But the problem that it'd be in permission is that the operator can force people to go back to the main chain. And going back to the main chain means potentially it's very costly, right? As we see on Ethereum today, you know, with gas prices at a thousand giveaway, not too long ago, this means that many people, if they're forced to go back to the main chain, they just can't afford it. And the main chain can't actually take on that capacity, right? Imagine if you have a plasma, you know, apparently these are supposed to scale to a million transactions per second, or some other number like that. You know, you have a bunch of people there, you can't really exit them onto the main chain anytime soon. So being forced out of the plasma chain is not a good thing.
+
+Fredrik:
+Yeah. I mean, and to put it in practical terms, it could mean like you have to pay 50 bucks even if you manage to get in. And so it's impractical for, anyone's actually try to do that. Yeah.
+
+John Adler:
+Yeah. And to kind of give some context and this just to give some numbers for some intuitions is that, you know, the paper that introduced Lightning network. I think it's suggested block sizes around 300 megabytes for Bitcoin to be able to handle even a small amount of global users, opening and closing channels and opening and closing channels. Again, you know, plasma, you can think of Plasma Cash, especially again, you can think of it that channel. So imagine, you know, the operator kicks you out of the Plasma Cash you're to have to essentially close all your channels on the side of Bitcoin, that will take 300 megabyte blocks to process this. And so, as you can see, you know, Bitcoin's limited capacity, it definitely wouldn't be able to handle, you know, having an off chance system that suddenly stopped working and having all users have to exit to back to the main chain. And now similarly, Ethereum would be way too overcrowded.
+
+Fredrik:
+Right. So how do you achieve the permissionless aspect and optimistic roll-ups without having that? This in plasma comes from you have sort of a centralized units and that is the block producer of the quote unquote plasma blockchain. And I think I've seen proposals where he can have multiple operators, but it's still at best just believe it's the problem. So at least they'll have the same core problem. So how do you actually get by without that role in optimistic roll-ups
+
+John Adler:
+You get by, by having data availability and basically all blockchain problems boil down to data availability, which will be a recurring theme in this skull. But in plasma, pretend you have two operators, right? You know, Alice and Bob, Alice starts, and then she creates a plasma block, but she doesn't tell Bob what's in the plasma block, right. She tells individual users, here are your transactions. And the plasma block is valid, right? So there's no reason for anyone to exit because the plasma block is valid. There's not a single fraudulent transaction in there, but Bob doesn't know what's in the plasma block. So Bob can't make new plasma blocks. Right? So now Alice is the only block producer, all problems in blockchain, boil down to data availability. So in a roll up, and this is both ZK Rollup and Optimistic Rollup all the block data is posted on channel.
+
+John Adler:
+So this means that anyone can produce a new block. They have all the data there. The only thing you need is a system to select a leader and you can do this any way you want. You could have something like first come first serve. Anyone just produces a block. The first person who does it is implicitly the leader. It wouldn't be too efficient, but it works like a, it gives you, it gives you all the guarantees that you could want a, you could have something like everyone puts up some bond, and then you do some round Robin, or you do some randomized shuffling with rando. You could add VDFs in there so that the randomized shuffling isn't predictable. And you can do this all on a smart contract in Ethereum. So, you know, selecting a leader is easy in a blockchain. It's basically just take some group of people and you put them in some order. So it's very straightforward. And data being available means anyone can be a leader. Anyone can be a block producer in the roll up if they want to.
+
+Fredrik:
+But then the trade off. And then the downside of this is you have to put all transactions on chain. How do you work around, you know, how do you compress that? Or how do you, do you try to work around it in any way? Or do you just say, no, sorry, hands up and accept that the blockchain size will grow in definitely.
+
+John Adler:
+So there's kind of two, two caveats here. The first is that we don't necessarily have to use the same transaction model as the base chain, we can use a slightly different transaction model...
+
+Fredrik:
+You could basically whatever you want. Right. Cause you're just putting binary blobs in call data.
+
+John Adler:
+Yes. But the binary blobs still have to represent state transitions. Yeah. So you can't just do anything and you're still, it's still need to have sufficient information there so that someone can reconstruct the state of the system and then produce a new block. So you can't just do anything you want, but that being said, you can use a different transaction format. For example, the initial prototypes for ZK Rollup use much more compressed transaction, just for simple transfers Alice to Bob with accounts, where, you know, instead of using addresses, you would just use some index. People register for an account and then you just use an index. And this is different than like a blockchain, for example, where you, you know, you need a 20 byte address to, you know, to show that Alice is Alice, and you can do this in the layer 2, you can do this in the rollup because we have a fund like an underlying Layer 1, that allows us to send transactions from 20 byte addresses to register, you know, a four byte index. So it'd be difficult to do this on Layer 1, but we can do this on Layer 2 by leveraging Layer 1. So you can do tricks like that. Instead of having, you know, a 32 byte value, you could have a 4 byte value or even an 8 byte value. There's not really any reason that you would ever want a 32 byte value, like for Ether or, you know, some token or something. There's really no reason why you would need such a, so many bytes to represent a value. So you can have, you know, reduce the representation of this value and so on. So this allows you to represent state transitions that are different than Ethereum's using potentially much smaller transactions. So that's one potential gain. And the other potential gain is that you can experiment with different ways of aggregating signatures. So when in Ethereum each transaction needs to have a signature and ZK Rollup the signatures are implicitly in the ZK proof and Optimistic Rollups you do need to include signature data, but you can do things like BLS aggregate signatures today that reduce the cost to something like 1, maybe 2 bites per transaction, which is probably even cheaper than a ZK Rollups verifying the ZK proof. Does that answer your question?
+
+Fredrik:
+Yes. You kind of use a bunch of different tricks that you would use if you were to build a token only like a domain specific blockchain that was only for token transfers. If you were to like build that from scratch today, you would use a lot of these optimizations, but instead of building a new blockchain, you're doing this as a layer 2 solution and, and sort of embedding that the block data in this format. Yeah, yeah. Within the existing blockchain.
+
+John Adler:
+Yeah. So to go too low back to our question, you're not inherently increasing the size of the history because you can fit more stuff into the same amount of space. That being said, even if you do increase the size of the history disproportionately, is not really a problem because history is right once never read as opposed to state, which is, you know, you need random reads into the state just append only history is very cheap. You can even do that on a hard desk and hard desks are, you know, a dime, a dozen things that cost nothing. And the second thing is that storage or history rather is printable. So you don't have to keep all the history around forever on every full node. Once you have the current state of the system, you can just discard the history. You can't discard the state of the system because you're needed the state of the system to produce and verify new blocks. So in that sense, moving stuff from the state of Layer 1 into the history of Layer 1 means that it becomes more sustainable and cheaper.
+
+Fredrik:
+Yeah. I mean, it becomes harder to sync, but really only for the people that will want to try to sync the Optimistic Rollup and continue producing bugs. Have you thought about synking strategies for them? Cause like in, on the base chain and we have a bunch of different proposals from Warp sync to whatever else, like there's a bunch of new ones. If they ever get implemented that essentially simplify terms, try to break up the state intoTorrent tree. I got a chunk tree that you then just sync and those chunks and for the Optimistic Rollup like block producer, that person still needs to go through all of history to create, you know, their internal States to be able to then produce the next block.
+
+John Adler:
+Yeah. That actually is a topic I wanted to discuss, which was comparing and contrasting ZK and Optimistic Rollups the guarantee is they provide and the scalability they provide. And it's exactly because of sync strategies and whatnot. So if you don't mind and we should cover that topic. First, before we talk about which one is more scalable or less scalable or the same scalable and nothing in between, we kind of have to define what scalable is. Scalability. Again, we should start that by definitions first, because otherwise we don't know what we're talking about. So James Prestwich wrote a thread about this, which was prompted by some comments that I had made that ZK Rollups, aren't actually more scalable than Optimistic Rollups contrary to popular belief, which we'll cover very shortly. Why, why that is. And hopefully this doesn't make a lot of your viewers, very sad, but that's the spoiler alert.
+
+John Adler:
+So if you don't like this and skip to the last, the last quarter of the, of the podcast so, you know, throughput versus scalability and James Prestwich wrote a Twitter thread on this. So throughput is just transactions per second. You'll have a certain number of transactions and you have a certain period of time. And then, you know, you just divide the two, is the ratio. And then transactions isn't really the best way of wording it. It should really be worded as some sort of unit of work per time because you know, just transactions doesn't really tell you anything. Cause the transaction could be very small. It could just be a simple transfer or it could be very large. It could be doing, you know, going through 10 defy protocols to do some flash loans on some minting of gas, tokens, and some burning of gas, tokens, and nothing in between.
+
+John Adler:
+So, you know, just transactions doesn't really tell you anything in the sense of Ethereum, it should be, you know, gas per second. In the case of Bitcoin, it could be like V bytes per second, something like that. Right. But you know, we can say TPS just as shorthand, but you know, it should be known that it's not just transactions of some unit of work. Yeah. How to measure that unit of work is actually very tricky. So we'll leave that as an exercise for the reader. So it's just that's throughput, but that's not scalability. And unfortunately, a lot of projects have described that as scalability and have said, Blockchain is scalable because I can do 10,000 transactions per second. But again, that's not scalability. So scalability. Scalability is transaction throughput divided by the cost to run on a Full Node.
+
+John Adler:
+And there's a star next to this fully validated node, which we'll cover shortly. Cause it's not just full validation. So what this means is you can increase the throughput of a system by increasing the cost, to run a node. In other words, you know, make require more powerful hardware and this will allow, this will increase the throughput, but it'll keep scalability the same.
+
+Anna:
+And by cost here, Do you mean cost like energy cost actually? Like dollars?
+
+John Adler:
+Dollars. It costs me a certain amount of money to buy a Full Node to buy the hardware or to rent it. Right? Yeah. So as an example, that takes us to the extreme I'll use Solana. Solana requires you to have a really, really powerful computer potentially that gets more powerful every year, you know, multiple GPS and all that stuff running in parallel, you know, 64 card CPU, you know, a bunch of bunch of RAM and all that stuff.
+
+John Adler:
+And sure that achieves potentially higher throughput numbers, but that's not scalability because the cost to run a node is very high, right? So it's not any more scalable than Ethereum. Now they have made some optimizations which they should be respected for in terms of things like parallel transaction processing, which allow you to make use of currently unused resources that currently Ethereum does not use, but that, or they're just sitting idle. So those optimizations are good and they should be respected for them. But you know, you know, requiring a $10,000 computer, that's not scalability. Right. That's increased throughput.
+
+Fredrik:
+Yeah. Just as you said as well that you could do a lot of these optimizations on Ethereum too, right? Like reducing the transaction bitesize et cetera. Like yeah, there are good optimizations and those are the ones that you would make if you built a new blockchain, but you can have them anyway
+
+John Adler:
+That they have access less, for example. You can add access less on Ethereum. There's nothing inherently stopping you. It just hasn't happened yet. And adding them will allow some measure of transaction parallelization. So now we'll go to the star and the full node, which is that full node ensures that the blockchain is valid. It makes sure it's fully downloads and validates every single block. And I make sure that it's all valid. The start here is that it also allows you to do something that a light now doesn't really allow you to do. It allows you to produce a new block. And you know, the original thing is that you had mining nodes and then do it SPV nodes. Like that's kind of like the Satoshi's Vision. And if you, if you want to call it that, that was, you know, described in the paper, but there's no real concept of a non-mining node.
+
+John Adler:
+It's just, there´s no non-mining node until, you know, after a while. So one of the things a full node allows you to do is produce a new block. And this is where things get interesting. Okay. So we'll cover something like, let's say a succinct blockchain. I'm pretty sure you guys have heard of things like an 0(1)blockchain or a succinct blockchain where, you know, you just, you get us a succint a recursive succint proof of validity, proof that all previous blocks are valid. This doesn't tell you the four choice rule of the, of the chain. But at least tells you with all the blocks are valid. So here's the thing. Let's say you have a system and you know, all your full nodes are just doing that. They're just, you know, verifying this zero knowledge proof. We know that the zero knowledge proofs tells us that the chain is valid, but it doesn't tell us what the state is. Right. It tells us here, you know, here's the state rent. The state rent was created through valid transactions with valid signatures and all that. But it doesn't tell you what the state is. So this node, couldn't ask you to produce a new block.
+
+Anna:
+Is there a way they are actually writing this somehow separately on chain?
+
+Fredrik:
+No, it's not on chain. It's all distributed. It's like a, you know, the, the whole stateless concept is you don't store it on chain. You just pass it around off chain and hope for the best.
+
+John Adler:
+Yeah. So this isn't the ZK Rollup this is, you know, something hypothetical, chain that operated through every block had a recursive zero knowledge proof of its validity, its validity on all previous blocks. What I'm describing as Coda or what used to be called Coda. Right. So you know, you have this chain, okay. So yeah, you have your full node. Do you validate the zero knowledge proofs? Great. It's valid, but you can't produce a new block. So what do you have to do to produce a new block? And this is, this is a question for you guys.
+
+Fredrik:
+Download the past data.
+
+John Adler:
+Great. Do you have to download the past data and make sure it's available? And then what else do you have to do with us?
+
+Fredrik:
+Re-Execute it.
+
+John Adler:
+So you have to re-execute it. I'm wondering if you, have you been reading the stuff that we've been writing or if this was known all along.
+
+John Adler:
+Okay, good. Yeah. So you have to re-executed, right. And not as means, is that again, we'd scalability is the throughput divided by the cost to run a full node star where the star is, there's not a full node. That's just validating transactions. It's a full node that can produce new blocks. Then we know that the zero knowledge proofs doesn't provide any scalability, you still have to fully download all previous blocks and you still have to execute every single past transaction to get to the latest state so that you can produce a new but new block. So to kind of, you know, bust some, to bust some myths is that, you know, there's no such thing as an 0(1) blockchain, unfortunately, as much as we wish
+
+Fredrik:
+In theory, you could. I mean, I'm not sure if they actually attempt to solve it this way, but in theory, you could just pass the current state around. And then the Zero Knowledge Proof also proves that this particular state route is the correct one. And then with the state in hand, like you have to download the states, they'll buy, you have a proof that this is the correct state route. And then you can proceed from there, with the transactions that you've been given.
+
+John Adler:
+Yeah. You could do that. But now that that's a stronger assumption than any other blockchain mix, right? Like Bitcoin, for example, and even Ethereum, they don't assume that you can download the full state from any node. They give you the option of reconstructing the state yourself by syncing the chains history only. Right? And this is a kind of a fundamental assumption of current blockchains, right? They don't assume that you must be able to fully download the state of the system. They only assume that you can, you only have access to the history. And of course, there's reasons for this. As I said before, is that history is really cheap. And state is really expensive and state can potentially be quite large, like an Ethereum. The state is almost as big as their history. So, you know, obviously you can make certain assumptions and you can make certain stronger assumptions than currently existing blockchains.
+
+John Adler:
+But then this begs the question if you make these assumptions. Then do you really need the zero knowledge proofs. You know, one example is if you make the assumption that there exists someone that is fully validated in the system, and that has access to the current state, why can't you just assume that they'll give you a fraud proof. If it's such a person exists, then they should be able to give you a fraud proof. At which point you don't need all this complexity of validity proofs, because you have this, you know, mythical person that's validating these tens of thousands of transactions per second, that can give you the whole current state. They can also construct a fraud proof it's trivial for them to do where they do all that work. Right? So we, we see this kind of counterintuitive result, which is that zero knowledge proofs, contrary to popular belief, don't ask you to any scalability or security advantages over fraud proofs.
+
+Anna:
+Isn't there a proposal for like some joint ZK optimistic roll up or something where you'd actually make use of the properties of both?
+
+John Adler:
+Yes. I don't remember the order, but I think it was it's you submit the ZK proof and then you only verify it as challenge or something along those lines. I don't remember, but yeah, there's, there's some suggestions around there. So to kind of go back to, you know, this throughput and scalability and zero knowledge proofs versus not, I know this hypothetical blockchain, that's supposedly all one, but isn't right. You do have to be able to fully download all the history and you need to be able to reconstruct the current state. And again, if you assume that the current state can be given to you by someone in the network that there's someone willing to potentially, you know, cause supposedly, you know, using validity proofs means you can have, you know, a whole bunch of transactions per second you know, tens of thousands, a hundred thousands, cause there's only one person creating proofs, right? So if you have this mythical person that has a super computer capable of, you know, constructing the current state and giving it to you at any time, they can just construct fraud proofs and give them to you at any time. So there's not really any assumption model under which zero knowledge proofs actually have higher scalability and more security than fraud proofs.
+
+Fredrik:
+It's sort of probabilistic, finality versus guaranteed finality and consensus systems like ZK is guaranteed finality. Like once you're given this proof, it's correct. You know, I assume everything is correct. I can proceed from there in a fraud proof system. I have to give it some time how much time is a little bit of like a variable.
+
+John Adler:
+That is a very good point. So I want to make clear that when I say that a zero knowledge proofs, aren't more scalable or more secure than fraud proofs. That doesn't mean the zero knowledge proofs have no advantages. So they do actually have advantages and you brought up a very good one, which is 'latency'. I wouldn't call it '...to finality', but 'latency to onchain interactions'. The reason being is that in an optimistic roll up, do you, you know, you commit to an optimistic roll up block and if it's invalid, then it can be reverted with a fraud proof within some time out. But if it's valid, it can't be reverted. So it's a guaranteed from the point of view of the on chain contract to eventually finalize, but a user can fully validate the optimistic, roll up off chain and then see that, okay, all these blocks are valid.
+
+John Adler:
+They build upon valid blocks, then that's immediately final. But from the point of view of the on chain contract, the on chain contract, obviously can't fully validate an optimistic rollup, right? As I said, that defeats the whole purpose, right? Then, then you might as well just run it in the contract. The on chain contract needs to wait a long period of time and potentially much longer than like a normal peer to peer fraud proof because on chain there might be congestion and stuff. So you're correct, but ZK Proofs have their very good advantage is that they allow you to have much lower latency when it comes to on chain interactions. So once submit a ZK rollup block, then you know, what's valid. You can immediately withdraw your funds. In the case of fungible assets, this isn't a very big distinction because the fungible asset can just be withdrawn with the help of a liquidity provider.
+
+John Adler:
+But it is very useful in the case of things like cross chain interactions and for doing things like withdrawing, nonrefundable tokens or NFTs. Cause you know, obviously you can't have a liquidity provider for an NFT by definition because it's not fungible. So that is one place where zero knowledge proofs are better than fraud proofs, which is that lower latency for on chain interactions. But they do have higher latency for committing the block for the first time, which is a disadvantage, but that's kind of, we're talking about. So they have one other advantage. And you know, I did bust potentially a lot of people's hopes when I, when I say that zero knowledge proofs don't provide scalability or security or better scalability or security, but does another thing, which, which is they're potentially good at. One thing that I kind of glossed over is that when you reconstruct the state of the system so that you can produce a new block, you don't actually have to fully execute every single transaction if you only have to apply every state transition.
+
+John Adler:
+So imagine you have like a uniswap contract, maybe this isn't the best example, but you know, some trade, some trading system, right? It might have to lock up a bunch of prices internally, but the end result is, you know, they're just a movement of tokens from one person to another or from two people between each other. I know in the scenario where you want to reconstruct the state of the system of a system that's, you know, has zero knowledge proofs. So and so in such a chain to get the state of the chain, you don't actually have to execute average transaction. You only need to apply every state transition. Now it's a blockchain only does state transitions. Like if it only does simple balance transfers, then we can see that, you know, state transition is that's, if that's all the work you're doing, if all you're doing is just transferring balances and then clearly using validity proofs doesn't have any advantage over not using validity proofs because all the work is in the state transition.
+
+John Adler:
+But if your system is very complex and allows for complex smart contracts that potentially read a lot of state elements, right? Like it goes in there and reads a hundred state elements then does one simple state transition. Then that is an area where zero knowledge proofs are useful, which kind of brings us back to why they're originally created it's to provide a succinct proof of some computation. So using it in the sense of, you know, scalability that has been bastardized in the modern ZK Rollups and all this other, and like all one blockchains and stuff is incorrect. But if you use it the way it was originally intended, where you provide a succinct proof of some computation happening, and that computation could be very large, then that is where using validity proofs for scalability has an advantage because that's what they were built for.
+
+John Adler:
+Right. You can have, you know, very, very large transactions, imagine a transaction that consumes, you know, a billion gas, but only has one small state transition just moves the balance. That's all it's doing. Then of course, using validity proofs does provide your scalability. Unfortunately, it's such a system that doesn't really exist nowadays because having, you know, large general purpose computations inside some ZK Rollup is just not something that exists today. At least not in an opensource publicly reviewable way. It may, it may, it may in the future, there's some advancements even down here. There's I think Zinc on the ZKSync side, there's a Cairo from the Starkware guys. So maybe we'll see some interesting things happening on that front, but you know, for now, at least it doesn't really seem like those exist.
+
+Fredrik:
+I want to take a step back because I think we've dove into describing, I think everything in how this works, but I want to take a step back and sort of ask the question of where fundamentally does the added scalability come from - "added scalability". Because it seems to me that if we just take plain Ethereum, it is not scalable because it is acting on a global states with a bunch of different miners and full nodes across the board have to re-execute all these transactions all the time, and it causes a bunch of problems. But what you do in an Optimistic Rollup and to some degree in a ZK Rollup and rollup in general is you are kind of creating a secondary system in which you have fewer block producers that can run faster because you've optimized the underlying data structures and how you act on this rollup. But you still fundamentally, you know, put the transactions on chain. You still fundamentally have to build that states in the rollup block producers. And so aren't you just like sort of creating a secondary blockchain within the call data of the first and the scalability is sort of, you're reducing the set of people who are computing.
+
+John Adler:
+That's almost exactly correct, except for the number of nodes, but everything else that you said is entirely correct, that there seems to be something fishy here, but the system I described, you know, the reason the Zk Rollups is not more scalable or secure than optimistic rollups. Or like validity proofs vs fraud proof is that you still need to fully, in the worst case, not in every case, but in the worst case. And unfortunately we have to metric our systems based on the worst case, because blockchains are adversarial environments. In the worst case, you still need a user to potentially run a full node, to reconstruct the state and essentially do full validation - if you want to call it that. So if you have that system and you know, you just put all your transactions on a rollup, it doesn't seem like you're getting any scalability.
+
+John Adler:
+And why would you, you just have bigger blocks essentially, or you have the same size blocks and you have no scalability. And the answer is you're correct, which is a very bizarre result from someone working in the rollup space would tell you, but you're entirely correct that rollups, don't provide scalability on their own. If you have an EVM and you put it inside an Optimistic Rollup. So you have a, you know, EVM native optimistic rollup, or, you know, potentially in some hypothetical scenarios, ZK Rollup, then that rollup would still be limited to 15 transactions per second, unless you want to increase the cost of running a full node, or unless you want to add, you know, stronger trust assumptions, unless you say, well, the users aren't going to run full nodes. We trust there's some, there's some supercomputer out there that can generate fraud proofs, right.
+
+John Adler:
+But if you really want to make that assumption, why don't you just do that on Ethereum? Right? So, you know, clearly there's no scalability to begin here. So where do we get scalability? So there's two ways. And James specialist's covered us in a thread which everyone should read. And if you're, if you're in blockchain. So the key things that rollups give you is there's two things. One, it allows you to choose different execution models that potentially are more scalable. One example is what we're doing as fuel, instead of using the EVM with all its problems, we're using a UTXO-based data model that allows for parallel transaction validation, and that doesn't have the same state lockup bottlenecks that Ethereum has. So this means on the same computer, you get more transactions, you're going to get more transaction throughput. So that's an increase in scalability.
+
+John Adler:
+So essentially you can think of it like segmenting the block space of Ethereum or block spaces. And just in bites, isn't there let's say gas, right? So if half of Ethereum blocks used on Ethereum, half of them were for fuel. It'll be able to process more than the current transactions per second. Assuming we don't raise the current gas limit, right? Because we use a different execution model for fuel. The other way you get scalability potentially is by creating segmented trust boundaries. So the example is, you know, there's two roll-ups and you only use one roll up. You don't care what happens on the other roll off. Alright. So this means that, you know, your users have one system could, you know, get access to the full 15 transactions per second. Users of the other system could get a full 15 transactions per second. And, you know, assuming most users don't use both systems. Then now you have 30 transactions per second, across both of them. And this should sound familiar because that is essentially what sharding provides, right? The rollups are very similar in many ways to shards, which should hopefully segway into our next question.
+
+Fredrik:
+And yeah, it was like, this is exactly heterogeneous sharding, eg. What Polkadot does.
+
+Anna:
+Or ETH 2 is supposed to do eventually
+
+Fredrik:
+Yeah. Let's go into the ETH2 discussion because ETH2 still doesn't really want to provide heterogeneous sharding and still wants to provide homogenous sharding where you still have the same execution model on all shards. So how do you bring this model into ETH2 and make it even better there?
+
+John Adler:
+Okay. So there was a reason posts by Vitalik Buterin sometime in early October about just this topic, which is a rollup-centric view of Serenity. Unfortunately it's commonly called ETH2, but I disagree with calling it ETH2 because that assumes the conclusion. It's you know, it's a separate blockchain that has nothing to do with Ethereum, except there's a few guys there that also worked on Ethereum. It should really be called Serenity. This post described the new roadmap for Serenity that was more rollup focused. So rather than having sharding execution as they were originally planning for Phase 2 they say okay lets drops this and say "Let's just have shorter data availability" which has some problems.
+
+John Adler:
+Let's just have shorter data availability and allow rollups to use this available unordered data to just run. And the rollups can run on, for example, ETH1 or Ethereum. So we kind of see that rollups do, as we just discussed, do provide some of the same properties of sharding, right? You can run as many rollups as you want. The rollups can have different execution models. The only constraint is that the execution model must either be expressable in some zero knowledge proof way, or you must be able to construct a fraud proof that can be interpreted in some way in the EVM. If not, then, you know, you can't really construct a fraud proof. So, so those are kind of the constraints. And there are actually non-trivial constraints, not having access to native code and only having access to the EVM are nontrivial constraints, but you can still do basically, you know, all of defy that you could want, all of payment transfers, UTXOs accounts or anything in between.
+
+John Adler:
+You can basically do anything you want. So in this way, Serenity could provide a large amount of data availability throughput, and then rollups could just run on Ethereum and essentially act as shards, as you could have 64 rollups running, just as an example. And then, you know, if a user doesn't want to validate every single Rollup, cause they only use one, then they adjust validate one, right? And then you can have some way of having some committees around for their 64 rollups that, again, its just a leader election. Then you can do leader election in some smart contract on Ethereum. It's not a, it's not inherently complicated
+
+Anna:
+In what you've described. Would you have identical ZK rollups like, or do we imagine each one of these, having this unique property, like for example, would there be like many zkSyncs, many fuel, many, like, would there be all of these? I notice it's not ZK Rollup, but all of these other rollups would, it would be multiples of them. Would it be singular?
+
+Fredrik:
+I think there would have to be, I mean, added Scalability as described, comes from domain specific optimizations, basically saying, we know in this context we only deal with balance transfers so we can make the most optimal thing for balance transfers, and then you can make another one that's optimized for NFTs or whatever. Right. And so I think that that's where the scalability comes from. So you'd have to have domain specific rollups.
+
+John Adler:
+Yeah. So you have domain specific rollups and you have multiple of them.
+
+Anna:
+Multiple of each one. Yeah. Cause that's that's the question is, is it sort of like, do you have to multiply it in the example that you would given, you did say that there would be like two rollups basically running at the same time. So we would do the same thing said reimagine it that way.
+
+John Adler:
+The current imagining if you know, the researchers in the space is that there should be multiple rollups running. Now, if you're asking multiple rollups of the same kind, like let's say multiple Fuels or multiple ZK syncs or multiple Hermezes is the answer is ... Maybe! There's no reason there's no inherent reason not to, especially if they're constrained, like, let's say you have ZK syncs, which does just as payments right on the side for now in that case, having two of them doesn't really affect anything. Cause you don't really need like atomic composability across payments. Right. So you can just have two of them and you don't really lose anything. But a prevention provides you with conditional scalability, depending on if a user is using one or both,
+
+Fredrik:
+You kind of need composability and payments like in the "train/hotel problem" where you want to pay for two things, but conditionally that both succeed.
+
+John Adler:
+If they both interact with smart contracts, then yes. But I'm saying ever just like a payment for something that's off chain, then it's not really too important. For things like trades or for, you know, more composable interactions then yes, of course you would want to put them in the same execution system. But if it just like a payment for something that's off chain, then it doesn't really matter where it is. That just as long as they accepted.
+
+Fredrik:
+Sort of back to the same sharding methods where you would have problems, perhaps interacting with people on the other rollup. Like if I want to, if I was in ???? On two different rollups and they want to send money to each other, then either Alice or Bob has to create an account on the other rollup and can send directly to between them, which might or might not be a problem, like depends on how you shard this and how users interact in reality.
+
+John Adler:
+Yeah. Obviously there needs to be a lot of application development that happens for across rollup interactions, just like there would be for cross-shard interactions, just like there would be for cross-chain interactions. So yes, there needs to be a lot of work done there, but it's not impossible. And some interesting stuff that's happening at the forefront of this is Barry Whitehat is also kind of pushing. This is doing things like 'public key registers'. If you want to call it that or, you know, 'account registries' so that, you know, all rollups are all rollups that conform to some standard can share a common registry of accounts. At that point, you know, account registrations are shared across multiple of these rollups, which means that, you know, Alice can send to Bob, Bob doesn't really need to create an account on the second rollup. He just needs to have an account registered on any rollup. Stuff like this, but yeah, there does need to be a lot of work done.
+
+Anna:
+Fascinating. Just imagining that starts to get really wild. The cross roll-up interaction.
+
+Fredrik:
+Let's talk a little bit about data availability because... I'm also, just a quick question before we dig in, you already to teased that there are some problems with sharded data availability, but even before then, I mean, there is this proposal on the table. I think it's been accepted. I don't really follow the details anymore, but to reduce the cost of call data. So how much does the cost of call data actually affect rollup schemes?
+
+John Adler:
+Right now it's actually quite significant because it's 16 gas per byte. And if you kind of do the math, it ends up being that in a lot of cases is it's cheaper to store something in state and then just doing an ass load later than done it is to provide, you know, the pre image to some hash and call data.
+
+Fredrik:
+So it´s actually very soon to be accepted and put into practice at some point.
+
+John Adler:
+So I actually wrote a proposal to decrease the cost of call data. Then I think that there is maybe some other soft proposals floating around. I want to be optimistic and imagine that it will be included at some point, but the realistic me says that there is opposition from certain Ethereum developers, such as Peter from GETH that really don't want chain history to grow. Despite the fact that as I said about you can do things like pruning and whatnot and chain history is actually really cheap. So I don't actually think the cost of data is going to be decreased anytime soon on Ethereum. Unfortunately. And part of this is because Ethereum doesn't really have any good scheme for doing anything better than just full replication of the data. If I had some way of doing, you know, error, correction or error recovery, then potentially you could do better cause you wouldn't need full replication of all the history you could, you know, do partial replication, which leads us to our next topic.
+
+Anna:
+This is flowing so well. So I guess next up is what we teased this data availability. Yeah, let's go into this. You've sort of explained the issue of it or the lack of it in certain cases. What are you doing about that?
+
+John Adler:
+So this is kind of the singular problem of all blockchain, such as data availability and ordering. If we have those two, then we have everything. So now let's kind of do a deeper dive into the problems that it causes. So in the form of channels, for instance, you don't have a globally available ordering on channel updates. So you can't do a thing. It was like what I described, you know, Alice sends to Bob, you know, Alice and Bob have a channel and Alice assign the channel over to Charlie and then, you know, says I'm no longer part of the channel. You can't do that without a global ordering. Another thing that, you know, data availability and the problems that causes is things like plasma being permissioned. Someone can create a plasma block and just not provide the data behind it. It could all be valid and they just don't provide it to any one party.
+
+John Adler:
+Then no one can create a new plasma block. It becomes permissioned. And all the thing is in the case of say a succinct blockchain you know, you have ZK roll up even right. And the ZK roll up, you still need to provide all the transaction data. And the reason you need to do this is if you didn't have the, someone could move the state over, in this case, you know, the state, the new state is valid, cause there's a validity proof for it, but no one can produce a new block and not only can non produce a new block, which, you know, maybe you say that's like a philosophical problem, right? But the issue is no one even knows what their coins are. If no one knows what their coins are they can´t spend them. So effectively by moving to an unknown state that is valid, but unknown everyone's coins are burned, right?
+
+John Adler:
+So it creates all these problems. And the solution, the naive solution as well, you just download everything, right? Which is obviously a terrible solution because it's downloading everything. Because it means, especially if everything is in history, it means that you're doing a whole bunch of work. So can we do better? And the answer is yes, we can. Which springs into how Lazy Ledger is doing things. And now Serenity is doing this potentially sharded data availability. So kind of a brief two minute description of the solution to the data availability problem: well, let's take this data. That's a erasure code it for those of you who are not familiar with erasure coding as a way of doing error correction. So we have some data. And then in the simplest sense is do you grow the data to twice as big? So if you have say a one megabyte of data, now you have two megabytes of data. Plus parity data, like original data plus parity data, is two megabytes. And as long as you can recover one megabyte, any one megabyte off this two megabytes, then you can recover the original data. And by extension you can recompute the parity data. There's like some more nuances in there and some parameters you can change it, but that's kind of in the simplest in the simplest sense. So if we have such a scam, what you can do is, well, you just random sample into this parity plus original data. Every time you do random sample into there, there's a 50% chance - in this like naive construction, just to get some intuitions - there's a 50% chance you land on some data that is there that is available. But the block producer like this militia block producer might be trying to hide more than half of it. So that the original data is like completely hidden. So very high level intuitions is every time you do random sample, there's a 50% chance you get tricked. That's the intuition. So if you do a multiple samples, the chance that you are tricked decreases exponentially, it's 50%. Then you do another sample. Now it's 25%. And so on.
+
+Anna:
+If you've been able to sample and it has not shown problems, then the likelihood is lower.
+
+John Adler:
+Yes. Then the likelihood that you have been tricked, decreases exponentially with the number of samples and you know, it's exponential, decrease as important. So doing this game requires committing to the erasure coded version of the data and using the 2DScheme that the one I just described here as the 1D, but, you know, just to build some intuitions, but the, the 2D game requires a commitment to square route of the block size amount of data, because you need a square route number of rows on a square route of a number of columns, cause they're two dimensional. So in total you needed twice the square route of the block size amount of data. So there's some overhead here, but what this means is once you've done this erasure coding scheme, a node can make an event - and this is a light node - can be convinced that the block data is available by doing a fixed number of samples into it. Because again, the every time you do one of these, you have a 50% chance of being tricked and that decrease exponentially. So the block could be 1 gigabyte. It could be one terabyte and it could be a one petabyte. You only have to do a fixed number of samples. The only overhead is square root, square route of the block size that must be committed to for each block. So what this means is we have a way of nodes convincing themselves that data is available by doing sublinear work. They only need to download the square root number of commitments, and then they have to do a fixed number of samples. So they don't actually have to fully download the block to convince themselves with very, very high guarantee is a very high likelihood that the block is in fact available, which is revolutionary. That means that you no longer have to fully download blocks. You can ask you to do a sublinear work, which means blocks can now be made - You know, they can be square, they can make it squared as much large.
+
+Anna:
+And is this what Lazy Ledger does? You sort of described it before as like it's an L1 in itself?
+
+John Adler:
+Yes. So I can cover both Lazy Ledger and Serenity proposal in this context. So Lazy Ledger basically does this and it only does this. The only thing it does is it takes data, blobs, just 0s and 1s. It doesn't execute them. It doesn't interpret them. It just puts them in a block, erasure codes a block, and then pass it around. So the only thing you need to do to ensure a block is valid is actually to ensure it's available. Because again, there's no execution.
+
+Anna:
+But is it taking when you describe this? Like it's not taking this information from another blockchain it's in itself doing this.
+
+John Adler:
+Yes, it's in itself a blockchain, but the nice thing is any blockchain can make use of this service. For instance, you could take Bitcoin blocks, takes that one megabyte and just put it on Lazy Ledger as a blob. Lazy Ledger doesn't interpret it as a Bitcoin block, but it means that some application running on top of Lazy Ledger say like a Bitcoin virtual side chain full node could read out all these Bitcoin blocks from Lazy Ledger and essentially reconstruct the Bitcoin blockchain without having to fully download every Bitcoin block. Interesting. Yeah. So it allows you to have data availability with sublinear costs, which means that you can have a large amount of it, right? The sublinear cost means that you can have a huge amount of it. Execution always has to be linear, right? Or at least not execution because as we said, you can do some checks with zero knowledge proofs, but at least the number of state transitions needs to be linear. And you can't avoid not executing something, but data availability, you don't have to fully download something to ensure it's available. You only have to do a square to work
+
+Anna:
+I'm trying to imagine, like how would, how would an application interact with it exactly?
+
+John Adler:
+So with the Lazy Ledger, we have a special optimization called the Namespace Merkle Tree, and this is not something that Serendity has. But contrast the two systems is that every piece of data in the Lazy Ledger block is associated with some name space, some application named space. And then, you know, each application essentially just described its own Namespace space. So like you could have Bitcoin for instance, it calls itself, you know, some virtual Bitcoin let's pretend and you'll call this off. Oh, I'm Namespace 12. Right? So it goes through and downloads only the pieces of the Lazy Ledger block that had Namespace 12. And you can provide efficient Merkle proofs into, and, you know, to show that just these pieces of the Lazy Ledger block or are for, you know, Namespace 12. So you don't have to fully download every single Lazy Ledger block to extract the application messages.
+
+Anna:
+Do you imagine this functioning though, in an L2 context as well?
+
+John Adler:
+Yes, so, well, can help with L2 as well. You can build things like rollups and Optimistic Rollups and ZK rollups and sidechains of you even want too and use Lazy Ledger as a shared data availability layer to provide shared data availability for all their systems. For instance, Cosmos zones, instead of having each Cosmos zone, you know, have to have a very strong validator set to prevent corruption. And you just put all the blocks for the zones on Lazy Ledger. And if they're not there, then you know that you're there invalid and if they are there. Then if something is invalid, you can construct a fraud proof or as ZK proof. So Lazy Ledger can be used by any and all the blockchains as a shared data availability there. And since it only does data availability, there's can probably a much higher throughput of just data than any other system in the world contrasting with Serenity and, you know, the new roadmap Vitalik Buterin - I think he posted a picture a very, very recently, or he also gave a short talk at the ETH online or ETH global summit, which was like a graph. And it's showing, you know, if you just do sharded data availability or just data availability in general, you can get like, you know, the throughput off 25,000 transactions per second. But if you do sharded execution, the throughput decreases to like 1000 transactions per second. So that shows that if you just do data availability and you don't do any execution, you can have much higher throughput off the critical thing that you need. And the critical thing that you need is data availability and ordering. Once the data is available, once it's ordering, you can build any application you want on top of it.
+
+Fredrik:
+I find this fascinating because I mean, I have my own internal worldview and everything, but to me, you're, you're literally just describing polka dot where namespaces are another name for para chains. And like, it's, it's the exact same construction it's sort of, this feels Lazy Ledger, then that's a relay chain. So it's sort of a coming to the same thing from two completely different angles kind of thing.
+
+John Adler:
+Yeah. I mean, ultimately all these sharded blockchains try to solve data availability in some way or another, right. While also providing things that guarantee is around execution. But ultimately what they really want to try to do is to increase the data availability throughput. So the answer, you know, are, are there similarities? The answer is yes, of course there's similarities between, you know, Lazy Ledger and all sharded blockchains.
+
+Anna:
+Also Beacon chain, Is that what, I don't know if that's still there, but like, was the Beacon chain also supposed to act a bit like this Lazy Ledger construction?
+
+John Adler:
+Not exactly. So the Beacon chain is responsible only for shuffling the validator set that doesn't really do much with the shards that being said one issue is the Serenity design of sharded data availability is higher overheads and more bread on us and the consensus mechanism, but specifically the higher overheads is the current Serenity design is basically a one big block you're segmented into 64 smaller blocks.
+
+John Adler:
+And then each of these smaller blocks you would do the erasure coding. Like I described to get, you know, with the square, with number of commitments and so on. I need to do some sampling, but the trick is, as I described earlier, the overhead for each block is square root and the block size and the number of samples you need to do is constant, right? But it's per you have to do a number of samples per erasure coded data. So if you take one big block and segmented into 64 smaller blocks, you're now increasing your overhead 64 times, and you're not really gaining anything, like ultimately you're still needed to do data availability tracking and every single no. And these to the availability of average art and this example, all the data and across all the blocks needs to be checked for availability. So in that sense, there's not really an advantage to splitting up one big block into 64 smaller blocks. There is increasingly overhead might as well just have one big block and just do a raise coding over the whole thing.
+
+Anna:
+I hate to sort of wrap up here because I feel like we could probably continue to chat about these, like the comparison between these systems and get into the nuance even deeper. But I want to say thank you so much for coming on the show and, and sort of taking us on this journey through like, fuel's work on Optimistic. Rollups it's comparison to ZK Rollups like how kind of it's it's turning that ETH1 construction into a sort of semi-sharded environment and lazy Ledger. This is really and data, the data availability problem. This is really interesting.
+
+Speaker 4:
+Yeah. Thanks very much.
+
+John Adler:
+No problem. Thank you for having me.
+
+Anna:
+And to our listeners. Thanks for listening.
+
+Speaker 4:
+Thanks for listening.
+
