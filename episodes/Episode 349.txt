@@ -1,0 +1,1006 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I chat with my co-hosts, Nico and Guillermo, as well as Alex Evans, all three of whom are working at Bain Capital Crypto, with Nico having joined the firm quite recently. In this conversation we revisit the concept of DA or Data Availability. 
+
+
+We talk about how works like FRIDA helped Nico, Guillermo and Alex to explore systems that mimic some of the characteristics of FRI, and could be used in a DA context. This has led to their work entitled ZODA standing for Zero-Overhead Data Availability, and we spend the first portion of the episode talking about that work. Nico then becomes my cohost partway through, and we interview Alex and Guillermo about their work called Accidental Computer. It was really fun to get this group back together again. Hope you enjoy it.
+
+
+I want to make a quick note about disclosures. You may have noticed that at the beginning of certain episodes, I'll let you know if I have some relationship or connection to a project that we're interviewing. In this case, I do have a disclosure. I am an advisor to Bain Capital Crypto. As we just launched our new website, I have been able to include a disclosures page for myself.
+
+
+In there, you can find investments that I've made as an angel, advisory roles that I've taken, as well as a link to the ZKV website where you can find investments that I've made through ZKV. You can find all of that over on the website zeroknowledge.fm/disclosures, and we've added the link in the show notes.
+
+
+Now before we kick off, I just want to share a little bit about the next ZK Summit. It's happening in Toronto on May 12. Applications to attend just opened. Space is more limited than usual this time around as our venue caps out at around 400. So we are encouraging people who really want to join to get their spot secured early. It is invite-only and we do prioritize previous attendees and long-term members of the ZK community. So if you're newer, and you really want to join, just aim to apply early for a better chance of getting a spot. The application to speak can be found in the same form. The deadline to apply to speak is March 15. For more info, check out zksummit.com/ We've also added the link in the show notes. Now here's our episode on ZODA and the Accidental Computer.
+
+
+Today, I'm here with two of my cohosts, Nico and Guillermo, and my friend Alex Evans. Hey everyone. Welcome back to the show.
+
+
+Guillermo Angeris [02:45] What's up?
+
+
+Alex Evans [02:46] Hey. Good to be back.
+
+
+Nicolas Mohnblatt [02:47] Hello. Hello.
+
+
+Anna Rose [02:48] I'm very excited to catch up with all of you and very excited to dig into the work that you've all been doing together. We're going to start this episode a little bit with like, how did this work come about? How did you working together actually come about? And then we'll dive into two specific works. One's called ZODA and one is called Accidental Computer. That's very good.
+
+
+Guillermo Angeris [03:14] I'm so glad that name caught on, honestly. It's so good.
+
+
+Anna Rose [03:17] So Guillermo, back in the end of your episode, you actually had started to explain ZODA. But that was like a jam-packed episode and we didn't get a chance to really dig into it. So --
+
+
+Guillermo Angeris [03:30] Probably for the better.
+
+
+Anna Rose [03:32] Well, also, yeah, I guess now time has passed. You maybe can even contextualize it better. I think it was quite fresh when we recorded that. But let's go back to the beginning of this. Like where -- first of all, where did the spark for this research come from? And all three of you are the co-authors of this work, so yeah, how did this start?
+
+
+Alex Evans [03:52] So very early on, the first tinder of an idea started. I had introduced RISC Zero, which is a team that we work with at BCC, to Celestia, because Celestia was looking into outsourced provers for inclusion into their data availability construction, and also looking at proving the correctness of the encoding as well as other things. And so it was more of an informal conversation between couple of technical teams.
+
+
+And I remember somebody at Celestia, I think it was Jacob Arluck, messaged me saying, wow, I didn't realize that we were using a lot of the same techniques under the hood, in other words, Reed–Solomon encoding some things and hashing some things. And I thought, yeah, that is actually quite interesting. These are seemingly unrelated things, but they're using some similar techniques that seem somewhat universal. But that was years ago and I filed it under mildly interesting. So there was a tinder there.
+
+
+Guillermo Angeris [04:44] This was what, '22?
+
+
+Alex Evans [04:45] This would have been '22, maybe '23, maybe early 2023. So it was just filed under there. I think maybe Guillermo, you and I spoke about it briefly and just thought it was kind of funny. But really where that started to become more of an ember, if not a flame was we, at BCC were having a conversation with what was then the Geometry Research team Kobi, Nico, Andrija, Wei Jie, grjte. And we were just jamming on, what would it -- should we work together? Let's explore this. What's the idea here? We share a lot of similar interests, similar ethos, and we like each other. We hang out, including on this pod, and the various conferences. So what would it mean? Could we combine forces here? Or would it be a disastrously terrible idea or a great idea?
+
+
+So we're like, okay, first thing we should do is we should just get together and talk about what everybody's working on. And so we go through the list, we talk about some things we're working on. Really captured our attention was Nico had done a lot of work, including actually with RISC Zero and others on FRI. And I can let him talk about that briefly. But the thing that caught my eye was he was looking at this protocol called FRIDA that had been recently published, and he was talking about essentially a couple of optimizations on it that he was working. And that idea that Guillermo and I had filed away somewhere in a dusty cabinet resurfaced in that. So I'll let him talk about what he was looking at because that was the impetus for us to look more closely into this.
+
+
+Anna Rose [06:09] Yeah. Nico, what were you working on then?
+
+
+Nicolas Mohnblatt [06:12] Yeah. So back then with RISC Zero, we were trying to get a soundness calculator inside their protocol. So you would set your parameters to run RISC Zero and see how secure you are. And that's great. But that sort of forced us to really go into the security analysis of FRI. And at the same time, there's this FRIDA paper that comes out that says, hey, you can use FRI to do data availability. That's quite surprising and really cool. And they go further and they say you can use sort of any IOP of proximity.
+
+
+Anna Rose [06:44] I just -- sorry. I just looked at FRI for DA. FRIDA. Got it. Okay.
+
+
+Guillermo Angeris [06:50] It's a very cute name.
+
+
+Anna Rose [06:51] Yeah. That's good.
+
+
+Nicolas Mohnblatt [06:52] There is a footnote in the paper that says this paper is named after one of the singers in ABBA and has nothing to do with the fact that we do FRI for DA. So you can take it up with them.
+
+
+Anna Rose [07:06] Okay. Who published that work?
+
+
+Nicolas Mohnblatt [07:08] So this is work by Mathias Hall-Andersen, Mark Simkin and Benedikt Wagner.
+
+
+Anna Rose [07:13] Which groups is that coming out of?
+
+
+Nicolas Mohnblatt [07:16] It's a mix of the Ethereum Foundation and then Matthias, I think, works at ZKSecurity.
+
+
+Anna Rose [07:23] Oh, cool.
+
+
+Nicolas Mohnblatt [07:23] And Mark at the time was, I think, a postdoc at Aarhus. So super interesting work and there's restrictions. They have definitions of criteria of what IOPPs you can use. And their criteria are a bit odd or not standard compared to what we know. They also say we can only work for very restricted parameter regimes. And so part of the work I've been doing since then is clear up these criteria and extend to wider parameter regimes. And that translates to 2-3X efficiency gains.
+
+
+And so I was chatting about this to Alex and Guillermo, and we're talking about this construction, and they're saying, why is everyone on this network, every light node, downloading the same thing? This feels wrong.
+
+
+Anna Rose [08:05] On which network? On RISC Zero or on Celestia?
+
+
+Guillermo Angeris [08:08] Yes.
+
+
+Anna Rose [08:08] Which one, yeah?
+
+
+Nicolas Mohnblatt [08:09] So the work, FRIDA, is a follow-up to another paper called Foundations of Data Availability Sampling, same three authors, and here they're trying to take a cryptographer's look at what is DA. So if I was a cryptographer, how would I model the setting we're in for DA, and what are the security properties I want?
+
+
+Anna Rose [08:31] That's interesting. Just -- okay, one sec before you continue here, because -- was DA coined by conceived of more like an engineering side of things, and now research was trying to codify it. Is that sort of what you're saying?
+
+
+Nicolas Mohnblatt [08:43] So DA was described more as a distributed systems thing. We have a lot of computers. They're all connected. Some of these are strong, some of these are weak. The weak ones want to know that they can download data without downloading it.
+
+
+Anna Rose [08:56] Yeah.
+
+
+Nicolas Mohnblatt [08:57] And it's purely like --
+
+
+Anna Rose [08:57] And that's the data availability. You're sampling to see that the data is there, but you're not actually --
+
+
+Nicolas Mohnblatt [09:04] Getting the whole data.
+
+
+Anna Rose [09:04] Like taking all of it, and -- yeah. Okay.
+
+
+Nicolas Mohnblatt [09:06] And so for them, they described it as a distributed systems problem. Like if these computers are connected, how should they behave? And given these sets of behaviors, what guarantees do we get?
+
+
+A cryptographer would say, all right, there are no computers whatsoever. There are these idealized parties. They have access to magical oracles in the sky. They want to query these oracles and output a bit 0 or 1. 0 being, I think you're lying to me, 1 being, I think the data is available. And the cryptographer wants to know what's the probability of outputting 1 when the data was not available? Okay. So we have DA, we have two ways of describing it. And in cryptography land, this is how it was described: Foundations of DAS paper.
+
+
+Anna Rose [09:53] Okay.
+
+
+Nicolas Mohnblatt [09:53] And then they say, well, what you can do is you run FRI as if you were doing a SNARK. So many repetitions of the FRI protocol. And one of these repetitions, you actually pick a piece of data you want to know whether or not it's available. And so what ends up happening is all these light nodes will download the same 49 repetitions and everyone downloads a 50th that's slightly different.
+
+
+Anna Rose [10:17] I don't know if I follow this.
+
+
+Alex Evans [10:19] I can make a bit of an addition here. So, in data availability, one way to look at it is just mechanically, what is happening. So what happens is we have some data, possibly a lot of data, that any small computer shouldn't be required to download. But ideally, all computers should know that they could, in principle, download it. So mechanically, what we do is we'll take that data, and we'll create some redundancy using an erasure code or an error-correcting code.
+
+
+Anna Rose [10:51] Yeah.
+
+
+Alex Evans [10:51] And then we will have people sample components of that redundant encoding of the data.
+
+
+Anna Rose [10:58] Okay.
+
+
+Alex Evans [10:59] And if enough of them sample that thing randomly, then across all of them, just by talking to each other and nobody else, they can decode the original data just by coordinating with each other. In order for this to be secure, we need two things to be true.
+
+
+One, we need the encoding to have been done correctly. Because if I create fake redundancy or I create a bunch of junk, no matter how many people sample that thing, we won't be able to recover anything, certainly not anything meaningful or consistent. The second thing we need is, of course, enough people. In the case of data availability systems, these are called light nodes or light clients, actually physically sampling the data such that we can define security collectively over that number of individuals sampling.
+
+
+What's happening oftentimes is that that latter set of folks works actually almost universally in the interactive setting. There's no way to non-interactively prove that data is available. You need to actively go out and sample for yourself. So what Nico and we were observing was, we were downloading a bunch of samples of this data, symbols from that redundant encoding, non-interactively, and we were downloading maybe one additional one interactively.
+
+
+What was happening in this framework was that, let's say, the four of us wanted to download sort of among the four of us, ensure that between us we have enough of the underlying data to be able to reconstruct it. So we each download a SNARK. And then we each download a little bit of additional random data. And the SNARK between the four of us, we're downloading the same thing. So we're not really learning any new information across the four of us. We're each learning the same thing.
+
+
+Anna Rose [12:49] Okay.
+
+
+Alex Evans [12:50] So the core insight, or at least original idea of this was, could each of us instead of downloading the SNARK, download interactively a couple of unrelated components. And the question is, can we do that in a way that's secure? And if we do it, what are the efficiency gains if I download different data from you, but get the same guarantees that I would have gotten under a non-interactive construction?
+
+
+Anna Rose [13:17] Now I'm a little stuck again, though, because you mentioned -- Nico, you talked about multiple instances of FRI and then one FRI that's different for people. Alex, you've talked about a piece of randomness that's different for people. Is it the same --
+
+
+Nicolas Mohnblatt [13:32] I see Guillermo pointing a lot. He wants to say something.
+
+
+Anna Rose [13:35] Guillermo wants to say something.
+
+
+Guillermo Angeris [13:37] Yes. The answer is they are the same thing. Indeed, Nico was talking about you run FRI and then you'd run one more instance of FRI where you randomly pick. Alex is talking about just forget FRI.
+
+
+Anna Rose [13:49] Placeholder.
+
+
+Guillermo Angeris [13:49] FRIs are useful, but otherwise kind of -- just. It's useful for guaranteeing that the things you got are correct, but it is, otherwise you're just collecting pieces of data. Maybe the, like, even simpler version of it is like, imagine you have -- you need to collect like 50% of coupons. So you have like 100 things. You need to collect 50 of them to reconstruct the original data. Remember that Alex mentioned these things were redundantly encoded. What that means is that you, instead of needing to get everything to have the piece of data, which you would have to do if you didn't do this encoding, you can instead do this redundant thing such that if you have 50% of all the data, that is good enough.
+
+
+Anna Rose [14:28] And then do you do that over and over and over again, so that you need less like 50% times 50% times 50 -- Do you kind of get to like -- no.
+
+
+Guillermo Angeris [14:35] Well, so not yet. So you need the 50% to recover the data. But the difference is, I don't know if you remember what Alex and Nico were saying. It was like, hey, what people do in this FRIDA setting or in this foundation setting is they download the same -- think about it as little boxes, right? They download the same 49 boxes and then pick a random new one. Or let's say it's fewer than that. Let's say they download the same 5 boxes and then pick a 6th one that is a random one. Right?
+
+
+Obviously, it's going to take way more people to sample 50 distinct boxes, if we do that, than if everybody samples 6 unique boxes every time. So that was the observation. The observation is like, why are we doing, everybody downloading the same 5 boxes out of 50 that we need. And then downloading one new one, instead of being cool, we could just download all, like whatever boxes we want. We just need to download enough of them collectively, and you can just have any of them do that.
+
+
+Anna Rose [15:31] Huh.
+
+
+Alex Evans [15:32] Here's a very silly way to look at it. Let's say we each download 50 boxes between the four of us. So in total there's -- let's say we get lucky and the distinct one that we each download is indeed distinct. We don't fall on the same one by accident. In theory here, we can't coordinate. So sometimes we get unlucky and we can download the same --
+
+
+Anna Rose [15:50] So we have different information. We have different boxes.
+
+
+Alex Evans [15:53] So we have -- in the current construction, or at least the construction that we looked at originally, of the 50 boxes, so we would download 50 boxes each. And let's say, we each downloaded one novel box each. So across the four of us, we would only learn of call it 54 unique boxes across the four of us, despite the fact that we collectively downloaded 200.
+
+
+Anna Rose [16:20] By the way, are these still samples from a larger set?
+
+
+Alex Evans [16:23] Let's say there's 400 in total, and we need to get any 200. It doesn't matter which specific 200, but any 200 or so would suffice to recover the original data.
+
+
+Anna Rose [16:33] Got it.
+
+
+Alex Evans [16:34] Now we want to be able to, across the four of us, efficiently get to 200.
+
+
+Anna Rose [16:37] I see.
+
+
+Alex Evans [16:38] Let's say we can coordinate here for the sake of argument. So we know that I sample this, so you don't sample the same thing. In the current construction, we would download, let's say, 49 of the same stuff, and then we would get a couple more. So we'd get to whatever that is, 53, or whatever the right number is.
+
+
+So we would have each collectively downloaded 200. So we had enough bandwidth to download --
+
+
+Anna Rose [17:02] 200.
+
+
+Alex Evans [17:02] Full 200 that we need, but we actually are quite a way off from our goal because of this inefficiency. Now, if Instead we each downloaded 50 distinct ones, we actually could get there if we were to coordinate. And, of course, there's a little bit of luck involved in practical protocols.
+
+
+So it turns out that just by doing this, by just doing our queries interactively, which again, we assume that nodes are interactive in the case of DA, because we can't prove DA non-interactively, just by leveraging that existing assumption, we've created a much more efficient network.
+
+
+So the first paper we put out, or at least note that we put out on our blog at BCC, was just how far can you take this idea, and what's the efficiency? And it turns out, depending on what the protocol is, it could be 10 times more efficient to 100 times more efficient.
+
+
+Nicolas Mohnblatt [17:45] I love how every time we explain this, we sort of auctioned up the number of boxes. You're like, all right, let's start. You need to get 50 boxes. No, no. You need to get 200 boxes.
+
+
+Anna Rose [17:53] Yeah. Okay. So in total though, there's 400. You need to get 200 in order to be able to kind of guarantee that you're doing this correctly. And the question here is, do you each do the same 50, or you do different 50s? Because if you each did 50, you're only getting, what is it? Like one-eighth of the entirety. You're not actually getting to that halfway mark, which is what you're aiming for.
+
+
+Guillermo Angeris [18:20] But all of -- yeah. That's right. If everybody does the same 50, you're always doing one-eighth. Right? Exactly. So you're always screwed there. I mean, you can do a little extra, but you need a lot more people that are doing this little extra.
+
+
+Anna Rose [18:32] In reality, everyone would be doing 200, I guess, or 199, right? Like before the fix, you would have been doing more, or you just would have had less good security.
+
+
+Nicolas Mohnblatt [18:44] Before the fix, everyone would do 50.
+
+
+Anna Rose [18:47] Okay.
+
+
+Nicolas Mohnblatt [18:48] And one extra. And we would need way more than four people to cover the whole 200.
+
+
+Anna Rose [18:53] Oh, I see. But you would all do the same 50 all the time, or would you?
+
+
+Nicolas Mohnblatt [18:57] Yeah. All the time. And that's what Alex refers to as the SNARK. And that's what I refer to as the same FRI. And then you do one different FRI.
+
+
+Anna Rose [19:06] Okay. I mean, I'm learning a little bit even more about DA here too.
+
+
+Nicolas Mohnblatt [19:09] This is great.
+
+
+Anna Rose [19:09] Like I haven't visited this topic in a little while, and I didn't know how it was built on that like numbers level. Interesting.
+
+
+Alex Evans [19:16] So there's two observations here. The first observation is that we must, in the data availability setting, work in the interactive model. Normally in SNARKs, we actually start there and then move to the non-interactive model through things like Fiat-Shamir.
+
+
+The second observation is that we need to define security collectively. No one node has enough bandwidth to download, in this case, our example, all 200 symbols, or we wouldn't be doing data availability to begin with. So we need to define security across, let's say in our example, in our call, four nodes here, each of which ideally download something like 50 symbols, maybe a little bit more. Because again, we could get unlucky, and if we don't coordinate, fall on the same symbols. So leveraging those two observations in that we're already in this setting, could we create a more efficient protocol? So that was the first exploration that we did.
+
+
+Nicolas Mohnblatt [20:06] Yeah. And this is a blog post we have, Sampling for Proximity and Availability.
+
+
+Alex Evans [20:11] And the key idea of that blog post is somewhat cute, which is if you look at what we described earlier with how mechanically data availability protocols work, they take some data, they encode it, they hash it, and then people open up components of that data. And if the network successfully responds to their queries, they accept. And if enough people accept, let's say, all four of us accept, then with some probability, we will have recovered the original data, which is hopefully a high probability.
+
+
+And then you look at how something like FRI works. Well, what do you do? You take some data, you encode it, you hash it, and then people sample that. And if the network successfully responds to their queries and the verifications pass, we accept. And it turns out that this idea of sampling, which we do for proximity in the case of FRI, and sampling, which we do for availability in the case of DA protocols, look almost identical.
+
+
+Anna Rose [21:02] And you mentioned using FRI, but is FRI interactive naturally? Is that one of the characteristics of FRI? Is that why you used it?
+
+
+Guillermo Angeris [21:12] So, usually many sync proofs are defined first interactively and then made non-interactive. So actually, almost every proving system, or proximity check, or whatever you want to call them, usually starts out in the interactive setting. And then we use fun tricks like the Fiat-Shamir trick to make them non-interactive. But it's funny, because it's like we're going back into the cave, right? Normally, it's like we start in the cave, and then we go out and make the thing non-interactive because we want a short proof of a thing. But now it's like, no, no, no, wait. We shouldn't do that. Stay. Yeah, like stay --
+
+
+Anna Rose [21:48] We should stay interactive.
+
+
+Guillermo Angeris [21:49] Exactly, exactly.
+
+
+Anna Rose [21:50] Or even make it interactive.
+
+
+Guillermo Angeris [21:51] Like stay.
+
+
+Nicolas Mohnblatt [21:52] The reason we looked at FRI in the first place, or the FRIDA paper looked at FRI in the first place, is because, as Alex was saying, when you do DA, you have to encode, like put in redundancy. And then people download, and they need to check was the redundancy put in correctly. So this is why these tests of proximity, as Guillermo mentioned, like FRI, like Ligero, are interesting, because that's literally what they do. They check that something was encoded correctly.
+
+
+Anna Rose [22:18] But kind of going back to that initial question, is FRI always interactive, or is it just can be interactive or it's optional?
+
+
+Nicolas Mohnblatt [22:26] It's described as interactive at first.
+
+
+Anna Rose [22:28] Okay.
+
+
+Nicolas Mohnblatt [22:28] It turns out most of the time we want a non-interactive version of it. We want a short proof.
+
+
+Anna Rose [22:33] So we use it in a non -- like we'll do something to it, Fiat-Shamir, in order for it to be non-interactive. 
+
+
+Nicolas Mohnblatt [22:38] Exactly.
+
+
+Anna Rose [22:39] Like in every way that we talk about it on the show, I'm assuming it's used -- or not in every way, but in most cases it's used in a non-interactive way.
+
+
+Nicolas Mohnblatt [22:47] Yeah. I think the only case where it is used somewhat interactively is when people have been trying to do proofs on Bitcoin, and then they spread the proofs across different blocks, and use interaction in that sense.
+
+
+Anna Rose [22:58] Oh, okay.
+
+
+Guillermo Angeris [22:59] But we're bringing interaction back, baby. It's becoming cool again. Let's go. That's this whole bit.
+
+
+Alex Evans [23:06] So interaction in our case actually is a superpower because we already have a very large number, possibly upwards of thousands or millions of nodes that are querying interactively. So we already have them, they're just kind of sitting there ready to query interactively. And instead we give them this non-interactive proof. But if we actually let them do their thing of querying non-interactively, we get very significantly more efficient protocols.
+
+
+Nicolas Mohnblatt [23:32] Querying interactively. You had a little slip there.
+
+
+Guillermo Angeris [23:35] Yeah. Querying interactively.
+
+
+Alex Evans [23:37] Querying interactively, correct. I stand corrected. So the other thing, by the way, that we don't even get to that much is actually, and this is in an episode that you, Anna, Guillermo and Justin Thaler did, is that the interactive setting is actually a little bit better in many cases because it is a bit more secure. We lose a little bit of security oftentimes in going from an interactive protocol to a non-interactive protocol. This is a benefit we don't really explore much in our work, but actually is true in that by going to the interactive setting, we oftentimes don't even lose that much security, though. We should talk about some of the constructions and so forth, because the definitions make it a little bit tricky. But oftentimes in the SNARK setting, the interactive protocol is typically considered more secure.
+
+
+Anna Rose [24:17] Actually, and I don't know Nico, was it with you that we did the Nethermind interview? I don't know if you were the cohost on that one.
+
+
+Nicolas Mohnblatt [24:22] Nope.
+
+
+Anna Rose [24:23] I don't know who I did that with, but I had them on, and they talked about that. I think it was like the danger of -- or the Fiat-Shamir affecting the security of FRI.
+
+
+Nicolas Mohnblatt [24:30] Yes. Absolutely.
+
+
+Anna Rose [24:31] So I'll try to dig that episode up because that was all about exactly this issue. Interesting. Okay. So I think we've done some good background on DA on FRI. Thanks. And on just interactive FRI or an interactive -- Is it interactive proof? Is that right to say? Or an interactive proof. Let's move on to like ZODA. Is this an extension on this observation? Is it an extra build? Like what is this work?
+
+
+Guillermo Angeris [24:57] Yes. So it is an extension, but I think I've actually had this rant on the show, and I believe it was at least with Justin Thaler, but also maybe in other cases, which is historically, for succinct proofs or ZK systems or everything like that, we're focused on proving general things. Our life revolves around being able to prove arbitrary computation. And one of the questions that I posed repeatedly is, are there useful, important and interesting computations --
+
+
+Anna Rose [25:30] Oh, yes.
+
+
+Guillermo Angeris [25:32] For which proving is very cheap? So normally, when we do a standard computation, a bunch of work has to go from turning that computation into a proof, right? And that work is like thousands, if not tens of thousands, if not sometimes even hundreds of thousands more work than it is to do the computation you want to do in the first place. Which is something simple or whatever. I mean, it might be checking a bunch of stuff or whatever. 
+
+
+So one of the things that repeatedly comes up on this is, okay, but there's a bunch of stuff -- we don't just do general computation. Life isn't just like a general computation. Life isn't just like an arbitrary computer program, right? We do a lot of very common things a lot, all the time. So can we come up with very good, very fast, very efficient, specialized proving systems for these specific types of operations? And specifically, when I say very good, very fast and specific, I mean, essentially, and the coolest thing would be, can we do it in such a way that proving the thing costs no more or only negligibly more than having done the computation itself? And number two, that it also means that you don't have to transmit any more data, right? Like you can just give the original thing that you were going to give to the person. That's good enough.
+
+
+Anna Rose [26:51] What are you trying to make smaller here though? Like the computation to prove or the thing itself?
+
+
+Guillermo Angeris [26:56] So both. I'm trying to make smaller the amount of computation necessary to prove the thing, right? Ideally, to compute the thing, you have to actually compute the result. The question is, can you not only compute the result, but also prove that the result was computed correctly in roughly about the same time, with no additional computational time spent doing this latter step? Normally, this latter step, this latter step of taking a computation and proving its correctness is often like 1,000 to 10,000 times more expensive than the computation itself. So the question is, can we do it with nearly zero difference, right?
+
+
+Anna Rose [27:32] Yeah.
+
+
+Alex Evans [27:34] So you need to prove that the computation was done correctly, which requires a lot of work. And then you need to give somebody a proof that proves to them that the result that they're getting is the right result.
+
+
+Guillermo Angeris [27:45] That's right.
+
+
+Alex Evans [27:46] So could you just download the result.
+
+
+Anna Rose [27:48] Yeah.
+
+
+Alex Evans [27:49] And do the computation? Can the proof be as quick? Like how close to computing the underlying thing can you make the proof? And how close to just receiving the result can the proof size be?
+
+
+Guillermo Angeris [28:01] That's right.
+
+
+Nicolas Mohnblatt [28:02] Would you call these things overhead, and say that you have zero overhead per chance?
+
+
+Guillermo Angeris [28:09] Dun dun duuun! By chance. So, yes. So if such a thing were it happened to be magically possible, one natural name for it would be a zero-overhead thing. In other words, doing the computation and doing the computation in a way that is provable, like gives you zero overhead over the original thing. It's like a zero-overhead operation.
+
+
+Alex Evans [28:28] So the starting point for this was FRI, which was pretty close. So if we looked at FRIDA, which we just described, it was quite close. In other words, if you look at what you're doing in the DA protocol, you're encoding and hashing again, you're looking at what you're doing in FRI, which is the proof of encoding, is your encoding and hashing. So you sort of merge these two things. But FRI also requires -- and we don't need to get super deep into this, the audience that will be familiar with FRI will know what I mean when I say this. There's a couple of intermediate folds that you have to do for FRI that everybody needs to download that present overhead.
+
+
+In other words, the four of us each downloading those folds just tells us something about the correctness of the original computation, but nothing really about the data itself. It doesn't help us reconstruct the data. And also prover needs to compute these folds. It's not too much overhead, but it is some overhead. So the question was, can we do better? That's the question we started with. And what ultimately led to the exploration of ZODA is, do there exist -- can we take this idea FRI is almost there, and can we take it all the way there to something that truly has as close to zero overhead in terms of compute for proving as well as proof size for receiving the result?
+
+
+Anna Rose [29:40] Does ZODA still use FRI or is it like replacing FRI? Is it just like playing on the ideas that FRI introduces or looking for characteristics that FRI has, and then creating something else?
+
+
+Guillermo Angeris [29:52] So yeah. It's playing on two ideas. The FRIDA idea and in turn the idea from the previous paper, which is Foundations of Data Availability, which is like, look, there seems to be a lot of similarities between these proximity-style checks and the things that Celestia does anyways. So it's based on that idea. And the second idea that we were talking about, which is the original piece work, like does this thing non-interactively, we can leverage interactivity to make it a lot faster and a lot cheaper.
+
+
+And then also based on this latter idea, which is, okay, in some sense, those protocols still have this overhead, these intermediate steps that only serve to tell you that something is done correctly, but otherwise do not serve any other additional purpose. And we call that overhead, right? Because in some sense, it is a proof that only serves to help you realize the result is correct, but it's not a proof that actually tells you new points along this like, you know, little -- it doesn't tell you new boxes.
+
+
+Anna Rose [30:53] But how does it relate? I guess, I'm still trying to figure out like, are you using any part of FRI? You just let it -- are you literally replacing it completely for this case specific. You just noticed a characteristic and you're like, we're going to create something different, but that cuts out all that overhead that doesn't -- is not necessary, but we'll have this one. Is it just the interactive characteristic? Did you then go looking for just other interactive light protocols or something like that?
+
+
+Guillermo Angeris [31:19] Yeah. So FRI itself is like one instance, but you could put many other protocols in there. And this was not our realization. This was a realization from the previous paper which led to FRIDA. But the question now is like, okay, but all those protocols also still have overhead, right? They still have -- in other words, you have to kind of send the separate proof. So it was like a bunch of things that merged together to make kind of what we call ZODA. So ZODA uses a different scheme, which is not FRI. It is something maybe familiar because I rant about it a lot in the show called Ligero, and these variations on that theme, specifically. So not -- yeah, like something that's kind of different from what's out there, but similar in spirit, same ideas.
+
+
+Anna Rose [32:02] So we had an episode with the Ligero team, who I guess built Ligero that you're describing.
+
+
+Guillermo Angeris [32:09] I think some subset. Yeah.
+
+
+Anna Rose [32:10] Or yeah, some version of it. But maybe we should explain what that is. Why is that different briefly? And I'll try to dig up that episode too, if people want to learn about that.
+
+
+Alex Evans [32:17] I think it's a good one too, because the minute you start describing Ligero, you can also, Guillermo, just say that you noticed that Celestia was basically doing this exact thing.
+
+
+Guillermo Angeris [32:26] Yes.
+
+
+Anna Rose [32:27] Oh, nice.
+
+
+Guillermo Angeris [32:28] So Ligero is a very beautiful, kind of crazy, simple observation. It says, cool. I have a bunch of vectors. And these vectors are maybe encoded, maybe not. If I take a random linear combination of those vectors, and the result of that random linear combination is itself close to a codeword -- in other words, it's mostly correctly encoded, then it is possible to conclude that each of the individual original vectors were themselves close to a good encoding. It's nearly stupid -- I mean, I would argue it's even a stupid observation. I wouldn't even say nearly stupid. It's actually stupid, is that's exactly the work you do when you encode a square in Celestia.
+
+
+So to construct these redundant encodings, you first encode -- you know, you take your data, you put it into a matrix, you encode each one of those columns, right? And then you take a  -- not a random, but you take a linear combination of the rows, right? So unfortunately, you can't see me waving my hands in the air frantically.
+
+
+Anna Rose [33:39] How should we describe what you've done? You've created like -- you've done the columns. You've shown the columns, and then you've shown the rows.
+
+
+Nicolas Mohnblatt [33:47] Yes.
+
+
+Anna Rose [33:47] Yeah. Okay. So you're creating a little hash. Hashy thing.
+
+
+Guillermo Angeris [33:51] Exactly. Yeah. You're creating a -- you start with a little square, you now have a bigger square.
+
+
+Anna Rose [33:54] Yeah.
+
+
+Guillermo Angeris [33:55] And the only observation here that ZODA essentially does is, instead of multiplying it by kind of -- so when you extend the columns, and those are codewords, so those are like pieces of a code, if they are correct. When you extend by the rows, what you're doing is you're taking not a random linear combination, but you're taking a linear combination of these codes. So what if we can squirrel away just a little bit of randomness to make that linear combination actually random
+
+
+And if you do that, now you're good, right? Because if that linear combination is random by definition, Ligero tells you that checking a small number of those entries is good enough, and you are good. And so the point is, all we did was we changed the way we constructed this square, by extending down and extending right. And then squirreled away the "proof" into the data itself. It's kind of the philosophical way of thinking about it, such that the proof is the data. Like the data itself is its own thing that carries its own proof of its correctness.
+
+
+Nicolas Mohnblatt [35:10] Yeah. It's messed up, right?
+
+
+Anna Rose [35:11] That's mind -- it's mind  --
+
+
+Guillermo Angeris [35:14] It's very weird. You got to like drink something or smoke something or really like if you can get very deep with this. But the point is, it's very weird that you can construct a thing which is its proof of its own correctness.
+
+
+Anna Rose [35:26] Is this a characteristic of Ligero itself or is this something you're like as you're using bits of it, you're creating something that does that? Is that ZODA?
+
+
+Guillermo Angeris [35:33] So this is ZODA. Yeah, ZODA itself. So Ligero is overhead, because Ligero -- the point is when you take this random combination, you have to actually give the verifier the output of the linear combination. The cool part about ZODA is that it actually squirrels that proof away into its own data.
+
+
+Anna Rose [35:51] Okay.
+
+
+Guillermo Angeris [35:53] Right? Which is again very weird. This is not obvious and kind of magical, but are you going to do this?
+
+
+Anna Rose [35:58] You hide the proof in the data in a way?
+
+
+Guillermo Angeris [36:00] Yes. But in such a way that the data is still useful to you. Right? Like it's still data. It's still data that is good to help reconstruct the original piece, but the proof is in the data.
+
+
+Anna Rose [36:11] Okay. But is there then a verification process to that? Like how does a verifier -- I don't even know if that's what you'd call that agent here, but like -- okay. So how does the verifier look into this data?
+
+
+Guillermo Angeris [36:22] Well, we call them samplers to distinguish them from the non-interactive setting.
+
+
+Anna Rose [36:24] Got it. Understood.
+
+
+Guillermo Angeris [36:25] But you know, for fun. The idea is very simple. Normally, what you would do is you would download some rows and some columns. The only thing that you have to do here is, when you download the rows and you download the columns, you just check that the linear combination that is claimed is actually correct, and that's enough. So instead of just downloading rows and columns, you also perform this additional check that says, are these columns and these rows consistent with each other with the randomness that I got?
+
+
+Anna Rose [36:55] And that's what the sampler, a.k.a verifier, is looking for.
+
+
+Guillermo Angeris [37:00] Yep. And that's enough to guarantee if they download enough rows and enough columns that everything is good.
+
+
+Nicolas Mohnblatt [37:07] When you say guarantee everything is okay here, we're saying guarantee that the encoding was done correctly. You still need to have enough samplers to sample enough data to make sure that it was available.
+
+
+Guillermo Angeris [37:16] Yes.
+
+
+Nicolas Mohnblatt [37:17] Just to make sure what the guarantees are.
+
+
+Anna Rose [37:18] And just going back to Celestia. So Celestia was doing some version of this, but with a lot of overhead. Ligero was doing something else, but it had overhead. Basically, I'm trying to figure out, is there an efficiency gain on both fronts here, or are you mimicking what Celestia already does with a new system?
+
+
+Nicolas Mohnblatt [37:38] Yeah. We mimic what Celestia already does and build into what Celestia did, the Ligero proofs.
+
+
+Anna Rose [37:45] Okay.
+
+
+Nicolas Mohnblatt [37:46] You do a tiny bit more computation than Ligero. This is like doing multiple Ligero proofs. But it turns out that all these multiple proofs is what your Celestia sort of full node [?] ref computed anyway.
+
+
+Alex Evans [37:58] We looked at it, and we just noticed that -- so we started out looking at this exploration of, okay, we can add interaction to a FRI-based scheme to reduce the overhead substantially. And then we're looking out there being like, okay, if we use Ligero, for example, we had written this note on logarithmic randomness on Ligero with Guillermo. So we're familiar with the protocol. And we looked at it, we're like, okay, just like FRI, this thing has a little bit of overhead, and that you need to download this random linear combination.
+
+
+And then we look at Celestia, and actually they're almost taking multiple of these random linear combinations anyway. Indeed, enough of them to be able to reconstruct the original data just from those. So if we're going to be downloading these random linear combinations, we might as well download different ones so that across, again, the four of us, we might have a chance of decoding the original message just from those. So we looked at it and we're like, guys, did you know you were running 99% of a Ligero prover already?
+
+
+Guillermo Angeris [38:51] Yes.
+
+
+Alex Evans [38:52] And their response was, we have no idea what a Ligero prover is.
+
+
+Anna Rose [38:57] Oh, shit. That's so cool. I like it when that happens. Like minds kind of converging, but from different places. Interesting.
+
+
+Guillermo Angeris [39:05] Yep.
+
+
+Alex Evans [39:06] So the only thing to make it 100% is this randomness that Guillermo is describing is in the encoding process itself, you weasel in this randomness. And now these columns function as themselves, these proofs that you were previously getting. So you needed to download those things anyway. Now they're also telling you something a little bit more cosmically interesting about the process of encoding itself.
+
+
+Nicolas Mohnblatt [39:29] By the way, my conclusion here is putting numbers into squares is magical.
+
+
+Guillermo Angeris [39:35] Yes.
+
+
+Nicolas Mohnblatt [39:35] To the point where it's too magical for human brains to understand. And this is why we have Ligero and Celestia doing pretty much the same thing, but no one realizing that it is, because it was all just so dense. It's like this description of these protocols are so dense.
+
+
+Guillermo Angeris [39:51] Yes.
+
+
+Alex Evans [39:52] We're actually just toddlers at BCC putting numbers in little squares and --
+
+
+Anna Rose [39:57] Matching the --
+
+
+Guillermo Angeris [39:57] The number of times you've drawn a  --
+
+
+Nicolas Mohnblatt [39:59] -- square. You guys make the same thing.
+
+
+Alex Evans [40:02] Obviously, naturally, you know.
+
+
+Anna Rose [40:01] Okay. You keep saying something here. You keep saying numbers in squares. What is this? Like the square is the matrix? Like what is the --
+
+
+Nicolas Mohnblatt [40:10] This is the matrix representation. Like represent your data as a matrix and then do things on the rows and columns.
+
+
+Anna Rose [40:16] And you call it a square?
+
+
+Nicolas Mohnblatt [40:17] Yeah. When it's a matrix that has the same length on each side, it's a square matrix.
+
+
+Anna Rose [40:17] Okay.
+
+
+Alex Evans [40:23] So here's maybe one way to look at the upshot, which is one way that we were thinking of doing this, and actually when I said I introduced RISC Zero and Celestia back in early 2023, or at some point in 2022, whenever that was, what we were thinking of doing was, Celestia was building this square. So they were encoding a bunch of -- they're taking this data, they're putting it in a square, they're encoding the rows and they're encoding the columns. And then they're hashing that whole thing. And then people are coming in and requesting random entries of the square, and if enough of them get enough of them then the data's available.
+
+
+What we were thinking of doing is taking that process and shoving it inside of a general purpose proof like RISC Zero. So what was going to happen there was we were going to arithmetize that encoding and that hashing, and then we were going to compile it all the way down to FRI, let's say, where we were going to encode it again, and then hash it and have people sample. So we actually just skip that latter step entirely, which is actually what if instead of you downloading some samples and a proof that the encoding was done correctly, the samples that you were going to download functioned themselves as proofs of their own correctness, creating a more efficient protocol.
+
+
+So we went from two encodings that we had to do and hashes that we had to do to just one that we would have had to do anyway. The way to contrast this is normally, again, to Guillermo's point, if we were to take, let's say, an optimistic rollup that does a general purpose computation, what happens is we need a lot of people to re-execute that computation and alert these low power nodes that some fraud has occurred. Oftentimes we can take that protocol and make it into a ZK rollup, let's say, where one person or some set of people compute a proof and send it to everybody and that way they know that it's correct.
+
+
+Sometimes that can have the advantage of lower latency, but it requires somebody to take on this massive overhead of computation, often thousands, maybe even millions of times more than the original computation itself. In this case, going from the optimistic system, which is what Celestia does today, to the validity provable system does not involve any additional or almost very marginal additional prover work.
+
+
+Anna Rose [42:34] I just wonder, in the way you described this, though, was this -- like in building this, do you see it as like, this replaces what Celestia built? Or is it like, now you can deploy Celestia in RISC Zero easily because you mentioned this RISC Zero part of it. Like would you actually be using this in any way in their system now?
+
+
+Guillermo Angeris [42:52] So this was like the old system, where you take a computation, you do a bunch of work to get the computation -- to prove the computation is good, and then you do it. This is essentially cutting out all of the mechanics of compiling this computation down and proving it, because what Celestia is already doing is essentially proving itself. So this is why it's essentially also zero overhead, is like if you just do what Celestia is doing with just one tiny change for free, you get verifiability. You get this ability that the data that you download itself tells you something about its own correctness.
+
+
+Alex Evans [43:26] Yeah. And we mentioned Celestia in this example just because we know their system well, we work with them, we're investors. RISC Zero similarly. And this is where the germs of these ideas came from. But it's sort of a generic observation in that Ethereum as well also creates a square of the data, encodes the columns, encodes the rows. In their case, they use something like KZG, which from in terms of proof size has extremely low overhead as well. So we expect it to be somewhat generic. It's not a Celestia or RISC Zero specific thing. It's just a more general observation that encoding and hashing in some sense doesn't need to be proven as much with an external system. It can carry with it its own proof without requiring a bunch of people to do too much additional work.
+
+
+Anna Rose [44:12] Funny. I'm just going back to me asking what a square is and you guys calling yourselves toddlers, I start to feel like a bit of a toddler. What's a square? Because there's like --
+
+
+Guillermo Angeris [44:22] These are great questions.
+
+
+Anna Rose [44:23] Almost the same size on each side. I don't know.
+
+
+Nicolas Mohnblatt [44:26] By the way, this is a technical terminology.
+
+
+Anna Rose [44:27] But I'm actually glad -- I'm actually glad I asked, because now you used it a lot.
+
+
+Guillermo Angeris [44:32] This is great.
+
+
+Nicolas Mohnblatt [44:32] But this is how they call it. If you go through the Celestia docs, they call it the data square.
+
+
+Anna Rose [44:36] The square.
+
+
+Guillermo Angeris [44:36] Data square, yeah.
+
+
+Anna Rose [44:36] The data square.
+
+
+Guillermo Angeris [44:38] Well, in general, it is like a square matrix is the good terminology. 
+
+
+Anna Rose [44:42] Cool.
+
+
+Guillermo Angeris [44:42] The technical term.
+
+
+Anna Rose [44:43] So now, Nico, I want you to sort of join me on the host side of the table.
+
+
+Nicolas Mohnblatt [44:48] Sounds good.
+
+
+Anna Rose [44:49] And I want us to interview Alex and Guillermo. Guillermo, you today are not the host. You are on the guest side of the table.
+
+
+Alex Evans [44:57] You've been demoted down here with me, Guillermo.
+
+
+Guillermo Angeris [44:59] I know. That's right. We all got to remember we started sometimes.
+
+
+Anna Rose [45:05] I want us to talk about Accidental Computer.
+
+
+Nicolas Mohnblatt [45:10] Great title.
+
+
+Anna Rose [45:10] Maybe let's start. Is Accidental Computer taking the ZODA idea, and then building on it. Or is this a different work?
+
+
+Nicolas Mohnblatt [45:17] Actually, I have a very leading question for you, Anna, which might get you to the conclusion of Accidental Computer.
+
+
+Anna Rose [45:22] Okay.
+
+
+Nicolas Mohnblatt [45:24] Are you familiar with how something like Plonky2 works, or Plonky3?
+
+
+Anna Rose [45:28] Yeah.
+
+
+Nicolas Mohnblatt [45:28] Yeah. So they do like --
+
+
+Anna Rose [45:30] I don't know. Not right now sitting here. I'd probably have to like refresh a lot, but okay.
+
+
+Nicolas Mohnblatt [45:36] I know you do, because we've been through the ZK Whiteboard Sessions, and this kind of stuff appears in there.
+
+
+Anna Rose [45:41] Okay. Okay.
+
+
+Guillermo Angeris [45:42] For what it's worth, I don't know if I know what this does, so I'm just here.
+
+
+Anna Rose [45:45] Yeah. Just like when you asked me that, do you want me to explain it? I don't know that I could do that.
+
+
+Nicolas Mohnblatt [45:48] Just sort of, what are the two components that we blend together to get a SNARK?
+
+
+Anna Rose [45:53] God. Okay. Polynomial commitment scheme and an IOP.
+
+
+Nicolas Mohnblatt [45:57] Yeah. Amazing.
+
+
+Anna Rose [45:57] The things I learned in the Whiteboard Sessions.
+
+
+Nicolas Mohnblatt [46:01] And then we've been saying like, oh, we can use KZG as our polynomial commitment scheme, or we can use --
+
+
+Anna Rose [46:07] Or FRI.
+
+
+Nicolas Mohnblatt [46:08] Yeah. So here's another case where we're using FRI. FRIDA said, if we're going to do FRI anyway, use it for DA. So now my question, Anna, is like, could we recycle our FRI?
+
+
+Anna Rose [46:20] Like in Plonky2?
+
+
+Nicolas Mohnblatt [46:23]Yeah.
+
+
+Anna Rose [46:24] So, wait, you start to go back into -- well, what is this again? The FRI is the polynomial commitment scheme, right? So you're using the standing IOPs, and now you're -- Instead of FRI, you're using ZODA.
+
+
+Nicolas Mohnblatt [46:40] Take it away, boys.
+
+
+Guillermo Angeris [46:45] Dun dun duuuun! This is one of Alex's truly deranged ideas. Actually, did this idea come before ZODA?
+
+
+Alex Evans [46:52] Some version of it came a little bit before ZODA, because, again, we were using these same polynomial commitment schemes in both cases, and we were sampling. First blog post was Sampling from Proximity and Availability. The idea of what we're calling the Accidental Computer is could you sample for proximity, availability and validity all in one-go?
+
+
+So given the fact that we were taking some data, encoding it, hashing it and sampling it, that's exactly what we would do in a polynomial commitment scheme based on hashes. For example, FRI would be one example. Ligero can function as a polynomial commitment scheme. So given that we were going to do this work anyway, could we indeed squirrel away not just the proof of the encoding, but also more general proofs?
+
+
+Remember we said earlier that we talked to some teams and asked them if they knew they were running a Ligero prover for the proof of encoding? They said no. Indeed, they weren't just doing that. It turns out they were running the prover for general polynomial commitment scheme that could imply to much more general computations. And we could utilize that to get more efficient SNARKs defined over the data that was posted to the data availability layer. And that's the original exploration that we went on for this most recent work.
+
+
+Anna Rose [48:12] Wow.
+
+
+Guillermo Angeris [48:13] So the title "Accidental Computer" comes from two facts. So number one is when you construct ZODA, actually it's a little bit complicated to actually get kind of a general computation stuck in there, just because of the way ZODA is constructed. So we use a little bit of a variation on it. So the point is this variation actually enables you to do kind of -- essentially construct a polynomial commitment scheme in a standard way.
+
+
+But the reason we call it Accidental Computer is Celestia, which is again, the impetus for this particular work, has been trying really, really, really hard, like literally trying so hard to make sure that they don't accidentally create a general purpose computer. Right? Because that has a bunch of security vulnerabilities, it has a bunch of random stuff in it that are really hard to audit. There's a bunch of mechanics around it.
+
+
+Anna Rose [49:04] It would also make it slightly a competition to Ethereum, which I feel they've always distinguished themselves in by not being general computation environment, like by being pure DA.
+
+
+Alex Evans [49:15] By the way, Ethereum too, in the context of the data availability layer, they've created a separate system that's not a computer for what are called the blobs. We want to have the computer sort of in a separate laned environment with its own fee markets and its own system. And then separately, we want to have this really dumb, simple system that's not a computer TM, definitely not a computer, but turns out to be very close to a computer.
+
+
+Anna Rose [49:39] Oh, wow.
+
+
+Guillermo Angeris [49:40] Correct. It is -- the equivalent version which I jokingly say is like, you started by building a motorcycle or a scooter, and you accidentally built like a Lamborghini, right? I don't know how that happens, but the point is, you start with what seems like the dumbest possible thing. It's like, look, man, I'm taking a piece of data, I am encoding it, and then I am asking people to take little pieces of it, right? If enough people collect those, great, we're all happy.
+
+
+And then all of a sudden, literally, by having accidentally done this encoding, you have essentially created an entire computer that can be used to verify arbitrary computation. Hence the title, Accidental Computer. It's under all of our noses this entire time, what Ethereum's been doing with blobs, what Celestia has been doing with DA, all of this stuff is actually itself essentially general purpose computer that you can use to verify any computation.
+
+
+Alex Evans [50:34] So the title, we started just by the way, as a bit of a joke, we had added it in there and then we shared it with some Celestia folks, we shared it with some Ethereum folks, just mostly almost a troll. And then I removed another version, and there was actually outroar about that. Like you should put it back in. And so we did.
+
+
+Nicolas Mohnblatt [50:51] Can I ask you to explain a bit more how the computer comes to be? Because at this point, like, we have our Ligero, like DA thing, we know that it's also a polynomial commitment scheme. So as I do DA myself, as a sampler, I'm evaluating a polynomial. Great. How does that make a computer?
+
+
+Alex Evans [51:09] So indeed, what ends up happening when you're proving a general purpose computation is that you do have to -- as you mentioned earlier, you have to have this IOP component, and then you have to have this polynomial commitment scheme component.
+
+
+There exists some protocols for which the construction currently works, though we conjecture it may be possible to generalize this to other IOPs. But there exist specific IOPs that start with a general computation, or a specific computation, usually could be something like matrix multiplication, for which there exist very efficient protocols. So they start with the result of the computation, and then there's a couple layers of what are called sumchecks that reduce the output to a claim about the input, which the claim about the input is just an evaluation of a multilinear polynomial at a point, which again is exactly what we're doing when we're sampling for data availability. We are evaluating a polynomial at a point. If we gather enough of those evaluations, we can recover the original polynomial. 
+
+
+So now the idea is can -- given the fact that we're already doing this work anyway, can we just leverage it securely as part of a general proof? In other words, let's plug in modularly an IOP on top of this thing, ideally one that's super efficient, that's based on sumchecks, could be linear time, all this amazing stuff. And the hard work, which is this slightly more expensive thing of encoding and hashing and so forth, can just purely be outsourced to the data availability layer.
+
+
+Maybe here's a helpful analogy or a helpful comparison, I should say. So previously what we were doing is, let's say, we wanted to prove that a particular computation was executed correctly. So if I give you some input to some circuit, I give you some input X, you compute that circuit, you say that the output is Y. And I want to prove to a bunch of nodes that I did that correctly, and that the underlying data is available, because proving it that it's correct doesn't suffice. If I withhold the data, for instance, you won't be able to reconstruct everybody's accounts, for example, and withdraw money. So we need two things for a secure rollup.
+
+
+We need to know that the data is available, and we need to know that the computation was executed correctly. So the latter we usually do with a SNARK that could plug into a ZK rollup. In the former, we do with a data availability system. So we try to merge these two. So what we do today, for example, would be we take that data, we encode it as part of the data availability layer, and then people sample that thing. Then we could prove that the encoding was done correctly by plugging it into a general purpose SNARK, doing an encoding, hashing the thing, having people sample the thing.
+
+
+Then we need to prove correctness. So we take that data, and guess what we do? We encode it again, and then we hash it, and we have people sample that thing, which is just madness. We are doing the same thing three times in this case. So the observation of ZODA is what if we do it two times? And the observation of what we're calling the Accidental Computer is, what if we just did it one time?
+
+
+Guillermo Angeris [54:04] Once.
+
+
+Anna Rose [54:05] Okay. I have another toddler question.
+
+
+Guillermo Angeris [54:08] Great. You do great.
+
+
+Anna Rose [54:08] This is very toddler though, because like you're using the word computer, and yet everything you're talking about is like proving some -- it's all -- I don't get where is the computing happening? Like what is your definition of computer in this context?
+
+
+Guillermo Angeris [54:25] Yes.
+
+
+Anna Rose [54:26] Toddler.
+
+
+Guillermo Angeris [54:27] So it is like a little bit of a -- yeah, this is actually a great question. We're using computer in a little bit of a loose way. In some sense there is computing happening, but the computing, it's like this notion of verifiability. Anybody can -- you can take a general computer program, prove only this small part, and then the rest, which ideally is very cheap to do, and all this stuff, and the rest, the data availability layer does the rest of the compute and verification and proving and all that stuff. So hence the Accidental Computer is, look, take any program you like. It could be just simply transferring balance between people, or it could be all the way as complicated as a general video game or something.
+
+
+And instead of proving every part of the thing was done correctly, constructing these proofs, sending them out to people, then afterwards performing the data availability, sending those out to people, all this stuff, it's like, wait, all I need to do is perform this tiny little part and then post the rest to Celestia or whatever DA layer du jour, right? And now we're good. Like you have now accidentally allowed everybody to verify that your general purpose game program thing is correctly done.
+
+
+Anna Rose [55:45] Taking all of these examples of like, where's the compute happening? Is it in a separate environment that you're just proving things about? Is that what you're expressing?
+
+
+Alex Evans [55:55] So some portion of the compute is happening at the Celestia or Ethereum or whatever data availability layers. And in fact, oftentimes the more expensive part of the proving work is being done by these systems in encoding and hashing some data. Then there's a separate part of the compute, which is you could think of in your analogy before as the IOP part. Typically some sumchecks that are happening by what we call in the paper a rollup prover. And that could be cheap, it could be expensive, depending on the computation, but typically, as in for specialized computations, that's cheaper than committing and hashing to the underlying data. The relative expense of course differs.
+
+
+So that's how we think about it. We think about today, a prover would have had to do that work. So the rollup prover would have had to do the IOP part, reduce it to polynomial commitment, which they would have had to commit to ahead of time, and then they need to open that commitment. So anything involving the polynomial commitment now gets pushed to the data availability layer. And only really the IOP part, including all the stuff that would require sort of these encodings and hashes and so forth, is out of their hands. So just by virtue of using this system, these provers accelerate. They become a lot cheaper to run.
+
+
+Anna Rose [57:14] I can tell that I have this old info about how Ethereum execution runs that constantly interrupts when we're talking in verifiable land. And this is something I don't know how to square, which is account systems and balances and these balance and there's things happening to them, and things are moving around and then you -- I mean, I really learned all of this stuff. I learned like "computer science", whatever I know here through Ethereum. So it's very confused and not -- like I don't have this background of how computing really works, but I'm trying to square.
+
+
+This is why I feel, and I've said this a bunch of times, I'm constantly confused when it's like this verifiable compute and like I still don't get where is the execution happening. I get that you're proving stuff on it, or you're saying this is what this is, but I'm like, but isn't the computation happening somewhere else? I think of execution as computation. Maybe that's my mistake, I don't know.
+
+
+Guillermo Angeris [58:21] Yeah. So what's interesting is like in Ethereum land, as is today as it exists, computation, execution and verification are the same thing.
+
+
+Anna Rose [58:32] Same thing, exactly.
+
+
+Guillermo Angeris [58:34] Right? So let's just take a simple example, right? You have accounts. I'm going to take even more abstracted version of Ethereum. You have some accounts and they are paying each other. And what you would like to ensure is that nobody's balance is negative after everybody has paid everybody. There's two ways of doing that. Number one is you just record everybody's transactions and you just run the deltas between every payment and then just check at every point nobody has anything less than zero, and nobody's paid more than they have available, and therefore nobody has received all this stuff. So there, the execution and the verification are the same. How do I verify that everything is correct? Well, I just ran the whole thing.
+
+
+Anna Rose [59:14] Run the execution. Right.
+
+
+Guillermo Angeris [59:15] So far good. What happens in verifiability line is those two things are now split, right? There is a notion, like computation is now a weird term because what we thought -- what we think of as a program is now either from the perspective of people looking at the -- you know, verifying this thing, it is a proof and from the perspective of the people proving this thing, it is a construction that they have to like do. But it is, like there is computation happening in the former in the sense of like the output of all of these transactions being non negative or being -- sorry, your balance of being non negative at every point, is a thing somebody is doing and checking. But the prover is doing certain compute and the verifier is doing certain compute, right?
+
+
+Anna Rose [01:00:02] And execution?
+
+
+Guillermo Angeris [01:00:03] And execution is like in some sense the prover is doing execution.
+
+
+Anna Rose [01:00:07] Okay.
+
+
+Guillermo Angeris [01:00:07] But in reality what they care about is this construction of a proof. Like the execution is kind of irrelevant. Like all you just want to show is that this thing is correct.
+
+
+Anna Rose [01:00:16] Yeah.
+
+
+Guillermo Angeris [01:00:17] Right.
+
+
+Anna Rose [01:00:17] And so it runs on like local machines, and then you prove it. This is what I literally don't know where the thing runs. That's my problem always. Like does it run on a blockchain? Does it run across a decentralized ledger with like state accounts? Or is it like run in a separate environment and then you're just constantly proving stuff? Like the rollups, I get. But it's the minute zkVMs and I get it if I keep the execution environment, it's like this bubble that lives outside and you just prove into a blockchain about it. But then where is the bubble? Maybe this is my issue. Where is that?
+
+
+Guillermo Angeris [01:00:49] Here the bubble is in the rollup. It's like -- well, there's two bubbles but number one is in the rollup. You can think of it as like it performing like the small part of the proof and the rest --
+
+
+Anna Rose [01:00:57] But it's not -- it being proven on the entire -- like is that like every single client node running an execute -- like this is the thing that I think is -- or is it just like on some centralized cloud server?
+
+
+Alex Evans [01:01:13] This is the cool thing about the verifiability. This is the cool thing about proving it, is that it doesn't matter where it runs.
+
+
+Anna Rose [01:01:19] Yeah.
+
+
+Alex Evans [01:01:20] So as long as I can verify a proof that it was done correctly, I don't care where it was run. I don't care if it was run on my --
+
+
+Anna Rose [01:01:25] So it could be run on your own laptop.
+
+
+Alex Evans [01:01:27] It could be run on your laptop, it could be run in the server, it could be run by the most evil, horrible person on the planet that I trust, exactly, zero. But it doesn't matter because I have a proof and nobody can take that away from me.
+
+
+Guillermo Angeris [01:01:39] Yep. Exactly. Exactly, exactly. So yeah, this doesn't really answer your question about where it happens, but the answer is everywhere, anywhere and everywhere all at once.
+
+
+Anna Rose [01:01:45] Everywhere and nowhere at the same time. Okay.
+
+
+Guillermo Angeris [01:01:49] That's right.
+
+
+Nicolas Mohnblatt [01:01:50] So I do have a question. Since we were saying, all right, in the typical rollup setup, you have one prover could be the most evil person. They do the execution in their head, they give you the proof, and they post the proof on Ethereum L1. And now you have all these Ethereum nodes who are going to run the verifier and they're all going to execute the verifier, and then they're going to come to the conclusion we all agree this proof was correct.
+
+
+Cool. Now, in the Accidental Computer case, the person verifying is just someone sampling for data, right? So is there some kind of consensus amongst the people who have checked the proof, or is it like one you're each in for your own and no one kind of agrees whether execution was done correctly.
+
+
+Alex Evans [01:02:35] There's two ways to look at this. So one way to look at this is, you could do it in a way that is described typically as sovereign rollups. In other words, that these proofs are just being passed around in a P2P layer, and every full node, light node, whatever you want to call it, downloads these, verifies them, and then does a little bit of additional sampling which will tell it that the PCS openings are correct, and also that the data is available, assuming enough other people are also sampling. And that's perfectly reasonable construction. And indeed that's probably the most natural one for some of these systems like Celestia and others that are amenable to these types of constructions.
+
+
+The other one that's just as natural is you could imagine the IOP part having its own non-interactive proof that you could post to some what are called settlement layers, you could post it to Ethereum L1 or somewhere else. And then you verify that part. Now, of course, that part will only tell you that the computation is correct insofar as the PCS opens to the right place. And then for instance, you could imagine sampling in order to achieve the latter guarantee separately. So now you know, for instance, that the first part is correct and also that the data is available, and that the PCSs open. So therefore the whole thing was correct and available.
+
+
+You could also go back to the fully non-interactive model, which is you do the PCS and IOP in the very traditional way and post that to an L1 and then do data availability sampling separately. That's an option as well. We don't discuss exactly how to implement these things because there exists multiple ways of doing it. The main thing that we focus on for this work is just giving a concrete sketch of a construction and it could be implemented in a variety of different ways where you do interaction, where you don't. And there's actually quite a lot of rich design space, I think around that that is starting to emerge.
+
+
+Nicolas Mohnblatt [01:04:25] So, one question we got often with ZODA, and I'm sure you're going to be getting with Accidental Computer is, was this implemented and how fast is the prover? Like does it deliver on the promise?
+
+
+Guillermo Angeris [01:04:35] Yeah. The implementation is coming soon, TM, but there might be some spicy numbers in the near future.
+
+
+Anna Rose [01:04:40] Could this already be out there by the time this airs? Should we look for it?
+
+
+Guillermo Angeris [01:04:43] Hopefully it will be. I mean --
+
+
+Anna Rose [01:04:44] Link to it maybe?
+
+
+Guillermo Angeris [01:04:45] Oh, yeah, that's right. Yeah. I guess it's going to be in two weeks. So yeah. 
+
+
+Anna Rose [01:04:48] When you tweet it, maybe you could tweet these numbers as well. If they're there.
+
+
+Guillermo Angeris [01:04:52] If they haven't already been observed.
+
+
+Alex Evans [01:04:54] I think you're being backed into a commitment, Guillermo.
+
+
+Guillermo Angeris [01:04:56] I know, I really am. I better have the preimage for that thing before I say anything. Okay, good. So, yeah, the answer is hopefully it'll be out by then.
+
+
+Anna Rose [01:05:03] Interesting.
+
+
+Guillermo Angeris [01:05:04] Or by the time you're listening now, dear listener.
+
+
+Anna Rose [01:05:07] Yes. Okay. So this is maybe something that's coming next, but is there anything else on the roadmap in terms of this line of work? Actually, even before I say that, I thought I saw Celestia post something in their forum about possibly using ZODA. Like is this going to be incorporated into existing systems? What's going on?
+
+
+Alex Evans [01:05:27] Yeah. I mean, we're looking at a lot of components of the system and there's lots of interest. This is, of course, early work, and there's lots of work still to do. There's questions around, can we make node sizes very, very small while preserving zero overhead? Can we, in the case of the Accidental Computer, work over more general arithmetizations and IOPs and efficiently prove more general computations?
+
+
+There's other questions, and can we eke out further efficiency in settings like consensus and the like? And so there's been quite a bit of interest. People have reached out to us and work that we're doing independently as well in those areas. So stay tuned. We've been chatting with teams like Celestia, a couple folks at Ethereum, and a couple others around it. So it's early research still, and we have -- this is generating as many questions as it is answering, but we're certainly having --
+
+
+Guillermo Angeris [01:06:15] Yes. At least.
+
+
+Alex Evans [01:06:16] We're certainly having a lot of fun doing it.
+
+
+Anna Rose [01:06:18] That's great. Well, thank you guys for coming on the show, being guests and hosts. Like  cohosts to guests.
+
+
+Guillermo Angeris [01:06:24] Thank you for having us.
+
+
+Nico Mohnblatt [01:06:26] For both being guests and hosts.
+
+
+Anna Rose [01:06:28] Cool. Thanks, guys. All right, I want to say thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.
