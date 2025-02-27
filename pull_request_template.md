@@ -1,5 +1,5 @@
 Episode:
 
-Sources corrobarting the fix (if relevant):
+Sources corroborating the fix (if relevant):
 
 Twitter:
