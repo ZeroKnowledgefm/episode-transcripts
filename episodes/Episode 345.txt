@@ -1,0 +1,700 @@
+0:00:05.6 Anna Rose: Welcome to Zero Knowledge. I'm your host Anna Rose. In this podcast we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+Hey! So I'm still technically on break from the show, but as I mentioned in my last weekly episode, I do have the plan to release one or two episodes this fall. Well, this is one of them. This week, I catch up with Dan Boneh for an update on the ZK research problems and ZK themes he and his students at Stanford are working on. The last time he was on was over two years ago. So it felt like a great time to bring him back on the show. We had a lot to discuss. We covered lattice-based SNARKs, ZK and the FHE context extensions on the content provenance work he presented last time he was on the show, updates on zkML, we talked about folding coSNARKs and much, much more.
+
+
+Now before we kick off this episode, I wanted to highlight for you, the ZK Jobs Board. There you can find job offerings from top teams working in ZK. There are always new jobs being posted, so check out the link in the show notes and find your next job working in our space. I also want to let you know about ZK Hack Online V, that just kicked off this week. ZK Hack Online is different from the hackathons we've hosted this past year. First, as the name suggests, ZK Hack Online is an event that is completely virtual. And second, it isn't a hackathon. It's a format that we pioneered back in 2021 and we've been running ever since. It consists of a 4-week workshop series with a CTF-like puzzle hacking competition running in parallel. We also are hosting a virtual ZK Jobs Fair to wrap up our event after the final workshop. This is our fifth edition and the event will be running until December 17th. So come join us and get to know the ZK Hack community. To learn more, head over to the website over at zkhack.dev, join our discord and jump in. All links can be found in the show notes.
+
+
+Now Tanya will share a little bit about this week's sponsor.
+
+
+0:02:17.9 Tanya: Today's episode is sponsored by Aleo. A new era of decentralized privacy-preserving computing is here. Aleo, a layer-1 blockchain powered by zero-knowledge cryptography, recently announced their mainnet launch. Now developers can build applications that take advantage of Aleo's unique combination of permissionlessness, programmability and privacy. Start by learning their domain specific programming language, Leo. Write and deploy your first ZK application at leo-lang.org or head on over to aleo.org to learn more about their technology and what you can build. Aleo, this is zero knowledge without compromises. So thanks again, Aleo.
+
+
+And now here's our episode.
+
+
+0:03:03.2 Anna Rose: Today, I'm here with Dan Boneh. Hi, Dan. Welcome back to the show.
+
+
+0:03:06.8 Dan Boneh: Hey, Anna. Great to be here.
+
+
+0:03:08.3 Anna Rose: Nice. So last time you were here on the show was actually November 2022. It's been a solid two years since you've been on the show. And in that episode, we covered what you were working on at the time, which was very exciting ZK research topics, both on the cryptographic side, but also on the application front. I'm going to add a link to that episode in the show Notes. Just to -- I don't know if I ever told you this, but it's actually one of our most popular episodes and it's been cited by a lot of our listeners as one of their favorites. So it's really great to have you back on to continue that conversation and to check in.
+
+
+0:03:43.9 Dan Boneh: Wow. Very cool.
+
+
+0:03:44.6 Anna Rose: I will say this too, like some of the work that you mentioned in that episode also still stands out very much to me. Like we talked about -- I think it was the first time I was introduced to this idea of using ZK in image provenance to show that a finished picture that's been transformed comes from an original image. And I believe it was the first time, at least on the show, that we talked about collaborative SNARKs, which also has become quite relevant today. We actually -- I did an episode about two months ago with the Taceo team who are focused just on collaborative SNARKs. So that's also cool that now there's teams working on it.
+
+
+0:04:24.3 Dan Boneh: Yeah. It's become a big topic. And actually we're going to discuss collaborative SNARKs later on in the episode.
+
+
+0:04:28.7 Anna Rose: Cool. So maybe to kick off, what's new with you in the last two years. You know, what kind of research have you gotten excited about? What are you working on?
+
+
+0:04:36.5 Dan Boneh: You know, there's a lot going on in the space. I have to tell you, the space is so much fun to work in. There's just so much activity all the time. I actually looked -- just before the show today. I looked in 2024, I just was just curious how many papers were published just on folding, just kind of a sliver of the SNARK space, just on folding schemes. And I found like 17 papers on ePrint just in 2024. That's a lot of papers and a lot of wonderful, beautiful ideas that has come out. So there's a ton happening in the space. I guess in recent months there's been a lot of work on new code-based SNARKs, new multilinear commitment schemes. The whole field is transitioning to relying much more on sumchecks than traditional things we've done before. So there's kind of also a bit of a transition in the space. And so there's like new folding schemes coming up all the time. Maybe we'll talk about some of those later on in the show, things like Arc and Nebula and others. And so there's just so much activity even in the code-based SNARKs, things like BaseFold and Blaze and all the other schemes that are coming up. So maybe we'll get to discuss some of those later in the show. But actually I wanted to start with something very specific. I wanted to start with actually the question of how do we build SNARKs from lattices?
+
+
+0:06:01.6 Anna Rose: Actually, before we even do that, why would you build SNARKs out of lattices? Like why would you start to explore that space in the first place?
+
+
+0:06:08.8 Dan Boneh: Yeah. That's a great question. Okay. So first of all, I guess there's sort of four types of assumptions that are being -- that are used to build SNARKs, or maybe more generally, four types of assumptions that are used to build polynomial commitment schemes. So we have SNARKs and polynomial commitment schemes from pairings, we have them from discrete log. So I guess from pairings, we have KZG and their variance. From discrete log we have Bulletproofs and its variance. From hash-based schemes we have FRI and many, many other types of hash-based schemes. And then the fourth category is lattices. And from lattices we also have, it turns out, SNARKs and polynomial commitment schemes that one can use. And so there's these four families. Pairings, discrete log, hash-based and lattices. And so you ask why lattices? Well, the first answer that comes to mind is, well, lattices are believed to be post-quantum secure. So if we build something from lattices, maybe we'll make them -- we'll get a SNARK that's post-quantum secure. Of course, the hash-based SNARKs are also post-quantum secure. So of the four that I mentioned, pairings and discrete log, of course are not, but hash-based and lattices are believed to be post-quantum secure. But it turns out there's another reason to try to build things from lattices. And potentially we might actually get better performance. And we'll talk about that in just a second.
+
+
+0:07:31.3 Anna Rose: Do you also need -- like the lattice-based SNARKs, I think when I've heard them referred to, it's actually been in the context of these FHE combo SNARKs where like they -- or they want to use FHE. And that's a different kind of math. And if you had strong lattice-based SNARKs, you could use them better with the FHE models.
+
+
+0:07:48.4 Dan Boneh: Whooh. Yes.
+
+
+0:07:48.7 Anna Rose: Is that true?
+
+
+0:07:49.1 Dan Boneh: Amazing. Amazing, amazing. That's an amazing question, Anna. That's exactly kind of where we're going.
+
+
+0:07:54.4 Anna Rose: Okay.
+
+
+0:07:54.7 Dan Boneh: But we'll get there in just a second. 
+
+
+0:07:56.6 Anna Rose: Sure, sure.
+
+
+0:07:57.2 Dan Boneh: So we'll see. So, first of all, I'm glad you brought up FHE. So fully homomorphic encryption. It's kind of one of the magical powers of lattices that we can build encryption schemes that support arbitrary computations. If I had to summarize why lattices lead to FHE schemes, the one sentence summary is that lattice encryption systems have a very fast decryption algorithm. And it turns out if you have very fast decryption, you can do something called bootstrapping, and that actually basically leads down to the path of fully homomorphic encryption. So if we had other ways to build encryption systems with super fast decryption algorithms, we might have other ways to build FHE. So the dream, of course, is always to come up with faster and faster ways to build FHE.
+
+
+Actually, I should probably say that one more time because this is kind of an important point that it's not clear that the way we currently build FHE systems is the only way to build FHE systems. There could be a completely different path that we haven't discovered yet that might lead to much more efficient and scalable FHE systems. So this is kind of a challenge to the whole audience. It's great to try to think of other ways to do it.
+
+
+But let's come back to SNARKs from lattices. So let's see. So there are a couple of systems that have been proposed over the last year or two. I guess one that's gotten a lot of attention is a system called LaBRADOR. So LaBRADOR, maybe one way to think about it is it's sort of adapting the Bulletproof-type work to the lattice space. And the reason I say that is because it's also kind of a folding-like mechanism. And in fact, in LaBRADOR -- the basic LaBRADOR, the verifier runs in linear time in the size of the statement, sort of like as it does in Bulletproofs.
+
+
+0:09:44.5 Anna Rose: Okay.
+
+
+0:09:44.7 Dan Boneh: Yeah. So it's a kind of a succinct proof, a short proof, I should say, but the verifier is not very fast. It runs in linear time as opposed to logarithmic time, which is what -- or log squared, which is what we would like. So one paper that came out recently is called Greyhound, which actually tries to build a polynomial commitment scheme from lattices. And what they do is they kind of take a two-step approach. They reduce the verifier time to O(N) using a technique that's been used before. And once they have now a PCS scheme, a polynomial commitment scheme that takes the verify O(N) time to verify, then they apply LaBRADOR to get a short proof.
+
+
+What's interesting is they kind of get -- they're able to then do commitments to fairly large polynomials. So for example, maybe just, it's worthwhile just saying the numbers like if you want to commit to a huge degree polynomial, a degree 2 to the 30, so it's a billion degree polynomial, they get a proof that the evaluation proofs are about 53 kilobytes. So not terribly short, but also it's not that long for such a high degree polynomial. And verification time is about two seconds. So again, not terribly fast, but two seconds I guess is reasonable. What's interesting is if we compare it to hash-based SNARKs, let's say the FRI-based mechanisms for polynomials of degree, say 2 to the 26, these are kind of polynomials that people use FRI to commit to. The verifier is still about 10 times slower. So the lattice verifier is slower than the FRI verifier. It's better in other performance, in other measures, but the verifier is a little slower.
+
+
+0:11:25.3 Anna Rose: And this is all Greyhound still.
+
+
+0:11:27.5 Dan Boneh: This is Greyhound. Yeah, yeah, yeah.
+
+
+0:11:28.1 Anna Rose: Okay.
+
+
+0:11:28.3 Dan Boneh: So it's a very interesting commitment scheme from lattices. And so the fact that the verifier is still somewhat slow makes this a little bit difficult to use in recursive schemes where you do have to run the verifier inside of the circuits. And so there's definitely more work to do there. So the reason I bring it up is this is kind of an area where there could be a potential for a lot more innovation. So this is something that maybe people would be interested in looking at. But why am I talking about lattice-based SNARKs? So in some sense they haven't been adopted into the SNARK world directly, but because when you try to build sort of a monolithic SNARK from lattices, it's not as maybe as great as what you would get from other schemes. But it turns out, surprisingly, lattices are great for folding -- for folding schemes. Yeah. And that's kind of what we started looking at. This is the scheme called the LatticeFold. This is joint work with Binyi Chen. Binyi is amazing, by the way. He's also applying for academic positions. So if you know of an available academic position, you should jump all over him because Binyi is really quite a creative and amazing researcher in this area.
+
+
+0:12:38.9 Anna Rose: Is this Binyi from Espresso?
+
+
+0:12:40.3 Dan Boneh: Well, this is Binyi, who formerly from Espresso and currently my postdoc.
+
+
+0:12:43.9 Anna Rose: Oh, okay. Got it. Nice.
+
+
+0:12:48.2 Dan Boneh: Indeed. But he's done a lot of work in the space. Maybe you remember Protostar and --
+
+
+0:12:53.6 Anna Rose: Yes, exactly.
+
+
+0:12:53.8 Dan Boneh: Well, and Lattice Fold, and many others --
+
+
+0:12:57.4 Anna Rose: I think we had him on the show, actually. I'm pretty sure he's been on the Zero Knowledge Podcast. So I'll find that episode too and add it.
+
+
+0:13:03.3 Dan Boneh:  Yeah. He's also a co author on BaseFold and Blaze and lots of kind of exciting developments in the space. So let me talk a little bit about LatticeFold. So when you do folding like in Nova, in HyperNova -- I'm sure you've talked about Nova and HyperNova and variants on the show. What happens is basically those schemes rely on what we call a homomorphic commitment scheme. Where I can commit to some message M, I can commit to some message M prime, and then I can add the commitments and get a commitment to M + M Prime. These are called linearly homomorphic commitments.
+
+
+And typically the homomorphic commitments that people use is what's called a Pedersen commitment. So Pedersen commitments are based on multiscalar multiplications. And so that's what these schemes typically use. But it turns out we have another linearly homomorphic commitment scheme, and this one comes from lattices. And the scheme is actually kind of a classic commitment scheme. It's called the Ajtai commitment scheme. Ajtai based on the Ajtai hash. So the Ajtai hash in its simplest form is simply a matrix vector product where the matrix is wide and short. So it's a very wide matrix that doesn't have that many rows in it. And so you can see if you multiply the matrix by a vector, what happens is you take a very long vector and the output of the matrix vector product is a very short vector. So it's compressing. This is why it's actually a collision resistant hash. And then you can use it as a commitment scheme. And because it's a matrix vector or product, it's additively homomorphic. Okay. So that's the Ajtai hash. It's a very simple hash to describe.
+
+
+0:14:42.1 Anna Rose: Where does that come from? When was that invented? And where -- like is it from a different part of math and now has been brought in or where is that from?
+
+
+0:14:51.6 Dan Boneh: Oh yeah, yeah. Well, it was invented by Ajtai back in the late 90s.
+
+
+0:14:55.8 Anna Rose: Okay.
+
+
+0:14:56.2 Dan Boneh: And it was invented for -- yeah. In a completely different context for a completely different reason, actually.
+
+
+0:15:01.7 Anna Rose: I love it when that happens. That's so cool.
+
+
+0:15:04.1 Dan Boneh: Yes, indeed, indeed. So in fact the SNARK space borrows from a lot of different areas of mathematics. From pairings, discrete log, elliptic curves, and of course, hash functions and codes and maybe now some lattices too. So we have this very simple hash, it's just a matrix vector product. Because of that, it's linearly homomorphic. And so the question is, could we use it for a folding scheme? Yeah. So we have a way to commit in such a way that is additively homomorphic. So potentially we can use that to fold.
+
+
+The problem is that the Ajtai hash is a little difficult to use. It sounds great. Yeah. We have a commitment scheme, it's fast, but it's a little difficult to use. Why is it difficult to use? It turns out it's only collision resistant when the inputs to it are low norm. So the vectors that you hash, they have to be short vectors. If you allow for arbitrary length vectors, it's trivially not collision resistant. That's easy to see. But if you restrict the inputs to be short vectors, vectors that have a low L2 norm, they're short, then it turns out it's actually collision resistant. In other words, it's hard to find two short vectors that will map to the same output. And from that you can build a commitment scheme. And as we said, it's additively homomorphic. So great.
+
+
+So we can throw this into folding. So folding, as we said, is basically based on adding commitments and the verifier, all it does is it just verifies that commitments were added correctly. So we can throw that into folding and you can say we're done. But that doesn't work.
+
+
+0:16:43.4 Anna Rose: Okay. But why wouldn't it work then?
+
+
+0:16:45.4 Dan Boneh: Yeah. So it's a great question. And in fact it turns out that when we fold, what we do is we multiply one vector by a scalar and we add it -- by a random scalar and we add it to the other vector. And so folding sort of inherently makes the vectors be large. It increases the norm of the vectors. Because folding inherently means you take a random linear combination of things and taking random linear combination causes things to grow in norm. If you multiply a short vector by a constant, you get a much bigger vector. And as a result you can't just use directly the Ajtai hash directly for folding. So that's kind of, it doesn't just work. So we need to solve this --
+
+
+0:17:24.4 Anna Rose: Okay. We need to do something to it or transform it or -- enhance it.
+
+
+0:17:28.2 Dan Boneh: Exactly. So you have to do some sort of a norm reduction process. Yeah, exactly. You can't just do folding on these committed vectors because pretty soon they will go out of the range -- out of the interval where the hash function is committing and then things will no longer be secure. So what we do is basically we apply a norm reduction step. And this is kind of, again, very common in the FHE world, we borrow a technique from the FHE world, where we do this step called decomposition, where the way you reduce the norm of something is you decompose it into smaller things. You represent it as a sum of smaller things. And so what you do is you want to fold two instances, each one of the instances you decompose into multiple instances, and now you fold all those instances together and you end up with one instance that's guaranteed to still be low norm.
+
+
+0:18:17.4 Anna Rose: Okay.
+
+
+0:18:17.9 Dan Boneh: Yeah. So that's kind of the basic folding mechanism. That's kind of problem one. But problem two -- still, we're not done yet, because problem two is that the prover has to prove to you that the initial commitment that they gave to you, in fact, is a commitment to a short vector. So in addition, there's a process in LatticeFold where the prover provides a range proof to prove that the commitments are commitments to short values. And you kind of put these things together and you can actually get a folding scheme from the Ajtai hash. So I'm oversimplifying. Of course, there's a lot of steps involved. But effectively you get a very efficient folding scheme from the Ajtai hash. So our motivation originally was just to get a post-quantum lattice-based folding scheme. Surprisingly though, but just because the Ajtai hash turns out to be so fast, this actually could be a competitive folding scheme. So not only do we get something that's post-quantum, it has a potential for being even well-performant. So there's actually a company that's implementing this now. So hopefully, I was hoping that by the time we do this podcast, I'll have running time numbers for you. But everything takes longer than you expect. And so we'll know -- hopefully, we'll know soon how well this actually works in practice.
+
+
+0:19:36.1 Anna Rose: I have a question. So the first change you had to make, like the norm reduction step, does that add a layer to this construction, like you have -- or multiple layers, and does that slow it down? Does that sort of cut into what makes it so fast?
+
+
+0:19:50.8 Dan Boneh: Yeah. It does, actually. So all of a sudden, instead of just folding two things, you decompose, and now you fold multiple things. And in addition, you have to do a range check. So if it was just as simple as replacing Pedersen hash with an Ajtai hash, everything would be 30 times faster.
+
+
+0:20:05.5 Anna Rose: Okay.
+
+
+0:20:06.5 Dan Boneh: But that's not that simple. You have to do a few more steps, and that actually slows things down, of course. And the question is, do we lose more than we gain or do we gain more than we lose? That's the sort of thing that we'll only discover from an implementation. So hopefully we'll have numbers soon. Now, I should say, we're actually working also on an improvement to this. So the story never ends with SNARKs. There's always ways to optimize and improve. So stay tuned. There are improvements to LatticeFold that are coming. So that's all kind of nice and fun.
+
+
+0:20:37.9 Anna Rose: Nice.
+
+
+0:20:38.3 Dan Boneh: But then something really interesting happened. So it turns out, because we can now do folding schemes using lattices, it turns out that the rings that LatticeFold uses are exactly the same rings that are used in fully homomorphic encryption.
+
+
+0:20:51.9 Anna Rose: Wow.
+
+
+0:20:52.6 Dan Boneh: Yeah. So that was kind of a bizarre. That was a bit of an unexpected. 
+
+
+0:20:55.5 Anna Rose: Was that a surprise or did you design towards that? Like was that actually an accident or --
+
+
+0:21:01.4 Dan Boneh: Yeah. I guess when you use lattices, it's kind of a natural thing to use those rings. And it turns out those rings are also useful in FHE.
+
+
+0:21:07.3 Anna Rose: I see.
+
+
+0:21:07.6 Dan Boneh: Yeah. Maybe I can claim it an accident, but really it's one of those things where you can only go one way, so you end up doing the same things that are also done in FHE.
+
+
+0:21:16.5 Anna Rose: Is it because they're borrowing from the same initial -- like, it's kind of coming from the same math.
+
+
+0:21:20.2 Dan Boneh: Yeah. Same underlying math. So you kind of end up with similar algebraic structures. So not --
+
+
+0:21:22.3 Anna Rose: Interesting.
+
+
+0:21:22.3 Dan Boneh: It's not too surprising, I suppose. But the cool thing about that is that there's a -- as you might know, there's actually a lot of work in the FHE space now to build custom ASICs to speed up FHE. So this is like, everybody's waiting for this. Supposedly this coming year in 2025, we're going to start seeing ASICs that speed up FHE.
+
+
+0:21:43.3 Anna Rose: Wow.
+
+
+0:21:43.7 Dan Boneh: And the claim is that maybe that will speed up FHE by, who knows, a factor of 10, a factor of 100. People throw out all sorts of factors, but until we see the actual ASICs, we won't actually know. So what that means is really, surprise, surprise, LatticeFold can actually benefit automatically from the ASICs that are being developed in the FHE world, which is kind of interesting. But it turns out that brings up a connection between FHE and lattice-based SNARKs that I wanted to highlight. So one of the issues with FHE, in some sense you could say it's a limitation of FHE, is if I ask you to compute on encrypted data that I give to you, the question is, how do I know that you did the computation correctly? Maybe you claim that you did a certain computation on the encrypted data, but maybe you did a different computation and what you send me back is just garbage.
+
+
+0:22:33.3 Anna Rose: I see.
+
+
+0:22:33.4 Dan Boneh: That when I decrypt, I'll get garbage. Right? So in some sense --
+
+
+0:22:38.6 Anna Rose: It's not that they can see it. It's not that like, because it's encrypted, so it is like the privacy is kept intact, but it's more that the action that's being done on it could be false or --
+
+
+0:22:48.7 Dan Boneh: Exactly. So it's not a confidentiality problem, it's an integrity problem. How do we know that the server computed what I asked it to compute on the encrypted data? In some sense this is always brought up as a limitation of FHE. There are situations where it doesn't really matter, but in some cases you'd like to basically have integrity on top of the confidentiality. So what do we do? How do we get integrity? Gee, if we only had an integrity providing tool, and that's exactly a SNARK.
+
+
+0:23:12.6 Anna Rose: Totally.
+
+
+0:23:13.4 Dan Boneh: So the FHE world is kind of interested in providing integrity by actually running a SNARK on top of the FHE? So what will come back is when you send encrypted data to the server to compute on, the server will do the computation and send you back the encrypted data along with the proof that it did the right computation.
+
+
+0:23:35.6 Anna Rose: This sounds a bit like just this idea of the untrusted server and needing to interact with it. It makes me think a little bit of the coSNARK world. Even though I realize, like the coSNARK is using -- its goal is to keep that privacy. If you send the information you want proved to an untrusted server, the privacy is revealed. And that's kind of the challenge that coSNARKs are trying to take care of. Here, you're using a SNARK to prove that that untrusted server is acting right.
+
+
+0:24:03.8 Dan Boneh: Exactly, exactly. And actually we'll get to the coSNARKs actually in just a second. It's a very, very good connection, Anna. Very, very prescient. So SNARKs can be used basically to prove that FHE was carried out correctly. And so there's kind of interest in, for example, in Zama, in implementing SNARKs on top of FHE. So you run the FHE and then you run the SNARK on the FHE computation itself. And so folding schemes come to mind and in fact, folding schemes that are friendly to FHE would make a lot of sense. And in some sense LatticeFold, because it uses the same rings as FHE, the two kind of play nicely together. So this is something that people in the FHE world are looking at.
+
+
+And then this is kind of -- I wanted to jump to the other way, the other direction, which is kind of where coSNARKs come in. So, so far we talked about how SNARKs can be used to authenticate FHE computation. It turns out that FHEs can also help the SNARK world. So how can they help the SNARK world? Well, this is where kind of coSNARKs come in. So in a collaborative SNARK, maybe the secret witness that we're trying to compute a proof over is shared across multiple parties. Maybe naturally, the data is already shared across multiple parties, and together they're trying to produce a proof that something is true. This comes up, you can imagine a lot in the banking world where maybe multiple banks share -- they each have a view of the transaction graph in the world, and they're trying to prove a global statement about the transaction graph. So together they're trying to produce a SNARK that something is true, but they're not allowed to share the -- to send the data to each other. So they need to collaborate in order to produce the SNARK. 
+
+
+So there's a long line of work on collaborative SNARKs. I guess this was started by, I guess Alex Ozdemir and me and followed up by a number of works as well. And basically, how do we get collaborative SNARKs to work? And we do that using basically MPC. So we use multiparty computation to speed up the SNARK generation process. And it turns out this is kind of an unusual situation where MPC doesn't add a lot of overhead. Yeah. Because most of the SNARK generation work can be done locally, even if the data is shared. It's very unusual, but this is a situation where MPC is quite efficient. It doesn't add much overhead above the SNARK generation. In fact, Sanjam Garg actually has some work that shows that not only does MPC not harm SNARK generation, it can actually speed up SNARK generation because now you have multiple machines that you can potentially use to generate the SNARK. So that's pretty interesting. But where does FHE come in?
+
+
+0:26:45.6 Anna Rose: Yeah. Is FHE replacing the MPC in this construction?
+
+
+0:26:49.5 Dan Boneh: Yeah. You got it. Exactly, exactly. So one thing you might try to do is say, well, maybe each one of the parties that holds a share of the witness, maybe what they can do is they can encrypt their witness under an FHE, send it to a central server. And now let's think about what is the central server doing. So now the central server has a bunch of FHE encryptions of the witness, and it wants to generate a SNARK on top of the witness. So now what it's going to be doing is it's going to be running the SNARK prover on encrypted data on the encrypted witness.
+
+
+0:27:25.4 Anna Rose: How does a verifier, though, in the end state ever verify back to like -- it can't verify what was in the encrypted data. It has to trust the FHE.
+
+
+0:27:35.1 Dan Boneh: No, no, no, not quite. Not quite. So what will happen is -- you know, maybe we should use a simpler example. One way to describe this is we have a witness that's shared across multiple parties, and we use FHE basically to compute on the encrypted witness to compute an encrypted SNARK. But now once we have an encrypted SNARK, that's not useful for anybody because it's encrypted. So then what will happen is the parties that actually ask for the SNARK to be generated will do a threshold decryption of the encrypted SNARK and they'll get the SNARK in the clear.
+
+
+0:28:07.7 Anna Rose: I think I followed like, you've encrypted it using FHE, and then you've sent it over to a SNARK and all it's making a proof of that encrypted data. And like the final thing is a proof that could be verified. But to me, a verification of that only goes back one step. Right? It only goes back to the prover of the encrypted data. It doesn't go all the way back to the clear data.
+
+
+0:28:32.7 Dan Boneh: Ah, okay. So let's actually explain it using maybe a simpler setup. So I can -- maybe I jumped two steps. So let's say we have a simpler setup. Let's suppose, Anna, you have a witness and you're trying to generate a SNARK, that witness satisfies a certain property. And let's suppose you're like a weak device. Like maybe you're like a cell phone, or maybe you're running inside of a Wasm virtual machine. You don't have a lot of memory, you don't have a lot of time. What you could do is you could generate the entire SNARK locally, but that might take some effort, that might take a lot of memory on your part. Instead, what you could do is you could take your witness, FHE encrypt it and send it to a remote server. Now the remote server could run the entire SNARK prover on the encrypted witness. And what the remote server will get from that is an encrypted SNARK, an encrypted proof. It will send the encrypted proof back to you, and now you can decrypt it and get the proof in the clear.
+
+
+0:29:31.6 Anna Rose: The whole goal of this is the sort of being able to use the untrusted server to do the proof generation.
+
+
+0:29:38.6 Dan Boneh: Exactly. Exactly. Exactly.
+
+
+0:29:39.2 Anna Rose: I get it. Because I think I was confused as to the goal of this, but the goal is just to be able to use that computation power.
+
+
+0:29:47.2 Dan Boneh: Yeah. Actually there are multiple goals here. So we can -- let's go over them one by one.
+
+
+0:29:47.3 Anna Rose: Okay.
+
+
+0:29:47.4 Dan Boneh: So if you're like a weak device and you're trying to create a SNARK, you could generate the SNARK yourself, but then you have to do the entire SNARK processing. You have to run the entire prover yourself.
+
+
+0:30:02.7 Anna Rose: Okay.
+
+
+0:30:03.2 Dan Boneh: Alternatively, you can encrypt your witness under FHE, send it to the server. The server will run the prover under the FHE, send you back the encrypted proof, and you'll decrypt it. So now all you're doing, you, the client, all you're doing is you're just encrypting and decrypting. So now supposedly you're doing much less work. This is of course a lot harder for the server. The poor server has to run the entire SNARK prover under FHE.
+
+
+0:30:30.1 Anna Rose: Right.
+
+
+0:30:30.7 Dan Boneh: And that's actually where the interesting research problem st
+
+
+0:30:31.3 Anna Rose: Okay.
+
+
+0:30:31.4 Dan Boneh: So maybe just to take this back one step and connect it to collaborative SNARKs. In the world of collaborative SNARKs, what happened is the witness is distributed across multiple servers and they don't collude. The servers don't collude with one another and they run an MPC to generate a SNARK. Here, effectively they could all outsource SNARK generation to a single server. So you don't need this non collusion assumption. You have a single server that generates a SNARK, but now the single server has to do much more work because it's doing proof generation under an FHE.
+
+
+0:31:06.8 Anna Rose: But are we imagining like this untrusted server also could be like an incredible machine with the ASICs? Like you could beef that up so it could handle it.
+
+
+0:31:16.5 Dan Boneh: Potentially, yeah. Exactly. Potentially, yeah. That would clearly have to be a very powerful machine. What's interesting is there has actually been a couple -- there have been two papers on this idea now . Unfortunately, these papers don't have system names to it, so I can't quite refer to them by the system names where people can just look it up. But there are two papers on ePrint that actually talk about using FHE for computing SNARKs. I'll say one is from Sanjam Garg's group and one is from Vercauteren's group. What's interesting is they used, for example, I'll mention the latest paper -- they used as the SNARK system, they use fractal and as the FHE system, they use what's called a Generalized BFV FHE. And I'll just say the claim in the paper is that for a million constraints, so not too big, but a million constraints is still a million constraints. The server can do this in about 20 minutes. So they can generate -- the server can generate a SNARK proof on an encrypted witness in about 20 minutes. And then the cool thing is the client doesn't need to do -- the client is just encrypting and decrypting. That's it.
+
+
+So I'm not saying this is something you should run out tomorrow and implement because this is still fairly theoretical, fairly long term. But what's interesting here is maybe there's an opportunity to design FHE systems that are especially compatible with SNARKs -- with SNARK provers, so that the FHE computation on top of the SNARK is not as expensive as it could be. So I just wanted to mention it --
+
+
+0:32:45.4 Anna Rose: That's cool.
+
+
+0:32:45.7 Dan Boneh: As kind of interesting direction for future work potentially that might make it easier to generate SNARK proofs on clients where the client now just has to do encryption-decryption rather than just running the entire proof generation process.
+
+
+0:33:04.9 Anna Rose: Is the prover on this untrusted server that's creating a proof in FHE somewhat, is it actually using any of the lattice-based stuff you talked about before? Or are these very distinct works?
+
+
+0:33:18.6 Dan Boneh: Oh, no, no. This would --  That's exactly right. Yeah. So the FHE right now is all about lattices. So presumably the SNARK that we would like to use would also involve similar algebraic structures. Although the work that's been done, so the two papers that I mentioned so far as to do this don't actually use lattices. They're more in the -- interestingly, they're more in the hash-based SNARK world.
+
+
+0:33:40.7 Anna Rose: Would it be helpful to be lattice, because then if you did create the better hardware, you could take advantage of that, like for both? Because you'd be basically optimizing the hardware for lattice-based everything.
+
+
+0:33:53.1 Dan Boneh: Potentially, yeah. So again, I don't want to get people overly excited about this because this is still very far away. It's not clear exactly how this -- when this will be useful, how this will work. Is it really better than computing the SNARK locally? But I guess in a situation where the witness is naturally distributed across multiple parties, you could think about using a collaborative SNARK to do proof generation or you could think about using a collaborative SNARK using FHE, where they all outsource the computation to a single server. The single server generates the encrypted SNARK and then the participants jointly decrypt using a threshold decryption.
+
+
+0:34:29.3 Anna Rose: Interesting.
+
+
+0:34:29.6 Dan Boneh: So this is just potential architecture. So the future don't run out and immediately implement these things. Right now these are still just research directions.
+
+
+0:34:42.6 Anna Rose: So. Last year I feel like I had many conversations about folding, but at the time it was like folding only worked in the pairing-based kind of world. And I heard that some of the folding work was starting to transition into the hash-based that people were experimenting. But here you almost see folding breaking out even from there, that you're starting to see it combined with lattice and the things that, that opens up. Like it's a technique that I sort of felt had been relegated to one part, one quadrant and now we're seeing it being used everywhere.
+
+
+0:35:16.1 Dan Boneh: Oh, folding is going to take over the world. I mean this is--
+
+
+0:35:14.3 Anna Rose: Wow.
+
+
+0:35:15.6 Dan Boneh: Folding is a really, really important technique that basically allows you to break a very large proof into many small proofs and kind of do them  -- all these pieces do them all at the same time. Actually it's interesting that you mentioned folding in the hash-based world because there I want to mention there's been kind of a pretty interesting development. There's a paper called Arc, A-R-C, just recently posted an ePrint. It's by Benedikt, Pratyush, Wilson and William. And that actually allows you to do folding without homomorphic commitments. Remember how we talked about folding required homomorphic commitments? So you either use Pedersen hashes or Ajtai hashes and Arc basically allows you to do folding even though you have a commitment scheme that's not homomorphic. Specifically it's for hash-based -- what's called hash-based accumulation. So for hash-based schemes these will also be post-quantum and they're compatible with much of what's being implemented today. And so Arc I think is a pretty important step in the world of folding because it does allow folding to also happen on these hash-based schemes. And so for example, if you need to do proofs client-side on a low memory machine, folding is almost the only option available to you. And potentially using Arc, you could actually do that using a hash-based scheme rather than a additively homomorphic commitment. So it's good to keep in mind Arc is a pretty interesting paper I think.
+
+
+0:36:50.7 Anna Rose: All right. I think we've covered a lot of ground on the folding and the FHE.
+
+
+0:36:55.3 Dan Boneh: Yes.
+
+
+0:36:56.1 Anna Rose: But what else, Dan? I know there's always many -- there's multiple research threads that you're always kind of exploring at the same time. So what's next?
+
+
+0:37:03.3 Dan Boneh: Yeah. So let's pop up a level. I guess maybe we started a little technical, so maybe we can pop up and talk about more applications. Applications of SNARKs. So there are actually two applications I wanted to talk about. So one is I wanted to revisit actually the work on using zero knowledge to fight disinformation and particularly to prove image manipulations.
+
+
+0:37:24.7 Anna Rose: Yes.
+
+
+0:37:25.5 Dan Boneh: But maybe before we do that, I'll very, very briefly talk about some recent work that we did on ZK in the Machine Learning world.
+
+
+0:37:32.9 Anna Rose: Oh, cool.
+
+
+0:37:32.9 Dan Boneh: And so the traditional ZKML question is the following. I have some data and you have a model. I want to send you my data and I want you to evaluate your model on my data and send the result back to me. But in ZKML, you also send me a proof that you evaluated the model correctly.
+
+
+0:37:50.8 Anna Rose: Yes.
+
+
+0:37:51.1 Dan Boneh: Yeah. You didn't take a shortcut or so on. So the point of ZKML is you have a committed model and now I have some guarantees that you evaluated the committed model correctly on the data that I sent you.
+
+
+0:38:03.1 Anna Rose: Yes. It's a bit similar to what you described before, where it's like something's happening in the FHE context, you want to prove that it's being run correctly. And here in this case, it's the ML model, the sort of black box that they're using, you want to prove that they're doing what they're saying they're doing.
+
+
+0:38:20.1 Dan Boneh: Exactly, exactly. They have a committed model and they want to prove that they evaluated the model correctly with respect to the commitment. There are a bunch of libraries that actually do ZKML -- ZK proofs for ML in a reasonable amount of time. What we were interested is the following question. Suppose you use a machine learning model to decide some critical things, like to decide who gets a mortgage or not. So you send your financial data to the bank, the bank runs a machine learning model and decides whether you get a loan or you get a mortgage or whatever based on the financial data.
+
+
+One thing that people worry about in this context is fairness. How do we know that, A, the same model was run for everybody? Like maybe the bank ran one model for you and one model for me, and now we're treated differently. So that is something that ZKML actually helps with because everybody -- the bank can prove that all the results are always done using the same committed model. That's what ZKML does. It's the same committed model that's applied to everybody's data. But that's not enough. How do we know that this model actually is fair?
+
+
+0:39:30.3 Anna Rose: So they might have run the same model, but maybe there's something in that model that -- I guess, are you looking for bias?
+
+
+0:39:36.8 Dan Boneh: Yeah, yeah, yeah. Exactly. So here we are kind of borrowing a notion from a whole area called algorithmic fairness. So algorithmic fairness is a huge area of research. Basically, how do we test that machine learning models are actually fair? In particular, the notion we're using is called what's called individual fairness, which says that similar people should be treated similarly. So what you'd like to say is basically the bank didn't make his decision based on your gender only, or didn't make a decision based on your zip code only. The bank is kind of fair. So if you and I are similar, the model treats both of us in a similar way. Well, so guess what? So we have a system called Fairproof that what it does is when you submit a query to the model, you submit your financial data to the model, the model comes back with a proof saying, yes, I used a common model to evaluate your query, but I also proved to you that for your data the model is fair. In other words, it would have given you the same decision even if you changed your gender or your zip code or other sort of protected characteristics.
+
+
+0:40:40.2 Anna Rose: Is it -- to get that proof though, do you have to run it again? Like do you have to kind of run it with variations and then prove that the outcome was the same?
+
+
+0:40:47.7 Dan Boneh: So what you need to do is you need to look at the geometry of the model. And so you look at the data that -- the data points that I send you, you look at a box around this data point and you prove that in this entire box the model would have made the same decisions everywhere. So it's not just a matter of querying a couple of other points, it's proving that in the entire box everything would -- all the decisions are the same. So we call this Fairproof. It works actually quite well. It doesn't work for ChatGPT-style models, but it does work for relatively simple models like what are used for financial decisions.
+
+
+0:41:24.6 Anna Rose: Interesting.
+
+
+0:41:25.1 Dan Boneh: And so this is kind of opening up kind of a new direction for ZKML in that you don't just prove that the models are evaluated correctly, but you also prove certain properties of the evaluation, like fairness. So one thing you might want to do is kind of prove like a universal fairness of the model. That the model is fair for all possible inputs. But that usually we can't do. These models are so complicated that we can't kind of give a universal proof that the model is fair everywhere.
+
+
+0:41:53.5 Anna Rose: Okay.
+
+
+0:41:53.5 Dan Boneh: What we can do is given a particular query, we can say for this query the model is fair. So that's why the proofs have to be done sort of online. For every query, we have to generate a proof that for this query the model was A, evaluated correctly and B, the response is fair in the notion that we've defined.
+
+
+0:42:12.9 Anna Rose: In this model, like, is there something that the ML side of things, the ML researchers were already doing to do this kind of verification that we're borrowing, or was this all -- like the whole construction is coming out of your lab that they were not checking this and now we need to check it for the first time.
+
+
+0:42:30.3 Dan Boneh: Absolutely. So this notion actually is very closely related to what's called the notion of robustness for machine learning, where you want to argue that small changes don't change the results. This is what's known as robustness. What's new is the ZK part of it. So robustness is something that was sort of checked offline, not shared with anybody, and now we can actually -- using ZK, we can send it back to the client and say, look this actually, there's a proof here that the model treated you correctly.
+
+
+0:43:00.4 Anna Rose: I see. Had it been like human auditors doing that check?
+
+
+0:43:05.5 Dan Boneh: Well, actually, right now it's not done. But what's interesting here is I just want the listeners to think more about there are many applications of ZK to ML that maybe we haven't explored. And for example, proof-of-fairness is one thing that there is to add.There's probably other things, in fact, we're working on other things that we can prove about a model. And so maybe the next time I come, I can talk about that.
+
+
+0:43:32.4 Anna Rose: Sounds good.
+
+
+0:43:33.3 Dan Boneh: So there's definitely interesting connections between ZK and ML, basically proving that models are used adequately. That space, I think, will continue to evolve. So that's on the ML side. I wanted to go back to images because that's, I think, as you said, as you can see, that's also something that I'm very excited about.
+
+
+0:43:52.5 Anna Rose: Yeah.
+
+
+0:43:53.3 Dan Boneh: So maybe it's worthwhile just recapping how ZK is used for proving image manipulation.
+
+
+0:43:59.9 Anna Rose: Or image provenance too. Yeah, showing where it comes from.
+
+
+0:44:03.5 Dan Boneh: Yeah, exactly. So let's just do a quick reminder for folks. So there's A standard called C2PA, stands for Content Provenance and Authenticity, where cameras have secret keys embedded in them. Every time you take a picture of a scene, basically the camera will sign the scene and then as a result, the viewer who looks at the image can tell, oh, this image came from that camera and it was taken at this time using this location potentially and the camera was in this and that configuration when it took the image. And so it gives you provenance that this is an image from a real camera. And by the way, what's -- a new thing that's happened since we last talked is that even the GenAI models now will issue a C2PA attestation. So for example, DALL.E, when you ask it to generate an image for you, the image will come with a C2PA attestation, which is pretty interesting.
+
+
+0:44:56.1 Anna Rose: And is it saying this is generated by AI? That's like it's actually saying --
+
+
+0:44:55.4 Dan Boneh: Yeah. Exactly.
+
+
+0:44:55.6 Anna Rose: Okay. And because I think when we spoke about it last time, we were talking about image provenance more as a defensive measure against AI. Like that you could prove that a photo had been taken by a certain device by a person by using this kind of ZKPs through every transition, every transformation. In this case, the AI itself is also saying like, no, no, this is AI. And so then if you were to transform that using ZKPs, you'd also be able to prove that it's AI.
+
+
+0:45:28.6 Dan Boneh: Exactly. That's exactly right. So it's image provenance. Whether you tie it back to a real camera or whether you tie it back to a GenAI model, you'll know where the image came from. That's the point. So I think that the hope is that maybe in 10 years, every piece of content will have some sort of a provenance attestation attached to it, and content that doesn't have provenance attestation to it basically will be dropped on the floor. So eventually I think everybody will -- because you just can't trust it. You don't know where it came from. Yeah. So it sounds like everybody will eventually race to generate these provenance attestations and that's how we'll deal with having some trust in the content that we're consuming. Yeah, we'll know where it came from.
+
+
+0:46:11.7 Anna Rose: And you're predicting 10 years. I think -- like I have a sense that we'll for sure see these things before the 10 year mark. But I think what you're hinting is that in 10 years it's like almost everything will need to have it.
+
+
+0:46:23.5 Dan Boneh: Well, okay, 10 years is, to be honest, out of a hat. I don't know why I said 10 years, but let's just say at some point. Yeah, at some point.
+
+
+0:46:33.2 Anna Rose: I mean, I think we're sort of waiting -- yeah, we're waiting for the common devices that we're already using to just come with --
+
+
+0:46:40.1 Dan Boneh: Yeah.
+
+
+0:46:40.5 Anna Rose: Like attested sensors and there are these attested sensor cameras and now microphones. There was one built last year at a hackathon. And I mean, they can put it into these devices, but it's like the need has to be there, especially if there's any extra cost to the consumer. Like the consumer needs to want that.
+
+
+0:46:58.5 Dan Boneh: Absolutely.
+
+
+0:46:59.9 Anna Rose: And I know the experiments are there, but so far it's not in everything. Although I've had this thought, like what if Apple just put it in -- you know, like the cell phone companies where you take so many photos from your cell phones. Like why not add that little attested --
+
+
+0:47:12.2 Dan Boneh: Gee, wouldn't that be a good idea?
+
+
+0:47:13.5 Anna Rose: Yeah, right.
+
+
+0:47:14.2 Dan Boneh: Yeah. Yeah, yeah. 
+
+
+0:47:14.8 Anna Rose: But so far I don't think they're doing it. But it would change a lot, I think, if they did. At least on the real person image provenance side of things.
+
+
+0:47:23.4 Dan Boneh: Very true. So eventually maybe we'll live in that environment. Now by the way, I should say there are some issues with C2PA. It's not – that's like the technology basically signs images that the camera or the GenAI generates, but this is by itself is not enough. There's a lot more that goes into C2PA. Let me give you just one example. Maybe you have an open source model that you want to use to generate images. Well, open source models can't sign anything because they can't maintain secret keys. So what are we saying? Are we saying that open source models will not be allowed to generate images anymore? So that's not good. We have to have a solution for open source models too. But there are ways -- there are kinds of engineering ways to deal with this. So hopefully things will get worked out. Of course there are always other issues with C2PA, for example, what if somebody steals the key out of the camera? Maybe I buy a camera, I kind of take it apart and I'm able to get the key out. Now I can issue fake C2PA attestations. We have to deal with that somehow. And so C2PA includes revocation mechanisms and it's a large field, let's just say. But it's not as simple as just signing images. There's a lot more to it than just signing images. But here, for this conversation, let's just focus on the ZK aspect.
+
+
+0:48:35.2 Anna Rose: Okay.
+
+
+0:48:35.5 Dan Boneh: So what does -- how does ZK come in? Well, ZK comes in when you want to include this in a newspaper article, right? So you have a camera that takes a picture of an event. The picture now has a signature attached to it. But the newspaper editor hardly ever uses the picture as is in the article. What they will do is they will resize the image, they'll make it smaller, maybe they'll blur some faces.
+
+
+0:49:05.6 Anna Rose: Change the color.
+
+
+0:49:05.8 Dan Boneh: Yeah, maybe they'll change the contrast. Exactly, change colors. By the way, interestingly, red-eye removal is not allowed. I just found that out. It's kind of interesting.
+
+
+0:49:09.1 Anna Rose: From what?
+
+
+0:49:09.7 Dan Boneh: The Associated Press.
+
+
+0:49:10.7 Anna Rose: Really.
+
+
+0:49:10.9 Dan Boneh: The Associated Press does not allow red-eye removal. That's considered too much. But you can blur some faces if you want to, you can maybe crop part of the image. So there's always changes that the editors actually do. And then they put that image into the article. The problem is now the newspaper reader will see the edited image and they can no longer verify the signature. Right? Because you can't -- you need the original image to verify the signature, but they don't have it. So what we did is with -- this is with work with Trisha Datta and actually also with Binyi Chen. We have a paper in this upcoming [?] Ohklyn, this is something that we -- we talked about this two years ago. We actually even published this two years ago. And there's been other groups have also worked on this. But what's new is I wanted to just tell the listeners about a cute trick that may be useful to you too.
+
+
+So the problem in building ZK -- oh, sorry. I forgot to say what the ZK proof is proving. So what the newspaper editor will do is it will remove the signature, the C2PA signature from the image, and instead it will blur and crop and resize and all that, and then it will attach a ZK proof that says that the edited image came from a properly signed C2PA image. And the only modifications to the properly assigned image is this blurring and cropping and resizing and so on.
+
+
+0:50:33.6 Anna Rose: Transformation.
+
+
+0:50:34.7 Dan Boneh: Yeah. These allowed transformations. So now the reader, instead of verifying a signature, they'll verify the ZK proof, and they have some guarantee that the image -- of what the image provenance is.
+
+
+0:50:52.6 Anna Rose: Usually when I've heard this described too, it's sequential. So you wouldn't actually, you'd like, you blur it, you create a proof that that blur came from -- that the image was coming from the previous image with a blur. And then the next step would be like, and you're cropping. So you do another proof kind of proving back. Have you heard about it ever being combined?
+
+
+0:51:11.1 Dan Boneh: Yeah. It's a good point. Honestly, we also do it one step at a time.
+
+
+0:51:14.3 Anna Rose: Oh, you do? Okay.
+
+
+0:51:14.7 Dan Boneh: But there's no reason why you can't combine those. So it's just mechanically, it was easier for us to do things one step at a time. But it could also be combined. But here's the problem. So naively, the thing you have to do is you have to prove that the image transformations were done correctly, but you also have to prove that the original image was properly signed. Now the problem is these cameras, they will generate a SHA256 of the image. Now these are huge images. They're like, you know the Leica camera that does C2PA, it's a 60 megapixel camera. So doing SHA256 of a 60 megapixel image inside of a SNARK circuit, that is death. That's really quite difficult.
+
+
+0:51:59.4 Anna Rose: Okay.
+
+
+0:51:59.9 Dan Boneh: Yeah. That's really quite slow. So forget the image manipulation. Just verifying that the original image was signed is actually quite difficult.
+
+
+0:52:08.8 Anna Rose: Yeah.
+
+
+0:52:09.4 Dan Boneh: So that's actually what the paper is about. So how do we get signature verification to run quickly inside of a SNARK circuit?
+
+
+0:52:16.8 Anna Rose: Interesting. What's the name of the paper?
+
+
+0:52:18.7 Dan Boneh: It's called VeriTAS.
+
+
+0:52:13.9 Anna Rose: Okay.
+
+
+0:52:14.5 Dan Boneh: VeriTAS. Image Manipulation -- Proving Image Manipulation in ZK. It's on ePrint and it will be in the upcoming [?] Ohklyn conference. So maybe I'll just quickly share the core idea. So one idea is basically, well, let's try to improve the hash function. Let's build a hash function that as fast as possible. And guess what? It turns out a hash function that's really good for this is a lattice-based hash function.
+
+
+0:52:43.8 Anna Rose: Whoa. Back to lattice. So cool.
+
+
+0:52:45.4 Dan Boneh: Back to lattices. Yeah. Because lattices are just very fast. They're very fast and they're very convenient for SNARKs to work with. So that's one way to do it. So instead of SHA256, let's use a lattice hash and then we can actually generate signatures. We can verify signatures inside of the SNARK at a reasonable cost. But it turns out there's even a better idea where we can take all of signature verification out of the SNARK circuits. And this is a trick that I want your listeners to know about. So the trick works like this. So imagine what the camera does is instead of signing a hash -- a SHA256 of the image, what it will do is it will sign a polynomial commitment to the image. So let's unpack that a little bit.
+
+
+So what we're going to do is we're going to treat the image as basically 60 million pixels. We're going to treat them as coefficients of a polynomial. We're going to commit to that polynomial. The commitment is going to be very short. And then the camera will just sign that commitment. So what the camera has to do is basically compute a polynomial commitment of the image and then sign that polynomial commitment. Okay. Now you can say, well, maybe this is too hard for a camera to do. And maybe you're right. Maybe my Leica camera can't do a PCS of a large image, but certainly OpenAI can. So the GenAI folks that need to generate C2PA images is they can definitely use a PCS of the image and then sign that PCS, the polynomial commitments of the image.
+
+
+Now, why is that helpful? Well, it turns out now the ZK proof just has to prove image manipulation. It doesn't prove anything about the signature. The signature can be sent all the way to the client. So it's a signature on a commitment. So you send the signature and the commitment to the clients. Those are all succinct.
+
+
+0:54:33.7 Anna Rose: Yep.
+
+
+0:54:34.5 Dan Boneh: Yep. And it turns out magically, using Plonk trickery, basically you can -- the client verifies a signature outside of the SNARK, and it turns out the SNARK just verifies that the data that was signed actually matches whatever the SNARK circuit says. And the SNARK circuit is just about image manipulation now.
+
+
+0:54:53.3 Anna Rose: Do you get to skip the transformations, though, or do you still need the proofs of each transformation?
+
+
+0:54:58.5 Dan Boneh: No. You still need to do the proofs of the transformations. What we save here is you don't need to verify the signature inside of the SNARK.
+
+
+0:55:04.3 Anna Rose: I see.
+
+
+0:55:05.1 Dan Boneh: Yeah. And this is kind of a useful trick that people should know about that. If you sign a PCS of your message, then there's no need to verify the signature of your message inside of the SNARK. And that basically speeds things up dramatically. That's a major improvement. So now we're actually working on provenance for videos and the fact that we don't have to generate -- we don't have to verify signatures for videos inside of a SNARK. It's a big improvement.
+
+
+0:55:32.3 Anna Rose: Changes everything.
+
+
+0:55:32.9 Dan Boneh: Yeah. Changes everything.
+
+
+0:55:34.4 Anna Rose: Actually, I don't know, Dan, if you've heard of this. I think there's another work on video that's come out called Eva. It's actually from one of my co-founders at ZKV and I believe they're also tackling this realm. So --
+
+
+0:55:47.1 Dan Boneh: Awesome.
+
+
+0:55:47.7 Anna Rose: Yeah. We'll add that in the show notes.
+
+
+0:55:49.7 Dan Boneh: Fantastic to hear. And we would love to collaborate with them. Yes. This is great.
+
+
+0:55:51.7 Anna Rose: Cool. Nice.
+
+
+0:55:53.4 Dan Boneh: Yeah. Always, this is why this space is so much fun. There's lots of ideas floating around and it's wonderful to collaborate with everybody. 
+
+
+0:56:01.6 Anna Rose: Totally. And it's fun. It's kind of -- I mean, you definitely see people go on research projects and then they start to sometimes converge around some solution or architecture or they've actually explored very different realms. Like I don't think this one -- this one seems to be focused more on like IVC. I don't know that it's doing anything with the lattice stuff, so.
+
+
+0:56:23.2 Dan Boneh: Yeah. Well, of course, always lots of ideas floating around and lots of room for collaboration. This is why the space is so much fun.
+
+
+0:56:29.2 Anna Rose: Yeah. Dan, I know that we have sort of reached the end of the main topics we wanted to talk about today, but are there any miscellaneous experiments that you would love to see people doing research on or other threads that you're just maybe starting to explore but don't have deep work on yet?
+
+
+0:56:47.6 Dan Boneh: Yeah, yeah, absolutely. In fact, we could go on and on and on. I was going to also maybe talk about accountability in cryptography, but maybe we'll leave that actually for next time. It's a lot of interesting work around that. Maybe a good way to conclude, since we're at time, is I wanted to mention that actually in the Spring, I'm starting a new course. It's called Applied Zero Knowledge. Basically it's going to be from no knowledge of zero knowledge proofs all the way to how zkVMs work and folding and so on. So we'll kind of take the students through the whole journey. Should be a really fun course to teach. I'm excited and looking forward to doing that. What I wanted to share is that I wanted -- this is going to be an applied course. So there will be programming projects where the students will actually have to write code that uses or generates SNARK proofs. What I wanted to share is that our community has made SNARK proof generation so easy using these zkVMs that now I can't give a programming project to do it, because it's too easy. Yeah?
+
+
+0:57:46.8 Anna Rose: It's too bad.
+
+
+0:57:47.8 Dan Boneh: You know, because of zkVMs, it's now become so simple to generate proofs that that's not an interesting project to do anymore.
+
+
+0:58:00.7 Anna Rose: So it has to be the applications.
+
+
+0:58:02.7 Dan Boneh: Yes. Of course, we'll do programming projects and applications, but I also want the students to understand why these proof systems work and why they're sound. And so I think what we'll do is we'll do programming projects like ZK Hack, where we take a proof system, we deliberately break it, we remove some of the checks in it, and then the student's role is to kind of actually come up with a theorem, a statement that is incorrect, but they're able to produce a proof that the verifier will accept. So they're able to produce proofs for incorrect statements.And this is a great way to actually learn how proof systems work. And that's exactly what I guess ZK Hack is all about.
+
+
+0:58:39.8 Anna Rose: Yeah. One of our projects, I'll actually -- I'll just make a highlight because actually ZK Hack Online is about to start as we're recording it. And by the time this airs, it may have just started. For anyone listening who wants to maybe get a taste for what you just said, Dan, for this sort of broken protocol and trying to figure out how to fix it. So ZK Hack does this puzzle hacking competition. It's the fifth time we run it. It's a multi-week event series where we do these puzzles every week. And there's like a competition to discover the bug fastest and do a write up. So I'll add a link to that -- to the latest, which is ZK Hack V. I'll add that in the show notes too. And if anyone's listening to this later, like after the event has already aired, we have an entire page dedicated to these types of puzzles as well. And actually Dan, we did one last year.
+
+
+0:59:27.9 Dan Boneh: We did. Yeah. That was a fun one.
+
+
+0:59:29.4 Anna Rose: In this case, do you imagine the students designing these or would you design them and then they have to do something to them?
+
+
+0:59:36.8 Dan Boneh: Yeah. Probably we'll do a combination of the two. Yeah.
+
+
+0:59:39.1 Anna Rose: Okay.
+
+
+0:59:39.4 Dan Boneh: So hopefully by the end of the quarter, we'll have a whole bunch of ZK Hacks for you.
+
+
+0:59:43.2 Anna Rose: Whoa.
+
+
+0:59:43.9 Dan Boneh: That you can use in future ZK Hacks.
+
+
+0:59:46.2 Anna Rose: That would be so cool. Nice.
+
+
+0:59:48.4 Dan Boneh: But anyhow, I thought it was kind of entertaining that now the world of ZK has progressed to the point where just giving a project to build a ZK proof is too easy.
+
+
+0:59:58.4 Anna Rose: Too easy.
+
+
+0:59:59.4 Dan Boneh: And we need to do something different.
+
+
+1:00:01.9 Anna Rose: Interesting. I think we have one last thing to tease. As some of the listeners may be aware, the ZK Whiteboard Sessions Season 2 are currently airing. We have six of the core modules. And Dan, you have a bonus module coming later this year. And so I just wanted to let the audience know that -- yeah, I don't want to give anything away. That's my problem. I don't really -- I'm saying it, but we're keeping it sort of under wraps. But there is going to be a module coming later this year sort of to wrap up the Season 2 of the ZK Whiteboard Sessions.
+
+
+1:00:38.5 Dan Boneh: Yeah. I'm having a lot of fun putting it together. So hopefully it'll be a useful resource.
+
+
+1:00:42.7 Anna Rose: Nice. And actually, if anyone -- I mean, I'm assuming a lot of folks who are listening know this, but you also were -- you did the first three modules in the ZK Whiteboard Session Season 1. I also would add a link to this in the show notes. Like for me, that was my onboarding into the technical. Even though it came out years after I started the show and years after I was talking to cryptographers, it was like the first time all of those words were put together in one -- I'm like, oh, that's what they meant. You know, watching those videos were so helpful.
+
+
+1:01:14.6 Dan Boneh: Wow. Amazing.
+
+
+1:01:15.5 Anna Rose: In your course, do you think -- are you still starting from that place or would you say the space has evolved so much that you kind of  -- how do you start teaching ZK today?
+
+
+1:01:25.1 Dan Boneh: Look, I mean, the reality is that this -- our space has expanded by so much that now you can teach multiple quarter courses on proof systems. There are also multiple ways of teaching proof systems. There are theory courses on proof systems, there are applied courses, there are very hands-on courses. There are like multiple even ways of teaching this material. So yeah. But you have to start from the same point -- you have to start from zero. You have to explain what ZK is, what it's for -- and actually the most important thing I would say is to explain why has it become such a big topic, why is it all of a sudden so useful? Why is there so much demand for SNARKs, whereas other cryptographic primitives, you don't see as much demand for. And the reality is just SNARKs let us do things that we can't do any other way. And that's why they're so important. If you want to scale Ethereum, you know, the world of Ethereum kind of converged to L2s and potentially SNARKs play an important role there.
+
+
+1:02:30.5 Anna Rose: Totally. Well, Dan, thank you so much for coming back on the show for this episode and giving us an update into the topics that you're researching, what you're interested in. Also the course that's coming up this Spring. Yeah, thanks so much for sharing all of this.
+
+
+1:02:45.8 Dan Boneh: Yeah. Anna, this has been a lot of fun and I hope you guys enjoyed it and happy to do it again.
+
+
+1:02:51.1 Anna Rose: Thanks a lot. And to our listeners, thanks for listening.

@@ -1,0 +1,594 @@
+Anna Rose (00:00:00):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:28):
+This week I chat with members of the Penumbra team, Finch, Erwan, and Jen. We dive into how the ZK powered blockchain works under the hood, how ZK is used to offer new paradigms for staking voting and trading, what kind of cryptography Penumbra is using, how the DEX works, and more. Now, quick disclosure, I'm an investor in Penumbra through the ZK validator, and this is a follow up and catch up to our earlier episode, which was an introduction to Penumbra that we recorded last year, right around the Zero Knowledge Summit8 event. So this will be an amazing catch up. Now, speaking of the Zero Knowledge Summit, I did want to let you know that if you're planning on joining our upcoming event that is zk10 happening in London on September 20th, be sure to get your application in now. And if you've been accepted and have received the link to buy the ticket from Eventbrite, be sure to grab this asap.
+
+(00:01:17):
+Only folks who've bought the ticket will be guaranteed entry into the event, so hope to see you there. Also, keep your eyes on the zkJobs board there. You'll find new job postings from top teams working in ZK, including some of our sponsors for the zkSummit. We've been thinking about the zkJobs board as a neutral ground for teams to share some of their new openings to the larger ZK community. So if you are a team looking for new talent, be sure to check it out. And if you're looking for your next job opportunity, be sure to check out the latest job postings links are in the show notes now, Tanya will share a little bit about this week's sponsor,
+
+Tanya (00:01:51):
+Anoma's first fractal instance Namada is launching soon. Namada is a Proof-of-stake L1 for interchain asset agnostic privacy, Namada natively interoperates with fast finality chains via IBC and with Ethereum via trustless two-way bridge for privacy. Namada deploys an upgraded version of the multi-asset shielded pool circuit, otherwise known as MASP, which allows all assets fungible and non fungible to share a common shielded set. This removes the size limits of the anonymity set and provides the best privacy guarantees possible for every user in the multi chain. The MASP circuit's latest update enables shielded set rewards directly in the shielded set, a novel feature that funds privacy as a public good. Follow Namada on Twitter @namada to learn more and join their community on Discord, discord.gigi/namada. So thanks again Anoma. And now here's our episode.
+
+Anna Rose (00:02:46):
+So today I'm chatting with Finch, Erwan and Jen from Penumbra. Welcome to the show, all of you.
+
+Finch (00:02:52):
+Hello.
+
+Jen (00:02:52):
+Good to be here.
+
+Erwan (00:02:53):
+Hey
+
+Anna Rose (00:02:54):
+So we had Henry from Penumbra on the show last year, and he introduced us to the project and many of the things that were being built at the time, but like a lot of those early stage projects, a lot of, I'm sure changed and evolved over this year. And so I'm really excited to meet with all of you to find out what's new what are you working on, what challenges have possibly been solved, what challenges remain open. Yeah. And just get a sort of a lay of the land of what's going on in Penumbra. I do want to start off with a intro to each of you. So if you can just say a few words about maybe where you got started and why you're working on what you're working on, I think that would be really cool to hear, Erwan.
+
+Erwan (00:03:30):
+So on my end I'm a core engineer at Penumbra. The way I got started, it's kind of funny I have, I happened to have like a bunch of interests in cryptography, in market design, in privacy, and got massively note sniped by the project and, you know, started like contributing and eventually like just proceeded to work full-time on it.
+
+Anna Rose (00:03:54):
+Had you been working on something in this field before or was it like a very different space?
+
+Erwan (00:04:00):
+Not really. I have been lurking for a while, more than anon capacity, I guess, rather than that.
+
+Anna Rose (00:04:07):
+Oh, cool.
+
+Erwan (00:04:08):
+But yeah, no, this is essentially like the first time I work publicly on a crypto protocol.
+
+Anna Rose (00:04:16):
+And yet it seems like yo dove in sort of on the deep end. This is not a beginner project, I don't think...
+
+Erwan (00:04:24):
+No, yeah. I've had a long interest, in the field, and so I was familiar with a lot of the work that Henry, for example, had produced, I think mainly the Ed25519 library that he and others wrote in Rust. So this is this is basically how I came about to work on Penumbra.
+
+Anna Rose (00:04:48):
+Got it. Finch, tell us a little bit about what got you started.
+
+Finch (00:04:52):
+Yeah, so about, I guess my work anniversary is coming up in something like a few months. So I've been here for about two years since just about the beginning. Jen is a slightly more senior than I am. I had known Henry before he got started on Penumbra. And so he told me about how he was working on this project, and it was very exciting to me. I had sort of like drifted into working on security and privacy sideways from having a background in programming language design. It seemed like a really exciting thing to be a part of. So I signed up and since then my role is also core engineer. Most of us have that role because in the beginning it really wasn't possible to differentiate who is working on what. I've touched a lot of parts of the system. I've focused a lot on the design of our core data structures, especially like the tiered commitment tree that's used for holding commitments to both notes as well as other pieces of private state. And I've also worked on our retooling of the jellyfish Merkle tree, which is borrowed from the DM project to suit
+
+Anna Rose (00:06:15):
+DM like Meta's DM, I guess, right?
+
+Finch (00:06:17):
+Yeah. Meta's DM like the Libra now Libra then DM
+
+Anna Rose (00:06:22):
+Then dead
+
+Finch (00:06:22):
+Dead, and now back from the dead
+
+Anna Rose (00:06:26):
+Oh
+
+Finch (00:06:27):
+Because we're using it and a whole bunch of other projects have cottoned onto the fact that this is actually a really great design for a content addressable Merkle tree. So we're using it and trying to help centralize the ecosystem around this particular tree.
+
+Anna Rose (00:06:47):
+Finch, I want to ask you, were you working with Henry before? You sort of said you knew Henry, but were you working in this field before joining Penumbra?
+
+Finch (00:06:54):
+I was working not with Henry but I was working at another blockchain privacy company before I joined Penumbra.
+
+Anna Rose (00:07:02):
+Okay.
+
+Finch (00:07:03):
+But then before that I had never really thought much about cryptocurrency at all. I had thought quite a lot about privacy but it was a pretty quick lateral jump. It's been really exciting.
+
+Anna Rose (00:07:19):
+Yeah. So you were coming more from that angle, from the privacy in, not from the, like blockchain on?
+
+Finch (00:07:26):
+Yes
+
+Anna Rose (00:07:26):
+Got it.
+
+Finch (00:07:26):
+I learned, I learned quite a lot in my first couple of years in the industry, that's for sure.
+
+Anna Rose (00:07:33):
+Jen, tell us a little bit about yourself.
+
+Jen (00:07:36):
+Yeah, so I think I'm similar in that I came from the privacy world previously, so I was working on sort of Tor adjacent projects. So previously I worked on a whistle blowing platform called SecureDrop, which uses Tor in services. So if a source wants to share something with journalists in a secure and anonymous way, that was the tool that would use. So I've worked on that for maybe five years previous to this. So no cryptocurrencies involved. But I was drawn to Penumbra. I knew Henry also through kind of the greater Tor web, I guess and thought that the privacy goals were important and the technology is really interesting and we get to use Rust, which is also quite sick.
+
+Anna Rose (00:08:26):
+Something you like
+
+Jen (00:08:27):
+Yeah.
+
+Anna Rose (00:08:28):
+What parts of the stack are you working on today?
+
+Jen (00:08:32):
+These days I mostly work on the the core cryptographic primitives and implementing the proofs. Doing the SNARK ceremony. Those are the pieces that I'm mostly working on.
+
+Anna Rose (00:08:45):
+Would you put yourself more on the research front or on the engineering front or both?
+
+Jen (00:08:50):
+I would say both. Yeah.
+
+Anna Rose (00:08:51):
+Okay.
+
+Jen (00:08:51):
+Like, part of the work is, you know, like many kind of cryptography, people in cryptocurrencies taking a paper and implementing it. And so it's sort of like research engineering.
+
+Anna Rose (00:09:02):
+Cool. Applied cryptographer.
+
+Jen (00:09:04):
+Yeah.
+
+Anna Rose (00:09:04):
+It's the rare role that everyone is always hiring for.
+
+(00:09:07):
+Erwan, we didn't really hear from you what part of the stack you're working on. So what, yeah, what parts would you say you're focused on?
+
+Erwan (00:09:16):
+Lately, I've been focusing on the tax engine, anything ranging from like how do you go from a swapping 10 to an outcome for the user that's positive, so how do they get the trade that they want? So that's the main part I've been focusing on that sort of like joins with like my interest about like cryptography and market design, because one of the ways I've learned about Penumbra was that I was very interested in that concept called frequent batch auctions. Which is like this concept that like, oh, what if like, instead of having this rates towards latency and all this money thrown at having like this latent arbitrage game, what if instead we batched all the trades together and executed all of those at discreet intervals? So switching from like a continuous vision of time to a more discreet one.
+
+(00:10:06):
+And in traditional finance, this isn't really, I guess, a super easy thing to do because, well, time is continuous, and if you decide that your exchange is going to run this on this microstructure model, then you have to sort of make sure that everyone else in the world is also running on the same model because otherwise, well, someone else can just run a continuous exchange. And now your nice microstructure is sort of exhaust of all the toxic flow coming from those places. In blockchains however, what's cool is time is discreet. We produce blocks at regular intervals, and it makes complete sense that the market microstructure would map cleanly onto this model of a discrete clock. And that's really like when when I read the, the protocol spec for Penumbra that it clicked for me. And I thought that was really interesting. And incidentally, it solves like a large number of kind of UX and fairness problems that arise in crypto.
+
+(00:11:10):
+So reading this, I was like, okay, like you can choose, you can design your decentralized exchange to not have batch swaps, not have batch execution, and this decide to executes every trade against the entire state one by one. Or you can just batch them together and kind of have finer control over like, remove sequencing and ordering as a thing that validators or block producers need to be very involved in. So that's one of the aspects I found really interesting but yeah, that's mostly, we've been working on the text.
+
+Anna Rose (00:11:45):
+You just mentioned also this concept of like Intents.
+
+Erwan (00:11:48):
+Yeah. The intent in Penumbra is kind of like simple. You submit a trade, you submit a swap, and your intent, this isn't that many intent to express. Your intent is to get the best possible execution possible period. So the role of the DEX engine is to take a bunch of those Intents of, hey, I want to swap this amount for that amount and work with the liquidity that is available, work with all those different knobs and levers to produce the best outcome for the user.
+
+Anna Rose (00:12:21):
+So I want to actually do an intro to Penumbra. I feel like you've started to introduce a part of it, which is the DEX, but why don't we take that step back? I mean, even though, you know, I'm going to obviously add the link to the episode we do with Henry. I think it's valuable to the listeners of this episode to, to learn a bit more about the project in that sort of high, high level way. So what is Penumbra?
+
+Finch (00:12:43):
+So Penumbra is an L1. We're a shielded cosmos zone built on top of the Tendermint now CometBFT stack. We are built entirely in Rust. And the way that Penumbra works is that when you do an IBC transfer into Penumbra, this shields the funds as they're transferred in. And an IBC transfer out of Penumbra unshields the funds to the destination. So everything that happens inside of Penumbra is the zone of privacy. We've essentially aligning the boundary of the chain with the boundary of your expectation of your privacy of action. And then within the shielded pool itself, this is a multi-asset shielded pool. So all of the value in the pool is within a single anonymity set regardless of denomination. We have the shielded DEX, which Erwan has been talking about and working on a great deal that allows users who are on the market taker side to get really, really strong anonymity for the swaps that they're performing and on the market maker side for liquidity providers to preserve their alpha to preserve their secrecy of their strategies because there are different micro positions are unlinkable from one another within this model.
+
+Anna Rose (00:14:20):
+Would people using Penumbra then, like they're coming from outside of Penumbra, they go in, they use it as a DEX, and then do they leave? Or is there other things that they can do in the zone itself?
+
+Finch (00:14:32):
+Currently, Penumbra is the DEX shielded, staking, shielded governance, delegator voting is also shielded using some of the same mechanisms, but there's no general purpose programmability for Penumbra 1.0 and I say that with an intent
+
+Anna Rose (00:14:53):
+To have, have a 2.0 or 1.5
+
+Finch (00:14:55):
+Yeah. Well, there's a lot in the roadmap looking forwards. Like Penumbra when it launches is not going to have this thing that we call flow encryption which we originally had on the roadmap. And that allows the aggregation of swaps and the aggregation of delegator votes to be encrypted to a threshold key of all of the validators to provide even more enhanced indistinguishability of these different actions that's on the roadmap for Penumbra 1.5 after we launch and then for Penumbra 2.0 or 3.0, there's all these really cool ideas about general purpose programmability using an async batch oriented model for smart contracts but that's a bit more like
+
+Anna Rose (00:15:45):
+in the weeds?
+
+Finch (00:15:46):
+I was going to say in the clouds actually. Henry gave a talk about this at zkSummit8 talking about some of the possibilities in the future for async models of computation and how that fits into ZK.
+
+Anna Rose (00:16:04):
+Well, I'll add that and we'll dig that up and add it to the show notes Sure. Along with your talk Finch from the same event, which hopefully we'll get a chance to talk about as well.
+
+Finch (00:16:13):
+Absolutely.
+
+Anna Rose (00:16:13):
+Okay. So this is really great, you actually just mentioned a part of this project that I wasn't sure was still in the works, and I think you called it, is it shielded stake or is it shielded delegation
+
+Finch (00:16:25):
+Shielded staking or shielded delegation.
+
+Anna Rose (00:16:26):
+Okay.
+
+Finch (00:16:27):
+I think like those are both sort of synonymous, at least in my view. Yeah. I can describe a little bit more.
+
+Anna Rose (00:16:34):
+Yeah, please do. Because it's interesting like that just as an aside, like ZK Validator, when we started Zero Knowledge Validator, we had, our dream was to be able to do some sort of like private delegation like that, you know, more in the actual, you know, Proof-of-stake stack using ZK using privacy. And I remember going, this is a little aside, but I remember like before we even started the thing, before we started ZK validator, I went and talked to Sonny and I was like, can we just make like Cosmos private delegation? Like very naive thing. So then he had to explain like how this entire thing worked much better to me. And it was very clear that at least on existing systems, it's not a small add-on. And so when Penumbra came around, it was very exciting because it was like, that was part of the proposal and it's really nice to hear that that's still the plan because it is so unique to Penumbra the fact that you'd have any sort of privacy in how you're staking in actually, like the way that validators would operate or the way that like, you know, if you have tokens and you want to participate in the consensus, how it looks.
+
+(00:17:40):
+But yeah, tell us more about it.
+
+Finch (00:17:41):
+So on Penumbra, our staking model is shielded staking for delegators and transparency and accountability for validators. So if you're a delegator, then it is not possible to link your different delegations to one another, and it's not possible to see which address has delegated how much to which different validators because addresses don't appear on-chain period except with a tiny asterisk that is for inbound IBC transfers. But that's a technicality that doesn't actually factor in here. So when you delegate to a validator, instead of having a globally readable ledger record that delegation, so that rewards can be minted to your address transparently. Instead it's an exchange of your unstaked tokens, your Penumbra tokens for a specific delegation token that is unique to each validator. And then when you choose to undelegate at some point in the future, the exchange rate between that delegation token and the Penumbra staking token has been adjusted by the chain. And so you get back more Penumbra staking tokens than you put in proportionate to what the staking rewards would have been during that period of time.
+
+Anna Rose (00:19:10):
+And that's your, like, whereas most transparent systems will have like daily emission almost of rewards in this case, you as the end user only see that once you take it out.
+
+Finch (00:19:20):
+That's right. That's right. And you could partially undelegate. You could at any time choose to partially undelegate only the amount that represents the emission that would've happened up until any particular point essentially you can think of it as like on Penumbra staking rewards compound automatically. And what this also means, this design for privacy also gives us first class liquid staking just as a consequence of how it's built because each one of these delegation tokens is itself something that can be moved around can be sold, can be traded, can be moved out of Penumbra over IBC. There's a lot you can do then with this mechanism that just isn't possible without further machinery if you have a conventional sticking mechanism like the Cosmos SDK.
+
+Anna Rose (00:20:15):
+And if I remember correctly from that previous interview I did, I think, don't those tokens also add to the anonymity set almost like they just add an extra class of tokens to mix with the other tokens?
+
+Finch (00:20:27):
+Absolutely.
+
+Anna Rose (00:20:27):
+Also, kind of like further adding, I don't want to say noise, but kind of like stuff that makes it harder to decipher who's who and what's, you know, what's connected.
+
+Finch (00:20:36):
+The more things that happen in the shielded pool, the more powerful the shielded pool is in terms of its ability to protect people's privacy. So everything is mixed in there, when you're a liquidity provider, you get back a shielded NFT that represents your capability to then manipulate the position that you've put onto the DEX. When you are participating in swapping there's a commitment that goes into the exact same commitment tree that represents your claim on the outputs of that swap. Everything uses the same mechanism of the shielded pool. And so the anonymity set is compounded by every kind of activity that could happen.
+
+Anna Rose (00:21:24):
+When it comes to stuff like the private governance, shielded governance, I guess shielded, is this private voting, is there a different mechanism? Are you using anything like MACI or anything like those constructions that have been created specifically for voting? Or is it bespoke and it just uses the properties that already exist in the system?
+
+Finch (00:21:43):
+It's bespoke to Penumbra.
+
+Anna Rose (00:21:45):
+Okay.
+
+Finch (00:21:46):
+We're not doing anything particularly special. We, the way that private voting works is that you to, you know, as a validator, you don't have privacy in voting, let me first make that clear. A validator votes we believe should be attributable to the validator so that people can place their delegations with validators whose on-chain voting record they actually agree with but as a delegator you should have privacy when you're voting, you shouldn't have to choose between participating in governance and giving up your privacy. So delegators proving that you have a particular voting power for a particular proposal looks like proving that you have spend authority for your delegation tokens to a particular validator. Or rather that you did at least have a spend authority at one point in the past when the proposal was first created.
+
+Anna Rose (00:22:45):
+Because the delegator can switch their vote from the validator if they want. Right. Like they
+
+Finch (00:22:49):
+That's right.
+
+Anna Rose (00:22:49):
+If they don't want to follow and just like let it passively be voted by the validator, they could, I mean, this is the same in all Cosmos SDK governance as far as I know. And at least the ones that we are active on. You can always split with your validator if you want to and, but yeah, that was always sort of the, the question here about lake, some sort of leakage. Like if you split from the validator vote, then I guess can't you put together that that delegator had delegated to that validator in a weird way because it's like all of a sudden it's like, oh, there's 10,000 tokens worth of voting power missing. Here's a delegator that's voting that amount and this validator has gone down by that amount. Like is there any sort of way that you can connect it
+
+Finch (00:23:32):
+Statistically? Yes. And the fewer number of delegators there are, the easier it is to do. Yeah. So imagine that there's only two delegators to a particular validator, then you know when one of them has chosen to vote otherwise because you can simply see like this, like we saw how much a particular delegator delegated, say they delegated all at once. Like the worst case scenario is you can see the amount of the particular delegation because flow encryption doesn't exist yet. Then you can see they chose to differ from the validator. So you can identify that the same person who delegated voted differently from the validator, but you don't get any more information about them. You don't know what their address is. You don't know the balance, the rest of their on-chain activity. You can't link that with anything else. So it's limited in impact and with flow encryption this gets even harder to do because it means that we batch together all of the delegations and on delegations over a particular epoch and only the sums are decrypted by the threshold of validators at the epoch boundary. And similarly for voting we batch together all of the votes and decrypt only the totals of the votes so that you can't see intermediate tallies, which would reveal more fine-grained statistical information that you could use to try and deanonymize people.
+
+Anna Rose (00:24:58):
+Got it. And actually just to, you sort of already said this, but the separation where like the validator is transparent and accountable, the delegators, those who have the tokens who are staking, that's where that privacy lives. I think that's a really important and it strikes a nice balance because I think some of the issues when we originally talked about like private Proof-of-stake was, oh, but how do you keep these validators accountable in that case? Like they can be malicious or they could be doing something weird and not paying out the rewards in certain systems where you have to manually do that. There's like all these things that would go wrong if the validators were actually anonymous, but the delegators themselves, because everything is so transparent in most of the systems, everyone's actions are revealed.
+
+Finch (00:25:45):
+Yeah. And I mean this is a little bit of a political perspective, but it seems to me like privacy for individuals, but transparency for institutions is a good way of organizing a society. And I think the validator as being a lot more like an institution than an individual and you can override a validators vote by knowing how they voted in a particular proposal before you yourself cast your delegator vote. So that transparency there is necessary because otherwise you don't know like, how critical is it that I override my delegated vote or not.
+
+Anna Rose (00:26:20):
+You just mentioned that the Cosmos SDK or you were using like Tendermint, but now it's called Comet. I don't know if I said this right, but what, is this a Penumbra thing or is this someone else's work?
+
+Finch (00:26:34):
+This is not a Penumbra thing. This is a rebranding of Tendermint, the like organization and application and all that jazz
+
+Anna Rose (00:26:44):
+Got It. Okay.
+
+Finch (00:26:45):
+So Tendermint,
+
+Anna Rose (00:26:46):
+New name, same thing or what?
+
+Finch (00:26:48):
+Yeah. New name, same software.
+
+Anna Rose (00:26:50):
+Okay.
+
+Finch (00:26:51):
+Tendermint is now called CometBFT and it's the same project, it's the same architecture, but there's like, I'm not sure exactly what was behind it.
+
+Jen (00:27:05):
+Yeah I think a fork occurred, some sort of issue and so there is the original Tendermint repo, but I think most of the activity it seems is happening in the CometBFT world.
+
+Anna Rose (00:27:16):
+Got it. Yeah. This sounds like a little bit of Cosmos like drama reasoning maybe, but
+
+Finch (00:27:21):
+Yeah, understood.
+
+Jen (00:27:22):
+Yes. I think that's the case.
+
+Finch (00:27:24):
+We are simply going to use CometBFT because that is the one that is going to ship vote extensions very soon. Which is what we need in order to enable low encryption for Penumbra 1. whatever, which we're very excited about after our mainnet release.
+
+Anna Rose (00:27:41):
+I want to ask a little bit about IBC and Penumbra because IBC is also, I mean this is a transparent system and you mentioned that like when you're outside of this system and you're coming in, there is this one point where it's transparent, I guess because you need an address to give to whatever other chain where you're sending on Penumbra that would be transparent. What happens after that?
+
+Finch (00:28:05):
+Good question. So it's different in different directions. So first looking at an outbound IBC transfer from Penumbra this looks very similar to an IBC transfer onto any other chain or from any other chain. Penumbra invokes the appropriate methods in the IBC state machine so that the relayer knows that it should tell the other chain that this amount has been withdrawn out of Penumbra and all is well in the other direction deposits into Penumbra and need to specify an address on Penumbra. And this is the only place in the Penumbra architecture where an address is actually recorded in the chain state at all. Everything else you see no trace of anybody's address on-chain but in this case, you do need to be able to put an address there so that the chain can mint new notes that are spendable by the recipient of the transfer, which is why, and I think Jen, you can speak more to this, we have a key hierarchy that allows you to generate essentially unlimited numbers of completely unlinkable addresses so that each time you do an inbound IBC transfer, you use a fresh one and they're not linkable to each other.
+
+Jen (00:29:24):
+But they share the same spend authority. So if you wanted to after you IBC transfer into a particular address, you could immediately move it to another address or just spend it from there and that activity is not linkable.
+
+Anna Rose (00:29:37):
+Can you explain what the key hierarchy part of this is or how that works?
+
+Jen (00:29:41):
+Yeah. So we have keys that have different capabilities that are all derived from a root seed phrase similar to other chains. And our key hierarchy is very similar to Zcash because Penumbra is based on mostly Zcash sapling. And so one of the nice features of Zcash sapling is that they have what are called diversified addresses, which are addresses that are all different when you share, you know, an address to Alice and an address to Bob, they are unlinkable between Alice and Bob however, they all share the same spend authority, which is a nice privacy feature.
+
+Anna Rose (00:30:26):
+This might be like a bit of an odd question here, but like, when I think of the Zcash model with the UTXOs and the notes at the same time, like is Penumbra then UTXO at its core? Or is this like there's something underneath and you're running sort of an emulation of UTXO on top?
+
+Jen (00:30:44):
+It is as at its core UTXO using notes.
+
+Anna Rose (00:30:49):
+Okay.
+
+Jen (00:30:49):
+Just like Zcash. The main difference is that we allow arbitrary assets. So a note has typed value where the type is a specific asset, and that's also private. So it could be one of the NFTs that Finch has mentioned could be the delegation token for a specific validator or the Penumbra token and that's not something that is public.
+
+Anna Rose (00:31:13):
+Can you have other types of assets, non-Penumbra assets also in here. And those would also be their own type, I guess.
+
+Jen (00:31:21):
+Yeah. So presumably once people IBC transfer in, you know, their favorite token, then that'll be in their Penumbra zone and will be a new asset.
+
+Anna Rose (00:31:31):
+Cool. How then though, does the DEX work with that? Like, so is the DEX a separate program that's sort of like just tapping into the UTXO, like to use it to read things, but it's doing things with it? Like I guess I always, I always have in my mind the idea that like a UTXO model is very like unprogrammable, that you can't do that much with it other than transfer. And I know that's changed. Like I know teams like Aleo would say it's changed teams, like Aztec will say, but like, you know, I know that there's variations on that, but yeah, I'm just curious, how does the DEX interact then with this?
+
+Erwan (00:32:05):
+That's a really good question. At a high level, when we design and built the DEX, there was like this constraint of we are working on a permissionless protocol where people can, as Jen just said, IBC assets in and out. So we don't have control over the space of assets that are representing the DEX. People can open positions, close positions, we can specify bounds on the positions. But really if a trade happens to be expensive to process or if an error occurs during exhibition step of the DEX, it's hard to attribute where the error actually came from. Who's responsible for maybe like a spike in processing costs. So we really had to treat that as a first class concern of building something that's robust enough. And that is basically like too efficient to trick into wasting compute. And the way this connects into, okay, like we have those shielded notes, we have those different components. Part of Penumbra is really core to the application architecture that we converge into, which are different components that stack on top of each other that have a specific sort of like generic behavior specified into a trade that essentially splits behavior into three steps, doing stateless checks, doing stateful checks, and finally like doing some processing some sorts.
+
+Jen (00:33:35):
+Yeah. So I think one of the critical things to recognize that differentiates Penumbra's DEX from other DEX out there, like on Ethereum, is that Penumbra's DEX is built in to the protocol level. So just as at the protocol level a spend exists a swap exists on the protocol level.
+
+Anna Rose (00:33:55):
+Got it. So does it have a category in the UTXO part? Like does it have its own field almost?
+
+Jen (00:34:02):
+Yeah, so the different kind of protocol level things that you can do in Penumbra are called action. So spend is one of them. There is a swap, which is when you're sort of signaling your intent. I would like to swap 1 Penumbra number for 1 wrapped Bitcoin or whatever it is and then there is a swap claim action that allows you to collect the outputs of that swap once it has been executed against the DEX.
+
+Finch (00:34:26):
+And there has to be an intermediary step. There has to be this two step dance of swap and swap claim because when you submit a swap, you don't know what the clearing price is going to be. Everybody in that block who submits a swap is going to get the same price. It's going to be the best price that's available given the liquidity that is in that block. But what you get back when you submit a swap is effectively a handle that says when we know the price, I can then prove that I had this chunk of the total swap volume and then get out the proportionate output of all of the swaps across that particular trading pair.
+
+Anna Rose (00:35:06):
+And that's sort of going back to that, that you're batching it because the whole trade is not just you, it's like a lot of similar Intents I guess bundled together.
+
+Finch (00:35:15):
+That's right. And that's where the DEX engine comes in because it's the DEX engine's job to take all of those swap in the swap Intents, aggregate them together by the trading pair that they're associated with and then do routing over the graph of all of the liquidity that's currently on offer in order to optimize the best possible price for those aggregate swap totals. I guess that's my picture of the high level of what Erwan has been deep in the weeds of optimizing.
+
+Anna Rose (00:35:48):
+What does it mean to optimize that Erwan? What do you have to do?
+
+Erwan (00:35:52):
+So at a certain level, it's designing the DEX engine as we call it, to make sure that even though we can't attribute processing complexity to specific user action, because it might have happened in the past, everything is batched, some things are shielded even though we can't do all of this that you would do in a normal sort of like trading engine in spite of this, you engineer things so that a lot of the complexity, a lot of the processing is done is frontloaded at certain steps of the DEX. And really what is on the hot path of determining, okay, how much inventory am I going to route over this specific route? What is the impact on the marginal price doing that entire thing of like past search routing and the combination of the two that's actually like executing in trade on the DEX, doing all of this has to sort of be regimented into phases where you are going to build indices upfront that are going to help you prune a part of the state that are going to act as jurisdictions of like, okay, like this is where I should orient my path search, for example, even though, you know, the liquid graph at core is permissionless anyone, can IBC deposit assets or bridge assets, anyone can create positions.
+
+(00:37:08):
+So you have this liquidity graph where vertices in the graph are assets. So for example, Ethereum, Bitcoin, whatever, like any asset you want, and edges between those vertices are going to be positions and stepping back again, really that liquidity graph is a multigraph. So between two assets, you can have many positions. Each position in Penumbra is this constant price tool or AMM in a way that is kind of akin to a limit order with some caveats. So for example, really what you do when you open a liquidity position on Penumbra, you specify a price, you specify an inventory, and then until you decide to close or withdraw a position, the position is going to stay on the order book. And when it gets filled, automatically start quoting the other side of the book. So each of those position has a linear cost, but routing over different hubs has a convex one because all of a sudden you have to compose with two different sort of like price points over two different parts of the route.
+
+(00:38:15):
+And doing this in a permissionless context is kind of a really interesting problem actually, because you have to step by step iteratively decide, okay, this is the optimal amount of flow to route over this given route, and then step back a little and say, okay, now that I have altered this view of the state, how do I how do I decide what is the next step? How do I decide what are, what is the next best route? What are the next positions that I should consume? And doing this just massively over like, you know, naive storage implementation would be excessively expensive. So what we did was built this very neat storage and caching layer that lets us do speculative execution at different steps of the processing, sort of like lifecycle of a batch trade. And so we can actually like say, okay, what happens if we route all the stuff in that direction?
+
+(00:39:17):
+What happens if we do it in that other direction and do this like very efficiently and at the same time have sort of like this escape hatch to revert to a known good state if anything bad occurs but of course, in, in and of itself, that wouldn't be sufficient because we need to bound the amount of work that we do processing traits. So in addition to this, there is like different layers, and this goes back to this phased execution thing where we do past search, we don't consider the entire search space. Instead we use indices that we build upfront at when we write and update positions into the DEX state. We maintain those indices and using those indices as heuristics, heuristics, we can trim the search space, figure out an estimate of like the best couple routes available and using this pipe that to a second phase of actually filling or executing that is going to be in charge of managing that sort of like convex cost function and convex problem of deciding how much flow I should route so that I don't go above a certain, like a certain price, essentially a certain, we call it the spell price.
+
+(00:40:31):
+So this goes back to like this convex problem which also has a computer science equivalent in that sort of like niche called network flows where you have to maximize the amount of flow through a network, but minimize the marginal price increases that routing any additional units causes. So that's, that's part of the, the way we addressed those challenges. Another way is also choosing a very simple but very versatile liquidity primitive, which is the constant price market maker. The constant price market maker, you specify a price, you specify an amount of inventory on either side of the pair that you're quoting, and that's it. There is, it's a linear function. It means it's very easy to compose no functions with it. It's very easy to have a precise approximate, a precise trading function.
+
+Anna Rose (00:41:28):
+I mean, you keep mentioning convex convex and all I can think is like Guillermo works on that. Have you worked with Guillermo at all on this? Is this anything related to the work that he's sort of talked about on the show?
+
+Erwan (00:41:41):
+Absolutely. Absolutely. Yeah. We had a really great collab with Guillermo. So a lot of this Replication Market Making work is actually completely pioneered by, dare I say the seminal work of Guillermo Angeris, Alex Evans and Tarun Chitra in their replicating market maker's paper. And totally, this is actually I think one of the cool instantiation of this research work into a soon live TM engineering project where yeah, you have this simple liquidity primitive, you have those "consistent" payoff functions. How do you approximate that with this? And so that's part of what we worked on.
+
+Anna Rose (00:42:26):
+So you just mentioned though, like the storage, you have some sort of storage state or something like what I was thinking as you were talking about this, it's like, if you have these Intents and you want to batch them, how long would it take? Would you almost like need to make the intent and then wait like a few days for them to sometimes happen because you're waiting for other things to be batched along with them? Is that why you need the storage? I'm sort of asking two questions here, so maybe let me break it in. One is, would you need to wait a long time? Could you end up waiting a long time in this system to get your trade fulfilled? And then the second one is that held in storage? Is that why you have storage?
+
+Erwan (00:43:02):
+It depends on the DEX state, but typically the expectation for a user would be to send a swap and it's fulfilled in that block. Right. The only reason why it would not be filled is if, for example, you were executing against an empty order book but much like, you know, classic kind of boring, centralized exchanges. When you do a market order there there's not really, like the intent is a little bit loose because the intent is execute me at any price, but you would typically be executed at any price, right? In Penumbra, the difference is your intent is just execute me at the best possible price. And you have this sort of like guarantee that the DEX engine will actually look at the entirety of the liquidity graph, not just the pair you're looking at, but the entirety of the liquidity graph and find all the best available liquidity and execute at the clearing price for that block.
+
+Anna Rose (00:43:56):
+But still pretty immediately, like it would be quite pretty immediately.
+
+Erwan (00:43:59):
+Yeah, absolutely. Yeah. Like the finale should be five seconds, essentially.
+
+Anna Rose (00:44:02):
+Okay. So you're not saying the order here, the intent is not, I want this for this much and I will wait until I can get it for this much.
+
+Erwan (00:44:09):
+Oh, that's right. Yeah. That would be, for example, a limit order which you can also express on Penumbra.
+
+Anna Rose (00:44:15):
+You can? Okay.
+
+Erwan (00:44:16):
+A swap. Oh yeah, absolutely. Yeah. So Penumbra is more like it's more a decentralized order book than it is say like an automated market maker.
+
+Anna Rose (00:44:25):
+Got it.
+
+Erwan (00:44:25):
+In Penumbra, like if you are a market maker or just a swapper or like trader, you have fine control over the trading functions of the shape of the liquidity you want to provide, say like, I want to provide only like the current prices on like some third party reference market. And as just a trader, you can also specify, hey, I want to either execute a market order, having that notion and that guarantee that the DEX engine will actually look at the entirety of the liquidity graph, including the synthetic liquidity. So for example, if you say, hey, I want to swap BTC for Eth, you're not just going to be executed on the BTC-Eth pair, you're going to be executed perhaps on the BTC-USD USD-Eth pair as well.
+
+(00:45:12):
+So your trade can take many different routes and actually the engine will gather all those different routes and fetch all the best positions and provide you with the output at like the best price. And we have this active market maker bot on our testnet that kind of like does a little bit of what I talked about previously with active market making it's called Osiris, it was written by my colleague Chris. And what Osiris does is it's sort of like implements this simple market making strategy of looking at like a third party reference market, quoting on the Penumbra order book the different assets at those like, you know, reference prices and maintain liquidity that way. What that means is on the testnet, when you submit a swap, you're going to be executed both against, you know, active market makers like Osiris, but also against, you know, passive market makers or just users who are like posting limit orders, much like a central limit order book except it's decentralized.
+
+Anna Rose (00:46:17):
+I want to go back though to the public state storage system. You need that because you need somewhere to hold these orders in place as they're being executed or like, what's it for?
+
+Finch (00:46:27):
+So every blockchain needs a way to record its state, and most of the time this is done on a block-by-block basis where you accumulate in memory the set of changes that happen over the course of that block, and then you atomically commit, here are all of the changes that occurred during this block, because it might be that something failed or didn't make sense or whatever. And like when end block happens, you commit what your state is. And on Penumbra we've developed this bespoke storage infrastructure that is meant to allow us to do all sorts of cool stuff with the state so that we can enable this speculative execution of the DEX, et cetera. What that looks like is at the base level, we have RocksDB, which is a Facebook originated fork of the LevelDB database that is a key value store.
+
+(00:47:25):
+On top of that, we have this bespoke storage layer that lets us make in-memory copy on right forks of the state so that you can say I would like a copy of the state and anything I do to modify it is not going to be committed down to the storage layer until I say, please commit this. And then you can branch those forks arbitrarily many times. So you can be like 12 speculations into the future. And only when you finally say, yes, this is what I want to actually change about the world. Does it collapse down and the like quantum wave function coheres or whatever, and you get a final actually committed durable state. So what the DEX engine uses this for is when you're doing path exploration, you might say, suppose I tried executing this trade across this path, what kind of price would I get? And this looks exactly like actually executing the trade across the path, except that the state that you're working off of is this ephemeral copy on right fork of the actual state that exists only in memory and only when you've found the best possible path, you say, great, now commit these changes down. We've tried to package this up so that it's an independent component because we think that other chains might be able to use this for their own use cases. So there's a Rust library that we've published with this
+
+Anna Rose (00:48:54):
+What's is it called?
+
+Finch (00:48:56):
+I believe it's called Penumbra Storage right now. It's our giant monorepo somewhere.
+
+Anna Rose (00:49:05):
+Cool. So how does the cryptography that you've been building and working on, how does that actually interact with the DEX?
+
+Jen (00:49:13):
+So one of the ways that it interacts with the DEX is as we mentioned previously, the DEX is built into the protocol layer. And so the swap and the claiming of outputs of a swap are protocol level actions. And so when you claim the outputs of a swap, for example, you need to prove that you are claiming the right amount. So we have executed a whole batch of swaps together in that block, and then you are allowed to take out just the part that corresponds to your inputs. And so you, we prove in zero knowledge that that's one of the places that we use zero knowledge proofs that that has been done correctly.
+
+Anna Rose (00:49:56):
+Which ZKPs are you actually using?
+
+Jen (00:49:59):
+We use Groth16 proofs at this point.
+
+Anna Rose (00:50:03):
+And do you think there'll be a move at all to something more modern?
+
+Jen (00:50:07):
+Good question.
+
+Anna Rose (00:50:08):
+Or is it sort of like let's stay on the true and tested side of things?
+
+Jen (00:50:12):
+Yeah, so for a mainnet it's going to be a Groth16 proof.
+
+Anna Rose (00:50:16):
+Okay.
+
+Jen (00:50:16):
+And the reason for that was just that we are a fairly small team and we can get really good out of the box performance using existing libraries by using Groth16. And so we will be doing a setup ceremony. We just had Lucas Meyer join us and so he's been working on the SNARK ceremony that we're going to be doing in soon (tm), but maybe a couple months.
+
+Anna Rose (00:50:40):
+Oh cool.
+
+Jen (00:50:41):
+At some point in the future, it is possible that we migrate to a different system.
+
+Anna Rose (00:50:46):
+Are you sort of like on the lookout for those systems then? Like with all the activity and new systems coming online? I mean, there's also been, I mean, since Groth16, according to some narratives, PLONK would've been like also quite battle tested, well versed, although there's lots of different variations of it, you know, maybe the Halo2 stuff. Like are you sort of avoiding that because at this moment because of its newness and like maybe lack of tools, are you skeptical of its security? Like is there, I'm just curious if you stick to Groth16 because of ease or because of security?
+
+Jen (00:51:23):
+At this point it's primarily for ease.
+
+Anna Rose (00:51:25):
+Okay.
+
+Jen (00:51:25):
+So a lot of the development work that's been done over the last year are implementing like rank one constraint system gadgets to use with Groth16. And so there is some work to migrate to some another system that's using like a PLONKish arithmetization but like Halo2 would be, you know, very high at the top of the list. Like there we're definitely closely following other proof systems for a possible migration in the future. Like for Penumbra 1.5 or 2 could use a different proof system.
+
+Anna Rose (00:51:57):
+And you sort of mentioned you have to build some of these like custom gadget, like very specific to the system. But if you do, like how intense is pulling out a approving system and sticking in a new one? Do you have to hire new people almost to be able to?
+
+Jen (00:52:12):
+I don't think we would need to hire new. I mean, it wouldn't hurt, but I don't think we would need to hire new people. It would just be so, well, like one of the differences about Penumbra is that we have also implemented some of our own crypto primitives and so like we have our own elliptic curve library, and so we have to implement whatever gadgets we need for the proving system and so there's a little bit of additional work there, but I don't think it's a massive lift to change
+
+Anna Rose (00:52:43):
+Where else are like ZKPs being used throughout the system. So you mentioned this one case in the DEX, but yeah, like, and I guess we can assume in voting, but yeah, I'm just curious like where exactly how many are there?
+
+Jen (00:52:57):
+Yeah. So you're right in voting. So in delegator voting we use the ZKP there and then for the multi-asset shielded pool similar to Zcash spends and outputs, so minting new notes or also have ZKPs associated with them. And then for undelegating to make sure that you're applying. So if the validator was slashed while you were delegated to it, then we ensure that you are applying that penalty as you convert back to Penumbra.
+
+Anna Rose (00:53:33):
+Do you also use a ZKP when you're going from that like transparent IBC input state to into the system?
+
+Jen (00:53:40):
+There is not a zero knowledge proof there.
+
+Anna Rose (00:53:42):
+Oh okay.
+
+Finch (00:53:43):
+There's no separate action because on the inbound direction you have the chain transparently, like when you do an IBC transfer from another chain, you on the other chain initiate the transfer, then the relayer does an action as a Penumbra transaction that says to Penumbra, here's an incoming transfer, and then Penumbra transparently mints notes to the specified address which then means that those notes are part of the shielded pool. But because that address is a one-time use ephemeral address, then whoever controls those notes then moves them around throughout the shielded pool as usual. And then in the other direction, the person who wants to transfer out says, I'm going to spend these notes which releases value that you can then spend on an ICS20 withdrawal that allows you to send outwards.
+
+Anna Rose (00:54:47):
+Are they just like completely separate systems? It's triggering something within a private system, but it's not like there's no transfer into it, there's no visible, like does it just stay then in that transparent Penumbra account? I'm trying, I'm sort of trying to follow it. So like you're coming in through the IBC, there's some sort of like, it hits somewhere that like yes, there's been a transfer in that is visible and then an action happens in the shielded pool at the same time
+
+Finch (00:55:13):
+The shielded pool if you're talking about the perspective of the Penumbra note software, the shielded pool has the authority to mint new notes within itself. And so when there's an incoming transfer, it can say by Fiat, here's a new note that should be considered to be unspent and belonging to the spend authority of this address that is the one that's being deposited into. So it just, it simply does that and then you, the recipient of the note are already to spend that note.
+
+Anna Rose (00:55:48):
+I feel like I'm sort of revealing a little bit of my ignorance about IBC transfers in this question because what I actually am picturing, and this is because of the way that we usually use IBC is you take a token, you send it over IBC, it lands in the other place and then you see it in an account. But what you're saying, like is the reemergence of that token on the Penumbra side, when it goes to Penumbra, does it just not appear in that transparent thing at all? It just sort of like triggers something. So you never have it like land on the Penumbra side visibly as a token
+
+Finch (00:56:23):
+It becomes a UTXO on the Penumbra side in the same shielded pool as everything else. So if you think about the Zcash model where there's the shielded set and the transparent set.
+
+Anna Rose (00:56:35):
+Yeah. And I think I might have a bit of that model in my mind. So I'm picturing like it lands transparent and then you move it in. But you're saying no, no, no. It immediately goes right into shielded.
+
+Finch (00:56:45):
+Imagine that, except that Penumbra is the shielded pool and the transparent pool is the entire rest of Cosmos.
+
+Anna Rose (00:56:54):
+Okay. Got it.
+
+Finch (00:56:55):
+So an IBC transfer is like a T to Z transfer in Zcash and an IBC transfer out of Penumbra is like a Z to T transfer. And then everything else inside of Penumbra is like Z to Z
+
+Anna Rose (00:57:11):
+I think I got it. I think that actually that's really helpful on how maybe for the end user working with Penumbra, like what will actually happen when you're using and like if you're sending something over IBC
+
+Finch (00:57:22):
+For the end user, it should actually look very similar to the user experience on any other chain. They'll just see like, I sent tokens into Penumbra and it's in my wallet.
+
+Anna Rose (00:57:31):
+Yes, exactly. Okay. But under the hood, it's just there's like, if you were looking on-chain, if you're looking at some sort of explorer, I mean, it we would not see other people's transfers in once it reaches the sort of gate of Penumbra. Like once the IBC transfer is hitting Penumbra, it sort of like goes into the shield.
+
+Finch (00:57:51):
+Yeah. You see where it lands and you see how much because the amount and the denomination are actually recorded in the ledger. So a block explorer could show you like a ticker of all of the incoming and outgoing IBC transfers but it could only say, here's this ephemeral address that you'll never see again and have never seen before.
+
+Anna Rose (00:58:13):
+Okay.
+
+Finch (00:58:14):
+And so in some sense, we've got a, a little bit of a toy block explorer for Penumbra that we haven't put a ton of effort into, but we'd like to at some point (tm) take that and make it a little bit more full featured. Because the funny thing about a block explorer for a fully shielded chain is how much it can't show you. So it's very funny to look at this and be like, well, I sure don't see anything.
+
+Anna Rose (00:58:43):
+Although you would see as a user, you'd have your own sort of personal dashboards somewhere, which could track your transactions and your trades, I'm guessing. Like you'd want to be able to see that yourself.
+
+Finch (00:58:53):
+Absolutely. And so we've been building a web wallet that lives as a browser extension which allows you to see your fragment of the global public encrypted state as if you could, it sort of provides you this, this prism that you can see into the darkness, but only for the part that's actually relevant to you. And so you can see your transactions, you can behave almost as if you are living in a transparent account model blockchain that's the user experience goal that we want to level up to. It should be no more difficult and no slower, et cetera than doing something on a normal Cosmos SDK chain. You shouldn't have to think about the fact that it's all shielded.
+
+Anna Rose (00:59:46):
+Nice. What other sort of crypto primitives or like you sort of mentioned you built the elliptic curve that you're using, but like is there other things that are like built by Penumbra for this particular system?
+
+Jen (00:59:59):
+Well, another change we made from Zcash in the key hierarchy is we use Poseidon, the Poseidon SNARK friendly hash function in a few places. And so we built a Poseidon library and a general purpose library for generating Poseidon parameters for whatever project and field they want to use. So that's all publicly available and has been audited.
+
+Anna Rose (01:00:24):
+Why would you not have used existing implementations? Was there nothing sort of up to the level you needed to feel secure?
+
+Jen (01:00:32):
+Yeah, like I think when we first started maybe 2 years ago because doing the crypto perimeters was one of the first things we had to do. When we were doing the Poseidon parameter generation for our field, we saw that there was sort of a few kind of Python scripts that had sort of been kind of hackily modified over the preceding months, but we wanted to have something implemented directly from the paper in Rust that was general purpose and solid. And I think other, I think Filecoin has something similar now that I think was developed around the same time and maybe other projects have done that since.
+
+Anna Rose (01:01:14):
+Ah, interesting. So we're almost at time and I want to hear a little bit about kind of what's coming up. You know, you'd sort of mentioned some of the roadmap things, but yeah. Share with us some exciting features that people can maybe look out for or maybe just like the ways you can see Penumbra being used in the wild.
+
+Finch (01:01:31):
+So one of the really exciting things that we have been plotting is this thing that we're calling Narsil and Narsil comes from the realization that every Penumbra transaction is effectively a micro rollup containing only the data about that specific transaction. In essence, a Penumbra transaction is two things. It's a commitment to the state change that that transaction affects. And it is also an encrypted package that allows the person who initiated the transaction and also the recipients who interact with its outputs to be able to decrypt the relevant information for themselves. However, if you are the only person who is interacting with your own transactions, say you're a big market maker or something like that, you are doing a lot of sending things to yourself over and over again.
+
+Anna Rose (01:02:29):
+Oh yeah.
+
+Finch (01:02:29):
+And you don't need to actually post on-chain and pay for it in fees.
+
+(01:02:34):
+All of the encrypted data blobs that are addressed to yourself, you already know your own data, but if you were to lose that data, then you would lose spend capability over everything that you had done, which would be pretty catastrophic. So we're building this tool called Narsil, which is a personal self-hosted rollup chain that you can use to do threshold key custody for your Penumbra activity and also allows you to save on gas costs by avoiding actually placing on-chain the self encryption of all of the transaction data that's addressed only to you.
+
+Anna Rose (01:03:20):
+Hmm. So what are you excited about Erwan? What's coming up on your side?
+
+Erwan (01:03:25):
+There's a bunch of things, but I think for me it's not really a specific product feature, but having Penumbra run and operational and be sort of like this hopefully agent of change is very exciting to me. I think our philosophy, speaking for myself, but I think we have a shared norm around this, is building something that's privacy preserving, but also really useful. And a DEX, for example, if it's a good product, what it means is that it has good liquidity when you trade on it, it has the correct and good prices and it's there when you need it. And that combined with, okay, like actually also like, it's not just convenient, it also like protects your trail, it, you know, guarantees that like what you do isn't completely observable by the entire world at any time forever. To me, that makes me really excited because that's something that helps a lot of other things come about, a lot of other comments emerge when they couldn't before. A lot of specific, you know, maybe types of organizations to emerge as well so I think it will be good with a capital G and I'm excited for that.
+
+Anna Rose (01:04:41):
+Nice. Jen, what about yourself in terms of the cryptography? Like you've sort of mentioned, you know, at least for this first version, you're going to stick with Groth16, but like, are there still pieces you have to build? Is there anything kind of coming up that you'd like to see included?
+
+Jen (01:04:56):
+I think the next big thing that's coming up right before mainnet that we would like to have people participate in is the SNARK ceremony and so that'll be something that, you know, the more contributions the better. And so that's going to be really cool.
+
+Anna Rose (01:05:13):
+Nice. Cool. Well thanks to all of you for coming on the show, sharing with us an update on Penumbra, kind of doing a little bit of a deeper dive than we did last time, to be honest, into the inner workings, what you're thinking about when it comes to the DEX, what that actually offers to the end user, the private delegation, which is obviously like a highlight for me. Yeah. Thanks so much.
+
+Jen (01:05:34):
+Thanks for having us.
+
+Finch (01:05:36):
+Absolutely.
+
+Erwan (01:05:36):
+Thanks for having us.
+
+Anna Rose (01:05:37):
+Cool. And I want to say thank you to the podcast team, Henrik, Rachel, and Tanya. And to our listeners, thanks for listening.
+

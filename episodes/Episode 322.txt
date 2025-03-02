@@ -1,0 +1,1343 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Guillermo and I chat with Justin Thaler, Associate Professor at Georgetown and Research Partner at a16z. Last year, he published a blog post called The 17 Misconceptions About SNARKs, which made waves in the ZK space. And in this episode, we revisit a few select points. We then dive into Jolt, a new ZKVM, which had been initially described along with Lasso in 2023 and has recently been implemented and is open to contributions from the community. We talk about how his work on sumcheck protocols influenced this work, how it compares to others in the space, and more.
+
+
+Now, before we kick off, I just wanna share a little bit about ZK Hack Kraków, an upcoming IRL hackathon happening May 17th through 19th in Kraków. ZK Hack is an educational hub and another project that I'm a part of. We actually mentioned that on this episode with Justin, because Justin's been running a long-standing study group over on the ZK Hack Discord. But ZK Hack also does IRL events, and as mentioned, the next one coming up is on May 17th through 19th, and it's happening in Kraków. We already have an amazing group of hackers set to join us, some fantastic sponsors offering prizes, a great venue, and we're hoping that this event, like our previous hackathons, showcases the next generation of ZK applications. So if you're in the field or looking to jump in, I hope you'll join us as well. I've added the link in the show notes. Now Tanya will share a little bit about this week's sponsors.
+
+
+01:55: Tanya:
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a roll-up. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org.
+
+
+Namada is the shielded asset hub rewarding you to protect the multichain. Built to give you full control over sharing your personal information, Namada brings data protection to existing assets, applications, and networks. Namada ends the era of transparency by default, enabling shielded transfers and shielded cross-chain actions to protect your data even when interacting with transparent chains. Namada also introduces a novel shielding rewards system. By holding your assets in a shielded set, you help strengthen Namada's data protection guarantees and collect NAM rewards in return. Namada will initially support IBC and Ethereum-based assets, but will ultimately serve as a single shielded hub for all assets across the multichain. Learn more and follow Namada Mainnet launch at namada.net.
+
+
+03:23: Anna Rose:
+
+
+Today, Guillermo and I are here with Justin Thaler. Welcome back to the show, Justin.
+
+
+03:28: Justin Thaler:
+
+
+Thanks for having me. Happy to be here.
+
+
+03:29: Anna Rose:
+
+
+Hey, Guillermo.
+
+
+03:30: Guillermo Angeris:
+
+
+Hey.
+
+
+03:30: Anna Rose:
+
+
+Justin, the last time you were on the show, I introduced you as an Associate Professor at Georgetown. Now I think you have another kind of role we can talk about, which is Research Partner at a16z, or Z. Sorry, that was so Canadian. But yeah, it's really great to have you back on the show. And I want to talk about what's happened since you've been on.
+
+
+03:50: Justin Thaler:
+
+
+Sounds good.
+
+
+03:52: Anna Rose:
+
+
+So you joined a16z. Tell us a little bit about that. What's it like working there and what are you doing there?
+
+
+03:57: Justin Thaler:
+
+
+Sounds good. Yeah, I think the last time I was on was just a few weeks before I started full-time. So I got started there right when the research group started. They ran like a few months after day one. Summer hit and the group was, I think, four people to start. And they brought in a whole bunch of visitors for the summer, really spanning the blockchain discipline, a bunch of cryptographers, economists, even political scientists, a mix of PhD students and professors. So I was there actually just for about half the summer and it was super exciting, just like drinking from a fire hose. I guess Tim Roughgarden, who runs the group, was trying to model the summer after the Simons Institute for the Theory of Computing at UC Berkeley that runs these semester-long focuses on a research topic. And also there, it's just like there's so much activity, you just can't keep up. You have to actually be careful. You have time to talk and think and do work, rather than just consume the content that is occurring and being produced.
+
+
+So that was just a great experience, kind of sucked me deeper into sort of efforts to deploy these SNARKs, deploy these ZK proofs. Yeah, I think it sort of cut both ways. Excitement in this technology was already high and rising, so I think there was a lot of interest both in the firm to have someone with my expertise there, and I was super excited to be more involved. So I started full-time in January. I'm gonna leave from Georgetown right now. I'm still able to sort of get my fix for teaching. I'm still running my reading group over Discord on the ZK Hack channel, and planning to start a brand new fresh pass through my book soon, hopefully in the next couple of weeks. So I've been off Discord for a few weeks, but I'll get back on and sort of announce that soon. And yeah, it's been a wonderful, it's been little over a year now, going on a year and a half, and there's so much just excitement about blockchains and SNARKs in particular throughout the firm. My colleagues in the research group are wonderful, and I've gotten to work very closely with this engineering team that's there as well, which has also just been like a dream come true for me. And that's sort of what's led to the recent Jolt implementation that we'll probably talk about today. So I'll say more about that then, but it's just been a wonderful experience overall.
+
+
+06:39: Anna Rose:
+
+
+Who's on that team with you? Are there any names we know? Yeah, and I mean, some of these folks actually, I know some folks from your group presented at ZK10.
+
+
+06:48: Justin Thaler:
+
+
+Yeah, yeah. So you probably know very well, Joe Bonneau, who's a... He's kind of a generalist cryptographer. He kind of co-authored the first book, as I understand it, on the science of blockchains and the cryptography underlying blockchains in particular.
+
+
+07:07: Anna Rose:
+
+
+He's been on the show before too, actually. I have had him as a guest, yeah.
+
+
+07:09: Justin Thaler:
+
+
+Oh, great. Okay, yeah, and he's done really groundbreaking works like introducing the notion of VDFs with colleagues and things like that. So Valeria Nikolaenko is on the team, and she does a lot of work with signatures and MPC and uses SNARKs as well in some of her research. And so we kind of form like the cryptographers of the group. And the others are our economists. So there's Tim Roughgarden, there's Scott Kominers, who's at Harvard Business School, Pranav Garimidi and Maryam Bahrani. So Tim and Scott are our faculty, and Maryam and Pranav are sort of full-time grad student level researchers, essentially. But there's no separation at all in the group. Kind of everybody works together and the same. And yeah, we also have Dan Boneh is closely affiliated with the group.
+
+
+08:09: Anna Rose:
+
+
+I was going to ask. Yeah, yeah. I know he's always... He's been involved with this for a while, right?
+
+
+08:14: Justin Thaler:
+
+
+Yeah, yeah. So he's not full-time or anything like that, but he's closely involved. We talk to him weekly and he visits over the summer. And there's also a political scientist closely affiliated with the group, Andy Hall. We sort of get him for one day a week. And he works a lot on like governance of DAOs and blockchain protocols and stuff. And I expect the group to continue to grow and add more areas and branch out as we go. You know, a postdoc, Joachim Neu is joining soon, and... Well, he's very broad, but he does topics like consensus research and things like that. So just a wonderful group and works very closely with other parts of the firm that it's just been a fantastic experience. I sort of can't believe my luck at getting to be a part of it.
+
+
+09:04: Anna Rose:
+
+
+It sounds like there's also an engineering team. And actually the folks who have spoken at ZK10, at ZK Summit 10, I don't think you've mentioned them yet. They're the folks you work on with on Jolt and stuff. Who are they? How big is that team?
+
+
+09:17: Justin Thaler:
+
+
+Yeah, so there's an engineering team. I think it's roughly the size of the research group. So I think I listed, depending on who you count, like six to eight people, and the engineering group is in that vicinity. I've never actually counted on my hands.
+
+
+09:30: Anna Rose:
+
+
+Got it.
+
+
+09:31: Justin Thaler:
+
+
+And yeah, so they have dual roles, just like the research group doesn't just do research. So they help the portfolio companies a lot to the extent possible. They also work on developing open source tools for the whole community to use, all sorts of other things in the firm as well. And so it's been a real pleasure to have Jolt kind of be one of the main sort of open source efforts and to be involved with that. Yeah, it's just been very exciting and productive, I think.
+
+
+10:09: Anna Rose:
+
+
+Cool. You just mentioned your book, Proofs, Arguments, and Zero-Knowledge Proofs. I want to just sort of mention this before we dive into any of the topics we wanted to cover today. I think you've run three cohorts of a study group in the ZK Hack Discord. I know last time we had you on the show, we talked a lot about that and that book and where it came from and where it was at. So I'll definitely link to that episode if people want to just learn about this book you've written or actually you called it a mono...
+
+
+10:38: Guillermo Angeris:
+
+
+Monograph.
+
+
+10:38: Anna Rose:
+
+
+Monograph?
+
+
+10:39: Justin Thaler:
+
+
+Monograph. We could just call it a book now, I guess, that it's been...
+
+
+10:43: Guillermo Angeris:
+
+
+I think it's a book now. I think it's officially a book.
+
+
+10:45: Justin Thaler:
+
+
+Not a monograph.
+
+
+10:45: Anna Rose:
+
+
+It's gone through peer review three times.
+
+
+10:48: Justin Thaler:
+
+
+Yes, exactly.
+
+
+10:49: Anna Rose:
+
+
+Some form of peer review. So, I know what you mentioned in that episode was that by doing these study groups, you actually get to see how the book is interpreted by people who are reading it for the first time often. And through that, you've been able to make it, like refine it and change it. You were just saying you're going to run another one. This is very cool. I just want to kind of highlight that because I think people are going to be into it.
+
+
+11:12: Guillermo Angeris:
+
+
+How long is it again? Like the how many weeks?
+
+
+11:15: Justin Thaler:
+
+
+How many weeks? Yeah, I mean, it varies based on basically how many off weeks we need to take. But one pass through the book normally takes about eight months, it seems, at this point.
+
+
+11:26: Anna Rose:
+
+
+Wow. 
+
+
+11:26: Guillermo Angeris:
+
+
+Oh, Okay. This is like not messing around type of thing. Sorry, I apologize. I've never done one of them. I did a very, very short session at some point, which was like three days or something.
+
+
+11:35: Anna Rose:
+
+
+Yeah, you did a short. You did a study group mini.
+
+
+11:38: Guillermo Angeris:
+
+
+Yeah.
+
+
+11:39: Anna Rose:
+
+
+Guillermo.
+
+
+11:40: Guillermo Angeris:
+
+
+A light edition.
+
+
+11:40: Anna Rose:
+
+
+Justin's Proofs, Arguments, and Zero Knowledge proofs are the ZK Hack study group, like Maxi, for sure. 
+
+
+11:48: Guillermo Angeris:
+
+
+Yeah, I should do that. I should just, one of these days, should just do it. It'd be kind of fun.
+
+
+11:52: Anna Rose:
+
+
+I think it might be the longest one. We did do... There was a group that did the Moonmath Manual, and they also spent like at least six months. But I think yours may still be the longest running one, and definitely the longest.
+
+
+12:04: Guillermo Angeris:
+
+
+Who is writing Moonmath?
+
+
+12:05: Anna Rose:
+
+
+Well, it's a book. It was produced by the Least Authority Group and Mirco was the author. But in our group, they've just read through it. So there's a facilitator and together the group kind of reads a chapter every week and then gets together. They're actually running the Moonmath Manual again right now and the Whiteboard Study group. There's a lot of study groups going on in ZK Hack if people aren't aware. Definitely go check that out. And I guess, Justin, if you're going to start yours off soon, this is kind of the perfect time to let people know.
+
+
+12:34: Justin Thaler:
+
+
+So sometime in May, I plan to start it up again, and one benefit of actually coming to the sessions or we try to record them and get them on YouTube, although I don't actually track if they make their way to YouTube or not. But there are a lot of questions about what people are actually building, specific systems and things, which isn't discussed as much in the book, or certainly the book can't keep up to date with the many changes to what people are building every month or so forth. So you sort of get that benefit. And I do my best to keep up and give accurate answers. It's hard with how much things changes, but yeah, so that's a benefit of the sessions over just reading the book, I think. And also, the book is now already out of date in certain ways. So that's another benefit.
+
+
+13:26: Anna Rose:
+
+
+Interesting. Since you've been on, you also published this essay called 17 Misconceptions About SNARKs. And I feel like that really made the rounds in our community. It affected... I mean, it definitely impacted me a little bit. I mean, the first point is using ZK to mean succinct. I think it was the first time, for me at least, it was very clearly articulated that we've been saying it wrong when we say zkSNARKs. We're often actually describing SNARKs that are not ZK, and yet it's all been lumped under the ZK umbrella. And we've talked about this a few times on the show and I think there's kind of now like an acceptance of we're still gonna keep using the term. But I think you were the first person to really, for me at least, like make that distinction very clear.
+
+
+14:09: Justin Thaler:
+
+
+Yeah, so I think I was not the first person from my perspective, right? I was... I think people were talking about this before I put it in the post. I guess one point, I'm not sure I had heard much before that, which is maybe my main concern is that ZK has a precise technical meaning about basically protecting privacy of the witness. And so my main concern is that one day someone calls something ZK, it's not ZK, and so there's like a privacy leak. And that's really my main concern. I mean, I do think it's helpful to be precise about what property of a proof system you really care about. And often it is succinctness and not the ZK property. I also just like the word succinct, but I know that's not going to catch on quite the same way ZK has, so.
+
+
+15:04: Anna Rose:
+
+
+I think succinctness has, I mean, emerged a lot more. I think people do use the term more since you've published this blog post, and definitely in the last year. But yeah, I think it's that big umbrella term ZK still seems to hold.
+
+
+15:17: Justin Thaler:
+
+
+Yeah, so I expected it will and I don't think it's the end of the world as long as, A, more people are aware of the way it's being used, right? I mean, I've also talked to people who know nothing about SNARKs and got very confused about this. So that was another concern. And if there's more awareness, I guess that can help. And also like now, I think people will say ZK and then be more prepared to clarify that they don't mean ZK and that can also help. So I'm not gonna be super rigid here, but I think it was definitely useful to say something.
+
+
+15:56: Guillermo Angeris:
+
+
+I think the crappy version of this that I have in my head is like ZK, the acronym is a different type than zero knowledge, right? Like ZK, the acronym is like, it just means vaguely everything unless it's combined with a secondary thing. But when you say zero knowledge, you really do mean zero knowledge.
+
+
+16:15: Justin Thaler:
+
+
+That's it. You know, I actually haven't heard that before, so that distinction. So maybe I'll feel... I'm going to... Now every time somebody says it, I'm going to think like, did they say zero knowledge? Or did they say ZK? And maybe it'll be okay.
+
+
+16:30: Guillermo Angeris:
+
+
+Yeah. Well, now it's a people problem, right? As opposed to... It's like, what kind of person is this?  Who would say that, right?
+
+
+16:38: Anna Rose:
+
+
+Looking at these 17, I will not go through all of them because, first of all, some of them are too in the weeds for I don't fully understand all of them. But I do want... I went through and highlighted a few of these because when did you publish this blog post actually, it's like a year ago, right?
+
+
+16:54: Justin Thaler:
+
+
+Yeah, something like that. I remember it was a couple months before the Lasso-Jolt papers came out, and those are already seven, eight months ago. So yeah, like a little under a year ago, 10 months, kind of like that.
+
+
+17:05 : Anna Rose:
+
+
+Yeah, I sort of mentioned the first point, which was using ZK to mean succinct. Another point you made was sort of the SNARKs versus STARKs, which I also think in the time... I mean, I think it was already happening when you wrote this, obviously, but I think in the time since, I think, that blending of those things and that sense that... I think I've asked this on a recent podcast, like which one wins and it's like both or neither. Like they're just... They're a mix in a way now. So it's hard to make that distinction.
+
+
+17:35: Justin Thaler:
+
+
+Yes. And I think they'll sort of get blended even more as with recent developments with like Binius now having polylogarithmic proof size without recursion and things like that. So if they blend enough, then the whole, I guess, concern goes away that I expressed in the post. But at the time and even today, people often treat them this distinctly when they're not really, because all of these are deployed non-interactively, which does make a STARK technically a special case of a SNARK. And of course, people use STARK to also mean a particular protocol as opposed to any protocol satisfying a class of properties, which is really how the term was defined in the research literature. I guess my two biggest concerns, one was mentioned in the post, which is the acronym STARK in the research literature actually doesn't specify if the protocol is non-interactive or interactive and whether it's non-interactive or interactive drastically affects the appropriate security level of the protocol. And so I find this kind of very, I almost call it dangerous where if you talk about what's the right security of STARKs is this number of bits of security appropriate.
+
+
+Well, firstly, bits of security is a sort of underspecified term, but even ignoring that, the answer is completely different depending on whether it's deployed interactively or non-interactively. But today, they're exclusively deployed non-interactively. So that was one concern. Something I didn't say in the post that I keep encountering since the post, people think STARKs also encompasses post-quantum security, but the term as defined says nothing about post-quantum security. Anyway, I mean, I think that this distinction, which is not really a distinction in practice, has caused a lot of confusion. I'd like to stop the confusion.
+
+
+19:34: Anna Rose:
+
+
+Okay. But which one do you choose, Justin? What do you call this thing now?
+
+
+19:39: Justin Thaler:
+
+
+So I mean, my preference, as I said in the post, as long as these are all deployed non-interactively, a STARK is a transparent SNARK with certain efficiency properties. So let's just say SNARK, and if you want to emphasize that it's transparent, let's say it's a transparent SNARK and it's kind of leave it at that. That's my view. Obviously there's going to be all sorts of disagreement about this. It's pretty controversial topic, but...
+
+
+20:03: Guillermo Angeris:
+
+
+I actually have two... Well, two questions for you. Yeah, I feel like a SNARK and STARK have become like tasting notes. It's like you use it to gesture at something that vaguely feels appropriate, but it's not quite like a real distinction in any deep way.
+
+
+20:18: Anna Rose:
+
+
+Is that a wine reference, Guillermo?
+
+
+20:20: Guillermo Angeris:
+
+
+Me making wine references in public? That's crazy.
+
+
+20:23: Anna Rose:
+
+
+Tasting notes?
+
+
+20:23: Guillermo Angeris:
+
+
+Absolutely. No, I would never do such a thing.
+
+
+20:26: Anna Rose:
+
+
+A hint of oak.
+
+
+20:28: Guillermo Angeris:
+
+
+Yeah, a nice bit of nuttiness right here.
+
+
+20:28: Anna Rose:
+
+
+A hint of SNARK.
+
+
+20:32: Guillermo Angeris:
+
+
+But I do want to like... I'm curious about this notion, and this is probably really obvious. It's not super obvious to me, which is you said, that STARKs in the non-interactive setting have non-obvious security properties. Again, explain it to me like I'm a five-year-old that happens to know a lot of math, but is otherwise an idiot.
+
+
+20:48: Justin Thaler:
+
+
+So, right, okay, so I think you're asking about this distinction I was drawing between appropriate security levels when a protocol is deployed interactively versus non-interactively.
+
+
+20:57: Guillermo Angeris:
+
+
+Yes.
+
+
+20:58: Anna Rose:
+
+
+And which one is more secure, actually, in that?
+
+
+21:01: Justin Thaler:
+
+
+Yeah, I mean, it's not really more or less secure, it's... So let me just explain. So when people refer to bits of security for a SNARK, roughly what they mean is the logarithm of the minimum number of steps, computational steps required to attack the SNARK. So to find a convincing proof of a false statement. Okay, when people say bits of security, when they're talking about an interactive proof system, essentially what they mean typically is what is the maximum success probability that the prover can achieve on any given run of the protocol, like regardless of how long it runs for. Okay, and even this can vary a bit, but... So it's like with an interactive protocol, it's like no matter how much work the prover puts in, it might be the case that it has like a one in a trillion chance of convincing the verifier to accept a false statement. And that probability is so low because at the very last second, the verifier chooses a random value, which the prover just doesn't know until all its messages are sent, right?
+
+
+22:08: Guillermo Angeris:
+
+
+Correct.
+
+
+22:09: Justin Thaler:
+
+
+So in that setting, it might be reasonable to have the prover have a one in a trillion chance of tricking the verifier basically because it doesn't know if it's going to succeed until it actually runs the protocol, and with probability one minus one over a trillion, the verifier rejects and everyone in the world sees that this was a cheating prover and it got rejected. Whereas in the non-interactive case, the attack can happen silently, kind of offline. The prover is just sort of doing in its own head kind of a linear search over possible proofs until it finds one that the verifier accepts. So it's just very different settings. And so in this non-interactive setting where the attack happened silently in the prover's head and no one knows it's happening, I think you really want like minimum 100 bits of security if you're protecting anything of value, if you really want the attack to be truly infeasible today and have a little bit of buffer in case better attacks are discovered. I even prefer more than 100 bits of security, but I won't complain about 100 bits. In the interactive setting, could be totally fine to be way fewer number of bits of security.
+
+
+23:20: Guillermo Angeris:
+
+
+No, sure, yeah. In the interactive setting, one in a trillion is good enough, right? But in the non-interactive setting, it gets... So I see. So the point fundamentally difference is like, one can carry an offline attack in the non-interactive case.
+
+
+23:34: Justin Thaler:
+
+
+Pretty much. That's the difference.
+
+
+23:35: Guillermo Angeris:
+
+
+Versus the other one, in a pure probabilistic sense, the sampling is happening independent of whatever you do, so you're screwed. And so that is the argument for saying, hey, look, we might want to extend the amount of security for the offline case or the non-interactive case.
+
+
+23:52: Justin Thaler:
+
+
+Right. I think everyone agrees that 40 bits of security, that's like one over a trillion, is completely insecure in the non-interactive case, but could be totally fine in the interactive case. So I'd really like a term to be precise about which of the two cases we're discussing because I think security is way more important than performance. And as I prefer the term to be precise about that, and technically the STARK term is not precise. And actually I think that had a confused discussion significantly. And this was one of the... When I started looking more closely at what people were doing in practice as my first summer at a16z, and I wrote this blog post, I actually had a couple people reach out to me after the post, not the 17 Misconceptions post, another post about security, saying that they thought that some STARKs had been deployed interactively, and hence 80 bits of security was plenty, plenty, plenty, plenty, a huge amount of security. And that was not true. And if these individuals didn't know what projects were doing, like no one does other than the projects themselves, right? I mean, I found it actually quite disturbing that basically these things were ostensibly protecting quite a bit of value, and actually, nobody knew apparently what was really the protocol was doing. So that sort of inspired me to try to talk about it.
+
+
+25:20: Guillermo Angeris:
+
+
+I see.
+
+
+25:22: Anna Rose:
+
+
+Makes sense. I'm going to keep going through this list with the highlights.
+
+
+25:25: Justin Thaler:
+
+
+Sounds good.
+
+
+25:27: Anna Rose:
+
+
+Number five was, SNARKs targeting R1CS cannot support lookup arguments. I'm assuming that this is potentially in reference to the work that you then started to do on Lasso? 
+
+
+25:39: Justin Thaler:
+
+
+Partially. I'd say this one kind of fed into a paper I have on Customizable Constraint Systems, which predates like Lasso and Jolt. And actually, for ZKVM is actually rendered irrelevant by Lasso and Jolt, basically because Jolt avoids constraint systems almost entirely. The constraint systems that it does use are so simple that it really doesn't matter what kind of constraint system you use. We use R1CS, but really they're just like those simplest constraints you can come up with. You can kind of use anything. But the Customizable Constraint Systems paper was sort of pointing out a couple things. Basically known sumcheck-based SNARKs, Spartan in particular, just sort of directly supports not only R1CS, which is how it was described for R1CS, but you don't need any new ideas. You just have to understand the protocol and you'll see it actually can prove statements about much more expressive constraint systems. And that sort of CCS, Customizable Constraint Systems, are sort of what we thought was the cleanest and most expressive constraint system that something like Spartan could prove statements about.
+
+
+But yeah, there were some works that were developing sumcheck based SNARKs, also looking at non-sumcheck based SNARKs for R1CS, and sort of didn't let the sumcheck based SNARKs for R1-CS have access to the lookup arguments. And so they claimed significant speed improvements over something like Spartan, when I think the speed improvements are really just due to the fact that they didn't let Spartan use lookups and they did let the new stuff use lookups. So that's the point I was trying to highlight there. And now of course that Jolt is all sumcheck-based and uses Spartan for R1CS and everything else is lookups. I don't think any of this is unclear anymore, but at the time of the misconceptions post, I think it was unclear.
+
+
+27:41: Anna Rose:
+
+
+I should also say the sentences I'm saying, you are arguing in this article that these are incorrect. That SNARK targeting R1CS cannot support lookup arguments is an incorrect statement. Another incorrect statement that you believe is incorrect is believing that Fiat-Shamir transformations generally lead to no major loss of security except when applied to the sequential repetition of a base protocol. That actually has come up on episodes since the Fiat-Shamir transformation as a place of potential security loss. And that's just interesting that you brought that up back then.
+
+
+28:19: Guillermo Angeris:
+
+
+Even for me, can you unpack that sentence in a nice way? I think I know what it is, like I can map it to something that I understand, but...
+
+
+28:27: Anna Rose:
+
+
+And just to say it again, the misconception, like he's saying here, people believe that there is no loss of security when using Fiat-Shamir, but that is incorrect.
+
+
+28:37: Justin Thaler:
+
+
+Yeah, so I'm happy for the opportunity to say something here because actually I think the blog post, this is sort of buried in the post, it's very technical. I think it's really good to speak about it right now. So Fiat-Shamir can lead to security issues in two ways. Okay, one is basically like, it's just not implemented right. And this comes up over and over and over again, and I mentioned it sort of as a PSA in the post, but like people have been aware of this for a long time, and somehow the mistake kept happening. For Fiat-Shamir to be secure, you have to Fiat-Shamir hash anything that the adversary might control. And often people don't do that, and that makes it attackable. And so people will call that weak Fiat-Shamir. I mean, I think we should just maybe just say like, that's not Fiat-Shamir, don't do that, but people call it weak Fiat-Shamir.
+
+
+29:26: Anna Rose:
+
+
+I've heard that, yeah. But like, I've heard it just like used. Do people just use weak Fiat-Shamir sometimes?
+
+
+29:32: Justin Thaler:
+
+
+Yeah. I mean, I'm not sure why anybody would intentionally do it just because Fiat-Shamir hashing is rarely a bottleneck. So I don't know why you would want to kind of risk... I think the general message for practitioners is like, when in doubt, hash it. I mean, there are some settings where if you're hashing like a whole description of a constraint system and the constraint system has no short description, that can be really gross. But typically it's not a bottleneck. So like when in doubt, hash it. If the adversary might control it, hash it. And so that's really just a bug that some practitioners... Some papers forgot to write down, like hash this as well, and so people implemented like the paper word for word. And so Trail of Bits discovered this bug in a bunch of SNARKs. And depending on context, this might or might not be a completely catastrophic vulnerability. Paul Grubbs and his colleagues had a paper, Paul Grubbs is a faculty at Michigan, recently looking at kind of a systematic look at SNARK implementations and found this bug like all over the place. And I believe actually found another exploitable deployment of this bug.
+
+
+Anyway, that is one major way Fiat-Shamir can lead to loss of security. That is not what this item of the post is about. Okay, this item of the post is about the fact that even if you do implement it correctly, the number of bits of security in sort of the interactive sense of the protocol you're applying Fiat-Shamir to, to make it non-interactive, often people just assume that the Fiat-Shamir protocol has the same number of bits of security as the interactive one you started with. And as we discussed before, these two words, bits of security for interactive and bits of security for non-interactive, don't necessarily mean the same thing. But yeah, so they assume it's the same number. And it's not always the case. And so there's really a canonical example where there actually is just a catastrophic loss of security, even when you implement Fiat-Shamir correctly, which is you take a protocol with like one bit of security, you amplify the number of bits of security by repeating it sequentially, once, then twice, then a third time, then a fourth time. Right, that drives the security down to say, 128 bits of security if you repeat 128 times and then you Fiat-Shamir that. That won't be secure at all. And like people do know that.
+
+
+31:53: Guillermo Angeris:
+
+
+Is there an easy explanation to see why it's not secure?
+
+
+31:55: Justin Thaler:
+
+
+There's a simple attack, it's sort of called a grinding attack, but basically in the interactive setting, the prover would have to sort of get lucky on all 128 repetitions all at once.
+
+
+32:06: Guillermo Angeris:
+
+
+That's right.
+
+
+32:06: Justin Thaler:
+
+
+Has to get lucky all at once. But once you Fiat-Shamir it, you can sort of attack the first iteration like independently of all the others, and it'll only take like a couple of attempts to find a convincing proof just for that iteration. 
+
+
+32:21: Guillermo Angeris:
+
+
+I see. And then you can continue grinding the rest.
+
+
+32:24: Justin Thaler:
+
+
+Yeah. It's like you defeat one and then the next and then the next and you don't have to get lucky all at once. 
+
+
+32:29: Guillermo Angeris:
+
+
+Got it.
+
+
+32:30: Justin Thaler:
+
+
+Right. And so, but I think people generally think, oh, well, that's the main thing to be worried about. If you're not doing sequential repetition and you do strong Fiat-Shamir, not weak Fiat-Shamir, you should be fine. This post is pointing out that there's a really subtle and amazing attack, which I learned about from a paper of Attema et al and through the folks from Nethermind, which I have a paper with, which I'll sort of plug briefly, but I think they discussed it on this podcast at some point.
+
+
+32:56: Anna Rose:
+
+
+Totally. I was about to say this is where I think we covered exactly that. We'll try to dig that up. The Nethermind episode. Yep.
+
+
+33:04: Justin Thaler:
+
+
+Wonderful. So I just recently talked to a couple experts recently, who were blown away by this attack. They literally read my post. They didn't quite understand the attack in the post, and then I sketched it for them over email and they were like, oh my God. So this is when you take a multi-round protocol and it's crucial like there has to be two or more rounds. So the attack doesn't work if it's just two messages. It's gotta be like three or four or more messages. You know, say it has 64 bits of security, you're not happy with that, because if you Fiat-Shamir it, that's not secure. So you repeat it in parallel twice to get 128 bits of security, and then you Fiat-Shamir that. Okay, so this is not sequential repetition, it's parallel repetition, and then Fiat-Shamir. That doesn't work.
+
+
+33:52: Guillermo Angeris:
+
+
+So here's the first dumb question is, what does it mean to Fiat-Shamir two parallel instances? What is the initial hash?
+
+
+33:59: Justin Thaler:
+
+
+Right, so the parallel repetition of the base protocol is just a new interactive protocol. Forget about Fiat-Shamir. So it's like you have a protocol with 64 bits of security, you wanna reduce that or improve that to 128 bits of security. So rather than like running it once and then running it again, you're gonna run it twice sort of...
+
+
+34:19: Guillermo Angeris:
+
+
+Yeah, like simultaneously or something. 
+
+
+34:21: Justin Thaler:
+
+
+Yeah, exactly. That is a new interactive protocol. It has the same number of rounds as the original protocol, unlike the sequential repetition where you would have doubled the number of rounds. This is the same number of rounds. Okay, now Fiat-Shamir that. That's just an interactive protocol, it makes sense to Fiat-Shamir and Fiat-Shamir that. That will be no more secure than if you hadn't done the repetition at all.
+
+
+
+
+34:41: Anna Rose:
+
+
+If you hadn't done that parallelization, basically.
+
+
+34:44: Justin Thaler:
+
+
+Right if you hadn't done the repetition like literally repeating it once as long... If you started with a two round protocol, you repeated it once like in parallel, so there's two repetitions in parallel and you Fiat-Shamir it, you might as well have not done the repetition at all.
+
+
+34:58: Guillermo Angeris:
+
+
+Interesting.
+
+
+34:59: Justin Thaler:
+
+
+Okay, and again the attack is very simple. It roughly amounts to attacking the first repetition on its own you sort of use round one like the first verifier challenge to attack one of the two repetitions, and you only need about two to the 64 attempts before you defeat one of the two. You're not gonna defeat both of them at once. You're only gonna defeat one of the, but then you still have another round left to attack the other repetition. And I know that you don't get all the details when I'm saying this on the fly, but I'm gonna try to go back to the misconceptions post and add just, I think a little picture of the two rounds repeated.
+
+
+35:38: Guillermo Angeris:
+
+
+Yeah, I think... Right, because the point is like, okay, fundamentally what's going on is these sequential constructions, these parallel constructions can always be reduced to just like, instead of kind of attacking this much larger space, like square of the size, actually what you're doing is you're doing something two times the size, right? Because of the fact that you can exploit this, the structure of it, such that instead of having many parallel instances, each of which is independent, in reality, what you have is we have a single instance which is sequential and they're all fundamentally sequential in some way, right? And so it just requires that you attack a single independent instance, and so you only need to do the 64 at any point in time, or attempts or whatever.
+
+
+36:21: Justin Thaler:
+
+
+I think that's the right, yeah, that's the right intuition. Yeah, and the general message of this part of my blog post,  I mean, mainly it's a PSA because this is like a huge foot gun where someone at some point is gonna blow their foot off unless everyone is aware of it.
+
+
+36:37: Guillermo Angeris:
+
+
+That's right.
+
+
+36:39: Justin Thaler:
+
+
+The right way to use Fiat-Shamir in practice is to first show that the thing you're applying Fiat-Shamir to satisfies a stronger soundness notion than just standard soundness called Round-By-Round Soundness. And this captures the intuition that if the prover in the interactive protocol kind of has to get lucky all at once, like in one round, it can sort of get a little lucky in the first round and then a little more lucky in the second round, then when you apply Fiat-Shamir, it's fine, there's no loss of security. And so with the Nethermind folks and my postdoc, Alex Block and others, we showed that like FRI is round-by-round sound. It actually hadn't been shown before, so we actually didn't know in the random oracle model that Fiat-Shamir'd FRI was sound. It's not that I actually thought it wasn't, but we should know that it is at least in the random oracle model. And then actually a group from StarkWare kind of showed the same thing, basically the same result around the same time. And with Nethermind, we had some other results that other things people were doing that potentially could have been attackable because they had more than one round, are also round-by-round sound. And so it's all okay. Right? There was no new attack in the protocol. We were just sort of showing that Fiat-Shamir was safe when it hadn't actually been shown before.
+
+
+38:01: Guillermo Angeris:
+
+
+Here's a very quick dumb question before we go to the next point is what is the intuition for round-by-round soundness? So I know you said like, Oh, you can't get too lucky. And essentially you can't get lucky in one and then get a little bit lucky in the next one, and then like at some point that adds. What is the more clear definition of it? I don't know if there is one. I'm just curious.
+
+
+38:20: Justin Thaler:
+
+
+I guess that is most of my intuition. I mean, I think it sort of rules out this sequential repetition canonical example. If the prover just has to... It has a probability half of getting lucky in the first repetition, and then half of getting lucky in the second repetition, and so on. And so it can kind of get a little bit lucky in each repetition, and that's exactly the situation where this grinding attack on Fiat-Shamir works, where, yeah. And round -by-round sound basically says that that grinding attack can't work.
+
+
+38:51: Guillermo Angeris:
+
+
+Got it. Because it's just essentially like the definition is explicitly to rule this particular attack out rather than like...
+
+
+38:58: Justin Thaler:
+
+
+That's my interpretation of it. That's my intuition. 
+
+
+39:02: Anna Rose:
+
+
+All right. I'm going to move on to misconception number 14.
+
+
+39:06: Justin Thaler:
+
+
+14, all right.
+
+
+39:07: Anna Rose:
+
+
+So we are skipping, like as I mentioned, I'm just... I selected a few of them. I have two more. So just before you mentioned Binius briefly. Number 14 was the misconception is the key to better performing SNARKs is working over ever smaller fields. And did they prove you wrong? What happened there?
+
+
+39:29: Justin Thaler:
+
+
+Great, great. So great. So this predated Binius. So a little context there. So Binius was at least partially inspired by Lasso and Jolt and this post predated Lasso and Jolt, right? So at the time, this was really a sort of a fight between elliptic curve-based SNARKs, meaning the commitments can be elliptic curves, so the field's big, and like hashing-based snarks and using FRI in particular and the field is small.
+
+
+39:58: Anna Rose:
+
+
+The small field folks. 
+39:59: Justin Thaler:
+
+
+Yeah. So I think...
+
+
+
+
+40:01: Anna Rose:
+
+
+Like the Plonky3s and stuff.
+
+
+40:03: Justin Thaler:
+
+
+Yes. And so you could have summed up a lot of my points, but not all of my points, by me just saying like, hey, curve-based SNARKs can be faster than the hashing-based SNARKs, like even though they work over big fields, and Jolt sort of proves that correct, right? Because it's at least as fast as the current hashing-based ZKVMs or what have you. But there's another point I was trying to make, which is that in certain applications, you really don't wanna work over the small field because the statement you're proving is sort of natively defined over a big field. And this is... In particular, this comes up whenever you're proving a statement about elliptic curve cryptography. And so I think the main application people always have in mind now is zkEVM's and there a big bottleneck is like Keccak hashing, say. But if not for that, another big bottleneck would be proving knowledge of digital signatures. And so if in a world where the hashing wasn't the bottleneck, the signatures were, you actually probably would want to work over the big fields. And you could imagine a world where one day we're able to get... Work over whatever field we want, when we want to, and glue everything together. And then what I'm saying would be right, like big parts of the SNARK will work over a big field. And then I guess the final thing I'd say is, just the underlying techniques that led me to try to make this point. And really I was trying to push back on what I thought was just a general idea, which has validity to it, but it's just been taken too far. Right, but the techniques that kind of led to the points I'm making, the sumcheck protocol and all of these things, they led to Binius, right? And so what Binius has done in my view, this isn't a controversial view, is it's sort of taken the small fields to their extreme, where now the characteristic is two. And I actually don't like the small fields term, it's small characteristic. So ultimately you work over 128 bit field, but it's like you do as much or, you keep as much of the provers work as possible over the base field or something like that.
+
+
+42:11: Anna Rose:
+
+
+So wait, but like, would you still stand by the fact that going back to the statement, the key to better performing SNARKs is working over ever smaller fields, being incorrect? That was what you were saying. Do you sort of... Would you adjust that?
+
+
+42:24: Justin Thaler:
+
+
+So I would say two things. Okay? So one is it depends on what you're proving, right? And this whole thing about proving statements about elliptic curve cryptography, it's not like some isolated application. It's half of blockchains is just like proving digital signatures authorizing things, right? And today's digital signatures are based on elliptic curves. That's not like some small thing, right? So it depends on the application. Also, these folding schemes that get the overhead of recursion very low, what that basically means is you can break big computations up into really tiny pieces and prove each piece separately and aggregate the results. And the aggregation step won't be the bottleneck because the folding lets the recursive aggregation be so fast. That can be really important if like, prover space is a major concern for you. There's been efforts to also do that with hashing-based SNARKs, but they still have downsides. So, that's another reason the curves could stick around. So I don't think the matter is settled, but I will say I'm more bullish on the small characteristic fields, thanks to the Binius advancements than I was when this post came out.
+
+
+43:34: Anna Rose:
+
+
+Cool. Yeah, because that one when I was going through it definitely stood out.
+
+
+43:37: Justin Thaler:
+
+
+That got the most pushback, I think. Yeah, that one got the most pushback. But ultimately, I think the developments since then have sort of fleshed out what I had in my head a little more. Like I couldn't talk about Lasso and Jolt, which I did have in my head at the time. They have these nice properties that while they work over a big field, the prover only commits to small values, like numbers between 0 and 2 to 20 or something. Like that's a significant performance boost for the techniques that do use the big fields and heavily exploited to see the performance out of Jolt that we see today. And that was something I couldn't talk about in this misconceptions post that I can now. So that was something that was in my head that I wasn't able to say in the post.
+
+
+44:23: Anna Rose:
+
+
+Was one other thing that maybe didn't factor into your thinking then like was sort of where hardware would be at or were you thinking about hardware?
+
+
+44:31: Justin Thaler:
+
+
+No, I wasn't thinking about hardware too much. The small characteristics field does sort of push that point forward heavily, I think. These fields are nicer for hardware. I mean, when I was thinking about performance comparisons to the extent that existing SNARKs are using vectorization in the small fields, I had that in my head already, but I wasn't thinking too much about FPGAs and ASICs, which these small fields also seem friendly to, especially characteristic to.
+
+
+
+
+
+
+45:01: Guillermo Angeris:
+
+
+I mean, I will say, right, like, what is it? Like, Apple Arm has an instruction for multiplication of two polynomials that are like, whatever is represented by uint8 or something like that. Right? That's like a thing that just exists on every Apple computer and iPhone, which is pretty cool. I think it's for Reed-Solomon encodings, actually, is what it is. But it has direct applications, of course, to potentially, some of these types of ZK proofs.
+
+
+45:26: Justin Thaler:
+
+
+Yeah, so yeah, even on the CPUs, because AES uses the field 2 to 128, they have built in operations. They don't use the same basis for that field that Binius like to use, but you can still leverage it, things like that. The statement that just came out of my mouth, I had no idea about 10 months ago. That only came from talking to the folks behind Binius, right?  That's way deeper knowledge of hardware than I would have any idea of.
+
+
+45:57: Guillermo Angeris:
+
+
+Yeah, here. I'm going to see if I can find the specific instruction. But it's definitely in the Apple manual somewhere. It's not even that for AES, actually, for small multiplications of polynomials. Because I think it's specifically for QR Code or something like that.
+
+
+46:08: Justin Thaler:
+
+
+Interesting. Oh, OK. Yeah.
+
+
+46:09: Guillermo Angeris:
+
+
+And some sort of syndrome decoding type thing. It's very weird. I did not know about this. I think I posted about it in the Discord sometime, but it's like, there's many messages there.
+
+
+46:20: Justin Thaler:
+
+
+It's fun to just piggyback over these things that came into the hardware for totally different reasons. That's nice when you can take advantage of it.
+
+
+46:28: Anna Rose:
+
+
+The last point was number 17, which is, and I think this might still be true, the misconception being SNARKs are performative enough today that they should now ossify. Do you feel we are any closer to actually getting our standard SNARK or any sort of subset of a SNARK becoming a standard?
+
+
+46:50: Justin Thaler:
+
+
+So I do. So first let me say, I think since this post came out, it's been made clearer and more concrete, like... Just how slow, I mean, that's my terminology. You could say exactly how fast or slow a lot of SNARKs are. And in my view, they're too slow, right? For a lot of their intended applications. But I also think they can get a lot faster still. So I'm still hearing this view that there's some more performance juice to squeeze, but it's not much. And we should start focusing on hardware speed ups, focusing on standardizing SNARKs. And I'm actually quite optimistic now that we can reach a point where that might make sense quite soon. I actually didn't think that would necessarily be the case when I wrote this post, but I think we can actually... So, as I've said very recently when discussing Jolt's performance and other ZKVMs, I think a ZKVM today is 500,000 times or more slower than just running the VM without the ZK part, which means succinct as we've talked about before. And I actually think we can get down to about 10,000 times slower rather than close to a million times slower and fairly soon. And then I think it won't be too slow. And then I think it will make sense to focus on hardware and if not standardizing, I sort of have mixed thoughts about standardizing, but it's gonna take a lot of effort to kind of reach a high level of confidence in the bug-freeness of various implementations. These are very complicated cryptographic protocols. I mean, people know what I'm saying, that the Ethereum Foundation is launching a competition with 20 million dollars of prizes to push this forward. And so it'd be a lot easier if we sort of converge on not the right SNARK, but a right SNARK, so that that effort doesn't have to be repeated over and over and over again. I mean, hopefully we also get better at making the effort lower and reproducible. Anyway, so yeah, but my view as to that final number 17, that SNARKs are too slow and can be improved and must be improved. It's only a stronger held view today for me than 10 months ago.
+
+
+49:17: Anna Rose:
+
+
+But it sounds like you think we're closer to being able to ossify, at least a little bit, at least hit a step... Like a step change where we... Probably not forever, but for a period of time, we kind of all start using the same thing.
+
+
+49:33: Justin Thaler:
+
+
+I do, I mean, it might be overly optimistic, but we could talk about this a little bit later. I mean, I think some of the recent discussion on Twitter, especially following the release of Jolt, might give the impression that there's more disagreements than there actually is. And I'm actually sensing a shift where certain views or techniques I've been advocating for for a very long time and getting very little traction on, actually people seem to be coming around to. And if they do, then, of course I have a view of what I think is the right approach, and if people come around to that, then great, then we've converged. I mean, I'll also say, it's never gonna be like one size fits all. I think for large enough statements, there'll be a right way to do things, but you'll still have settings, and I've been encountering them in certain applications where the statement being proved is pretty simple. Like if you can describe it in a couple million constraints and you want the verifier to be really fast and there's no room in the application to kind of aggregate proofs or prove many of the statements at once. You really have to just prove one small statement and have the verifier be fast and the proof small. And in that setting, my preferred techniques don't necessarily help or make the verifier cost too big and recursion would be a bottleneck or something like that. So you can't recurse to bash the verifier cost down. So that will always be an issue. It's never going to be just one SNARK for everything. But most applications, the statements are at least somewhat big and then I think we can converge in at least those settings.
+
+
+51:18: Guillermo Angeris:
+
+
+It's funny because right now everything is super general purpose, right? And we're just like, throw the kitchen sink at it, like we want this thing to work for everything. But one could imagine the existence of specific protocols for things that are very common, that are extremely efficient. You can provide a sync certificate for it and then verify a sync certificate in some very, very efficient way, like a secondary problem. So it is kind of interesting. I feel like right now, this is like the Moore's law thing, right? It's like CPUs. CPUs just got better and better and better, and so everyone was like, why the hell do you need anything other than a CPU? You just like, wait two years and this thing gets infinitely better. But at some point we're going to probably develop the GPU and the FPGA version of this where it's like, okay, no, we need to do this one thing very efficiently because we do this one operation, linear algebra or whatever, 50 million times. Let's get good at that and defer a succinct proof of that or a ZK proof or whatever you want, to that special device for that one specific case where it turns out to be extremely useful. 
+
+
+52:21: Anna Rose:
+
+
+All right, well now I think it would be a really good time for us to talk about Jolt and maybe Lasso and Jolt. I know last year when you announced this work, you were kind of... You shared it in a pair. I think it would be great to go into both of these. So Justin, what is Lasso? What is Jolt?
+
+
+52:37: Justin Thaler:
+
+
+Great, yeah, I think Lasso, it's sort of a technical hammer. So I don't think we have to talk too much about it, but back in August or when we sort of announced Lasso and Jolt, like Lasso was implemented and Jolt wasn't. So what is Lasso? It's what's called a lookup argument. And there's sort of two ways to view a lookup argument. They're completely equivalent, but one is it lets the prover, an untrusted prover commit to a bunch of values and then prove that each of those values lies in some predetermined lookup table, some predetermined table of values, okay. A completely equivalent way to look at it, and really this is equivalent to a variant called what I call index lookup arguments, but the details aren't so important, is it's a way for a prover to prove like very efficiently that a bunch of committed values are all the outputs of a simple function. So it's like the prover commits to a billion values and then very quickly proves that for each value that's committed, like that actually equals like f of xi, the i committed value is f of xi where, f is known to Prover and Verifier and xi is also committed. Okay, so I actually prefer the second view, although it's sort of, I think I'm the only one who takes that view. With that view, it's just a really efficient SNARK for super highly data parallel computation. So evaluating the same simple function f over and over and over again.
+Now what Jolt is, is something called a ZKVM, specifically for something called the RISC-V instruction set. It's a SNARK that lets a prover prove that it correctly ran a computer program on a witness, where the computer program itself is specified in RISC-V bytecode, RISC-V assembly. And so this idea of designing as ZKVM for RISC-V was pioneered by a project called RISC Zero, which had incredible foresight to see the major benefits of using an instruction set, RISC-V, that was not designed by SNARK researchers, but rather designed by the computer architecture community and came with all sorts of great tooling and compilers and things like that. And so Jolt is basically just another way of proving the same statements that RISC Zero is already proving today and has been proving for a year or a year and a half or something like that already.
+
+
+55:08: Anna Rose:
+
+
+So just so you know, Justin, I don't know if you know this, but I'm an investor in both RISC Zero and Succinct through ZKV and as an angel. And I think, Guillermo, you also have...
+
+
+55:18: Guillermo Angeris:
+
+
+I'm also an investor in RISC Zero.
+
+
+55:21: Anna Rose:
+
+
+We know that group quite well. But actually, I just want to stop you, because just before you jump into Jolt in more detail, I actually want to ask you one thing about Lasso and these lookup arguments, because I feel like there's been this line of work. There was, I don't know what the first part of this is, but it's Caulk and cq. I know that that's like one line. Is Lasso in the same line of work? Is it an addition on cq, or is it using, is it for something else? Is it coming from different... Like a different track?
+
+
+55:52: Justin Thaler:
+
+
+Yeah, great question. So it's inspired by that line of work. I don't know whether to call it part of that line of work or not. So essentially we looked at that line of work, all of those works, starting with Caulk. Well, okay, so none of them use the sumcheck protocol and some of them seem very specific to KZG commitments in particular, and it's not clear that they would work when KZG commitments don't use Fiat-Shamir and it's not clear that they would work if they did use Fiat-Shamir. So basically, we looked at what was going on in those protocols and we said, well, let's use sumcheck. And...
+
+
+56:25: Anna Rose:
+
+
+Okay, and change it for that. 
+
+
+56:28: Justin Thaler:
+
+
+Yeah.
+
+
+56:29: Guillermo Angeris:
+
+
+It was like Justin's favorite tool is like, how about sumcheck?
+
+
+56:33: Justin Thaler:
+
+
+Right, and by the way, this is... In my view, I've been trying to get people to use sumcheck for a long time. It's kind of going on 15 years, like before I even knew what SNARKs were really. I was working on half of a SNARK, so SNARKs without the commitment schemes. And I'll be thrilled if people just start reaching for sumcheck, like they don't have to use Jolt or whatever. I mean, obviously it'd be even better if they decide to do that, but as long as people start using sumcheck, I'm thrilled. You know? So, yeah. And yeah, so we particularly took inspiration from Baloo, which clearly had sort of a matrix vector multiplication going on in there, and then we use sumcheck to prove that matrix vector multiplication, and the way we did that was very similar to something that was happening in the Spartan paper from the 2019, 2020 era. And we just have like a few more observations on top of that to squeeze some extra performance out, basically make sure the prover only commits to small values, not big values. So that's Lasso. And it sort of comes with some other nice benefits like, for a lot of the tables, lookup tables, people use in practice, Lasso is sort of unique, like no one has to commit to the table. I think anything that doesn't use the sumcheck protocol is not going to have that property. So that's Lasso in a nutshell.
+
+
+58:02: Anna Rose:
+
+
+Got it.
+
+
+58:03: Guillermo Angeris:
+
+
+Very dumb question here before we get too far. You said, it only makes sense for a simple function f. How do you quantify the simplicity of function actually? What does it even mean to be simple here? I know you did early work on this in a very specific way, which is polynomial degree of weird Boolean functions, but I'm just curious what it means here specifically.
+
+
+58:21: Justin Thaler:
+
+
+I guess the way I'd say it is, one way to view Lasso is, it... From the verifier's perspective, it is a reduction from evaluating f many, many, many, many times, like once per lookup to evaluating f just once. Okay, and really it's not evaluating f itself, it's evaluating the multilinear extension of f, but whatever. Basically, you want f to be simple enough that that multilinear extension evaluation is fast for the verifier.
+
+
+58:49: Guillermo Angeris:
+
+
+Got it, got it.
+
+
+58:50: Justin Thaler:
+
+
+There are some functions f where that multilinear extension evaluation would be extraordinarily expensive, and so it's a very technical notion of simple...
+
+
+58:57: Guillermo Angeris:
+
+
+It's something like, if I may, it's like the support of... So the number of non-zero coefficients in the multilinear extension is the complexity of the function that we care about here. Is that right?
+
+
+59:08: Justin Thaler:
+
+
+Yeah, and it doesn't have to be in like, it could be in any basis, coefficients in whatever basis. It just needs to be some quick evaluation procedure, having few coefficients in your favorite basis for multilinear polynomials is one way to do that. Yeah, I mean, it turns out that all of the tables that we need for Jolt to have this property and no one has to commit to these tables and things like that.
+
+
+59:30: Guillermo Angeris:
+
+
+Right, like bitwise operations certainly will have this property and things like that. But yeah, you could imagine like much more complicated operations to have a sparse basis, you might need a very complicated basis in which you're doing all of the work in the reduction or something. 
+
+
+59:45: Justin Thaler:
+
+
+Yeah. Yeah. And in...
+
+
+59:46: Guillermo Angeris:
+
+
+To this new base.
+
+
+59:46: Justin Thaler:
+
+
+Exactly. And in a theoretical sense, this is not a practical protocol, but there's like a section buried somewhere in the Lasso paper. Like sort of any function with small circuit complexity, it has some reasonably low degree extension that can be quickly evaluated.
+
+
+1:00:03: Guillermo Angeris:
+
+
+I believe that. I was gonna say, this feels like right up your OG alley, right? This is like defining the complexity of this feels kind of...
+
+
+1:00:11: Justin Thaler:
+
+
+Well, yeah, so this has always been a sign of a thorn in my side where my favorite protocol is sort of for the verifier to be fast, you either need the multilinear extension. Like I said, things get nice for the prover if you use multilinear extensions, but the verifier is going to be fast, mainly if the multilinear extension is quickly evaluable. But what does it mean for the multilinear extension to be quickly evaluable? And explaining this to people has been a 15-year thorn. But it's very related to how AIR constraint systems are sort of by design very structured so that the polynomials capturing the constraint system are quickly evaluable. This is completely analogous to that. Yeah, that's the gist.
+
+
+1:00:55: Guillermo Angeris:
+
+
+Okay, okay, got it.
+
+
+1:00:57: Anna Rose:
+
+
+Cool. Let's go into Jolt a little deeper. You sort of put it in the same category as the RISC Zero ZKVM. You didn't mention it, but it would be similar to the SP1, Succinct VM. It's funny, I'm not actually sure... Is Jolt the name of the ZKVM, or is it the name of the SNARK system that you've actually created? Is there any sort of... Because for example, SP1, we know, is using Plonky3. I actually don't know what RISC Zero is using, I'm guessing Groth16.
+
+
+1:01:28: Guillermo Angeris:
+
+
+It's a combination of a bunch of stuff, I think.
+
+
+1:01:29: Justin Thaler:
+
+
+Okay, so firstly, RISC Zero applies a STARK that they implemented sort of themselves to an AIR capturing the RISC-V CPU that they also implemented themselves. SP1 feeds an AIR that I guess they implemented themselves, I think building on some other projects as well. They feed it to Plonky3 and then Plonky3 is sort of the STARK backend for the AIR that they feed the Plonky3. With Jolt, I would say Jolt is like the ZKVM, but agnostic... It's really the polynomial IOP in the ZKVM if you will. So I'm very happy to switch the polynomial commitment scheme in Jolt to something like Binius, say and still call it Jolt. I'll call it Jolt with Binius instead of Jolt with Hyrax commitment or Zeromorph commitment or something like that. So, Jolt is really the polynomial IOP capturing the RISC-V CPU execution. And I can go into a little more detail about how that polynomial IOP works and kind of how it compares to SP1s and RISC Zeros, if that would be helpful.
+
+
+1:02:38: Anna Rose:
+
+
+Would you say that's where a lot of the work that you've... Like the sort of innovation is on this polynomial IOP side of things?
+
+
+1:02:46: Justin Thaler:
+
+
+Yeah, I mean, Jolt really just is a polynomial IOP and like plug in whatever commitment scheme you want to turn that polynomial IOP into a SNARK.
+
+
+1:02:54: Anna Rose:
+
+
+Interesting.
+
+
+1:02:53: Guillermo Angeris:
+
+
+What are the differences, right? Like what is the difference between kind of sticking a big brain RISC-V virtual machine into some horrible representation versus this? Why is this representation so nice? Like it's not... So I will ask very dumb questions, but I'm just curious on this one. 
+
+
+1:03:10: Justin Thaler:
+
+
+Yeah. So, let me give a brief overview of the Jolt polynomial IOP and sort of compare it to the pre-existing ZKVMs and go from there. So just as a CPU contains several components, like so does Jolt, like really mirroring those components. And I think the other ZKVMs probably function in a similar way as well. So a CPU just repeatedly runs like fetch decode execute, fetch decode execute, fetch decode execute, right? And then the only other thing going on in a CPU is like reads and writes to random access memory, basically. 
+
+
+1:03:44: Guillermo Angeris:
+
+
+There's some registers in there too, but I don't think you have those in the ZKVM.
+
+
+1:03:48: Justin Thaler:
+
+
+No, we do. We do. So, RISC-V has 32 registers, so we have to support it.
+
+
+1:03:54: Guillermo Angeris:
+
+
+Oh, yeah. Sorry.
+
+
+1:03:55: Justin Thaler:
+
+
+But yeah, so the registers are part of the fetch decode, the execute is telling you what are the source registers for the instruction? What's the destination register? Where should the output of the instruction be saved and stuff?
+
+
+1:04:06: Guillermo Angeris:
+
+
+Yeah, people usually have been... I know they stick those in RAM somewhere instead of actually having some dedicated.
+
+
+1:04:11: Justin Thaler:
+
+
+Yeah, exactly. So ultimately the SNARK techniques we have to verify that the registers are being read and written correctly are really no more efficient, waving my hands a little, than just general random access memory. So there's not really a reason to separate the registers from the rest of memory necessarily. There are some in the weeds reasons that you can benefit from that. But anyway, yeah, so Jolt has the following components. Okay, so firstly, the newest thing in Jolt, I would say, albeit sort of the one I'm tied to the least in sort of my personal hopes and dreams or whatever, is the handling the execute part. We do it purely with the Lasso lookup argument. So we say, if you need to evaluate this instruction on these inputs, x and y, we just treat that as a lookup into the evaluation table for that instruction, which is exactly this view I was saying, where lookup arguments are great for evaluating the same simple function over and over and over again. What does the CPU do? Execute, execute, execute, execute, execute, right? So it's a match made in heaven. So that's how we handle execute, is just straight up Lasso. This lookup table is enormous size, 264, 228, but it's so structured that no one ever materializes the whole table and so forth. And people were already doing similar things just without quite this perspective and without using sumcheck, which I think is key to getting the prover performance really high. So that is one part of Jolt.
+
+
+We handle sort of the random access memory with what's called offline memory checking techniques, which also are quite popular already today. But again, we implement those offline memory checking techniques with sumcheck. We particularly use something from Spice, which is a variant of something from Spartan. Anyway, and then finally, I'd say we handle like the fetch... Well, fetch is again, like a memory checking. We handle the decode part with R1CS. So we have this constraint system, which again, it's a sort of minimal constraint system, there's something like 40-ish constraints per step of the CPU. And I think there's like 80 witness elements and they're all very small committed per step of the CPU. And that's sort of doing things like, if you fetch the program counter from the right memory cell, you then have to sort of decompose it into several different fields or something and making sure we do the decompositions right. That's the gist.
+
+
+So that's all a Jolt. And I would say the main differences over existing ZKVMs in my view,  of course I think the fact that it uses the sumcheck protocol everywhere, to minimize especially the amount of data committed by the prover is, that's really what I'm like sort of personally connected to, what I feel like the main takeaway I want people to take from Jolt. The other things I'd say is it does more... It's sort of everything is like R1... This very minimal R1CS and offline memory checking. Everything is offline memory checking other than the R1CS. So that's a powerful thing, I think. I mean, that's where we get like you can specify a new instruction for your instruction set just with very few lines of Rust code. That's just like a very human readable specifying how you sort of decompose executing the instruction into executing sort of instructions on smaller inputs or something like that.
+
+
+So I think that's valuable, but there's no... So I wanna be clear about something, I guess. Doing everything through lookups, which under the hood is offline memory checking, at least as the way Jolt and Lasso do lookups, I think that's very powerful. I think for some instructions, there's more performance to be had by going through a circuit implementation of the instruction. I think in most cases that performance overhead may not be worth the extra complication. It's like very, very clean and simple to just do everything through these lookups. So I don't necessarily think people will only do things through lookups like forever and ever from now on when they design ZKVMs. But there are definite benefits to doing it that way. It's definitely nice and clean and simple.
+
+
+1:08:38: Anna Rose:
+
+
+You talk about designing a lot of the system around sumchecks. Does that sort of hint that one could also design a lot of systems, like these systems around another paradigm? Like, could it be a folding based ZKVM? Like, could you just use another one of these techniques that people like to kind of build around?
+
+
+1:08:58: Justin Thaler:
+
+
+Yeah, so I mean, one thing I'd say is like the state of the art folding schemes do use sumcheck in them, right? So that's like a Hypernova and I guess the Protostar line of work is doing something sumcheck like, but not literally doing sumcheck. And so I think a sumcheck more is like a hammer. And the main thing to be aware of when you use that hammer is that the polynomials arising under the hood in your protocol are multilinear or at least multivariate instead of univariate, and that has ramifications both in terms of what commitment schemes you can use. And there's much more subtle ramifications that I think people are slowly starting to understand. It's just a hammer for designing SNARKs where the prover commits to minimal amount of data is my view.
+
+
+1:09:51: Anna Rose:
+
+
+Well, I guess what I was trying to say here is like, it's almost like you choose a track and then you build around that track. I do kind of wonder if you could... Like is there a chance for you to share with existing ZKVMs and the ones that are with the RISC-V instruction set. Yeah, can you actually mix and match, you sort of mentioned that you could maybe use Binius instead of what you have right now, but how much overlap in what exists out there is there with Jolt? Or did you have to build it again, basically? Did you have to redo the whole thing?
+
+
+1:10:20: Justin Thaler:
+
+
+Yeah, so I think you basically do have to redo the whole thing, which is why it was a heavy lift for Sam and Michael and Arasu to build this proof system. Like they really couldn't reuse much of anything. Fortunately, they were able to start from Arkworks and Spartan, but nothing else really. Some curve libraries too. I guess it's a little hard to explain, but the fact that the polynomial IOP is just different, it means you kind of have to start from scratch. The components of the proof system are the same. There is a polynomial IOP, there is a polynomial commitment scheme, but the polynomial IOP is totally different, and the commitment scheme needs to be at least a little bit different because it's multilinear instead of univariate polynomials, right? And this is... Maybe this is in the weeds, but like people have been trying to use FRI as a multilinear polynomial commitment scheme, so that they can glue things together better, right? And actually... 
+
+
+Okay, so an aside, but I'll take this as an opportunity to revisit. I was saying before, I think there's more agreement out there than kind of the Twitter discourse might lead people to believe. So there's a new proof system, Stwo, that Starkware is working on, right? And there were just some new numbers presented at the recent ZK Summit, and there was a ZK Accelerate event right after that. So I was looking at the Stwo numbers, right? And in my blog post about Jolt, I had a pretty lengthy discussion about whether something like a proof system like SP1 would be able to do recursion efficiently if using a SNARK-unfriendly hash function. And I was expressing concern that recursion with something like Blake as the hash function would be too slow and would bottleneck the prover. And in the presentation about Stwo, one of the presentations, there were very, very, very good numbers reported for proving Blake. And I was worried all of a sudden, like did I miss something? You know, have I underestimated the performance of some proof systems? But there was Twitter discussion, like Stwo is apparently getting mileage out of using a lookup argument that is using the sumcheck protocol that was inspired by Lasso and quite similar in many ways to Lasso.
+
+
+And so actually these good performance results are consistent with what I was saying in the blog post. I think you'll need the sumcheck protocol to prove these hash functions fast enough that you can do recursion quickly. And so there isn't actually any disagreement here. I agree with everything. And so, yeah, I mean, in my view, the key components of Jolt are just like everything. It's kind of exploiting sumcheck to minimize how much data the prover commits to, and then it's handling as much as possible with offline memory checking based lookups. And I'm more tied to the sumcheck part than to the lookup part. I think they're both powerful. Yeah, so that's my view of what Jolt is and how it compares to the existing proof systems. And there are ways to glue it together because Stwo is... Like it's only using sumcheck I think in the lookups, right? Everything else is based on STARKs and univariate polynomial. So there are ways to do it, but I'm hoping the community sort of fully embraces sumcheck and like...
+
+
+1:13:42: Anna Rose:
+
+
+Sumcheck?
+
+
+1:13:43: Justin Thaler:
+
+
+Yeah, sumcheck through and through. It's not just one component of the proof system, if that makes sense.
+
+
+1:13:47: Anna Rose:
+
+
+Interesting. What's the plan for something like Jolt? So you've done an implementation. Actually, I mean, this was interesting because you announced it last year, and then just recently, actually, I think the day of the ZK Summit, we saw the announcement for Jolt again, but I was like, I wasn't clear when I saw that. I was like, what is that? And I guess that was the implementation. That was like, this is now ready to use. But what is... I mean, is this just like an open source library that you're sharing? What are you doing with it?
+
+
+1:14:14: Justin Thaler:
+
+
+Yeah, so it is just open source. It's for anyone to use and build on. I mean, there's a lot of building left to do. So right now it is, there's not what's called continuations implemented, right? So it takes the entire execution trace of the RISC-V program and it just proves it all at once. And that's very space intensive for the prover. So what people will typically do is they'll chunk up the execution into smaller pieces and kind of prove each piece separately and aggregate the results. So we don't have any of that implemented yet. We wanna switch the Binius to... The commitment scheme over to Binius and all sorts of other stuff. So there's a lot left to build. We're kind of still figuring out the best way to go through that long process. And we're hoping that the community as a whole will contribute and really, I think the initial version of Jolt that we just released, like there weren't great ways for the community at large to get involved. It sort of just needed a core team to get it to this point. But I think now there's sort of a more modular path forward. So we'll hopefully figure that out. But no, they are the words very important to us that this is this kind of open source and eventually, the small team that reached this point just can't build all of it and can't keep doing this forever and ever. So it's very important that sort of the community, as a whole kind of get involved and eventually probably take ownership in some way. We'll see.
+
+
+1:15:43: Anna Rose:
+
+
+I'm kind of curious why it's coming out of a16z research. That was also a thing where I was like, you guys are building stuff and it's open source, you're sharing it, but like, do you imagine spinning it out into something? Or is it really just for the teams in your portfolio or is it just for the community? I'm kind of curious how you think about it.
+
+
+1:16:04: Justin Thaler:
+
+
+Yeah, no, it's for the community as a whole. I mean, a16z will never monetize this. Of course, we'd love portfolio companies to use it, but we'd love for everyone to use it. The perspective of people at a16z is that the firm as a whole sort of succeeds or fails based on the entire ecosystem. It's not about any one project. And so if we can really move the needle for the whole ecosystem by sort of these sorts of efforts, it's worth it. And so I was very lucky to join the firm when I did. The engineering team had just gotten built up along with the research team. I managed to get a lot of interest and excitement from Michael and Sam, two of our engineers. They didn't know anything about SNARKs, they had to learn it from scratch. It's nice that I had this book that they could kind of get like a private pass through the book.
+
+
+1:16:55: Anna Rose:
+
+
+Oh yeah.
+
+
+1:16:56: Guillermo Angeris:
+
+
+Nice.
+
+
+1:16:56: Justin Thaler:
+
+
+I mean, the whole thing has been sort of unbelievable for me that they've managed to pick this up and implement it. And it was like just so much work for them. But yeah, I mean, the hope is that it benefits the whole community. And we'll see how it plays out.
+
+
+1:17:10: Anna Rose:
+
+
+I just love this. I can see this. It's like you have been on a mission to make sumcheck the thing. And you are now getting it into the hands of people in a way I guess you maybe couldn't have imagined like a few years ago, because you were really in that research area where you might have championed it in research, but you need people to implement it and buy in and here you actually get a chance to see it in action.
+
+
+1:17:31: Guillermo Angeris:
+
+
+This is the… Like spoon, here comes the airplane to like the child who doesn't want to be fed. It's like, no, you will be fed sumchecks.
+
+
+1:17:41: Justin Thaler:
+
+
+Right, and I'll say, I mean, this whole effort would have never happened if the RISC Zero had the foresight to... I wouldn't know what RISC-V was when RISC Zero launched, right? Sort of the interest, the fact that I was able to take three engineers' time, because Noah worked on the developer interface, which was also a lot of effort, you know, to take all that time from a very small engineering team for ultimately like not 10 months if you include Lasso in there. The fact that just all these projects had already built so much and made so much progress, it just can't happen without that.
+
+
+1:18:20: Anna Rose:
+
+
+Conceptually.
+
+
+1:18:21: Justin Thaler:
+
+
+So anyway, I bet, yeah, as just a professor, I think there's no way we could have... I could have gotten the engineering required to just sort of demonstrate that this stuff really has the benefits that it does. Because engineering is... As a researcher, it's like it's a confounding factor, right? It's like something could be 10 times better sort of intrinsically, but the engineering makes a 20x difference and you can't tell now, you know.
+
+
+1:18:43: Anna Rose:
+
+
+Totally.
+
+
+1:18:45: Justin Thaler:
+
+
+I could see it up, yeah.
+
+
+1:18:46: Anna Rose:
+
+
+Funny. Was there ever a moment as they were implementing it where you weren't sure if your results would actually play out? Because now you have some metrics that are good. But what if they hadn't been?
+
+
+1:19:00: Justin Thaler:
+
+
+Yeah. I won't say that I had no stress at any time, but it was always the case that... So I had very detailed calculations largely based on cycle counts, especially because we're using curve-based commitments. Everything the prover does is fieldwork or just like plumbing stuff that I sort of ignored in my calculations. So either I was making a mistake in my calculations, or the plumbing was just going to be too expensive, and I was pretty sure the plumbing wouldn't be too expensive. So either I had a fundamental misunderstanding and my calculations were missing something really important, or just the plumbing is overwhelming. And so until I either discovered a really big mistake or the plumbing was just seeming awful, I was not too worried.
+
+
+1:19:47: Anna Rose:
+
+
+You were not worried. Okay, cool.
+
+
+1:19:48: Justin Thaler:
+
+
+Yeah, but now Michael and Sam suffered through all of this without that faith, right? So I'd say even a month ago, we were 5x, 6x slower than today. 
+
+
+1:20:00: Guillermo Angeris:
+
+
+Oh, wow, yeah.
+
+
+1:20:02: Justin Thaler:
+
+
+And so I said, we had like a functioning version of Jolt after... Like back in December. And so I thought that... I was surprised how long it took to get the engineering in the state that it needed to be in, but I never had a doubt it would get there. But like I kept saying... Sam kept saying like, oh, we're going to get like at most another 2x, even back when we were 10x. And I kept being like, no, we're not.
+
+
+1:20:24: Guillermo Angeris:
+
+
+It's going to be better.
+
+
+1:20:24: Justin Thaler:
+
+
+And eventually it was. And you know...
+
+
+1:20:28: Guillermo Angeris:
+
+
+And it was.
+
+
+1:20:28: Justin Thaler:
+
+
+And it was, and there's still something on the table there, so.
+
+
+1:20:30: Guillermo Angeris:
+
+
+Right. Yeah. It is funny, the engineering does... It's like, you can test individual components, but it isn't until you kind of really put all the nuts and bolts together and like really make sure you oil every bearing and stuff, that it's like clear that it all works. It's very easy to jump ahead the five steps, but there's some real glass chewing that happens in the middle.
+
+
+1:20:51: Justin Thaler:
+
+
+Oh yeah. And then what Jolt's like, there's a lot of structure that existing libraries don't leverage. Like the R1CS we deal with is super structured. And Spartan was made to handle arbitrary R1CS and we were just like, it was 60 times too slow to begin with and it took a while to figure out exactly why it was quite so bad, what structure it was missing and things like that. So.
+
+
+1:21:16: Guillermo Angeris:
+
+
+Yeah, it's like materializing the matrices in one row order versus column order will screw you if they're spot... This is the kind of stuff that's like, oh, like, yeah, I mean, of course it's like, if you do it right, it's gonna work, but it takes real glass to it.
+
+
+1:21:30: Justin Thaler:
+
+
+Right, and I don't wanna minimize like that stuff is super important. But I think there is a perspective out there that you just can't know how these things will run till you build it because of stuff like this. And I think that's too strong. I mean it's always possible. I just got lucky with Jolt and this stuff didn't turn into a sticking point that kept us from getting where I thought we would go. But my general sense, though, is that with enough glass chewing, you will get where you think you're going, if your calculations were detailed enough to figure out where you think you're going. And that has been my experience so far.
+
+
+1:22:07: Anna Rose:
+
+
+Cool. I really see this, Justin, now as like this mission, just this force of will to get this sumcheck out there in the world. And you did it. So congratulations on that.
+
+
+1:22:22: Justin Thaler:
+
+
+Thank you. I definitely could not have done it without a lot of help along the way. So let me express appreciation to everyone, and yeah, I mean, I think at this point, I get to work with lots of new people who weren't working on sumcheck before. And that's super fun. And I just, I feel much better. I feel like I could disappear today and the community will wind up in a great place. There's so much ability and motivation and capability out there.
+
+
+1:22:54: Anna Rose:
+
+
+For sure.
+
+
+1:22:55: Justin Thaler:
+
+
+And I've been trying to sort of just point it in what I think is the right direction. And I feel like it's pointed now and that's great. The process can just play out.
+
+
+1:23:05: Anna Rose:
+
+
+Very cool. Thank you so much, Justin, for coming on the show and sharing with us what you've been up to since last year, going through the 17 or some of the 17 Misconceptions About SNARKs and then sharing with us Lasso and then now Jolt and basically your mission to get sumcheck into the hands of as many people as you can get it into. I love it. So cool.
+
+
+1:23:24: Justin Thaler:
+
+
+Thanks for having me. Pleasure to be here.
+
+
+1:23:27: Guillermo Angeris:
+
+
+Yeah. Super, super fun. Thank you.
+
+
+1:23:29: Anna Rose:
+
+
+Thanks. All right. I want to say thank you to the podcast team, Rachel, Henrik and Tanya and to our listeners, thanks for listening.

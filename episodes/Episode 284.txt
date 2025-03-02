@@ -1,0 +1,582 @@
+Anna Rose:
+Today I'm here with Jon Stephens, a computer science PhD student in the UToPiA Group at UT Austin, and a co-founder of Veridise, a blockchain auditing firm that is increasingly specializing in ZK systems. So welcome to the show, Jon.
+
+Jon Stephens:
+Hi, good to be here.
+
+Anna Rose:
+I feel like this interview and basically this topic that we're gonna be covering, which is like audits and ZK security, ZK circuit security, it's coming at a really important moment in our industry. Right now we're seeing so many ZK systems move from the theory or proof of concept or testnet state into the wild, and the issue of ZK security has been raised, but I don't know that we as an ecosystem yet have like a rule system or like a sense for how to address this. So I'm very excited to explore this with you.
+
+Jon Stephens:
+Yeah, I think this is a really interesting topic and I'm excited to chat more about it.
+
+Anna Rose:
+Cool. Let's first understand a little bit of your background. As I mentioned in the intro, you're a student at UT Austin. Tell me, like, what were you studying before this, and actually, what is your PhD focused on?
+
+Jon Stephens:
+Yeah, so my PhD focuses on an area of computer science called formal methods. So this is kind of a sub area of programming languages that focuses on how do you reason formally about other software. And so this includes, you know, designing tools that are capable of looking at other software through, you know, techniques like formal verification or static analysis. So basically the way that this got started is during my PhD one of the tools that I developed was a tool called Smart Pulse, and that would verify formally these types of properties called temporal properties within smart contracts. So basically that is where we started, is we started by looking at this particular smart contracts, or particularly Solidity contracts because, you know, we were noticing that there were a lot of attacks in this area, and that auditing at least is a very manual process and coming from formal methods, it seemed like in order to increase the quality of this particular ecosystem and hopefully prevent some of these attacks, more tooling should and could be used. And so we basically took this work as well as some other work that was done by some of my other co-founders and kind of wrapped that up into this company.
+
+Anna Rose:
+Interesting. I did an episode many years ago with Martin Lundfall from Maker at the time. He was part of the MakerDAO engineering team. I think he's moved on to other things now, but he had been doing sort of this formal or like, was exploring formal verification of Solidity contracts. Do you feel like, did something happen in the Solidity landscape that made it so this all of a sudden was more viable or could it always have been done? Do you know about this work at all? Like, had you seen previous work on formal verification of Solidity code?
+
+Jon Stephens:
+Yeah, so at least when it comes to formally verifying Solidity code, there had been quite a bit of work even when I published about, you know, performing formal verification in that space. However, part of the issue is a lot of these tools, including mine is a research prototype. And so that means that it's not really production ready.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+So for example, one of the annoying parts of my tool, at the very least, is due to dependencies. It was stuck at Solidity 5 and stuff like that. And so there were a lot of other tools that had been created that, you know, were just in a research prototype phase and weren't ready for anything production ready. And so a couple of other companies, like so TORA for example, took a verifier that they worked on as a research prototype and actually expanded it so that it could actually be used for verifying real Solidity smart contracts. And so there wasn't really anything that changed that would've allowed this. It's just there needed to be more work put in, because Solidity has some really annoying design decisions like you know, dynamic call resolution and stuff like that, which makes formal verification very difficult, but not impossible.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+And so for that reason, really there wasn't anything that changed, it's just people started putting in more effort as they were able to tell that, oh, people in this ecosystem do actually want to use tools like this, and without having to actually perform the formal verification themselves.
+
+Anna Rose:
+That's cool. I think it's worthwhile to redefine formal verification and how that actually works because I sort of want to understand like, you built this tool, but like, yeah, what would this tool actually look like? Or how would one use it with code? So let's first start though, what is formal verification?
+
+Jon Stephens:
+Okay. So just to give a little bit of an overview about formal verification. Basically what formal verification does is it reasons very precisely about your program in order to validate that, you know, any particular input is going to satisfy some logical specification. And so this logical specification can take a number of different forms. So for example, it's typically an equation over program variables. So you might want to validate, for example, that, you know, if any particular input is given to this contract, then after you transition to this state, you can never transition away from that state. So, for example, let's say that an auction has been completed an auction or Solidity auction, I guess. And so normally they have some sort of gating where they say the auction is going to become complete. And once that happens, you don't want to open the bidding again most of the time. And so for that reason, you might want to verify formally that yes, there is no combination of calls to your contract that could allow people to bid again.
+
+Anna Rose:
+In that episode that I did many years ago, we talked about like formal verification. The trick was you have to specify the exact behavior you're checking it for. It's not gonna necessarily notice bugs that are like outside of that behavior. Like if that auction software had some, like when it starts or like some other part that you weren't formally verifying, the formal verification would not catch that. It will only capture that specific behavior. Right?
+
+Jon Stephens:
+Yes. That is true. However, one thing that I'll note is when you're formally verifying, you're doing it with respect to a specification. And so if something is completely separate from your specification, then it won't be caught by formal verification. But one interesting thing that we found during this paper that I published is you can actually end up finding really interesting attacks that don't seem to be related to your specification, but are, so for example, some of the attacks that we ended up being able to find in this paper that I published was without actually specifying, I want to look for something like an integer overflow or a re-entrancy attack the verifier would be able to synthesize counter examples that corresponded to these without having to be told, you need to do X. And so while it won't find something that's unrelated to your actual specification, it can still find some pretty powerful attacks and pretty powerful 0 days without having to be told to look for it.
+So it's really interesting and a little bit different than how people typically go about this. The interesting part of it is it's not just going to look for a particular type of vulnerability, and I don't know, I guess one of the interesting things that we found during the evaluation of this paper is you might have something that says like, a user can always withdraw their funds or something like that. And then basically what the formal verifier will do is it will try to figure out a way to steal funds using any method that it can from that contract. And so it ends up creating some really interesting and odd counter examples that you might not have thought about otherwise.
+
+Anna Rose:
+Interesting though, so this is sort of surprising that it sort of can find things passed what it's been spec'd for. I guess I'd always gotten this impression that it was a very precise testing tool, but a very limited one.
+
+Jon Stephens:
+It depends on how you perform formal verification and exactly how much you kind of constrain the problem. And so, for example, if you're testing by, or if you're only trying to verify pre and post conditions or something like that, where a pre-condition states the assumptions about the contract before execution, and then the post-condition is going to state what should hold after you actually execute that function. It's not going to be able to find some of these attacks that I was talking about before, because it doesn't necessarily, or depending on the architecture of the verifier, it won't necessarily try to manipulate the state of the contract in order to find ways that are within the pre-condition that can still violate the post-condition. So the verifier that I created was actually very flexible in that it used a specification class called temporal specifications, which basically state properties over time. And because we were using this very, I guess flexible but particular specification language, it was able to find, you know, attacks that required a series of transactions or that even would require fallback functions to be synthesized and so it was really interesting. And so it depends largely on the verifier that you're using because, you know, people say formal verification a lot, but even within formal verifiers there are different ways that you can well build them and different specifications that can be provided.
+
+Anna Rose:
+You mentioned a paper. What date did you publish that? Like what era are we talking?
+
+Jon Stephens:
+I think it was either in 2020 or 2021.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+So I think that the paper was actually published in 2021, but was accepted in 2020, if I remember correctly.
+
+Anna Rose:
+And is that paper, was that the thing that kicked off Veridise or did that come later?
+
+Jon Stephens:
+So yeah, it was part of what kicked off Veridise. So Veridise started in, well, I guess a little over a year ago now.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+And so basically what happened was I had published this paper, and at the same time, IÅŸil my advisor was visiting Yu Feng, who was her former PhD student who's now a professor at UCSB. And he also had, in parallel been developing some, you know, other techniques in order to find bugs in smart contracts. And he had been approached by some VC's about, you know, the possibility of making that into like a security company and so those two got pretty excited about it and asked me if I wanted to join. And so, yeah, that's kind of how Veridise got started.
+
+Anna Rose:
+I see. This actually makes me want to ask sort of, we were talking about one tool in the auditor's toolkit, right? The formal verification tool. But what are the other tools that are out there and that you would be using maybe in tandem?
+
+Jon Stephens:
+There's a lot of tools that are available for auditors. Formal verifiers aren't used very frequently because they require a little bit of expertise because you have to know about the formal verifier in order to kind of provide extra invariance and reason about why the formal verification might not have gone through. And so some people find that very frustrating.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+And so the most commonly what's used by, I would say auditors now are in this particular domain are fuzzers and static analyzers. And so what a fuzzer is going to do is it is going to randomly generate inputs to whatever your program is. If it's a smart contract, it will randomly generate transactions and inputs to those transactions and then feed them to your program. And so what has been found is in a lot of different areas like operating systems, they were able to find that fuzzers can find very interesting and deep, logical violations or violations within your program because they generate weird inputs that people don't commonly think about and so
+
+Anna Rose:
+But that could happen in the wild
+
+Jon Stephens:
+But that could happen in the wild. And that the point is typically the things that get exploited are not what programmers are thinking about or developers are thinking about. It's these other side effects. And so fuzzers are a very powerful tool, but the problem with the fuzzers is they don't come with any sort of guarantee. Everything is generated purely randomly, and they kind of have this probabilistic guarantee that eventually if you run them forever, they might converge on a particular solution. And so if you compare a fuzzer to a formal verifier, a formal verifier is like you took a fuzzer and you ran it on every possible input to the program and validated that the output was correct. And so, you know, technically that's not possible, but a fuzzer on the other hand is just going to provide random inputs. And so they can be very useful, particularly when you're performing something like property-based testing where you want to provide random inputs and check a particular property after each particular test was run by the fuzzer.
+
+Anna Rose:
+And is static analyzers in a similar category to fuzzers? Or is it its own thing?
+
+Jon Stephens:
+Yeah, static analyzers are its own thing. So what a static analyzer is going to do is it's going to reason statically about a particular program. And so there's a couple of ways that you can do this. You can look for particular patterns within the program. So for example, if we're talking in the ZK domain, one thing that a static analyzer might do or a very light static analyzer might do is it might look for instances in Circom where people are using the single arrow assignment in order to assign to a signal, right? So that is a very light static analyzer that just takes his input, the source code, it doesn't run anything, and it reasons kind of abstractly about the program itself. And so the nice thing about static analyzers is similar to formal verifiers, they can come with guarantees because if they aren't able to find a particular pattern or whatever they're supposed to, it's guaranteed not to be in that program.
+
+Anna Rose:
+Ah, that example you just gave, would that have been a bug that it's looking for? Or like something that causes bugs?
+
+Jon Stephens:
+Basically, static analyzers are going to be looking for specific types of bugs, and so this would be a
+
+Anna Rose:
+But they already know that
+
+Jon Stephens:
+Yeah. This is a bug that they already know of. And so static analyzers, unlike with what I was talking about with the flexibility that you can get from formal verifiers, they're targeted at looking for a single thing normally. And so there are, again, different types of static analyzers that can go all the way from, I'm just going to look for the single syntactic pattern by just looking at the program itself all the way down to, I'm going to reason in an abstract way about the program itself and maybe prove something about the program itself over these abstract semantics.
+
+Anna Rose:
+I want to now go back to like, what does a formal verifier look like? Or what is it as a piece of software? So the way you've sort of described this, like you have a piece of code, you have a program or circuit or something you've written, and then you kind of like, do you feed it into it or do you set the formal verification upon it? Like, I'm just curious how these things interact.
+
+Jon Stephens:
+No, I like, you set the formal verifier upon it. So you've got this source code, and what the formal verifier is going to do is it's, it's going to reason very precisely about the semantics of the programming language in order to prove something about the software. And so there's a couple of ways that you can do this, but essentially what a formal verifier is going to do is it's going to take as input your actual source code as well as a specification. And so this is just, you know, the logical formula over the program that I was talking about previously that's going to go into this, let's just call it a black box for now which is the formal verifier. And what it's going to spit out at the very end is it's going to say, yes, this was verified and or no it wasn't and in the more frustrating cases, it might say, I'm not sure.
+
+Anna Rose:
+Oh, no.
+
+Jon Stephens:
+And then you have to go and try to provide it with better, more proper invariance in order to get that formal verifier to actually verify.
+
+Anna Rose:
+And you're going for, you want it to come back with yes, it's been verified.
+
+Jon Stephens:
+Yes.
+
+Anna Rose:
+This does what you're supposed to do.
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+I'm curious about the code and the program that you're actually putting in into it. Does it always have to have a certain structure? Like when you create that black box, are you only making it for certain kinds of contracts or certain kinds of programs?
+
+Jon Stephens:
+Yeah, so typically it's parameterized on the actual language that the contract is in. So for example, typically you, I mean, there are ways around this, but typically you write a formal verifier that knows about the semantics of a specific language and then after that you can feed in any particular program within that language you want.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+However, one thing that people typically do to get around this is you could, you know, have a language that the formal verifier knows how to reason about and then translate from other languages to that one. And as long as that translation process is sound, then you'll be able to formally verify on whatever can translate down to it.
+
+Anna Rose:
+Okay. I feel like this is a total place for bugs or some problem, like at the compile, are you compiling or are you translating?
+
+Jon Stephens:
+You know, compiling and translating kind of end up being this a similar thing because a compiler is just going to compile down to like a byte code. Right. And so here let's just call it translating because typically you're going from like a high level representation to another fairly high level representation.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+And so it's kind of a translation problem, but for example, the move prover is built on top of this verifier that operates on Boogie. And so it's fairly common for people to rather than implement their own verifier because that is a lot of work and it can be quite hard. they will instead translate down to a verifier that they know well and that is fairly mature because, you know, there can also be bugs in the verifier.
+
+Anna Rose:
+I want to just check, so when you say move, you mean like the language move, the one that was developed by the Facebook group?
+
+Jon Stephens:
+Yes.
+
+Anna Rose:
+Okay. (or Meta). Did you just call it a Boogie verifier or is that the name of this?
+
+Jon Stephens:
+Yeah. Boogie is the language that you translate down to. And Microsoft has created a verifier that will verify properties that over these Boogie programs.
+
+Anna Rose:
+That's interesting though. And actually maybe for our audience too, when we're talking about prover verifier here, we're not talking about it in the ZK context at all.
+
+Jon Stephens:
+Yes.
+
+Anna Rose:
+This is the prover of the code and the verifier of the program.
+
+Jon Stephens:
+Yeah. This is the struggle of my life is verifier is too overloaded. And the ZK context, you've got a prover and a verifier.
+
+Anna Rose:
+Yeah.
+
+Jon Stephens:
+For formal verification you've got a verifier.
+
+Anna Rose:
+Wow.
+
+Jon Stephens:
+And then also when it comes to, and this is what we've encountered in DeFi in particular, people call the process of validating that source code and byte code matches. They call that verification
+
+Anna Rose:
+Wow.
+
+Jon Stephens:
+And so no matter what, we always have to clarify because it just gets too confusing.
+
+Anna Rose:
+I think we've done a pretty nice mapping of formal verification, formal verifiers and some of the other tools, fuzzers and static analyzers this is the auditing toolkit, but all of this so far, we're still kind of thinking about it in this Solidity context or like smart contracts. Or even, I don't know, maybe it goes past that. But what I do want to understand is like, where for you did the move to ZK happen? And obviously down the line, I want to understand if it changes anything, but yeah, maybe let's start with the story.
+
+Jon Stephens:
+Yeah. So the move to ZK happened when we were, you know, doing stuff at Veridise. So basically at the time we talked with the developers of Circom-lib, and they wanted to perform some formal verification over Circom-lib. And so that's where Veridise got involved. And some of our employees went and they actually now have developed a separate formal verifier specifically for ZK, but I'll skip past that for now. Basically they performed some formal verification over Circom-lib in order to validate that certain properties held. And so they performed some formal verification over, if I remember correctly, it was specifically the big end library within Circom-lib, and ended up being able to identify a couple of bugs there. But, you know, more importantly, verified other properties held.
+
+Anna Rose:
+Can you say the name of that library again?
+
+Jon Stephens:
+Yeah, so the big integer library.
+
+Anna Rose:
+Okay. The first time I heard about Veridise was, I think we mentioned it really briefly on an episode with Uma from Succinct and Jon. We were talking a bit about the security of these systems, bridges and all of these things, and they had mentioned that you were doing that. So you were first brought in to do this on Circom. And this is where maybe you could help tease this out. Like, are you, when you're doing this, still focused on the language, so like you're talking about Circom, but I mean, there's a lot of languages in the ZK space, there's also like different levels of a stack. So I'm wondering, like, when you deal with Circom, would you deal with the formal verification of the entire, like all levels of Circom and libraries that draws upon, or would you just focus on that?
+
+Jon Stephens:
+Yeah, so for something like a formal verifier, typically you have to assume there's trust somewhere. And so when it comes to formally verifying something over Circom, basically you trust that the semantics of the language is implemented correctly. And so in this case for ZK, that means that you're trusting that the verifier works properly as well, and that it's actually performing that verification in a way that's consistent with the semantics of the programming language. Because otherwise, without that trust, it causes the already fairly intensive job that is formal verification to become, you know, even more intensive. And so typically whereas previously when I was talking about performing formal verification over Solidity, it's a little bit, I would say, easier in a way because, you know, you don't have to worry about what is constraints and what is going to go into your witness generator. Whereas when it comes to performing formal verification over something like ZK you need to make sure that you're only performing formal verification over your constraints because those are ultimately what's going to be checked. And so there's a slight difference between how the formal verification is being performed in this ZK space.
+
+Anna Rose:
+Yeah, that's interesting. I want to understand, so like you do the formal verification over Circom, I'm trying to use your lingo here over Circom the language, let's kind of figure what this actually looks like. So you've written a program in Circom using Circom.
+
+Jon Stephens:
+Yep.
+
+Anna Rose:
+And now you're going to set the formal verification upon it. So you're not really checking the language so much, you're just, like the formal verifier knows the language, and now is looking for, what's it actually doing with the constraints? What's it looking for?
+
+Jon Stephens:
+Yeah, so basically the way that this is going to work is, like you said, you've got a program that was written by some developer. And so the formal verifier at the end of the day has to know the semantics of the language. So it is going to reason very concretely about the program itself. And what it's going to check is it's going to check to see whether anything that would violate the specification is potentially possible. And so this violation could, is not specific to being under constrained or over constrained. Instead, what you have to do at that point is you have to write these properties that you want to check, like whether a circuit is under constrained using a logical formula. And so, for example when it comes to expressing whether something is under constrained, basically what you say is for every input there exists two outputs such that the circuit will take in the inputs that you provided it, and what you'll get out at the end is an output. And then you have to check and make sure that it is only possible for those two outputs that you defined to be the same. Because if they're different, then you have found an under constrained circuit. And so that is essentially how the formal verifier goes about checking to see whether there is an under constrained circuit, but it's not necessarily configured to look for this one problem.
+
+Anna Rose:
+Can you actually, I really like you describing this because the under constrained problem has never really been clear. Like, I don't know what the outcome was. So you just said it but I missed it a little bit. So if something is under constrained, you're putting in an input you're getting, did you say two outputs?
+
+Jon Stephens:
+Yeah. So, basically at a high level, what you're doing when you're checking for an under-constrained circuit is if you can provide it with a single input, however there can be multiple assignments to the output, and so > or = to 2, then your circuit is under constrained. And so the reason why this would happen is because there might be multiple ways to satisfy your constraints. Because really what you're doing at a high level when you're working with these ZK circuits is you're providing it an input and you're saying, I know an assignment to these outputs. Right? And so if you can provide it two conflicting assignments to those outputs for these particular inputs, then all of a sudden you now have an under constrained circuit.
+
+Anna Rose:
+Is this similar to like a collision?
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+Okay. Like you're expecting one input equals some output, and here you actually have like multiple inputs that will equal the same output because the system is under constrained.
+
+Jon Stephens:
+Right. So you can say that it is kind of similar to a collision when it comes to a hashing function. With a hashing function, it can't be avoided because, you know, count it. But at least when it comes to specifying a proper hashing function, you have to make sure that it is fairly well collision resistant, because with a hash function if you have something that commonly hashes to a single value, then at least in the space that we're in, that would break a whole lot of software. And so here, basically what you're doing is kind of the same, where you need to make sure that for every input there's a single possible output. There are reasons why people wouldn't want to do that, I guess. But most of the time that we've seen the circuits from people making sure that circuit is properly constrained or deterministic is another way to consider it, is an important property that should hold.
+
+Anna Rose:
+Is there such thing as over constrained?
+
+Jon Stephens:
+Yes. So that is a good question, that is something that we kind of debate internally at Veridise every once in a while because we used to kind of provide or define an over constrained circuit as well, where basically an over constrained circuit would be one where your witness could generate valid outputs that would not be accepted by your circuit. And so you can claim that that is an over constrained circuit. However, in a lot of systems when you add a constraint into, or when you add a constraint a similar assertion will be added in your witness generator. And so you can kind of say at that point that in some of these languages, you can't possibly create over constrained circuits because your witness generator would crash. However, I at least am on the side that you can create over constrained circuits because sometimes something else is generating your witness and so yeah.
+
+Anna Rose:
+Is there, when it comes to sort of the under or over or perfect constrained systems, is there a trade off with performance? Is there a reason? Like, are you kind of looking for the cusp where it works, but if you go too far, you are actually also like, I don't know, make maybe making the system too slow or too energy inefficient. And so often people are trying to find that razor edge where it's acceptable, and not under, but also like not too full.
+
+Jon Stephens:
+Yeah, that's a very good question. And so the reason why these under constrained circuits actually occur pretty frequently is because exactly what you said, people are trying to save constraints. The reason why they do that is because proving time often becomes kind of a bottleneck. And so they want to make their, or they want to have as few constraints as possible so that proving time will become quick. And that is where you end up running into problems because they'll remove constraints that they might not think are necessary because it's very easy to make that mistake. And when they prune that mistake or that that particular constraint, they are now going to have an under constrainted circuit, and then that's a security risk.
+
+Anna Rose:
+Oh, I see. Are there different levels of security risk? Do you ever have the result of like, it's somewhat under constrained? It's very under constrained? Yeah. Are there different levels or is it sort of binary? It's either correct or incorrect?
+
+Jon Stephens:
+So no, there's definitely a range that you can have, right? And so one of the most dangerous things is if you have a completely under constrained signal, because that completely under constrained signal can now take on any particular value. However, we have seen other mistakes that people have made where a signal is partially constrained. And so basically you've narrowed down the possibilities that the circuit could take. And in terms of whether or not or the severity of the bug, that often largely depends on the application itself. Because, for example, you might have an under constrained signal, but in order to, let's say, find another value that would be accepted by the circuit you would basically have to break some cryptographic protocol that is being implemented by the circuit itself. So for example, let's say that you have a hashing function and the I'm kind of making this up on the fly here, so I hope it makes sense. So you might have a completely under constrained value, but as long as it hashes to the correct value at the very end, then everything is okay. And so in that case, even though maybe the input is completely under constrained because it is being fed into this hash function and that's going to be checked somewhere else, technically if you, or that's only exploitable if you're able to break that hash function
+
+Anna Rose:
+As well.
+
+Jon Stephens:
+Yes.
+
+Anna Rose:
+I guess because you'd have to be breaking both.
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+So is there almost like mitigating, like are there techniques that people that maybe, I don't know if you've seen this, where like people will do a really under constrained system and then have some mitigation on the side.
+
+Jon Stephens:
+So really the only thing that we've seen them do is right now there are people who are trying to combine ZK circuits with like right? And so one thing that'll do is they might have some mitigation, but that might not actually exist in the circuit itself. And that's because they will have public inputs and all the outputs to the circuit are always public. And so when the circuit is actually checked into the blockchain, there'll be some additional validation logic to make sure things are well formed. So for example, you can consider the case where there's a Merkle tree in order to validate that something exists in a Merkle tree, you're ultimately going to end up calculating a root. But, you know, there's no way for the ZK circuit to know what the proper route is unless you've hardcoded it. And so one thing that people will commonly do is any root will be accepted, but then at least on the blockchain side of things, they'll validate that yes, this is the route that is stored on the blockchain and it will be rejected otherwise. So you might be able to validate the circuit, but it will be rejected by other validation logic.
+
+Anna Rose:
+In this case, are they checking actually at the input itself? Like is it at that step or is it the output? Is it like you wouldn't be able to feed in any input that isn't already a block header or something like they're checking something else, or they're they're checking it at that beginning part?
+
+Jon Stephens:
+Yeah, typically what I was describing here would be at the output. So basically someone has generated a proof when you generate a proof, you know, you have to provide the public signals, and so they'll perform some additional validation over those public signals. And so in the case that I described specifically the additional validation would be performed after the proof has been generated. And so in that case, if someone decided to, let's say, try to perform an attack they would have to go through the entire process of, let's say, wasting their computation only for it to be rejected by the smart contract itself.
+
+Anna Rose:
+Could you though do it also at the beginning, like, could you make sure that like, there's only a certain set of inputs, like it would be kind of impossible to just randomly pick one out of the air?
+
+Jon Stephens:
+Yeah. So in that case really if you're going to do it on the input phase, or at least I believe that you would have to have constraints inside of your ZK circuit itself in order to check things. And so the only time that I've seen someone perform something on the input phase, it's because they had, let's say, a trusted service that they would use and that trusted service would generate a certificate that would then be checked by the circuit itself. And so the problem that you have with doing things on the input phase at least is you have users who can interact kind of arbitrarily with the witness generator and stuff like that. So there's no guarantee necessarily that they've been doing things properly. And so really if you want to do something on the input side, you would have to have some sort of trusted service.
+
+Anna Rose:
+I see. So far we've talked about using formal verification to check for under constraintness, but is there anything else that you're checking for?
+
+Jon Stephens:
+Yeah, so basically the other thing that you would want to check for is behavioral violations. So for example, the reason why formal verification is so powerful is because you can check arbitrary properties under constraintness. This is only one of those particular properties. And so typically, you know, under constrainedness, this is one of the, I guess, interesting properties that we end up getting in this aspect. So it gets a lot of discussion. However, people can also just implement things incorrectly. So often times...
+
+Anna Rose:
+So this is like checking for bugs in a way. This is just like a mistake?
+
+Jon Stephens:
+Right. And so logical mistakes are one thing that we commonly find during our audits where someone intended to, you know, write a logic that, or write a program that did X, however, it does something slightly different than X. And so the other thing that you would do with a formal verifier is you might want to check that someone's logic is actually implementing the computation that they expect. And so in that case, you would encode the computation that someone wanted to perform as an actual logical formula and validate that yes, this logical formula actually holds over the constraints of the ZK circuit. And so this is something that we do commonly for our clients and while it probably sounds like you have to write something twice, that can be pretty powerful expressing the same thing in two different forms, because especially if you find discrepancies between those forms, then you find bugs, and that's what the formal verifier does.
+
+Anna Rose:
+In the case of ZK circuits though, are you also running fuzzers and static analyzers?
+
+Jon Stephens:
+Yes. So at Veridise we have developed some custom formal verifiers, which help us more efficiently be able to perform the formal verification because at least right now, and we didn't really get into this, there are ways that you can perform formal verification automatically, but ZK kind of has some properties that make that difficult. And so at this point, formal verification is typically a manual process where you have to manually write out the proof. And so we have some techniques that we use in order to automatically prove things most of the time which is another paper that we have published. At the same time, we have developed tools that use fuzzing in order to help identify problems in ZK circuits by, let's say, randomly mutating outputs, for example, in order to try to find this under constrained violation. That's something that we've been working on recently because if it can find a counter example, that's great. And then finally at Veridise we've also developed static analyzers in order to find bugs within these ZK circuits. And recently we're in the process of publishing a paper about the static analyzer that we developed, which ended up being able to identify bugs in real circuits that
+
+Anna Rose:
+That people are using
+
+Jon Stephens:
+That that people are using. Yes.
+
+Anna Rose:
+Is there a order in which you're usually running these things?
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+Yeah. Like, okay, so what is that?
+
+Jon Stephens:
+So for ZK, typically the first thing that we do is we would run a static analyzer because a static analyzer at least in terms of the picture that we had, it's just going to take in your source code and then it's going to tell you, yes, this is vulnerable, or no, this is a list of problems. And so static analyzers are also very fast. And so typically we first use a static analyzer, then we'll use something like a fuzzer, because again, a fuzzer is very automated and at least the fuzzers that we use, we try to configure so that they can also do some property checking while they're looking for other bugs. And so they can often times also perform or find counter examples that would also be found by a verifier, but they don't come with strong guarantees. And then the last thing that we normally do is formal verification, because with formal verification it requires more manual effort.
+
+Anna Rose:
+So I kind of can picture this, where you've built tools which are like, they're kind of out of the box. You might need to run them because you know how they work the best, but actually another auditor could also run them. But when you get into the formal verification side of things, would it need to be the person who wrote it, who does the check because they need to so deeply understand this circuit?
+
+Jon Stephens:
+Not necessarily no, So, basically, when it comes to the formal verification, typically that just needs to be done by someone who has expertise with a particular verifier. So for example, at least in the context of ZK, a lot of the actual verification is being performed with what is called an interactive theory improver. So this is something like Coq or Lean, if you've heard about them. And so essentially the way the formal verification is done there is you translate the constraints down into this form that can be understood by Coq or Lean, and then you manually write a proof that says that your specification, which you also encode in the interactive theory improver matches the constraints.
+
+Anna Rose:
+When it comes to an audit. So as you're going through this, you start with the static analyzer. If you find something, do you immediately bring that back to the team you're auditing or like the company or whatever, like, and then see if they can fix from there? Or do you actually go through the whole process and then give them a report?
+
+Jon Stephens:
+Yeah, so we try to do as much as we can in parallel. And so typically for something like a fuzzer, it, it's faster to set up, but it can take days to run. And so when we do these things, we kind of have this process of how the order in which we'll start things. And at least for a static analyzer, we normally get feedback very quickly.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+And we do provide that feedback as soon as possible because at least for something like formal verification, if there is a bug that was found by one of the previous components, then normally the formal verifier is going to find it as well. And so really for formal verification, you want to verify on the fixed version that everything is proper, otherwise you're just going to be rediscovering all of those same bugs with more manual effort.
+
+Anna Rose:
+Is it also good that people do the correction because it's possible they make a mistake in that, that the formal verification might find out? Or would you just run the static analyzer again on the new version anyway?
+
+Jon Stephens:
+Yeah, so basically, so when we perform our audits, what we're going to do is we're first going to perform the audit on one fixed version of the code because when you keep getting new code, that makes the auditing process very chaotic and very difficult. And so typically what we'll do is we'll perform as much work as we can on the version that we're auditing, and then when we get to validating fixes, then we'll make sure that we run the same tools that we ran on or that found bugs on the unfixed version of the code, the version that we were given to audit on the fixed version to identify any potential new issues. Because we have found bugs in the code that people have provided us to that is supposedly fixed.
+
+Anna Rose:
+But like different bugs almost.
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+But like the fixed chain made a new bug appear.
+
+Jon Stephens:
+Yeah. So sometimes things weren't fixed quite properly, other times they introduced new bugs that we then would point out
+
+Anna Rose:
+How long does something like this take each of these tools? I'm picturing you pressing a button in like 30 seconds later. It's like, yes, but I'm guessing it might be a little longer than this.
+
+Jon Stephens:
+Yeah. So static analyzers will typically take somewhere in the order of minutes. And so in that case, your picture is exactly right for a static analyzer. For a fuzzer it can take longer. And so with a fuzzer, because it's purely random, the longer you could run it and it won't find bugs the better. And so with a buzzer, we typically try to run them for a longer period of time, normally about a day or more. And then for a formal verifier that can take a lot longer than a couple of minutes because you know, typically you'll write a specification and then you'll run it through the formal verifier. If with formal verifiers, they might take a little bit longer to verify, but in the case where you get counter examples, then you might need to refine your specification or introduce new invariance that the, the verifier didn't know about in order to push that verification through.
+
+Anna Rose:
+I was actually curious about this, like when you use the formal verifier in prep to use it on a particular circuit, I'm trying to figure out how abstracted it is or how general it is. Like do you have to rewrite or like, do you have to know this circuit intimately and then like write it into the formal verification?
+
+Jon Stephens:
+Yeah, so basically what someone has to do is if we have an automated translator from the circuit language to the interactive theory improver, because let's just say that we're using an interactive theory improver in this case I'll ignore automated verification if we want to talk about that a little bit later, maybe we can. But essentially the auditor themselves has to perform that translation in order to help with that process, both in terms of scaling the formal verification and to make it less error prone, we also work on automated translations from a particular language to the language used by the interactive theory improver, so Coq or Lean. And then the next thing that you do is after that translation has been performed, you then encode your spec in that language as well. And then finally you write a proof that that spec holds over the translated program.
+
+Anna Rose:
+So there's quite a lot of setup work for each one of these things. It's not like out of the box and it's gonna understand different circuits in the same language.
+
+Jon Stephens:
+Yeah. So the hope is that, and I mean, this is what everyone works on. As they start getting more and more circuits in a particular language, then they work on automated translators too Coq or Lean. And so we have I think one written for Circom that will automatically translate to Coq in our case for performing that formal verification. But yeah other languages, the translation has to be manual.
+
+Anna Rose:
+Does it matter? I'm curious here, like, I mean, so far you've talked more about Circom, but not so much about like proving systems. Does proving system have any part of this? Say you use PLONK versus using something like Nova?
+
+Jon Stephens:
+Yes.
+
+Anna Rose:
+Do you have to rewrite these things or can you reuse them?
+
+Jon Stephens:
+Yeah, so the reason why I say Circom is just because most of the audits that we've gotten have been for Circomm, but really, a lot of our tooling actually targets R1CS. So for different proving systems, typically yes, you do have to do some extra work because you can then with different proving systems obviously have different shaped constraints and then on top of that, when it comes to some of these systems like PLONK, now you also have to deal with recursion. And so R1CS is typically just the, or at least the R1CS generated by Circom is typically just the easiest one for us to deal with because the constraints are quadratic. And then while you can, I think now have recursion in those constraints, typically they don't.
+
+Anna Rose:
+Yeah. I mean, I'm just thinking about like R1CS versus something like Air or like the sort of STARK structure. Have there been any auditing tools built for those kinds of systems? Or is that still like, I'm just curious like how much work has to go into building. Can you reuse anything if it's a different underlying structure?
+
+Jon Stephens:
+Yes. So basically you can always reuse the interactive theory improver because that part is general. And so really at that point, it comes down to the translation process. So when you translate down to that underlying form when you move to a different proving system, then likely a lot of that is going to have to be re-implemented. And so, for example, if we have a translator that works on Circom, for example, even if we move to a different language that will generate R1CS, we'd have to create a new translator, right? And so generally for that reason, it makes more sense to target a proving system like, or at least the language for a proving system. So something like R1CS or PLONK or something like that. That way you can then support multiple languages.
+
+Anna Rose:
+Are you familiar with some of the newer languages coming out? Like there are languages like Noir, which are kind of especially designed for some of the more modern PLONK variations as well as others. I know that I think folks from the Noir scene would not say it's just for PLONK, but like there's some new languages coming out. I guess the question here is almost like, is it on your radar? How would it get on your radar? Like, would you need a project to approach you saying, hey, we want an audit, we're using this other language, and then you'd get into it? Or are you kind of tracking it yourself?
+
+Jon Stephens:
+Yeah, so a lot of these new languages are on our radar, especially because, at least my feeling is that some of these new languages will bring greater security. And so for some of these languages that are being developed, like
+
+Anna Rose:
+Leo
+
+Jon Stephens:
+Yeah. Like Leo for example, or Lurk where people don't have to write the underlying constraints themselves, that can bring a much greater security because then you don't have to worry about the individual developer making or running into issues. And so, at least in terms of what we do at Veridise we are aware of these different languages and we try to learn as much as we can about them beforehand, but we normally can't spend too much time investing and tooling for those particular languages until either one. Like we try to approach these ecosystems early and try to determine like whether or not we'll get, or how likely it is that we'll get audits for them in the future.
+But really a lot of our development, at least has been driven by the projects that we've been getting. And so we are working on a number or expansions to our tools to support other languages. So for example, some of our tools at Veridise work on source code. And so typically they were built to support Circom because that was what we got. Most of our, a lot of the audits that we've gotten have been in Circom, but now we've also gotten audits in Halo2 and Arcworks and stuff like that. And so at that point we have started expanding them to work on those languages as well. Yeah. So similarly, when it comes to talking with these ecosystems, sometimes we expand our tools to those ecosystems, but generally it's driven by the audits that we end up getting.
+
+Anna Rose:
+As you just said, that I'm just like, Halo2 to me is a proving system. What is, I actually don't know this, what is the language of Halo2? Is it Rust?
+
+Jon Stephens:
+It's Rust.
+
+Anna Rose:
+Yeah. What happens for something like this then? Like what happens if Rust is the language?
+
+Jon Stephens:
+Yeah. It gets more difficult. Let's just say that. So Halo2 is kind of a unique beast because basically what you're doing is you're you're using Rust in order to basically construct the circuit. So you've got a circuit builder that you're interacting with in Rust. Right? And so at least for some of these things when it comes to supporting them, one of the reasons why we like supporting things at the language level is because then we can reason about, at least for a static analyzer, we can reason about both the witness and the constraints at the same time. Because if we can find deviations between them, that's likely a bug. However, for some of these systems where that might be, let's say complicated, like supporting Rust sometimes we have to let go of the witness generator side of things that helps us identify some of the bugs. And instead we reason almost entirely about the constraints in order to find bugs.
+
+Anna Rose:
+Oh, interesting.
+
+Jon Stephens:
+And so it's always better if we're able to have more information. And so that means that some of the, at least for the static analyzer, some of the detectors that we've developed work better in some languages than others. But yeah, basically we try to adapt as much as we can to new languages or new proofing systems.
+
+Anna Rose:
+Kind of throwing back to that earlier episode I had done on formal verification, I know at the time we talked a lot about Rust and how Rust as a language already has like a form of checking. And so there's almost like the spectrum of moments when your code gets checked and very, you know, as you're writing it, if you're writing in Rust, it's getting checked there, but then, you know, you can further check it. Formal verification potentially being at the end of that, where it's like the most checked. Does formal verification like Rust?
+
+Jon Stephens:
+Yeah.
+
+Anna Rose:
+Does it save formal verification? Like does it find things that normally formal verification or some of these other tools would find?
+
+Jon Stephens:
+So yeah, basically one of the nice things that you get with Rust, and I'm gonna say nice from a language perspective rather than sometimes from a developer's perspective, is Rust has this notion of a borrow checker. And so the borrow checker essentially is going to perform what maybe you can consider as some sort of basic formal verification. It's basically going to validate that when you
+
+Anna Rose:
+It works, right?
+
+Jon Stephens:
+Kind of, it's basically going to validate that when you have a reference to a program, you're not using that reference in let's say an improper way.
+
+Anna Rose:
+Okay.
+
+Jon Stephens:
+Because when you have something like C or C++, you can get into problems where like you have a piece of memory allocated and you haven't freed it. So with Rust the borrow checker allows you to, let's say, check something out and then it will validate that it will only compile if you have properly used what you have checked out or if you've like checked back in, for example. And so this borrow checker basically provides concrete ownership of a particular reference to an entity so that you're less likely to run into particular issues or, yeah, I'm gonna say less likely because you can still use some unsafe things, but at least in Rust you can say this is unsafe. And so one nice thing, and there have been, there's at least one paper that I can think of off the top of my head where people have used knowledge of Rust borrow checker in order to help simplify the process of performing formal verification.
+
+Anna Rose:
+Interesting. But not in ZK so far,
+
+Jon Stephens:
+But not in ZK? No, this was just verification using Rust. And so in ZK at least you still end up with normal bugs that you would otherwise, because at least right now what you're doing in Rust is your, Rust is just the language that you're using to build the circuit itself. So you can still make an under constrained circuit because Rust is not going to do anything to help when you generate your constraints.
+
+Anna Rose:
+Okay. And you sort of mentioned Lurk as like a language where it sort of protects developers from making some of these errors, but could you build some sort of formal verification into a language for ZK? Could that ever happen where like almost using that similar technique that you just described in Rust, but actually looking at like how a circuit performs?
+
+Jon Stephens:
+Yeah. So there's a couple of different things that you can do here. So first let me address something like, or languages like Lurk or Mina or something like that. So right now there's a couple of different things that you can do. So you could, one, have a high level language, and that language is just going to allow people to express the computation that they want to be checked by the ZK circuit. And then at that point, because developers aren't writing the ZK themselves, you can perform formal verification or whatever you want on the underlying infrastructure and validate that that infrastructure is correct. And then you're doing it once. And so that's one thing that you can do. Another thing that you can do is, and this is one thing that I'm interested in, is you could perform formal verification over the witness generator itself when expressing computation.
+And then as part of the language, you could possibly prove that my constraints actually are constraining my program to be exactly this witness. And so that would be another interesting way of doing it, where it's kind of like you have a formal verifier in the loop. And so this has been used in other languages. So for example, there are languages like Daphne and a couple of others, where you basically perform the formal verification in line with the actual computation. And that seems like something that would be interesting in this domain where when someone expresses constraints, there is some integrated tooling that will make sure those constraints and the computation match.
+
+Anna Rose:
+Interesting.
+
+Jon Stephens:
+The problem is then it places more of a burden on developers because now they basically have to be the ones who perform the formal verification. And the feedback that you get from at least interactive theory, improvers is not always the best.
+
+Anna Rose:
+Not clear or not
+
+Jon Stephens:
+Yeah. So sometimes it's not quite clear, especially to people who aren't very familiar with the system, like what the problem is. And so, yeah.
+
+Anna Rose:
+Got it. I want to talk about security in the ecosystem.
+
+Jon Stephens:
+Okay.
+
+Anna Rose:
+You are primarily working and exploring, I assume, projects that you are auditing for. So this is a company has been like, hey, we need external auditors to look at this code before we go live and they send it to you. But do you, in the training of these tools, do you also look at other circuits, other code that isn't your clients? Yeah. And like, kind of why? I'm kind of curious, like is it to train up the tools or is it because you're curious or like general?
+
+Jon Stephens:
+No so it's generally...
+
+Anna Rose:
+Does it help you get deals too? Kind of like, hey, hire us
+
+Jon Stephens:
+Yeah. I mean, kind of all of the above. So basically we use our tools to help with our client code because essentially the more code that we can expose our tools to, the more confident that we can be that we have not, you know, introduced bugs into our own codes. So the more confident we are in their results. And so there are very good reasons why you would want to, let's say, check our tools on other people's code, particularly if we know that code has bugs, and this is part of the reason why we like running them on code that we've audited, because then we know exactly what bugs should be found. But you know, for code that has been exploited, you often times would want to run your your tools on that to make sure, it can find the exploit if it's supposed to.
+
+Anna Rose:
+Interesting.
+
+Jon Stephens:
+And then in terms of running it on other code, let's say code that's just publicly available on GitHub, that's also useful because if it can find bugs, then you found something new. But it also again gives you the opportunity to, let's say, identify false positives or something like that for a static analyzer that where maybe it identified something that it shouldn't have so that you can trim it out. So basically it just allows you to build up your confidence and then when you find a bug, then obviously that can be good if you can report it to that particular developer ahead of time. And that has led to us finding clients in the past.
+
+Anna Rose:
+Interesting. I'm curious about the disclosure process. Maybe going back to the Solidity world. Are there ways that people expect that to happen in Solidity? And does it change when you move into the ZK world there? And the reason I'm asking here is like, a bug fix in Solidity might be quite fast, and I'm wondering if you find something in a ZK circuit, is the fix that much harder? Yeah. Just tell me if there's any difference and maybe just how, how does it work in the Solidity world? Let's start there.
+
+Jon Stephens:
+Yeah. So in terms of disclosure things can get a little bit awkward. And so you have to figure out where the appropriate place, and this is kind of the first step in order to post a disclosure. So for example, for people who want to get paid for their disclosures, which a lot of people do they might not want to post something publicly because then someone else might be able to claim it. And also they then might not get paid because people can, or the developers can take that disclosure and then just kind of go with it. And that was one of the issues that people had in the early Solidity days. That's why some of these bug bounty platforms like Immunefi and stuff like that exist because one problem that people had is they would identify a bug, they would disclose it privately to the developers, and the developers would say, okay, great.
+And even though they technically had like let's say a private bounty program where if they got a disclosure, they would say, this isn't actually a bug, and then go and fix the bug. And people would not get the money that they felt like they were due. And so that's where some of these bug bounty programs like Immunefi came in because they have like a recorded process where developers or hackers can feel more confident that if they disclose a bug, they will get a settlement or they will get the actual bounty that they were promised. Because now a developer can't necessarily just disappear and say, I'm not giving you the money that, you know, you expect that I would or that I promised. And so that's kind of how it works in the Solidity world, at least right now in, because a lot of people in ZK are kind of building on top of these dApps.
+Some of them also use similar platforms, right? Like Immunefi, but some don't. And so when it comes to disclosures, at least for us, because some of the bugs that we found are in things that may or may not be in production because it's not always clear what's in production. We try to disclose things privately and then we're generally not looking for a bounty unless someone has a bounty program. But it then gets kind of awkward because sometimes we disclose things and then we just don't hear back from the developers. And it's unclear if they've fixed things like, we'll monitor their, their GitHub usually to try to see if they have, but when we report something and we don't hear back from them, it can be a little awkward to know like, did you validate this was a bug? Was there a reason why maybe this wasn't that we didn't get? Or something like that so
+
+Anna Rose:
+In the case that somebody that a team received a report like this and they don't react, are there ever times where it actually, maybe the reason they don't react is it's not breaking, it wouldn't affect their system?
+
+Jon Stephens:
+Possibly, yeah. So at least generally when we've done this it's been by discovering protocols that are publicly available like on GitHub. And so in that case, it might not be something that they actually have deployed in production. It might be something that they're currently building or something like that. And so the kind of awkward part about, you know, when people don't respond to this, is it's one we're part of the reason why we are reporting this is because we want to make sure it's not a bug or we're there to help. And also if it's not a bug, we want to learn, so for example for bugs that we found with tools, maybe there is an additional component that we're not aware of that is preventing this from actually being a bug. So for example, perhaps they're performing some on-chain validation, like we talked about earlier, that our tools or we weren't aware of. And so essentially one of the reasons, or one of the important reasons why we at least want to report bugs is so that if the developers disagree with us, we can at least learn from them why they built the system this way or why something that we reported maybe isn't a bug.
+
+Anna Rose:
+So in, there's been kind of a conversation brewing in our big ZK podcast telegram group about security. It's kind of come and gone over the last few weeks. And there was one kind of counterpoint to this which could potentially help explain why some teams aren't reacting, which was this idea of, and this was mentioned by an auditor, by a ZK auditor that sometimes there's these like under constrained bugs that wouldn't necessarily be exploitable either because of the way governance is set up or there's only a certain part of the stack in this case, like relayers that would actually be able to exploit it. Have you seen any of that? Could that actually help explain sometimes why there's no reaction?
+
+Jon Stephens:
+It could. So for example, this is where I was kind of describing different parts of the system that maybe would've allowed this not to be exploitable. So for example, in the two cases that you were just talking about, basically there's some validation that's being performed on-chain that maybe we're not aware of, or perhaps a particular proof has to be generated by a trusted entity because maybe the ZK circuit is validating a signature or something like that, or for particular inputs. And so in that case, maybe it's okay that certain values or certain computations are not properly constrained. And so there could be reasons why an under constrained value might not actually be exploitable. And so, for example, in one of the disclosures that we made to a team about an under constrained circuit, they took it very seriously and particularly because they were hoping to run their trusted setup soon.
+And so they worked with us in order to try to figure out why this thing was under constrained. And while the circuit technically was under constrained, the signals that were actually under constrained were kind of some utility signals that they were using that actually were not necessary for the circuit to operate correctly. And so they were performing some additional computation and it turned out that computation was unnecessary for the circuit to actually operate correctly. And so in that case, they were able to remove constraints, which is typically great for proving time, but the circuit itself more importantly was not constrained or under constrained.
+
+Anna Rose:
+I'm kind of curious, like given you're an auditor, it sounds like you're, I mean, you're doing the disclosures privately responsibly, but do you ever bump up against the black hat hackers, the other hackers, or like do you, do you sort of see them around? Like, would you be able to spot because you're kind of in these code bases, would you ever like be able to spot other hackers?
+
+Jon Stephens:
+No, because generally the black, you know, the black hat hacker is only going to show up once things have been deployed. Like they're not, they're not gonna necessarily show up there typically with a black hat. They actually want things with baby bugs that they found in the source code to be deployed .That way after deployment they can steal funds or something like that. And so in the process of auditing, I have not bumped up against black hats.
+
+Anna Rose:
+Okay. I always find it fascinating sort of the motivation of the kind of good hacker here like there is the financial gain potentially through bounties. I think there can be like epic cred in the community. I think if you look at like the DAO hack, you look at those stories that are, you know, Jordi (Baylina) and Griff (Green), like they're written in books, like books are written with them as like, you know, protagonist type characters. I mean, this is awesome. But yeah. I wonder, are there other things that you think could motivate the appropriate positive disclosure that would like almost encourage the black hats not to wait for that vulnerability to be out in the wild?
+
+Jon Stephens:
+Other than what we've talked about? It's pretty difficult because one good motivator is obviously money. and at least for motivating a black hat, really most of the time what they're doing is they're trying to get some sort of financial gain. Sometimes they'll do something just to spread chaos or something like that. Because that can be fun I guess. But really the financial gain aspect is at least in this space, pretty significant, right? And so one thing about disclosing at least bugs early is someone doesn't necessarily know how much money is going to be tied up into a protocol. Right? And so if they could report something to a bounty system where they know they'll get X funds, whereas rather than actually exploiting the thing in production where maybe they can't quite get as many funds and that can be a motivator.
+Another one is, it can be difficult to get funds out of these systems. Like you, you might be able to steal funds, but then you have to quickly exit. And sometimes those exits are not very successful because I feel like people think that they found a bug and then they try it and then all of a sudden they end up with millions of dollars and they're like, oh, now what do I do and so that's another reason is that I guess these bounty programs are important to motivators because not only does it allow someone to kind of engage and get that money early, it also provides a more guaranteed source of funds if you report a bug. Because just because you're gonna exploit the thing doesn't mean that you can successfully exit those funds. But at least in the context of ZK, I think the big question is going to be whether that matters because if everything is private and let's say they can exploit a circuit itself, then in some cases it's not obvious that something has actually been exploited or a hack has actually occurred. And so at least in this context, it is going to be interesting to see how things go forward. And I really hope that they do not go forward in a disastrous way.
+
+Anna Rose:
+Okay. Are you, I'm just now I want to ask sort of a final question on this. Given the fact that you're looking at a lot of ZK systems, how optimistic are you? Should we be worried or do you think we're going to have sense?
+
+Jon Stephens:
+Well, part of what we end up seeing here, so the problem is everything is being designed at a really low level. People are actually designing these constraints themselves. And I would kind of end up, you know, saying that that's very similar to, you know, actually programming and assembly. It doesn't encourage proper programming practices in some cases and it can be quite dangerous. And so we have seen a significant number of bugs during the course of our audits. So I think I calculated this recently. On average in ZK audits, we found 3 to 4 significant bugs per audit on average.
+
+Anna Rose:
+Wow.
+
+Jon Stephens:
+And some of them corresponded to these under constrained circuits. During the evaluation that we did on our static analyzer, we found even more in publicly available GitHub code, which like I said, I'm not sure if it's in production. But in a lot of these cases it's because people weren't understanding how to properly constrain particular values because there are edge cases that they don't think about.
+So for example and I've talked about this in a couple of conferences, if you think about something like division, you know that you can't actually divide by 0, but you can't really express division in I don't think any of these constraints systems. So instead you have to say like, rather than A divided by B is equal to N, you have to say N times B is equal to A. And so, however, if this is trying to constrain a division, you also have to consider the case where B can't be 0. And that's something that people often miss because it's not really something that you think about very frequently. And so that was surprisingly one of the major bugs that we ended up finding in these systems is people not understanding how to properly constrain the semantics of the language that they were trying to, or that they were expressing these constraints for.
+And so for that reason, like what I'm hoping going forward is earlier we kind of talked about these high level languages where maybe you only have to perform the verification once like I think that at least going forward, what I'm hoping to see is more people making use out of these languages like Aleo, Mina, Lurk, RISC Zero, things like that where they can express their computation and then let the language itself deal with the actual constraints because as long as the language team or the people developing that language do their job properly, you only have to check that once.
+
+Anna Rose:
+Yeah, yeah.
+
+Jon Stephens:
+Or I guess as things upgrade multiple times, but really
+
+Anna Rose:
+But just on like, yeah, like the person writing it could be like depending on those checks being made,
+
+Jon Stephens:
+Right. Hopefully those people developing the languages and I've met with quite a few of them and they're all very intelligent and stuff like that. And so you leave the difficult part up to the experts and then have them vetted very thoroughly in order to bring broader safety. Because really the problem that we have right now is in terms of the safety guarantees. Like they're everywhere. You have to trust everyone, you've got to trust the developers, you've got to trust the proving system. Whereas things would be a whole lot better if you were able to kind of design things in a more, I guess, modular way where only one part has to deal with the constraints and stuff like that. The reason why that might not happen or I, that people would still design in languages other than that though would likely be in order to improve the proving times. Because not every application is going to be amenable to these languages, which will likely have a larger overhead.
+
+Anna Rose:
+Cool. Well on that note, I want to say a big thank you Jon for coming on the show and sharing with us sort of how formal verification and ZK can work together. A little bit about your journey, Veridise's work and yeah, kind of the landscape of ZK security disclosures. Yeah. I really appreciate it.
+
+Jon Stephens:
+No problem. Thanks for having me.
+
+Anna Rose:
+I want to say big thank you to the podcast team, Rachel, Henrik, and Tanya. And to our listeners, thanks for listening.
+

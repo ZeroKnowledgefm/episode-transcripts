@@ -1,0 +1,1208 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Tarun and I catch up with an old friend of the pod, Georgios, CTO at Paradigm. Georgios updates us on what he's been up to over the last few years since he was last on the show, how Foundry, the topic of his last episode, has evolved, and how this and other work has led to Reth, an Ethereum client that Paradigm has built and funded. In this episode, we cover the general client node landscape, going back to the ETH2.0 research days back in 2018-2019, and the different client teams then to today. We talk about the different clients and how a diversity of clients can protect a chain. We then dive deeper into the details of Reth, what makes it different, what inspires its design, where it's going, and what it eventually wants to become. We go on quite a few tangents and cover quite a lot of ground in this episode, so I hope you enjoy.
+
+
+Now before we kick off, I just want to highlight the ZK Jobs Board for you. There you can find jobs from top teams working in ZK. So if you're looking for your next opportunity and want to jump in, be sure to check it out. And if you're a team looking to find great talent, be sure to add your job to the Jobs Board today. I've added the link to the ZK Jobs Board in the show notes. Now Tanya will share a little bit about this week's sponsors.
+
+
+01:41: Tanya:
+
+
+Attention ZK developers, o1Labs is excited to announce the V1 release of o1js , the fastest way to build ZK apps and deploy to the Mina blockchain. After two years and 70,000 downloads, o1js  V1 is the enterprise-grade, TypeScript ZK DSL the community has been waiting for. The fastest, most scalable, most stable version of o1js  to date is packed with features. Use ECDSA signature verification to add privacy and scalability to existing Ethereum applications. Implement foreign fields to connect your ZK apps to the outside world of cryptography, and pass a wide range of external data as private inputs with a growing list of hashing algorithms, including SHA-256 and Keccak, or build your own using efficient Bitwise operators. Are you ready to build the next killer ZK app? Visit o1js.org and get started today. So thanks again, o1Labs.
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. And now here's our episode.
+
+
+03:23: Anna Rose:
+
+
+So today, Tarun and I are here with Georgios, a longtime friend of the show. And as I recently learned, he was one of the hundred or so people who attended ZK Summit 1. Georgios is also the CTO at Paradigm. Welcome back to the show, Georgios.
+
+
+03:37: Georgios Konstantopoulos:
+
+
+Hey Anna. Hey Tarun. Thank you guys for having me. It's great to be back. And also it's interesting to reflect back on our times from the early ZK Summit days and how far we've come since then. 
+
+
+03:47: Anna Rose:
+
+
+Yeah. And Tarun is our co-host for this one. Hi Tarun.
+
+
+03:51: Tarun Chitra:
+
+
+Hey, excited to be back.
+
+
+03:52: Anna Rose:
+
+
+So, yeah, Georgios, I think a catch-up is very much in order. Last time you were on, I think was like two years ago or so, and we discussed Foundry. That was the topic of the episode. But since then, I know a lot has happened, and I think actually a cool starting point would be like, what have you been up to? But also, tell us a little bit about what the Paradigm stack looks like today.
+
+
+04:14: Georgios Konstantopoulos:
+
+
+So the last... When we last spoke on Foundry, that was two years ago, it was a different time. It was the beginning of our open-source tooling saga, where our general take was that, okay, we've been doing research with a portfolio for years, we fished with a portfolio, we worked with them hand to hand, then we wanted to scale that up. We started teaching fishing, so we ended up teaching best practices at the portfolio. And then we were asking ourselves, all right, how do we go beyond? Meaning how can we build stuff that is there for the developers when we are not there? How can we build things that go beyond ourselves in the portfolio and move the needle at the entire industry level? And that was sort of a strategy that was devised after seeing the wild success of the Foundry toolkit. And for the audience's context, Foundry is a testing framework. It's like the pie test of Solidity, and it lets you build and test your code very fast. And not only that, it also gives you an integrated suite of tools around it to make sure that your code is secure, that you don't lose money, that you have access to advanced auditing, fuzzing, and other tools that you need in your day-to-day to be successful as a smart contract developer and to not cause anyone to lose any money.
+
+
+So that was the beginning. That was two years ago, and that was where we left the last ZK conversation. After that, my boss, Matt, came to me and he was like, okay, Foundry is good, what's 10x better than that? And we had to go to the drawing board and think really hard on what to do. And the thought there was, where are gaps in the developer ecosystem in crypto, in Ethereum? In Foundry, we had identified a gap in the developer experience. In the Reth project, which is what we're gonna talk about next, we identified the gap in performance and extensibility and contributor friendliness of Ethereum nodes. So our thought was, all right, let's build a new Ethereum node.
+
+
+And for the audience's context, a node is almost like the lowest level piece of infrastructure you can build for a blockchain. It's like the soul of the chain. It has every component that you need to download things from the peer-to-peer network, to execute them locally, to do simulations, to write them to a local database, expose them for further data processing. It's really a meta piece of software that you can use to build anything else. And the Reth project was basically a new Ethereum node built in Rust for high performance security and modularity. And then with the Reth project, we're hoping to level up the entire Ethereum ecosystem and beyond.
+
+
+07:10: Anna Rose:
+
+
+It's funny as you describe what a node... What node software is. I'm just remembering when I realized.... You hear about Solidity Devs and then you hear about this core infrastructure, it's a separation, right? There's the nodes that are running the blockchain in a way, but then there's the developers who are building on top of it, at least in the Ethereum context.
+
+
+07:31: Tarun Chitra:
+
+
+So I think we should talk about Georgios' personal journey, because this is a U-turn for him to come back to building nodes. His first job... What was that L2 call? Or it was like its own chain that you worked at?
+
+
+07:45: Georgios Konstantopoulos:
+
+
+Loom network.
+
+
+07:46: Tarun Chitra:
+
+
+Loom, right. You were working on the node. It's like full cycle.
+
+
+07:48: Georgios Konstantopoulos:
+
+
+Yeah, totally. So it's kind of funny, Tarun like... Yeah, and not many people know that. So I started my career as a technical writer in 2017 where I would basically write low-level technical posts, not that low-level in hindsight, about how to do Solidity, security, et cetera. I was part of the team that did CryptoZombies way back, which was the main coding school that onboarded many people in Solidity. And during our time there, that was the company was called Loom network in 2018-2019. We were doing sidechains on Tendermint. We were not using the Cosmos SDK, we were building pure ABCI applications on Tendermint. We had done a lot of things that were, I think, ahead of their time, but didn't see much of the light of day due to maturity of the stack, demand not being there, our timing or execution not being the right one. But yeah, I started as a JavaScript developer, then got into Solidity, then got into nodes. That's how I learned how to write Go in the first place. Then I did a long journey consulting around the industry where I picked up ZK. I picked up Rust eventually, which got me to ZK, where I collaborated with Kobi Gurkan, common co-host of the podcast, on early Celo, SNARKs, BLS threshold signatures, and more than that, and it was really a big journey for me. And eventually got back into application development. So I started by writing Solidity and by doing the CryptoZombies code school, then went into nodes, then went into the whole ZK path, then back into Solidity with the Foundry tool, and now we're back into rebuilding the node stack. For me, the journey is like, I've seen... Saw most of the stack and now it's, okay, let's rebuild it with a very, let's say intentional strategy on what works and what doesn't and what needs to be future-proofed.
+
+
+09:46: Anna Rose:
+
+
+Why did you end up working primarily on Ethereum? I mean, I think of that moment in the network and the timing and how much attention is on it, but like had you considered looking into other ecosystems or other tool sets?
+
+
+09:59: Georgios Konstantopoulos:
+
+
+I've consulted with many non-Ethereum projects before in the past. All my ZK work was entirely on outside of Ethereum. When I was consulting on the Cosmos SDK or Tendermint side, it was all not Ethereum.
+
+
+10:14: Anna Rose:
+
+
+In the Cosmos side, yeah.
+
+
+10:16: Georgios Konstantopoulos:
+
+
+Yeah, exactly. So generally not an ecosystem Maxi, in any way I've looked... I've written a bunch of Solana code in the past. I've not written much Move personally, but I've read a lot of it. Why Ethereum? Well, it's because it's just a thing that I learned the best, honestly, and the thing that I prefer to be playing ball in. And that's the extended goal. We could talk about values, we could talk a lot about other subjective things, but I think in the most objective sense, it's the thing that I've spent the most time on. I know the best, I feel like I can move the needle the most.
+
+
+10:48: Anna Rose:
+
+
+What existed before Reth? Let's do the landscape of other network, or other...
+
+
+10:54: Tarun Chitra:
+
+
+There's a graveyard also.
+
+
+10:56: Anna Rose:
+
+
+Node software. Yeah, I mean, I remember when it was ETH2 time, and there were like 17 client developer teams. Do you remember this? They had a lot of them.
+
+
+11:05: Georgios Konstantopoulos:
+
+
+Still is the case. So the evolution or the history of Ethereum nodes is a very interesting thing to look back at. Also, it's just interesting to look at nodes in the past where Ethereum has 10 plus node implementations, whereas other networks have maybe one or two. Well, at the top level again, what is a node? A node is a thing that runs all the time that implements the protocol, in this case Ethereum. Why is that important? It's important because if the node can be fast, then the chain can also be fast. But if the node is too heavy to run, then the chain is not going to be able to decentralize. So there is a seeming need for a very efficient set of nodes that also are able to be extended for the future and also invite people to contribute to them, to learn how the protocol works. So that's a few questions that popped into our minds when thinking about why do we want to do the Reth project. But looking back for Ethereum, for example, the first node implementation, I think was Aleph or Aleph by Gav and friends back in the day. And then we got Go Ethereum, which is of course, led by the brilliant PÃ©ter SzilÃ¡gyi and his team. And then we got a bunch of other clients, which the list is too long. There was Besu, there was Nethermind, there was Erigon, now there is Reth, there was a cooler node. There were a bunch of nodes that were attempted over the years. Some are still maintained, some are not.
+
+
+And in general, the Ethereum culture has a framing around this concept of client diversity, that there should not be one implementation of the Ethereum protocol, there should be multiple ones. Because, well, one might say, because this is good for the safety of the network, because if there is a bug on a majority client, that means that the network might have trouble processing new transactions. Whereas if there is a client that has, say, 20% of the network that has a bug, the network can keep going, which is great for their network's resilience. I would wager that having multiple clients is great not because of that, it's because more people learn how the thing works. We're building very complex systems and it's very hard to onboard people on how these systems work at such a scale. And if you're securing a 50 or 500, I guess at this point, billion dollar network, then you probably need a lot of people knowing how it works.
+
+
+13:33: Anna Rose:
+
+
+A lot of experts. Before Reth, though, would you say that there was a dominant team?
+
+
+13:38: Georgios Konstantopoulos:
+
+
+There still is. The Go Ethereum, the Geth team, is by far the most used client with over 50% of the Ethereum L1 network, followed by the Nethermind client, which is at 25%-ish of the network. Both of these are amazing projects. They've existed for a long time, Geth over 10 years now, Nethermind over five years. Overall, there's an interesting point. So when people ask us what does success for the Reth project look like, they're like, Oh, do you want to kill or do you want to go very hard on the Layer 1? I'm like, no, man, the Layer 1 is... There's nothing to win by gaining more... It's a wrong metric to be optimizing for L1 adoption above a certain number. You want to have multiple clients up to a certain number, let's say 20% for example, or 30, below a certain amount, such that no critical bug can hurt the network. And that's your stability feedback loop. That is... And we like to think about the success of the Reth project in a bunch of feedback loops. So in the Layer 1 case, what is the feedback loop? It's the stability. The stability means that if we can operate the Ethereum network with 20% of all stake, let's say, on the Reth project, I'm a happy man. Because that means that 20% of stake, say whatever the number is, gives us enough confidence that the Reth project is stable, secure, and is not broken, and we can play ball with higher performance.
+
+
+15:11: Anna Rose:
+
+
+There are these examples in the past where... I mean, this is maybe more during the proof-of-work era of Ethereum, but where there was the Geth client and I remember there was the Parity Ethereum client and I think one had a bug but the other didn't. And actually it sort of saved the network in a way or it allowed for... I don't know, the node operators or the miners to switch quite quickly over to one. Is that still the intention with having these multiple client teams and multiple percentages but not having just one single majority percent like owner or sorry, not having just one majority client software? 
+
+
+15:48: Georgios Konstantopoulos:
+
+
+So that is definitely still the case in Ethereum. I think reasonable people might disagree. I think from my perspective... Well, from my perspective, just to say it, it's convenient to allow for multiple clients because I'm building a new client, right? So yeah, I'd love to have more clients just to state my incentive explicitly. Reasonable people, many reasonable people in the industry, including most of the Bitcoin devs, would argue that one client is better because then you don't need... You don't run that risk of having multiple people, two clients disagree on the implementation because there's more eyes on a single implementation. I don't know to what extent this is a technical versus philosophical debate, so I don't have a strong view on where that stands. I think more people learning how the thing works is great, just in the abstract, and how much adoption that gets should be merit-driven and not... Basically there's something that happens in the Ethereum community where people almost cancel the dominant client. They're like, hey guys, Geth is over 60 or 70%. You know, Geth is bad. I think that's kind of toxic culture and should be removed. If Geth is to have less than the top percentage in the market, then somebody should build something that is as good so that it presents a credible alternative. But you know calling Geth node operators and being like, yo, you should stop running Geth because it's above 66 percent or whatever and that's dangerous. Well, that's kind of toxic because the next best implementation might not be able to support 20 billion dollars stake.
+
+
+17:22: Tarun Chitra:
+
+
+Yeah, I think there's just a question of what things are worth caring about over concentration and what things are, does the market choosing that concentration is actually a sign of quality matter. And I definitely think for node software, the market is choosing because it's like, A, developers have to choose, B, exchanges and on-ramps have to choose, all of these people who have very different concerns. And if they agree on a shelling point, that's effectively the market saying, this one is the easiest to run, doesn't... Has the most security, whatever those properties are. Versus, okay, concentration of stake is more direct thing, right? There, obviously, it matters. But yeah, I do think there's a bunch of concentration programs that exist.
+
+
+18:08: Georgios Konstantopoulos:
+
+
+Yeah. And remarkably, Coinbase, for example, a few weeks ago, they were like, yeah, we want to support client diversity, we didn't have a great client so far, and now we have changed a bunch of our stake on Nethermind, which is a great feat for the Nethermind team. And that exploded their client adoption up to 25%. This is a testament to, okay, there exists more production-ready software that we can use to increase the resilience and redundancy of our infrastructure. So in every way, to me, that seems good. Having independent... It's almost like a Hydra. It's a multi-headed beast and you need to cut all of the heads to make it die, and that's what contributes to the resilience of the system.
+
+
+18:47: Anna Rose:
+
+
+What would happen if more than two-thirds of the, like, let's say there's three teams that share the majority of the pie. Three client software that make up the majority of the network. If two out of three of those were to fail, what actually happens? Does that one third just sort of maintain it?
+
+
+19:05: Georgios Konstantopoulos:
+
+
+So it depends on the network.
+
+
+19:08: Anna Rose:
+
+
+We could have forked.
+
+
+19:09: Georgios Konstantopoulos:
+
+
+Exactly. So let's... There's a very clear bifurcation in consensus research here around protocols that favor liveness over safety, like Bitcoin or Ethereum, and protocols that favor safety over liveness, an example being Tendermint. In this case, we're talking about liveness over safety protocols and the analysis is different versus the Tendermints. In the Tendermints, there's a very simple thing that happens, which is if there is a bug that means that client A and client B disagree and there is not enough stake to finalize a new block, the chain stops and people intervene in some way and people fix it, yes. And this is... It's almost like a feature of the safety over liveness protocols.
+
+
+19:52: Anna Rose:
+
+
+Safety over liveness. Okay.
+
+
+19:53: Georgios Konstantopoulos:
+
+
+Because they're like, okay, bug happened, let's stop, and let's have someone restart the network, fine. In the Ethereum and the Bitcoin case, this is not how it works. Basically, in Bitcoin, it has proof-of-work, liveness is maintained by a new person coming in and advancing the chain with proof-of-work. In the proof-of-stake context, there's the concept of the inactivity leak. So let's go through an example of what that would look like. So let's say we have Geth at 67% and the Reth at the remaining, and that is how the stake is also distributed. So there's 67% of stake on Geth and the 33% or whatever on Reth. So if there is a crit on Geth, because there's a different analysis, that might mean that an unsafe state transition might be processed. What's the outcome of that is that it might also end up getting finalized after 12 minutes. So the Ethereum network finalizes every 12 minutes when it has gathered enough consensus signatures, what the result of that is that the Reth client will no longer be able to follow the Geth network. Basically, if all Geth nodes have a bug, well, they will still agree on that. They will just agree on a bug state. And the non-buggy nodes will just go to a different network. They will fork off because they cannot agree with the buggy state.
+
+
+And so you have two options there. You either pull the small ones to the big ones, or you pull the small one to the big one to the small ones. And how does that work? It's either by canonicalizing the bug, you say, okay, Geth had a bug. Maybe it was not that serious. We will add a patch for that bug in Reth so that Reth can follow the Geth. And basically the bug is canonicalized and you go on with your life and that requires an intervention, the minority part of the network, and you didn't disrupt finality. This actually happened a few weeks ago in Binance, where there was actually, I think, a bug on Geth or Erigon. It got finalized in whatever consensus context for Binance Smart Chain, and they ended up literally inserting a transaction hash string with the regular state transition for that transaction hash in one of the two nodes. I forget exactly what... It was a big mess, but there is precedent for this happening. This also has happened in some ways in Bitcoin where there was an old patch, I forget what it was, where again, a consensus bug was canonicalized because it was tiny. 
+
+
+Now the alternative, which is the... This again requires manual intervention. This means that, okay, Geth finalized the bug, we're gonna go and patch Reth and tell all Reth node operators, reboot your nodes with a patch, such that you can start following the buggy chain. And the community has agreed that the buggy chain is fine. In the other case, there's the concept of inactivity leak. So Geth nodes from the perspective of the Reth side will stop being right. 
+
+
+22:58: Anna Rose:
+
+
+Yeah, everything that's happening there is kind of deleted after that, right?
+
+
+23:02: Georgios Konstantopoulos:
+
+
+Exactly, it's literally not part of them.
+
+
+23:03: Anna Rose:
+
+
+If you move the large over.
+
+
+23:05: Georgios Konstantopoulos:
+
+
+Exactly, so how do you move the large nodes over? Well, A, they have to stop running the buggy client. So let's say they replace the buggy client with a good client, let's say Geth releases a patch. And what will happen is that it will need to wait for the stake to transition over to the non-buggy client. So let's say there is no intervention. What this will kick off is that from the Reth perceptive, all the Geth nodes and their consensus counterparts will start getting slashed for inactivity, which means that their stake will drop weeks in. This will take weeks to actually work out because it's a slow drip. You have a bottle and it's slowly dripping water out until it's below a certain amount, which makes the Reth side enough to finalize. So this is a very clunky process, it takes weeks. I think in practice you might see manual intervention in all cases because people will be like, ah, do you wait 10 weeks for this to automatically resolve or are you going to do it on your own? Now the good thing about this is that the worst case outcome is handled automatically. This means that on no intervention, 10 weeks. Let's say we're in World War 4 or 3, whatever, the network chugs along, which is pretty exciting as a fallback or self-healing mechanism. And of course, on top of that, you build whatever you want.
+
+
+24:24: Tarun Chitra:
+
+
+It's like tangent, but everyone loves talking about these World War 4 resilient blockchains, right? You see Anatoly always making fun of Bitcoin for this. But honestly, isn't electricity going to be cut then anyways? Like how the fuck are these things? This idea that that's your first concern is crazy.
+
+
+24:47: Georgios Konstantopoulos:
+
+
+Right, so exactly. So it's very clearly like a Black Swan tail case optimization, which is why you should probably adjust your system design and weight it to the probability of that event happening, right? And there might be unreasonable trade-offs that you make in the rest of your system while trying to support such cases. One common debate in the Ethereum community being the solo staker narrative versus should you have a solo staker at home running the network versus enshrining a delegation primitive in the protocol?
+
+
+25:18 :Tarun Chitra:
+
+
+So actually... This actually gets to a question that I'm thinking about more from the future of clients versus sort of the history of clients, because so far we've kind of talked about the history of clients, how when you have multiple of them, how things interact. But if I think about a lot of modifications to clients even prior to Reth, like flashbots adding a sidecar for doing an MEV auction, other EVM compatible chains modifying the client for what they need, L2s modifying the client because they have some intermediate representation or some other virtual machine. It does feel like the client itself is becoming this kind of modular thing and people will mix and match for their use cases. So where do you see that going? Right? Because if I look at something like restaking, right? They're going to take components out of each client. If I look at some like data availability, they're going to... You know what I mean? And like, what's the role of a light node in this, if the client itself is modular? Because the light node should just be a subset of the full node at some point, right?
+
+
+26:24: Georgios Konstantopoulos:
+
+
+Totally. So many thoughts on this. Well, first and foremost, let's observe the general trend by zooming out and being observing the fact that nodes are getting modified more and more. The vanilla case of a modded node is Bitcoin Cash, change the block size. The more elaborate version of a Bitcoin node, of a modified node is BSC, which is take the Geth node and crack up a bunch of constants. And even more elaborate version of a modified node is MEV-Geth, which is the sidecar that you mentioned. And there is even more elaborate versions of that these days with FHE rollups, basically every rollup, a zk-rollup...
+
+
+27:05: Tarun Chitra:
+
+
+Or Arbitrum. 
+
+
+27:05: Georgios Konstantopoulos:
+
+
+All of these things are effectively modified. Or Arbitrum, exactly. Exactly, so it seems the Ethereum ecosystem or the general... The node ecosystem has started to effectively extend nodes in ways that who has predicted the Substrate and the Cosmos SDK ecosystems? Because these guys, they were like, oh, everybody will want to run nodes and they will want to mod them, let's build the framework for that. What came first, the chain or the framework? I would wager that to build a successful chain SDK, you need first the chains versus building first the framework. Why am I saying that?
+
+
+27:43: Tarun Chitra:
+
+
+What you're saying is Cosmos and Polkadot were too early.
+
+
+27:46: Georgios Konstantopoulos:
+
+
+Yes, yes, yes. And I would link this back to the... 
+
+
+27:50: Anna Rose:
+
+
+And Ethereum took all those ideas and added them into their system eventually.
+
+
+27:55: Georgios Konstantopoulos:
+
+
+Yeah, I would link this back to the Reth project. Basically from the side of the what has worked, basically we have had indication that, all right, MEV-Geth style modifications make sense, rollup style modifications make sense, there's a bunch of other extensions like Shadow Logs that also are part of the set of an extended or modified node. So what gives... What are the shared things that people do? Turns out there's a bunch and how have people been doing them? They've been doing them by forking the node. And forking nodes is very clunky. And when I say forking, I don't mean fork the main network, I mean literally go on GitHub and click fork and have your own copy of the code base and modify it. Now this has a benefit and this has a disadvantage or a few disadvantages. The benefit being that, all right, you have full access to the code base, go crazy. It also means, all right, you have full access to the code base, you will go crazy, which means that the code is not going to be maintainable or that you're going to do unsound things that were not expected by the creators of the code.
+
+
+28:59: Tarun Chitra:
+
+
+The question is who's crazier, the code-based post-modification or the developer who made the code?
+
+
+29:04: Georgios Konstantopoulos:
+
+
+Who made the code, right? Yeah, totally. Because Tarun, you know this like node maintainers go crazy over the crazy stuff that people do to their code.
+
+
+29:16: Tarun Chitra:
+
+
+Don't worry, there's always these edge Twitter events. They have kind of...
+
+
+29:20: Georgios Konstantopoulos:
+
+
+Yeah, no, it's totally crazy. So, okay, the Reth project observed that and we said, while we're building the node, let's be intentional about the future of nodes and build a node not just for Ethereum L1, but build it to be both an L1 node, an L2 node, and also a framework for building nodes. So we're calling this Reth Core, or Reth SDK, where the first node that we implemented was the Reth L1, the flagship node, the node that is our stability feedback loop. And then our second feedback loop, which is for performance, we use the L1 as a weak performance feedback loop, but that's not good enough because L1 is not that fast.
+
+
+30:04: Tarun Chitra:
+
+
+Maybe just to take a quick pause, what components do you view as part of core? Like networking stack, virtual machine, what are the...
+
+
+30:14: Georgios Konstantopoulos:
+
+
+Yeah, so I was just going to give the simple examples of where is the demand and extract the components out of them. It's hard to imagine the framework without looking at what is needed from the market. So from our perspective, what we identified from the market was the L1, the L2, and the modified, the further extended nodes. And what does that give us? It gives us, okay, A, the node framework needs to have a consensus interface. The first consensus interface that we're supporting is the Engine API, which is the consensus interface used to interact with Ethereum Beacon Chain. This is what allows Reth to be used as an execution layer client for Ethereum
+
+
+30:51: Anna Rose:
+
+
+And this is what all of them have, right?
+
+
+30:53: Georgios Konstantopoulos:
+
+
+And this is what all of them have. Every consensus and execution Ethereum node has an implementation of the  Engine API for sending and receiving messages. This is the equivalent of the ABCI interface in Cosmos, and Polkadot has its own variant of that. The same Engine API abstraction can be used to run OP Stack nodes. So Reth, by supporting Engine API and a bunch of specific OP Stack modifications, which I'll talk about in a second, it's able to support Layer 2 use cases, which is very exciting. What do Layer 2s need in general from the deposit side, from the perspective of the Layer 2 receiving transactions, they need to incorporate any modifications the state transition function has and the derivation function. But the derivation function is part of a piece of software that the OP Stack provides, so you don't need it. So the main thing that we really needed to support L2 on Reth was a modified EVM, which meant that we also had to do the same thing that we did on the node at our EVM. Instead of having a forking version of the EVM where you need to fork it and do all the modifications, we made the EVM that uses Reth... That Reth uses a platform, which means that you can inject pre-compiled, you can inject custom opcodes, you can add pre-post execution hooks, and all of this is very powerful because it's done at runtime, not at compile time with minimal overhead. And this is very powerful because you don't need to fork the package anymore. You can just build composable modular small blocks that you inject in your code. And to any listener, you might think, hey, this sounds like Cosmos SDK, and it is because it really is how node frameworks should be built.
+
+
+32:37: Tarun Chitra:
+
+
+It also sounds like a Docker container.
+
+
+32:39: Georgios Konstantopoulos:
+
+
+Exactly. You get it. Yeah. So that's part of where we're going. Exactly, so the Reth project is moving towards that.
+
+
+32:47: Tarun Chitra:
+
+
+Something very interesting you said to me last time I saw you in person was an L2 can just be viewed as a pre-hook and post-hook.
+
+
+32:57: Georgios Konstantopoulos:
+
+
+Yes. Post-execution hook. Yeah.
+
+
+32:57: Tarun Chitra:
+
+
+Post-execution hook. And maybe pre if it has to load some extra state or something or like do DA type of things. So, do you know... How did you get to that abstraction, that set of abstractions you got to, right? Because you've described this thing, it's easy to understand, it's relatively clean. But I imagine you may have taken a circuitous route, right? You may have tried some other designs, you may have been like, oh, this particular part is not modifiable at runtime, this needs to be imported. And then how did you get to where you got and what were some of the mistakes along the way? Because I feel like the mistakes are just as valuable.
+
+
+33:33: Georgios Konstantopoulos:
+
+
+Yeah, no, totally. So how did we arrive into this? Well, design wise, we really took a lot of time to just understand what kind of post-execution hooks could exist. So just to give you an example, a post-execution hook could be an indexer. On every block, the chain emits a bunch of events where there might be transactions, state diffs, Merkle tree updates, or even traces, and you want to index them somehow. So we had identified that, okay, there's something like... There's an abstraction that says, read from L1 notification. And then we thought further and we're like, when people build indexers, they also don't build reorgs in their indexers, which means that you need to wait, let's say up to six blocks in the past or 12 blocks or whatever. And there was a company in the past which would really charge the heavy amount for providing the reorg-aware streams of data. From our perspective, we figured, oh, it would be interesting to provide that natively. So what if the Reth node gave you a subscription that gives you a reorg aware stream of every new piece of information that arrives.
+
+
+What can you build on top of that? Well, what you can build on top of that is indexers that are real-time because you just read the chain as it arrives and if there's a reorg, just undo the things that were reorged away and you reapply the new things and you have a clean abstraction for that. And downstream of that, you can really do anything. You do compute on top of it, which means that after you've indexed some data, let's say you have converted the L1 payload, the L1 data to an L2 block, then you can pass it through an EVM or you can pass it through a MoveVM or some other VM. And again, you start seeing how this starts to resemble all the stories that we heard in the past from Substrate, from post Cosmos SDK, from all of these, how you can really run any runtime on top of this. So what we thought would really work here, and I'll get to what we tried and didn't work, is we think that we can basically build a framework for running extensions on top of a node natively. Why is that important? It's because right now to run extensions on top of nodes, A, you don't get deep enough integration with a node. For example, you don't get access to the reorgs that happen on the L1, and anything that depends on L1 state needs to be reorg safe. So that's a very core requirement for building fast streaming real-time applications. And downstream of that, there is... After the indexing, there is like, all right, I need to figure out a good abstraction for extending the node. And this was us really modeling it as, okay, there's an extraction that happens, James Prestwich also has written about this in the past. There's an extraction that happens from the L1 data, then you transform it, and then you load it somewhere.
+
+
+Now, what is that? This is a generalized ETL framework, which is very common in all of Web2 and the clouds. So part of our general principle, just to answer the question, Tarun, is how can we reuse as much of the Web2 collective hive mind knowledge into this and get out of the almost disease that we have in crypto which is not invented here. People like to reinvent things all the time to put their names on them. Basically what we stumbled on was a ETL framework that you can deploy on top of a stream and that stream just happens to be relating to Ethereum data and that stream has an operation called append and revert. But beyond that, you're really in standard data science or data engineering land, which is the exciting part because part of the Reth project again is to grow the pie, enable people to build things while knowing how things should work. So on what didn't work, honestly, not much didn't work. Most of the things that we did on this worked from the beginning, but we stood on the shoulders of giants, right? I have worked on Cosmos SDK, like Matt Seitz is from our team, he was working on Substrate, Doug Feagin also from our team was working on Substrate. We've worked on all the big frameworks, we've read most of their code, we know the shortcomings, and basically this has set up the Reth project to not only serve for a very good L1 node and a very high performance L2 node, which is kind of like the two obvious things you might think one would go but also to create a general purpose framework for going beyond the L1 and L2 nodes into indexers, MEV, launching more rollups on top of the node, or even just going ham on cryptography and other things. For example, and this might tie into the rest of our conversation, for example, I want to run ZKVMs on top of Reth on every block, why not? Like we have the abstractions to do that.
+
+
+38:26: Anna Rose:
+
+
+Cool, I want to ask something kind of a little simple because in talking to you, I'm realizing something I didn't fully realize before, which was that I always thought of client software, the nodes, as mostly living on the L1, but you're talking about Reth on the L2. Is a node operator running both at the same time? Is there a standalone L2 node ecosystem as well? I don't know anything about this. I just realized as we're going through it.
+
+
+38:58: Georgios Konstantopoulos:
+
+
+Yeah, totally. So let's talk about what's been the status quo so far and where we want to take the world. So to run an OP Stack node, you need to run four pieces of software. You need to run the L1 consensus layer, let's say Lighthouse. You need to run the L1 execution layer, say Reth. You need to run the L2 consensus layer, which is OP node. And you also need to run the L2 execution layer, which would be OP Reth. So in this case, you're running four pieces of software that communicate over some interface that is well-defined. Generally, this is the Engine API and the logs.
+
+
+39:36: Anna Rose:
+
+
+Would you put the EVM on top of these things? Is it like EVM runs on Reth?
+
+
+39:43: Georgios Konstantopoulos:
+
+
+The EVM is inside of Reth, and it's not even a separate process. Basically, a node is a piece of instrumentation software around how to pass data through the EVM. It says, okay, data right from here, pass it through this, go through EVM and then write it to the database.
+
+
+39:56: Anna Rose:
+
+
+It's within it, okay. But this is great, Georgios, those four pieces, that's so helpful to kind of imagine. So you're running all four of those things, if you're like actually...
+
+
+40:07: Georgios Konstantopoulos:
+
+
+Right now, you're learning all four of these. And here's the thing, we're not in the single rollup world, so if you're gonna run a thousand of these, you need a thousand copies of the stack, or variants of the stack. For example, maybe you can reuse the L1 part of the stack, but you need the different L2CL and L2EL for each layer of the stack. And that is insane, like we cannot be in that world if we want to have like 100 or 1000 or 100,000 rollups. So the Reth project observed that rollups are post-execution hooks and you actually don't need to run L2CL and L2EL as two different services. You can just squash them together and put them on the node as a post-execution hook. Now, why is this exciting? It means that instead of being like for a thousand rollups, you need to run, maybe one L1EL and L1CL stack plus a thousand copies of the L2 stack, you run one thing, which is the L1CL and the L1EL, and every rollup gets launched as a post-execution hook on top of the main node. Now this is great because that means now, my node at home with one binary, or two if you're running Lighthouse externally, it runs any amount of chains that I want. So where we're going, Anna, is that right now people run nodes, you need to do Reth node, dash dash chain equals one, and then to run another chain, you need to do dash dash chain equals two on a separate terminal. We're entering the world where you write dash dash chains equals one comma two comma three comma whatever.
+
+
+41:37: Tarun Chitra:
+
+
+Maybe a somewhat more nuanced question is like, at some level you're gonna have the same problem that all of these kind of microservice-y things have where there's a scheduling problem, right? Of like I'm running these, there's some that... You're going to have to either force the user to manually specify some type of DAG structure that gives you the dependencies of which nodes are dirtied by like a new thing and do all the downstream dependencies need to get run or not.
+
+
+42:07: Georgios Konstantopoulos:
+
+
+Yes. This is like we're rebuilding airflow.
+
+
+42:10: Tarun Chitra:
+
+
+Yeah, exactly. It seems like you're basically doing some Airflow Kubernetes type scheduler type of thing.
+
+
+42:15: Georgios Konstantopoulos:
+
+
+Yes. So we take a lot of inspiration from...
+
+
+42:18: Tarun Chitra:
+
+
+So I don't mean to keep front-running your descriptions. I know, I've been MEVing longer...
+
+
+42:21: Georgios Konstantopoulos:
+
+
+This is very... Yeah, you've been MEVing. Yeah, no, this is very exciting to me because you really get it. Literally what we're doing here is we're taking the two biggest, one of the two of the biggest cloud inventions like Airflow and everything around this orchestration stack and Kubernetes around the orchestrating the supply. Airflow and Kubernetes go hand-in-hand in the sense that Airflow is the thing that schedules a bunch of jobs that the dev has written, the demand side, and Kubernetes is the thing that orchestrates all the infrastructure for that. And we're kind of doing both, exposing them inside of the Reth node. Now to what extent we end up being victims of this not invented here syndrome that I said earlier, we need to be present to it. But basically what we're doing Tarun is spot on. We're basically introducing ETL jobs orchestration Ã  la Web2 where the input is in the purest form. It's like a reorg aware stream of the data that comes from the L1 and everything else gets derived from that with some DAG like structure. Now to what extent we make that programmability very high so that you can schedule jobs very complex, we'll see. 
+
+
+Right now how this works under the hood is that you write one async function, which is the meta post-execution hook. We call these Execution Extensions, ExEx. So we have a post-execution hook and that can include all the other ones inside of it in whatever shape that you want. And that is built by the developers and compiled statically into the node. That means that when you're building your own modified node, what you really do is that you don't fork anymore. So we have exited this world of forking the binary, forking the repository, and making modifications anywhere you want. What is exposed to the developer is the famous builder pattern. So in software where you do let x = Foobuilder.Bar.Baz... dot whatever dot build. And that gives you back the full data structure that you're looking for, and it gives you an easy configuration interface for writing that. In our case, we've built a node builder. So the node builder says node builder configure, then it says dot p2p layer, here's the config, dot this, here's the config, and then it says dot install Execution Extension. And then when you do that, you start adding all these extra jobs that you want. And these are compiled in the main node.
+
+
+Where we want to get it to is into a Reth Cloud style app store where you can literally have your node and you write Reth install plugin name. It downloads the plugin, it keeps it around, and that gets us to the world which is very similar to Kubernetes in Helm, where in Kubernetes you can install services over a package manager almost that defines a whole format of how these extensions are defined.
+
+
+45:19: Anna Rose:
+
+
+And just to clarify what those plugins or extensions are, those are the MEV ones, the L2 ones... Is that like those things?
+
+
+45:25: Georgios Konstantopoulos:
+
+
+Yes.
+
+
+45:25: Anna Rose:
+
+
+Okay.
+
+
+45:25: Georgios Konstantopoulos:
+
+
+Yeah. And this is effectively allowing developers to write plugins and co-locate them with nodes, with native database access, low latency access to everything. This is really how you build performance software. Instead of creating JSON-RPC interface to them and requiring copy-pasting a bunch of stacks, where we want to get it is that we want to basically create a Kubernetes moment for crypto where we can pull in services from a service hub, similar to Docker Hub, and create a set of useful services around it. It doesn't need to be crypto native only. It can be off-chain, non-deterministic services. So machine learning you want, we will write a plugin for that and we'll let you run PyTorch on your machines.
+
+
+46:08: Tarun Chitra:
+
+
+This is taking us very close to the land of restaking then because what are they doing? What AVS doing is it's just running the sidecar and then infrequently...
+
+
+46:16: Georgios Konstantopoulos:
+
+
+Exactly, exactly. So this is a generalized framework for launching sidecar processes that get triggered either on interval, where the interval is like per block denominated or just spawn an off-chain service that has a tight integration with the rest of the node. And who runs the service? Yourself, someone else. If it's someone else, how do you pick them? Restaking is a very credible option.
+
+
+46:38: Tarun Chitra:
+
+
+It's funny that you describing this makes it sound like you're gonna start a cloud service provider.
+
+
+46:44: Georgios Konstantopoulos:
+
+
+I mean, I don't have a commercial plan baked for the Reth project yet. To the extent that a cloud-esque, like Reth cloud, decentralized cloud thing makes sense, I would love to explore it and if anyone's working on it should message me. But I think what got me into crypto, Tarun, was the decentralized cloud, right? Like crypto is about orchestrating idle resources with incentives in a very abstract. And I think this is the way that we can get there.
+
+
+47:11: Tarun Chitra:
+
+
+I think one interesting thing about the way Reth has developed versus say L1s is, L1s have tried to put all of the innovation directly into the actual chain state versus the client state. They've kind of like, for the most part, it's been like, oh, we have this particular... We have Block-STM, or we have some feature, we have this Narwhal, some weird mempool, whatever, different consensus algorithm, all those things. So they're baking the new feature into the chain versus just trying to have the client upstream a lot of those. So locally you're running the new feature, but globally you don't necessarily need to... It's almost like users... It's almost like soft forks that the user gets to choose effectively.
+
+
+47:57: Georgios Konstantopoulos:
+
+
+No, 100%. And I think crypto also suffers from this general thing that people think that products or well, features are companies, and I think this kind of just to put on the....
+
+
+48:10: Tarun Chitra:
+
+
+Luckily AI exists, so we're not the worst offender anymore. I realize.... It was a lonely road.
+
+
+48:17: Georgios Konstantopoulos:
+
+
+I mean, yeah, man, but just look at it. For example, having a parallel EVM in a vacuum like that's not fundamentally defensible. That's a technique that you can apply anywhere and it gives you a speed up. Yeah, great. And there's a question on like, or on people... On everyone building, and to be clear, we're investors in Monad, which is like a parallel EVM among others. Basically the question is, when you build a feature, there is a time to valuable state. And beyond that, your feature is kind of... Your features alpha is decayed because everybody has it. Let's say a year from now. So from our perspective, from the Reth perspective, given that we're not doing anything fancy ourselves right now, the strategy is very simple. It's create a good node for L1 for stability, create a great node on L2 for performance and be enough opinionated by learning what others have done wrong in the past. So no Wasm like Substrate did. No low performance IAVL stuff. No mempool getting baked in from the Cosmos SDK. No polka.economics baked into the system. We've basically out of all the cruft that we think made the previous frameworks not work. And we're exposing enough infra to hook on to build high performance rollups, MEV infra, indexers or AVSs.
+
+
+49:44: Tarun Chitra:
+
+
+Yeah, the AVS part is the kind of part where I feel like that's where you kind of feel bad for Polkadot, right? They really did come up with the idea and they kind of just messed up everything... They completely lost it.
+
+
+49:55: Georgios Konstantopoulos:
+
+
+I've been looking a lot at the Substrate docs, like the last five, six days or so because it's kind of shocking, Tarun, to just look back at history....
+
+
+50:03: Anna Rose:
+
+
+They were ahead of their time.
+
+
+50:03 :Georgios Konstantopoulos:
+
+
+And see what others saw. It's kind of shocking how it goes like the old anecdote how every good idea has been written in Bitcoin talk in 2010.
+
+
+50:19: Anna Rose:
+
+
+Every Ethereum innovation is actually in Substrate docs.
+
+
+50:23: Georgios Konstantopoulos: 
+
+
+Well, no, I'm not saying that.
+
+
+50:24: Tarun Chitra:
+
+
+And Cosmos. I think you have to give Cosmos a lot of credit too. Obviously, both Polkadot and Cosmos think they invented everything, but in my experience, outside they both had some ideas that were very uniquely...
+
+
+50:38: Georgios Konstantopoulos:
+
+
+Totally. And I would even wager... I've been trying to understand, again, philosophically, looking back at history, what went wrong? Why did Jay, Gavin, Vitalik, or whoever else, where did the friendship go wrong? What could have been done better? It could really have been in a different world.
+
+
+50:54: Anna Rose:
+
+
+Kind of going back to like they had it before. It was in there, like the Substrate and Cosmos stuff, it was all there, but they couldn't quite figure out a way to all work together. This is something you've been actually thinking about.
+
+
+51:07: Georgios Konstantopoulos:
+
+
+It kind of bothers me because I just look back at when I started writing Rust in 2018 and Parity at the time was the thing and I'm just wondering what happened. It makes me sad to some extent because the world would have been such a different place had the last six years of all the Rust expertise that these people had had been spent on things that had demand, frankly. So, yeah, I'm a bit sad about it.
+
+
+51:38: Tarun Chitra:
+
+
+Well, a lot of them did move... A lot of them did move to Ethereum. I feel like you taught... There are a lot of former Polkadot rollup devs, AVS devs... AVS developers, it's like Polkadot Central.
+
+
+51:50: Georgios Konstantopoulos:
+
+
+For example, people are using Substrate to build sequencers for rollups because you can build... Substrate and Cosmos SDK, they give you state machine replication, which is effectively how you build decentralized sequencers. So I find it very interesting to see the resurgence of these frameworks, of the consensus side of these frameworks for applications built without the framework, just because people...Or without the ecosystem. So people build Tendermint app chains for sequencing rollups, for sequencing EVM or Celestia rollups, without caring about the Cosmos or without caring about Polkadots.
+
+
+52:26: Anna Rose:
+
+
+IBC and stuff like that.
+
+
+52:28: Tarun Chitra:
+
+
+Or Avail, right? 
+
+
+52:29: Georgios Konstantopoulos:
+
+
+Or, yeah, exactly.
+
+
+52:30: Anna Rose:
+
+
+Avail is Substrate.
+
+
+52:30: Tarun Chitra:
+
+
+Avail is basically a full Substrate.
+
+
+52:33: Georgios Konstantopoulos:
+
+
+Yeah, exactly. So I find it very interesting to see that, and I am also observing that, insofar, these were the only ways available. I think there's a clear gap in the market for a very high-quality consensus implementation in Rust that is able to play the role of Tendermint or CometBFT or the Substrate consensus without any opinions around the rest of the thing.
+
+
+52:56: Anna Rose:
+
+
+You mean like opting for one or the other? Like something that actually has like...
+
+
+53:00: Georgios Konstantopoulos:
+
+
+No, no, I'm just saying consensus algorithms have improved a lot. And Tendermint was the best one at the time that was un-opinionated, take a fault-tolerant state machine replication engine and plug it on anything. That was amazing. I think somebody should go and take CometBFT or Tendermint, rewrite it in Rust, map it against the latest consensus features, which in my view is generally the Narwhal, Bullshark literature, and go and do that open source and give that to the people. I think that will change literally the world in terms of high quality consensus implementations.
+
+
+53:36: Tarun Chitra:
+
+
+Well, I think another important fact thatâ€¦ And I think maybe some of the new L1s don't totally realize this fact, at least in my opinion, is most of the improvements to consensus since 2019 have little to nothing to do with the theoretical properties or like I made a new consensus algorithm. It's almost all like implement like Narwhal and stuff have some stuff on the edges where there is a little bit of theoretical stuff that improve them, but the majority is just that the implementations are not academic code anymore.
+
+
+54:08: Georgios Konstantopoulos:
+
+
+Yeah, and the general pattern is still like the same shape as Tendermint. It's like, okay, I'm doing one less round of commits here or I'm doing less communication, but the shape... There was even a paper released a few weeks ago about unifying the shape of all consensus algorithms. And I think going off of that would be really powerful.
+
+
+54:26: Tarun Chitra:
+
+
+Yeah, and I just think it's like people underestimate the time it takes to harden implementations and then like reimplement, but optimize the next one. And that oftentimes takes much longer than like, hey, I came up with a new consensus algorithm and gave me money for my L1.
+
+
+54:44: Georgios Konstantopoulos:
+
+
+Totally. What I know is that the people want it. Like there are pull requests in the Reth code base where one person at least has implemented a PBFT, where PBFT is ancient in terms of literature. But they have implemented a PBFT in pure Rust and we were thinking, oh, okay, that's interesting. Maybe we should productionize something better than this.
+
+
+55:03: Tarun Chitra:
+
+
+One thing I think that potentially is like, isn't true in kind of the existing cloud market nor in the existing sort of all L1, I'm using a different consensus market, is this idea that, say you have a bunch of modules that are running in your client and each of them has different dependencies, but they can each use their own subset of consensus algorithms that they want. So maybe the AVS node is very infrequent and you only care about liveness. So you use some cheap, but not finalized consensus. But then in the same thing that you're running, there 500 rollups you're running, some of the rollups want grandpa, some of the rollups want BFT, some of them... They all are making different trade-offs, but you have a single environment in which you can homogenize these different consensus algorithms. Because that's very different than what most cloud providers do, they just use Raft or whatever, they're single consensus...
+
+
+56:03: Georgios Konstantopoulos:
+
+
+And also something to observe is that every user of the clouds, they rebuild their fault-tolerant infra on top of the Raft or whatever that the clouds expose. And this is almost like a new way of building like serverless systems. And not just that, it also gives you access to the entire set of crypto data, natively integrated and that feels powerful. I don't know what this will get us, but this feels powerful.
+
+
+56:29: Tarun Chitra:
+
+
+Well, it's just sort of like, if I look... So, the disclaimer here is like, I keep bringing up restaking cause I spend a lot of time working on it and reading people's code and trying to understand the security risk stuff. And basically what I've realized is almost every AVS has their own pseudo... Either explicit consensus protocol or pseudo consensus protocol on top of ETH that the node operators agree to in order to do certain actions.
+
+
+56:53: Georgios Konstantopoulos:
+
+
+How are you going to coordinate all the node operators? Yeah.
+
+
+56:56: Tarun Chitra:
+
+
+So you have this thing where you're doing this like heterogeneous consensus, but now it's in two different environments. You have to synchronize that. And they're... It's kind of a little bit messy, whereas kind of the vision you're describing seems you could do that, but it's not... It's all in one kind of container.
+
+
+57:12: Georgios Konstantopoulos:
+
+
+Totally. Totally. Again, I don't know what this looks like. So I was with my housemate, Liam Horne, who is ex-CEO of Optimism, and we were drawing on the whiteboard what this could look like, and I envisioned a... You know how Docker has like the taskbar icon on the top of your, and you click it, and it shows you a UI with all the running services. I was thinking maybe the Reth Stack is deployed as a taskbar at the top right, and there's a scheduler that says, hey, you have this many idle resources. Do you want to get paid five bucks for spending 2% more CPU? And here's like a whitelist of services that you have opted into running.
+
+
+57:55: Anna Rose:
+
+
+Interesting.
+
+
+57:55: Georgios Konstantopoulos:
+
+
+What does that get us? Because that is the real...
+
+
+58:00: Tarun Chitra:
+
+
+Yeah. Well, I think a scheduler that has to be aware of the consensus algorithm is actually kind of different than existing schedulers. Existing schedulers, you have the simple scheduler where it's like, it's all in a single machine running serially. Okay, that's easy. The next question, next type of scheduler is like I have futures and promises, right? Like I have... It's asynchronous on multiple machines. Some of them are promising, saying like, hey, when my task is complete, I'll send it to you, but you're going to have to wait and maybe you'll wait forever because I crashed. And then the next level, which I think is interesting, is that the view of futures and promises that are heterogeneous, right? One type of...
+
+
+58:37: Georgios Konstantopoulos:
+
+
+Across different devices.
+
+
+58:39: Tarun Chitra:
+
+
+Across, exactly, right? And that's what you see in mobile computing versus edge computing versus data center. But somehow that's the same problem as this multi-consensus thing. It's heterogeneous... You have this kind of heterogeneous set of guarantees that you're kind of... So I feel like it is, to me, that's the end state but I'm kind of curious where you think that goes and how that evolves.
+
+
+59:02: Georgios Konstantopoulos:
+
+
+Totally. How this looks like... And I don't know who needs this but I think this is like some...
+
+
+59:08: Tarun Chitra:
+
+
+The AVSs are basically doing this. That's what I'm saying. Like my reason for bringing this up is I'm seeing people building this.
+
+
+59:14: Georgios Konstantopoulos:
+
+
+Right. Sorry. Like I guess in my mind, I'm thinking, well, who needs this beyond crypto? I'm thinking like the real competition here is GCP and AWS. This is like who the Reth project is going to compete with. So...
+
+
+59:28: Tarun Chitra:
+
+
+Well, AI workloads are like this, right? Because inference versus training workloads will have two different types of promises to you.
+
+
+59:36: Georgios Konstantopoulos:
+
+
+Yes. So the idea here is that the Reth project acts as a distribution ground for various tightly integrated off-chain services that integrate with the entire rollup stack, whether it's L1s, L2s, L3s, L-whatevers. And it also allows you to build consensus to tie into voting processes, whether these are consensus protocols, whether these are MEV auctions, whether it is really anything that you want and lets you coordinate resources across these mutually distrusting services. One might say, oh shit, this is the world computer, original vision. There's the realization that like everybody has been building the same thing and there's a singularity moment almost here where literally everybody has been building the same thing from different perspectives.
+
+
+1:00:20: Anna Rose:
+
+
+You know, it's so funny. I feel like what you're also describing is something that we've been talking about on the show, which is from the role of the validator, previous validator, and then the prover networks, you're doing proving, the DA, the sequencing, like the MEV in proposing. We kind of talked about like a single agent doing that. I actually wanted to ask you though, something like a prover network or DA, does that also like tie in? Would that be something that Reth would actually be hosting or do you still see those as separate?
+
+
+1:00:50: Georgios Konstantopoulos:
+
+
+Yeah, so for DA, perhaps you could build a DA service or perhaps you could build a proving network AVS. As far as I know, what I would like to do as a post-execution hook is work with Succinct or integrating SP1 into Reth as a post-execution hook, such that you can do arbitrary co-processing of any kind of L1 data that arrived, but also it lets us do zkEVM as a sidecar to the Reth process. And from that, we could feed it to the Succinct proving network, and from that, maybe goes to Ulvetanna, now Irreducibles being used provers. So in general, in my mind, there's parts of the stack that we want to build and create distribution channels for. And from the paradigm side, there's, of course, a bunch of investments that we've made that I would like to help succeed. And so in my mind, the Reth project is the gauntlet in the infinity gauntlet that ties everything together. And every one of these projects are like the stones that make the superpower work.
+
+
+1:01:50: Anna Rose:
+
+
+Interesting.
+
+
+1:01:50: Georgios Konstantopoulos:
+
+
+And this might sound too hippie, but I think we're gonna look at the conversation next year, and we're gonna be like holy shit this all worked.
+
+
+1:01:56: Tarun Chitra:
+
+
+Does it sound like the hippie? What? Hippie?
+
+
+1:01:57: Georgios Konstantopoulos:
+
+
+That's the thing. Hippie... It's kind of like... It's like kumbaya, like crazy things like what are you even talking about man? You know what are you on like whereas what I'm telling you is that literally this morning I sent my team a video showing how to do a rollup that writes to SQLite as a demo database as an Execution Extension. So we literally have that for the rollup case. With the rollup case, I would wager is the hard mode because it has all the crypto native components that you need to think about. Whereas building an indexer, we have an indexer in under 100 lines of code and that's like a production high performance indexer. Like the AVS component, no, we haven't figured it out yet, but it's not that hard, I would wager. And also we have AVSs are fundamentally peer-to-peer services, and another observation that we've made is that we can plug on the existing Ethereum P2P network on Diskv4 or Diskv5 and re-leverage the existing connections of stakers. So the crazy version of this whole thing is that, like, my vision is that everybody should be building infra on Reth, and I realize we're coming up on time, like my vision is that every piece of infra in the future gets built on Reth. This gets us, like, everyone running Ethereum nodes. This gets everyone in the world running stateless nodes, staking ideally, running additional services on top. And this is how Ethereum and the ecosystem on top of it end up basically eating AWS, GCP, and the others. You know, like, what's the joke? Like, Uber has no cars, Airbnb has no homes, the decentralized cloud has no data centers.
+
+
+1:03:34: Anna Rose:
+
+
+You really think it'll be Ethereum though? Don't you think we need something else that's built slightly different to do that?
+
+
+1:03:40: Tarun Chitra:
+
+
+Polkadot in you is speaking, Anna.
+
+
+1:03:42: Anna Rose:
+
+
+I'm not saying Polkadot, something else. 
+
+
+1:03:46: Georgios Konstantopoulos:
+
+
+How many Polkadot validators does ZKV run? I forget.
+
+
+1:03:49: Anna Rose:
+
+
+Currently one in the set. 
+
+
+1:03:51: Georgios Konstantopoulos:
+
+
+But yeah no... Okay, nice.
+
+
+1:03:53: Anna Rose:
+
+
+Not that much.
+
+
+1:03:54: Georgios Konstantopoulos:
+
+
+The actual take here, I think over time, the stack has been getting unbundled and re-bundled over and over and over, like Andreessen said many years ago, I think we're basically going through a re-monolithization of the stack without realizing it. Basically we unbundled everything, we figured out the right abstractions. Now all of these abstractions that we figured out across different systems are too inefficient if you're on the ground, if you're not on Twitter. And when you combine all of them, then you understand, okay, this is what the new monolith should look like by coordinating all the services, and then we're gonna re-modularize it. And I think in that next re-modularization phase, is there an opportunity to potentially disrupt Ethereum? Maybe where would you go? You would probably need to disrupt the DA layer or the verification layer. So to that extent, I think for Ethereum to defend its positioning or to maintain its advantage, it will probably need to go really hard on data availability. So as Reth developers, we're also core devs, we have stewardship towards the Ethereum protocol, and so our view generally has been that DA is something that Ethereum should take a lot more seriously.
+
+
+1:05:02: Tarun Chitra:
+
+
+What's the 2024 Ethereum Core Dev and Twitter bio vibe? Is it a Farcaster bio now only? 
+
+
+1:05:12: Georgios Konstantopoulos:
+
+
+Yeah, I mean, I don't know, but in 2024, well, I think the core dev process is actually pretty good. If you think that there's no one... There's no manager. There's Tim Beiko, who is like doing God's work on all of this stuff, but he is not... Like, nobody's reporting to him formally. There's no... And don't get me wrong, I would love to go into the room and be like, okay, here's our agenda requirements, let's go through the list, ABC, you take this next steps, action items. Okay, see you next week. I would love to do that. That's ultimately how you run a top down cross-functional company. And that's the wrong way of seeing how Ethereum governance and how Ethereum shipping really plays out. I think the process actually has been more functional than it ever has been. And yeah, there is healthy disagreement happening, and that's why the Reth project really tries to emphasize asynchronous written communication. So we did that with Cancun. For Cancun, we said, OK, what comes after Cancun? And we wrote a blog that basically outlined all the upgrades that we thought were the right thing to ship in December or January 2024, 2025. 
+
+
+1:06:20: Anna Rose:
+
+
+Cancun or Dencun?
+
+
+1:06:21: Georgios Konstantopoulos:
+
+
+Whatever, it doesn't matter.
+
+
+1:06:23: Anna Rose:
+
+
+Okay.
+
+
+1:06:24: Georgios Konstantopoulos:
+
+
+Dencun is like the mixed name of the consensual layer and the execution layer, but Cancun, it's like Cancun is the execution layer side. And we wrote, hey, here's like the things that we think, is our view, it's not like this should happen or this must happen or this is gonna happen. It's like, what do we think a year ahead instead of being in a call and going around the room with 100 people and being like, hey, what do you guys think? Vibe check, thumbs up, thumbs down. Doesn't work like that. Our view is that people should be writing a lot more and being a lot more precise and being very technical and again, precise and scientific instead of vibes-based. And so if I were to point out one shortcoming in the decentralized core dev process, it would be that there's a lot of things that are vibes-based, and I think my view is that everything should come with a doc, with numbers, with feedback loops, with pros, cons, not with, oh, the network is not feeling well. The network doesn't have feelings. The network has benchmarks.
+
+
+1:07:21: Tarun Chitra:
+
+
+I think you should get that tattooed. I think you gotta get that tattooed, Georgios. The network does not have feelings, it has benchmark. That would be like a hilarious tattoo for you.
+
+
+1:07:32: Anna Rose:
+
+
+I sort of want to round out our interview with just a little quick kind of return to ZK. Georgios, years and years ago, you were very much in the ZK space, as I mentioned earlier. You were at the first ZK Summit. What are you thinking on ZK these days? And you sort of mentioned you want to bring ZKVMs, but is there anything else that is ZK related to what you're working on?
+
+
+1:07:55: Georgios Konstantopoulos:
+
+
+Yep, the abstract thought is that the world is changing faster than people think. For the most part of history, ZK was in a low... Was in the like first 10%, let's say, of the sigmoid. I think definitely we have reached... Well, I don't know that we have reached the peak of productivity, but I definitely feel like we have made great strides in the last years, just from every way that you look at it. Developer experience, amazing. Do you want to go faster than what the great developer experience gives you? You can do that by writing your own constraints. Do you want to just write some Rust and get a proof out? Yeah, we have that. Client side proving, also tractable. Combining MPC with the zk-SNARKs for doing collaborate... All of the stuff is happening. It's actually insane that all of this stuff is happening. And I think we're getting to the world where, okay, now that we have built all of this great tech, it's time to deploy it to the real world.
+
+
+1:08:52: Anna Rose:
+
+
+Do stuff.
+
+
+1:08:53: Georgios Konstantopoulos:
+
+
+Yeah, exactly. So what do I care the most about? Verifiable compute and privacy is like always the conversation. There's like a lot of concrete things to talk about on the ZK meta. I wrote about the ZK meta moving to smaller and smaller fields evidenced by the Goldilocks field, by the Mersenne Prime, by the binary fields of Binius. I think smaller is better, size matters in this case, and I think it's very important that we get to this end game of field size and be done with that part. Yeah, it's just so much is happening, man. It's kind of crazy. I think the biggest evolution will be figuring out very fast client-side proving. And this was a quote that Remco Blenman told me, one of the most skilled engineers that I know, who basically said that the DevX or the UX, it has three things. It's either instant, spinner, or loading bar. And we're way beyond the loading bar today, and we need to get at least to one, two spins or less for client-side proving to be something like users want to think. And that's a good way to think about performance. I don't care about your milliseconds. I care like, am I seeing a spinner or a loading bar or nothing? So what I worry about in the ZK space always is security. When I worked... I was one month doing ZK and I had found a bug in like, Kobi's code, where Kobi is like the ZK guy, right? And I'm like, Kobi, this is missing. So how many of these things exist? What are processor for doing that? What do the testing frameworks for that look like? In the end, what is the tooling needed to go beyond?
+
+
+1:10:27: Tarun Chitra:
+
+
+Let's go on a little bit of a speculative journey. So what do you think the DAO attack for ZK will look like? The DAO hack.
+
+
+1:10:34: Georgios Konstantopoulos:
+Oh, like a massive, the biggest zk-rollup.
+
+
+1:10:37: Tarun Chitra:
+
+
+What do you think it will be.... Yeah. Do you think it's a roll up?
+
+
+1:10:38: Anna Rose:
+
+
+Do you think it will be a rollup?
+
+
+1:10:38: Tarun Chitra:
+
+
+Do you think it's a DeFi protocol? Like it could be a bridge. 
+
+
+1:10:42: Georgios Konstantopoulos:
+
+
+I think it's a roll up, I think the roll up. Worse, I think it's like many roll ups, it's like...
+
+
+1:10:47: Tarun Chitra:
+
+
+At the same time? Do you think it's like a single circuit that all of them use in common or something?
+
+
+1:10:51: Georgios Konstantopoulos:
+
+
+Yeah. What's an example like aggregation? You know, pick an aggregation circuit that will be deployed somewhere and that aggregation circuit might... If I were to be full doomer, which I'm never doomer and I think that people will do...
+
+
+1:11:03: Tarun Chitra:
+
+
+Yeah, I'm not necessarily saying I'm just kind of curious because we know there will be some incident, right? I think thatâ€™s just like nature.
+
+
+1:11:11: Georgios Konstantopoulos:
+
+
+Yeah, I really liked there was some piece of work by I believe the team called Veridise where they were doing static analyzers for Circom. I think basically this line of work must go crazy. You know, people must, must, must like go ham on that. Yeah, so like all the standard things that we've done for security will apply. Yeah, so what will go worse? I think it's going to be some complex unconstrained circuit.  If I had to bet literally on like I've written like on every library that exists, like Halo2 is by far the most complex system for writing constraints right now, which is also very expressive, which makes it very nice for configuring your prover-verifier trade off for expressing everything like very granularly in your trace. But just very hard, man. If it's like 10 people writing it, okay. But that means that there is 10 people writing in and that's why progress is slow. If there's a hundred people writing it or a thousand or a hundred thousand, then it's a bit rough.
+
+
+1:12:04: Anna Rose:
+
+
+Wow.
+
+
+1:12:05: Georgios Konstantopoulos:
+
+
+So if I were to predict I would say that something from the Halo2 side would ham and I'm personally the most excited about the Circle STARKs, because it means that all the StarkWare STARKs are available like on 31-bit prime which means much faster proving. I'm excited about Plonky3 because it's obviously like they are open source stack to be building everything else on top of. I'm excited about SP1, which we're investors in Succinct, and I'm also excited about Binius to move to the smaller fields. And otherwise, like techniques from Jolt and from other papers, I think these are, as I said earlier, features that are small and portable and are basically going to proliferate in the entire ecosystem.
+
+
+1:12:46: Anna Rose:
+
+
+Cool. Well, on that note, so I thought we were going to land on the what's the doomer suggestion, but now we've had a few more hopeful things from Georgios.
+
+
+1:12:55: Tarun Chitra:
+
+
+Sorry, I didn't mean to be the Debbie Downer. I just think you got to walk into these things with your eyes open.
+
+
+1:13:03: Anna Rose:
+
+
+I think it's good we got it out there.
+
+
+1:13:05: Georgios Konstantopoulos:
+
+
+Totally. 
+
+
+1:13:05: Anna Rose:
+
+
+For sure.
+
+
+1:13:06 :Georgios Konstantopoulos:
+
+
+And again, we need tooling. We need a Foundry moment basically for ZK tooling.
+
+
+1:13:10: Tarun Chitra:
+
+
+I feel like you saying that just means it just becomes part of Foundry, but that's just my... It's kind of...
+
+
+1:13:20: Georgios Konstantopoulos:
+
+
+We don't have anyone working on that. We are collaborating with the software management team who is building Starknet Foundry, which is the framework for testing, fuzz testing, Cairo, which is amazing. But we don't have something for... I don't know, how do you unit test circuits? Will you even be writing circuits five years in the future? Maybe not.
+
+
+1:13:42: Tarun Chitra:
+
+
+Well, the problem is then you have to unit test the translation.
+
+
+1:13:46: Georgios Konstantopoulos:
+
+
+Right. Exactly. And like unit testing compilers is even harder. Right?
+
+
+1:13:50: Tarun Chitra:
+
+
+Yes.
+
+
+1:13:50: Georgios Konstantopoulos:
+
+
+How are you going to test... Yeah. I think in general, the thing to be present to is that ZK changes a lot. And if you're not spending full time on it, it's important to be first principles understanding like where the trade-offs and what the levers that you have are. And ultimately, what you have is like a polynomial commitment scheme, you have a field, you have a lookup technique, and then you have a frontend that you expose to the user. And mix and matching these four is what gives you access to most of the techniques or to most of the products rather. So I think to the extent that one is up to date with these where I think again the bleeding edge is like Mersenne Prime, Babybear, Circle STARK, Binius on the fields. On the lookups it's like probably Lasso, logUp, whatever else is coming, cq. And on top of that it's probably the VMs. Where if honestly for the VM it seems like the RISC-V ISA has won for good reasons. So I would probably focus on that. Although I did see maybe more than a year ago work on a zk-Wasm prover...
+
+
+1:14:50: Tarun Chitra:
+
+
+There's so many people doing that, which I don't understand. Because Wasm has all these annoying problems. Stack is not constant size and all this shit. I don't know, I kind of look at that code, I'm scared. 
+
+
+1:15:02: Georgios Konstantopoulos:
+
+
+You would know better here. So I don't really know what it's about, I think in ZK, actually one very, very exciting conversation happening right now is around Ethereum, stateless clients, Verkle trees, are Verkle trees easy to SNARK? That's honestly the most exciting conversation for me, because we observed that for the performance of nodes, that most of the time is spent on calculating the state root, which today is the Merkle-Patricia trie root. This is a very expensive process, and making it cheaper in every way makes nodes go faster. Making other parts of it cheaper, like the inclusion proofs, also makes stateless nodes much better. And there's a generally interesting bifurcation in the Ethereum roadmap that I would like to start discussing more and more. So this is the first time I say this with anyone really, which is that I wish that we can perhaps have a real conversation on whether Verkle is the right thing to do or whether we should, this might sound crazy, and I don't have a strong view, but I think it's worth discussing it, that maybe we should just ditch Verkle, go full ham on data availability on the Layer 1, and then replace, add a SNARK for the Merkle-Patricia trie, and maybe we can do incremental improvements to the Merkle-Patricia trie that make it more SNARK-friendly. And this is a big narrative that also the Polygon Zero, or not narrative, it's a technical path that the Polygon Zero people have been exploring, and I think it's worth seriously entertaining it. And I think that it goes back to my point that ZK is moving faster than ever. And might be that, we might be making a commitment for 18 months in the future in the Ethereum roadmap, and it seems to me that 18 months ago, we did not even think that like fast zkEVMs were possible, and now we're like at seconds proving times for Ethereum blocks. And that's huge, that's new, that's an update, that's a real Bayesian update to how you prioritize and how you allocate resources. And I think that's a big problem, like in the crypto space in general, that I was having a conversation with Nico Mohnblatt a few weeks ago where we were like, oh, cryptography is just my thing. I don't think much about consensus, where the fact is that you can use cryptography to make the consensus better. And the problem that we have is that more people don't have a spherical view of the ecosystem to surface new insights. And Tarun, you know that the best things in math or physics came from merges of the two, right? So what are we doing here if we're not marrying all our subfields together?
+
+
+1:17:32 Tarun Chitra:
+
+
+It's true. Actually, a very interesting thing I think is like... That I think is a worthwhile thing for people to do is to go to all the different conferences and then meet the people who aren't into crypto who go to those conferences. So at ZK Summit, there's a ton of people who are like, I work in tech companies who I feel like I've met who are like, I'm just interested in ZK, but I hate blockchains. I don't want to think about them. Or you go to like...
+
+
+1:17:58: Georgios Konstantopoulos:
+
+
+Sorry, Tarun, you just said this. I want to put this on the table. I think cryptography without blockchain is actually a wonderful, wonderful area to be spending time on. Albert Ni had talked to me about this a while ago, I also believe it very humbly. I think we should really look at like everywhere in the world where there is a symmetry of power or where there is adversaries that can hit you badly. This started with literally HTTPS on your website at the top left as you're looking at the computer right now. Like this was the beginning of cryptography being deployed in the wide world. I think crypto obviously is a bounty to getting private keys to everyone in the world. Crypto is creating an incentive of distributing private keys to everyone in the world. We should be doing more of that. We should introduce more client-side proving mechanisms. Like I should never leak my credit card or my passport or anything really to anyone.
+
+
+1:18:49: Anna Rose:
+
+
+I want to just... Tarun, I just want you to finish your thought because you were like, go to all these conferences and meet the non-crypto. What do you get out of that?
+
+
+1:18:58: Tarun Chitra:
+
+
+So, yeah. So, you go to... Say you go to ZK Summit, you go to SBC, you go to... Maybe you go to an academic conference that has a couple crypto papers. Oh, and then go to a token shilling conference like I was at last week because you need all parts of the world, right? And meet the people who are there, not because they like crypto, because it tells you something about how well, how much overlap there is, how much there's new people coming in. So the ZK stuff having people who work at big tech companies showing up means that there's this group of people who's following ZK while avoiding all the cryptocurrency-related stuff. And that's an interesting demographic. How did they find it? Just the papers? This podcast? A lot of people were like the podcast more than anything else.
+
+
+1:19:50: Anna Rose:
+
+
+Well, you're at the ZK Summit. That must have been...
+
+
+1:19:52: Tarun Chitra:
+
+
+Sure. Yeah, but I think it's kind of interesting to meet these people who like the consensus stuff and whatever, that literally is a negative to them. Then you go to the academic conferences, you meet these academics like, oh, no, no, cryptocurrency bad, blockchain, okay. But anything that you guys use that looks like my research, great. And you're like okay, that one is more obvious what the incentive is. And I think when you go to these things and you meet those people, you get this understanding that cryptocurrency itself is really this interdisciplinary field, and the only way really actually makes large steps is when someone new comes in who brings in some new... Some other field, and then it transfers. And I think that's kind of like the... That's one really good thing about going to these conferences, because sometimes that person or those people are the ones that who are like, oh, I hate cryptocurrency, but I'm going to these things because I'm interested in this one thing and then they...
+
+
+1:20:56: Georgios Konstantopoulos:
+
+
+We've been talking to a lot of these people because the Rust community has a interesting bifurcation where like they...
+
+
+1:21:02: Anna Rose:
+
+
+They don't like crypto at all. That's been years that they haven't liked crypto.
+
+
+1:21:06: Georgios Konstantopoulos:
+
+
+We're using a WebSocket library somewhere and the maintainer at the bottom of the readme is like, yeah, I don't take contributions from crypto people. I'm like, man, we want to make the library better, please.
+
+
+1:21:18: Anna Rose:
+
+
+Oh, wow, really? Oh, would you take contributions? That seems a little short-sighted. Like if it's quality...
+
+
+1:21:25: Georgios Konstantopoulos:
+
+
+I mean, yeah, but that's kind of like the demographic that you need to convince, right? And I think there is something to say about the entire industry having to do better, having to call out bad actors, and really doing crypto where it's useful and not for... I don't know, like single-ended profit activities.
+
+
+1:21:43: Anna Rose:
+
+
+Great, no more casinos. Okay, I gotta wrap us up because we are way over time. I want to say thank you so much for coming on the show, Georgios, and chatting with us. Thanks for coming back.
+
+
+1:21:55: Georgios Konstantopoulos:
+
+
+Yeah, it's good to be back. And we have a lot more to ship, and we are just getting started. 
+
+
+1:22:01: Anna Rose:
+
+
+Cool. And I hope we'll see you at more ZK events in the future, too.
+
+
+1:22:05: Georgios Konstantopoulos:
+
+
+ZK Summit 12 in August?
+
+
+1:22:08: Anna Rose:
+
+
+Lisbon. October.
+
+
+1:22:10: Georgios Konstantopoulos:
+
+
+October. All right.
+
+
+1:22:11: Anna Rose:
+
+
+Yep. See you there. And also announced on the show for the first time, so folks should mark their calendars. We'll be making more noise about that as well. Cool. Thanks, Tarun, for co-hosting this one.
+
+
+1:22:21: Tarun Chitra:
+
+
+Thanks for having me. 
+
+
+1:22:22: Anna Rose:
+
+
+And I want to say a big thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners, thank you for listening.

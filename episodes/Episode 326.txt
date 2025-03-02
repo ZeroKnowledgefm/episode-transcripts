@@ -1,0 +1,847 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Kobi and I chat with Muthu and Carmit from Ligero, sometimes also referred to as Ligero. We cover what inspired them to work on cryptography like MPC and ZK for almost 20 years, and how this space has developed since they started. We discuss Ligero, what led to the project, the early phases of the project, and the work that they're doing today. We return to the MPC-in-the-Head work and discuss how they have improved on this system. We cover how MPC and ZK are interrelated, how their system incorporates the advances and new techniques from both fields, the new Ligetron system, and how they plan on getting this technology into the wild.
+
+
+Now, before we kick off, I just want to share an update about another project that I work on called ZK Hack. ZK Hack is a learning hub for all things ZK. Just over 10 days ago, we hosted ZK Hack Kraków, which was so amazing and special. 40 projects were built at the hackathon, bringing the total number of ZK projects built at our ZK Hack IRL hackathons to over 100. And we announced in the closing ceremony of that event that we have an upcoming event, that is ZK Hack Montreal, which is bringing this event series to my hometown. ZK Hack Montreal will be happening from August 9 through 11th, and it promises to be a very special one. Once again, we are hosting our ZK-focused IRL hackathon. This is the event you should join if you're looking to experiment with ZK tech and tools. It's also the first time that we bring our hackathon series to North America. And just as an aside, Montreal is also amazing in the summer. So if you've never been to Montreal, you should definitely check it out. We are just kicking off the development for this one, but wanted to give you a heads up. Applications are open, so yeah, I hope you'll join us. One last note, there's no episode next week. We are taking the week off, but we will be returning the week after with our regularly scheduled program. Now Tanya will share a little bit about this week's sponsor.
+
+
+[00:02:20]: Tanya:
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. And now here's our episode.
+
+
+[00:03:04]: Anna Rose:
+
+
+So today we're here with Muthu and Carmit from Ligero, also pronounced 'Lee-hair-oh'. Muthu is the CTO and soon-to-be CEO of the project. Carmit is the Chief Scientist. Welcome both of you to the show.
+
+
+[00:03:18]: Muthu Venkitasubramaniam:
+
+
+Thanks for having us.
+
+
+[00:03:20]: Carmit Hazay:
+
+
+It's great being here.
+
+
+[00:03:21]: Anna Rose:
+
+
+We also have Kobi as the co-host for this one. Hey, Kobi.
+
+
+[00:03:24]: Kobi Gurkan:
+
+
+Hello.
+
+
+[00:03:25]: Anna Rose:
+
+
+Let's start a little bit with the name, because I've just basically shared two iterations of the name. I always thought it was Ligero. It's with a -g- in the middle. So I recently learned it's actually pronounced 'Ligero'. Tell me a little bit about the name of this project. Yeah, and maybe, what does it mean?
+
+
+[00:03:43]: Muthu Venkitasubramaniam:
+
+
+So, Carmit and I, our backgrounds, I mean, we did our PhD in computer science, specifically cryptography, zero-knowledge proofs, and secure multiparty computation. We actually did a lot of theoretical investigations in these protocols. About seven years back, out of a theoretical project came this zero-knowledge system that we said, hey, let's implement. And I think the convention is you got to give a name. And we were about to submit this paper, and I was like, okay, what name should we give? And one of the features of our system is it's lightweight. So I'm a little bit of a Harry Potter fan, so I was like, let's use Leviosa. Okay? Like, it's featherweight from... But my co-authors weren't big fans of it. So then I went around looking at every language. What does lightweight translate to?
+
+
+[00:04:29]: Anna Rose:
+
+
+Okay.
+
+
+[00:04:28]: Muthu Venkitasubramaniam:
+
+
+And when I went to Spanish, it said it was Ligero, and then there was Lig- for lightweight and -ero for zero. And I was like, okay, this is good, but I should tell you, maybe even I don't know how to pronounce this well. I have a colleague, I don't know if you know Daniel Benarroch. He's actually, he knows Spanish, and he corrects me how to say Ligero properly.
+
+
+[00:04:49]: Anna Rose:
+
+
+Nice. Cool. That's a great backstory to the name of this project. So when I saw it, I actually thought maybe for a second it was Esperanto. Now I kind of want to go look it up. But anyway...
+
+
+
+
+[00:04:59]: Kobi Gurkan:
+
+
+Yeah, because we used to do it in Celo.
+
+
+[00:05:00]: Anna Rose:
+
+
+Oh, yeah, Plumo. Right?
+
+
+[00:05:02]: Kobi Gurkan:
+
+
+Exactly.
+
+
+[00:05:03]: Anna Rose:
+
+
+Nice. Okay, so, yeah, you shared a little bit about the history very briefly, but I think it would be great to get to know both of you. Muthu, let's start with you. Tell us a little bit about your background leading up to this and why you work on these problems.
+
+
+[00:05:19]: Muthu Venkitasubramaniam:
+
+
+Sure. The passion for cryptography, of course, started when I was an undergrad with my undergraduate advisor. But when I started grad school, actually, I wanted to do... Like I was going to do database systems. But then I went to database privacy, and I published a paper called ℓ-Diversity, which not many people know, but among all my papers, that has the most citations for some reason. But then from there, I knew what I wanted to do was cryptography.  Once you learn zero-knowledge proofs and secure multiparty computation, you just fall in love with it. And of course, I was very theoretically motivated in understanding this, and when I say theoretically, it's about, hey, what is the minimal assumptions? Like, what's the round complexity? It's... I'd say much of the initial works that I published, they are not practically feasible. It's actually more about understanding can a particular security or security feature be achieved? But then, out of one of these projects, we had to design something. And often in theory, we say, hey, if we put this guardrail, there is a chance that it will be concretely efficient, which is called a black-box construction. We ended up doing it and came out a zero-knowledge system. And we're like, okay, I had a student who was interested in implementing it, my PhD student, Scott Ames, he implemented it, and it turned out to be fast. And at that time, there was only the Zcash crypto system, and our work actually precedes STARKs.
+
+
+[00:06:47]: Anna Rose:
+
+
+Interesting. What year is this, then? What are we talking?
+
+
+[00:06:51]: Muthu Venkitasubramaniam:
+
+
+It got published in 2017, but much of the work was in 2016. So we are actually one of the first transparent zk-SNARK, although I should say we are not a fully SNARK, because it's sublinear as opposed to succinctness, like we can talk about this later. But then after that, I was like, okay, do we... The co-authors like me, Carmit and Yuval Ishai, he's a professor at Technion University, we're like, should we commercialize this? And I just put the... I put the invention in... I was back at University of Rochester, a professor there. They had a tech transfer department, and they put me in touch with our other co-founders, our business co-founders, Scott Catlin and Matt DiBiase. Now, what motivated us to start a company? I mean, a little bit, I'll say that we are definitely excited about this technology and scaling this technology, but also we wanted real world applications. We want the world to see what these primitives can do. And I should just a side note, among all the things, don't ask me what cryptocurrency to buy, but I love blockchains. I think the number of people excited about zero-knowledge proofs, and also more generally, cryptography is just amazing, and I think it's a large part due to the blockchain community.
+
+
+But anyways, when we started this company, I mean, we were looking for applications in zero-knowledge and multiparty computation, we were looking for applications in finance and our business co-founders, I mean, they are from Wall Street and have deep connections, we were looking at both on-chain and off-chain TradFi, as well as crypto applications. We looked at multiparty computation, more than zero-knowledge, actually, when we started. And we actually have a scalable auction technology for dark pool auctions, and a couple of more products that, if it's relevant, I can share later. But along the way, the last four years, we also secured a DARPA contract to scale zero-knowledge. And we refined the Ligero system, and right now I think it's in an iteration that really, I think, can change the space. And we needed a name for the new version, so we call it Ligetron, which I'll tell more later, but I will...
+
+
+[00:09:05]: Anna Rose:
+
+
+Ligetron. Would you also pronounce that "Ligetron"?
+
+
+
+
+[00:09:10]: Muthu Venkitasubramaniam:
+
+
+No. 
+
+
+[00:09:10]: Anna Rose: 
+
+
+I was like, am I going to say that right? Okay, that's Ligetron. Okay.
+
+
+[00:09:13]: Muthu Venkitasubramaniam:
+
+
+I just hope Michael Bay doesn't come and say that I shouldn't use Ligetron.
+
+
+[00:09:19]: Carmit Hazay:
+
+
+That's exactly my excuse, why I should say Ligero and Ligetron.
+
+
+[00:09:24]: Anna Rose:
+
+
+All right, Carmit, let's hear a little bit about your background and what led you to work on this stuff.
+
+
+[00:09:28]: Carmit Hazay:
+
+
+Okay, so I have slightly different story. I did my bachelor and my master's at Bar-Ilan University, but not crypto-- in crypto. And then I took a course by, back then it was Amir Herzberg, who gave the course on cryptography, and I was fascinated by this area. And I decided that I want to do my PhD in crypto, but there weren't anyone who can actually advise me because Amir was full. And then he told me, now there's a new faculty member, just came to Bar-llan and let's go and you can meet him. And that was Yehuda Lindell.
+
+
+[00:10:11]: Muthu Venkitasubramaniam:
+
+
+Yehuda was one of the co-founders of Unbound that got acquired by Coinbase.
+
+
+[00:10:17]: Anna Rose:
+
+
+Yes, yes. This is with Nigel. Right?
+
+
+[00:10:20]: Muthu Venkitasubramaniam:
+
+
+With Nigel.
+
+
+[00:10:20]: Anna Rose:
+
+
+By the way, Nigel also had encouraged that I bring you on this show. So shout out Nigel for another recommendation. Anyway.
+
+
+[00:10:27]: Muthu Venkitasubramaniam:
+
+
+Absolutely.
+
+
+[00:10:29]: Anna Rose:
+
+
+Cool.
+
+
+[00:10:30]: Carmit Hazay:
+
+
+So I went into Yehuda's office and he asked me about crypto, and he told me he's working on the relatively new area called secure computation and started explaining that. And at the time, it sounded really far-fetched. Who is going to work on protocols? How useful can they be? But I decided that I like it, and we started working. And I think I worked on the first practical secure computation before anyone actually thought that could be even practical. Our papers...
+
+
+[00:11:11]: Anna Rose:
+
+
+What year is this, roughly?
+
+
+[00:11:13]: Carmit Hazay:
+
+
+Well, so I can tell you a fun fact. I started... When I entered Yehuda's office I was pregnant with my elder daughter, and I gave birth soon after, and she's over 19 today.
+
+
+[00:11:29]: Anna Rose:
+
+
+Okay. That's a great way to know the timing.
+
+
+[00:11:34]: Kobi Gurkan:
+
+
+Nice.
+
+
+[00:11:35]: Carmit Hazay:
+
+
+Yeah. So almost for two decades, I've been working on secure computation, and we started looking into the practicality of these protocols before people even thought it could be made practical. Our papers got rejected from conferences and, yeah, people have just dismissed our paper saying, no, this can never be practical.
+
+
+[00:11:58]: Anna Rose:
+
+
+Little did they know. Right?
+
+
+[00:12:01]: Carmit Hazay:
+
+
+Yes. I think one of my papers that actually got published later on during my postdoc in Denmark was about distributed RSA. I think it got rejected over five times. People didn't like the paper. They said, no one cares about that, it will never be... They didn't say will never, but it will not be useful. Today, I think many people are implementing such systems, people definitely care, and it is highly cited.
+
+
+[00:12:32]: Anna Rose:
+
+
+Nice.
+
+
+[00:12:33]: Carmit Hazay:
+
+
+So I did my PhD with Yehuda. It was great, he was a great mentor. Then we moved to Denmark for my postdoc, and I had the chance to meet, I think, the mentor in practical secure computation, Ivan Damgard, who was back at the time, they were the first to implement secure computation with the Sugar Beet Auctions.
+
+
+[00:12:58]: Anna Rose:
+
+
+Oh, yes.
+
+
+[00:12:58]: Carmit Hazay:
+
+
+And it was a great experience. And then coming back... Came back to Bar-llan into a different faculty. And I guess a decade ago, I met Muthu. I mean, we knew each other from before, because that was a small community, definitely back then, but we never had a chance to collaborate. And actually, I think we met that time in Denmark, right? In one of the TPMPC...
+
+
+[00:13:26]: Muthu Venkitasubramaniam:
+
+
+We actually met once before, but that's okay, I remember that.
+
+
+[00:13:31]: Carmit Hazay:
+
+
+But I'm talking about the meeting where we started collaborating.
+
+
+[00:13:33]: Muthu Venkitasubramaniam:
+
+
+Yes, that is true.
+
+
+[00:13:35]: Carmit Hazay:
+
+
+And I think the rest is history. Right? We became very close collaborators, very close friends. Yeah, we've been doing a lot of great stuff since then.
+
+
+[00:13:45]: Anna Rose:
+
+
+Then I want to kind of throw it back to the name because I feel like I've been hearing about this project since 2017, but maybe that's wrong. When did this first... You kind of hinted there, Muthu, that it might be more like 2020, when something was founded, but when does the first work come out? When do we first see this name? And when is the company founded?
+
+
+[00:14:05]: Muthu Venkitasubramaniam:
+
+
+Great. So our work got published at ACM CCS 2017, and in 2018 is when we started talking to our business co-founders and we incorporated in 2018, and we closed our seed round early 2019.
+
+
+[00:14:25]: Anna Rose:
+
+
+All right. I feel like I had heard... I've seen the name, I've heard the name for a long time. For me, it was somewhat under the radar until recently. What were you working on early on, and has that changed?
+
+
+[00:14:38]: Muthu Venkitasubramaniam:
+
+
+That's actually a great question. I think one of the things, if we look back in the last four years, is we weren't as much self-promotional in terms of what we had accomplished. We were focusing on projects, scaling our technology more than advertising. Not that we shouldn't, but I do think that's one thing I would say, looking back in the last four years. One thing regarding our company is we did have a more heavy focus on MPC or multiparty computation compared to zero-knowledge. Although our zero knowledge was being developed in parallel under the DARPA project to scale... I mean, DARPA funds fundamental research and it was great to... I mean, we didn't have to raise capital because that was great funding for us to develop our technology. But our focus was on multiparty computation and banks. Like, we talked to the big banks in Wall Street, JP Morgan, Fidelity, Citigroup, et cetera, and we wanted to build the auction technology. And in parallel, there is also this project that we took for doing the distributed RSA generation for the Ethereum Foundation. Actually, this is one of the first publications that came out of after the company was formed.
+
+
+I'll just tell maybe one minute about this project. It was the first multiparty computation project that we demonstrated could run among 10,000 parties. We had envisioned that everyone maintaining either the Bitcoin or the main nodes maintaining Ethereum could run this protocol, and at that time, this was... People were looking at it for what is called Verifiable Delay Functions. We were able to scale this to 10,000 parties. I think our goal really was to take ZK and MPC and to scale it. And following this, we refined our technology for auctions. And let me just tell a minute about auctions. So in auctions, you have a bunch of people who want to bid on a product, and usually it happens with a third party. A third party collects your bids and announces the winner. But using MPC, you can eliminate the third party. You can just talk to the people bidding, and at the end, only the winner gets announced. Now, this is very useful because it reduces the information leakage to the bare minimum. Only the winner of the auction is released. And we took this as a challenge and we actually have this product, like, if anyone's interested, we can demo this. We can actually scale auctions... For example, imagine you take all assets in the US and all assets in some other market, let's say that they are like 10,000 stock symbols, we can run an auction in parallel for all these 10,000 symbols and complete it in five minutes. Like this is, again...
+
+
+[00:17:31]: Kobi Gurkan:
+
+
+That's really good.
+
+
+[00:17:32]: Muthu Venkitasubramaniam:
+
+
+One of the challenges we took and we were able to deliver. Now, while we are talking about MPC, at least I'll say how people think about MPC today was different from at least two or three years back. Because when we went and talked to people about it, they were like, MPC, is that zero knowledge? And, okay, I had to control my anger inside, but also, at the same time, I think...
+
+
+[00:17:54]: Anna Rose:
+
+
+It falls under the Royal ZK sometimes, yeah.
+
+
+[00:17:57]: Kobi Gurkan:
+
+
+I mean, the hot topic on Crypto Twitter now is, is MPC also threshold signatures? But yeah.
+
+
+[00:18:04]: Muthu Venkitasubramaniam:
+
+
+I know. Oh, no, please don't get me started on that also. But we didn't realize that there is sort of an education problem. Blockchain has done great for zero knowledge, but not yet for MPC. And so we wanted... Actually, we created a cute little product which is also available, which is to schedule meetings. Now, you can imagine this is a very basic task and you want privacy. I don't want to tell what appointments I have. Even if I don't show what the appointments are, I don't want to tell when I am free and busy. But you can use MPC to find a common meeting time.
+
+
+[00:18:37]: Anna Rose:
+
+
+What's that called? Do you have it?
+
+
+[00:18:39]: Muthu Venkitasubramaniam:
+
+
+MeshCal? M-E-S-H-C-A-L. Meshcal.com. Mesh and Calendar.
+
+
+[00:18:43]: Anna Rose:
+
+
+You have some good names. They're hard to pronounce there a bit.
+
+
+[00:18:50]: Muthu Venkitasubramaniam:
+
+
+But then came the zero-knowledge proof, and then I think we have now, I would say a little bit pivoted to exploring what the zero knowledge is going to do to the space. All these other projects are still there, like, we have demos for all of them, if anyone's interested.
+
+
+[00:19:07]: Carmit Hazay:
+
+
+I can add. I mean, during all these years, we had two jobs. Our main job was we had academic positions which are really, really intense by themselves. And in parallel, we've been trying to run the company. I mean, this is part of why we've been slightly under the radar. And also as a scientist, I think we really cared about spreading the words about this technology. I mean, the place where we come from, we really value privacy. We really think of it as an important value in society. We really think society can benefit a lot from understanding why privacy is important. And our goal, our mission was to make MPC, also now zero knowledge, as a tool that people would really value and appreciate and would want to use it because they will understand that it's for their own benefit. And I think privacy is something that we should educate for. For instance, when... I give many talks in high schools in Israel. I mean, people invite me for science days and so on, and I speak about crypto, but every time I... I finish my talk with... I have this slide on explaining about privacy and why is it important. And I mean, you can see that it's missing. And this is something that we should definitely educate more... I think this is our mission as scientists.
+
+
+[00:20:52]: Kobi Gurkan:
+
+
+So, first of all, I completely agree with you, Carmit, about that point. And especially, I think a lot of people are not realizing that they could have this kind of non-financial privacy in their lives, and they take it as a given, which is not that good. And, Muthu, to your point, I think that I also get why you had to do MPC stuff for a few years if you were working with TradFi people, because I think that ZK really flourishes in this kind of crypto space because there are very strict trust requirements which don't necessarily exist outside. So I kind of get it.
+
+
+[00:21:37]: Anna Rose:
+ 
+I want to just quickly return to what you were saying about your first contract being with DARPA. What's it like working with them? Can you say anything?
+
+
+[00:21:45]: Muthu Venkitasubramaniam:
+
+
+So there are different kinds of projects, but this project comes under a category of fundamental research. I think they really want to promote the technology. Like this is clear from their intentions. The way DARPA works is actually, we had an excellent program manager, his name is Josh Baron. And he finished his term, and then we have another excellent person who is now his name is Dan Wallach. But they said, look, we need to scale zero knowledge, they kept metrics. And we actually beat the metrics halfway through the program in terms of how they wanted to scale. With DARPA, the only thing is, whenever you announce something publicly or publish, you just have to get sort of an approval from them. But this has never been sort of a bottleneck in terms of getting this technology out. But I think it's a really great program.
+
+
+[00:22:39]: Anna Rose:
+
+
+You're allowed to publish it. Can you open source the work you do with them?
+
+
+[00:22:42]: Muthu Venkitasubramaniam:
+
+
+Yes, you can do everything. Yeah, you just need to get your permission, which, again I think this research is not too sensitive in that sense.
+
+
+[00:22:53]: Anna Rose:
+
+
+Got it.
+
+
+[00:22:53]: Carmit Hazay: 
+
+
+I think it was a great experience also collaborating with many groups, seeing the results of many different systems. I think it really pushed this project.
+
+
+[00:23:05]: Kobi Gurkan:
+
+
+Okay, so let's talk about Ligero itself. So, the construction and the paper, it had a bit of a history, right? It's based on earlier works like MPC-in-the-Head. And so how does that lineage look like?
+
+
+[00:23:20]: Carmit Hazay:
+
+
+Let me give you a little bit of a background on MPC-in-the-Head, which to my mind, I think it was one of the most brilliant papers. So...
+
+
+[00:23:30]: Kobi Gurkan:
+
+
+And it's not an MPC protocol.
+
+
+[00:23:32]: Anna Rose:
+
+
+Oh, it's not?
+
+
+[00:23:33]: Carmit Hazay:
+
+
+Not exactly. Let me... I will explain. So, the starting point is a paper by four authors, Ishai,  Kushilevitz, Ostrovsky and Sahai, from 2007. They came up with a new technique to design zero-knowledge proofs. Now, let me tell you that as cryptographers, we care about the complexity class for which we can design zero knowledge. Specifically in crypto, we care about NP-problems. And this class is the set of problems where you can validate or verify efficiently. Now, classical results on zero knowledge showed how to build zero-knowledge protocols for this class by basically focusing on a class that is considered more difficult within this class. These problems are called NP-complete problems. So like satisfiability. So if you build a zero-knowledge protocol for this problem, then you basically cover the entire set of NP-problems. Now, the IKOS paper, I'm going to denote it IKOS, by the initials of the authors, so this paper, what they showed, first of all, they took a detour from the original way, or the classic approach of designing zero-knowledge proofs for NP-complete problems and basically build directly a zero-knowledge protocol for every NP problem. And the way they did it is basically, instead of having using reductions, like you had to do if you wanted to work with NP-complete, they pushed the computational task into building or using an MPC protocol by the prover.
+
+
+Now maybe it's a good time to distinct between zero knowledge and MPC, because that was going back to the discussion we had before. MPC is a generalization of zero knowledge, right? In zero knowledge, we have two parties, the prover and verifier. In MPC, we can have an arbitrary number of parties. In zero knowledge, only the prover has a secret input. In MPC, basically each party can have a secret input. And also the functionality, right? In zero knowledge, the prover is convincing the verifier by the validity of some statement. In MPC, we could just compute an arbitrary function. Now why do I mention that? Because MPC is general enough to have different flavors of security definitions or adversarial models. And looking ahead, this is what gives this MPC-in-the-Head technique its flexibility, because it can be instantiated with different protocols. Now, going back to MPC-in-the-Head, what IKOS basically did is the following. They said, let's define a function or a functionality. In this functionality, take the secret input and secret share it among a set of parties. Now the prover is going to virtually, right? This is where it comes in its head. The prover is going to take some protocol and emulate this protocol in its mind, in its head, computing a function that basically validates the witness.
+
+
+Now, when you run a protocol, you have a transcript or the messages exchanged between the parties and views. A view is basically the sixth internal state of a party and incoming messages. So now after virtually running this protocol, the prover is going to take all these views generated by the virtual parties and commit to those views. And this is the first message of the MPC-in-the-Head protocol. Now, after committing to these views, the verifier is going to challenge the prover to reveal a subset of these views for which it's going to check for consistency. So what does it mean? It means that if, for instance, one party sends a particular message, so it should appear in the view of the other party. This is what they call pairwise consistency. And what IKOS showed is that if you have this pairwise or local consistency, you can prove that you have also global consistency, meaning that if every pair of views are consistent, that means that the statement could be correctly validated. So this is the core idea of MPC-in-the-Head, and it was also implemented, for instance, by the ZKBoo paper. I think it was implemented and already demonstrated to be practical. However, the basic approach is that you get a constant soundness. So you really need to repeat the protocol multiple times if you want to get really small soundness. And this is where, for instance, Ligero kicks in. Because if you enhance the properties, the security properties of the MPC protocol, you're actually using the virtual protocol, then you can get much better. All the properties that Ligero has, like going into sublinear and so on.
+
+
+[00:29:05]: Kobi Gurkan:
+
+
+Something that I remember about MPC-in-the-Head and ZKBoo, is that because if you want to enhance soundness, you have to repeat like you said, is that you can run a lot of these in parallel and gain efficiency in that way. Is that also true for Ligero?
+
+
+[00:29:21]: Muthu Venkitasubramaniam:
+
+
+So we won't have to do that, because by choosing the right MPC, you won't have to repeat it in parallel. And also, there is a difference between how Ligero works to other systems. Like, for example, in Ligero, it's not that you need to use large field sizes to get good security, which happens in other systems where the security is related to one over the size of the underlying field.
+
+
+[00:29:49]: Kobi Gurkan:
+
+
+Yeah, for SNARKs, it's very required.
+
+
+[00:29:51]: Muthu Venkitasubramaniam:
+
+
+Yes. But in Ligero, actually, there is a different mechanism that you can repeat what we call code test and linear test, that's part of it, even if you have a small field and get it. Now repeating in parallel, this one needs to be careful. And I actually listened to Justin's podcast last week that he talked about parallel repetition of these things. And I just want to point out, he mentioned that he blew away two researchers by saying it, and one of it was me. So I'm just revealing the identity of one of them. So, I mean, you want to be careful. For the ZKBoo setting, repeating in parallel is fine, because it's actually one round of interaction with the verifier. Ligero is like three rounds of interaction, and when you parallelize, you're not going to get the best parameters. So you would rather do it in the MPC itself. But maybe I'll just tell a little bit about this MPC-in-the-Head from how it is today. One of the things also for Carmit and me in this thing was that we came from, I want to say a little bit from the cryptography world, as opposed to the complexity world. For me, like the words like Eli Ben-Sasson and so forth, I mean, they come from this complexity world of doing probabilistically checkable proofs, which has evolved into interactive oracle proofs, as well as the kind that's based on the sum-check protocol, which also is from the complexity world.
+
+
+But we started from the MPC world, but actually now you can unify it, everything is an interactive oracle proof. In what Carmit described, it's about committing to views of these players. You can think of this as an oracle proof. LIke these views are being put in an oracle and the verifier is opening a few of them to check it. Now the difference between again the complexity world and the cryptography world here is actually the size of the symbol in the oracle. Now in the complexity world, including even STARKs, when the verifier queries one of these oracle entries, it's a single field element typically. And because this is how the complexity world has optimized probabilistically checkable proofs, they care about getting the symbol size too small, even Boolean. But in the MPC world we don't care about it. The view of a party, which is one symbol can have a lot. And what we have found is that this actually helps us leverage things better than the complexity world, but also more from a concrete efficiency and usability standpoint. But I want to say that MPC-in-the-Head can be viewed actually as an instantiation of an interactive oracle proof.
+
+
+[00:32:23]: Anna Rose:
+
+
+Interesting. I want to just highlight, it's funny because I think you're the second group to talk about MPC as sort of the meta, the higher kind of distinguishing factor and ZK living underneath it. We on the ZK land think of the Royal ZK, which is just the umbrella term that VCs use to describe all advanced cryptography. But I'm sort of left after what you just said, a bit confused about exactly what this is then. Is it an MPC protocol? Is it a ZK, is it a weird new combination of the two? How do you define this? It sounds like you're coming more from the MPC land, but yeah, I'm just curious.
+
+
+[00:33:03]: Carmit Hazay:
+
+
+So this is exactly what I wanted to add. So as a PhD student in crypto, or every PhD student studies one of the most classical result in MPC, how to compile passive to active protocols. You start with a protocol with very benign security properties and you use zero knowledge to compile it into a protocol that is, let's say, much more secure or secure against stronger attacks. And this is actually the very first application of zero-knowledge proofs and it is called the GMW compiler. Very, very famous results and fundamental in cryptography. Now what IKOS showed is basically the other direction. So they showed how to use actively secure protocols to build zero knowledge. So, thinking out of the box, because up until their paper, we thought of MPC as a generalization of zero knowledge, and we knew that zero knowledge can help to get better MPC protocols, and they actually showed the other direction.
+
+
+[00:34:17]: Muthu Venkitasubramaniam:
+
+
+Let me add one thing to this, and Anna, actually, this confusion makes sense to me, because if you look at these two objects, as Carmit said, multiparty computation is a generalization of zero knowledge. It's in fact more powerful and in the most sort of general form, it actually demands more. And let me explain what this is. For zero-knowledge proofs, including the Ligero system, you just need hash functions, just like STARKs. You don't need any, what we call public key primitives, elliptic curves, or like lattices or anything. We don't need public key objects for building a zero-knowledge system. But for multiparty computation, this is necessary. You need something called an oblivious transfer, that's one of the minimal objects that you need, and these can be based only on public key assumptions. Actually, there are separation results that say hash functions are not enough. So when we are using MPC-in-the-Head, this begs the question, hey, I'm using an MPC protocol, does it mean now my zero knowledge needs these public key primitives? And the answer is no. The point is that there are several variants of multiparty computation, and the variant we are using is something called an honest majority multiparty computation, which means that you actually can build these without any cryptographic primitives. And it is those multiparty computation protocols that we plug into this compiler to get a zero-knowledge system based on hash functions. So maybe, to answer your question, it is a zero-knowledge system in the sense that it needs only hash functions. But the techniques that go into it has come from the MPC world.
+
+
+[00:35:56]: Anna Rose:
+
+
+Okay, is it a ZK system then?
+
+
+[00:35:58]: Muthu Venkitasubramaniam:
+
+
+It is. Actually, this is one of the things, maybe I want to say that whatever we have designed, like by default, they are zero knowledge. And I kind of want to compare it with sometimes the other systems, even sum-check protocols, just when you use it, like on the face of it, they need not be zero knowledge. In fact, Jolt is not a zkVM, as Justin says, it needs to be called a succinct VM.
+
+
+[00:36:22]: Anna Rose:
+
+
+Wow. Okay. Yeah, it's not ZK.
+
+
+[00:36:24]: Muthu Venkitasubramaniam:
+
+
+But the Ligero system is zero knowledge by default, and this is something you get for free because you do MPC, because MPC has the privacy already in it. So you get it baked in.
+
+
+[00:36:37]: Kobi Gurkan:
+
+
+So what were Ligero's improvements above MPC-in-the-Head and other works that made it a new work?
+
+
+[00:36:46]: Muthu Venkitasubramaniam:
+
+
+So Carmit mentioned this work, ZKBoo. In fact, it was the first work, we were really... We really loved this work. It appeared in USENIX. It actually got the best paper at USENIX for implementing this MPC-in-the-Head. And let me say, that line of work is still active today, and it is leading to post-quantum signatures. We are not involved in that, but I want to say, just give a shout out to MPC-in-the-Head for post-quantum digital signatures. But to compare that kind of MPC-in-the-Head to what Ligero does is that here is a challenge with MPC. Typically in MPC protocols, as Carmit said, there are these views that I said, hey, you can think of it as an oracle proof that you put in an oracle entry. But the size of these views are proportional to the size of the computation, standard protocols of MPC, this is the case. Now, this is what ZKBoo did. If you use this, your proof lengths are not going to be short, they are going to be the size of the computation. But when you want to build SNARKs, you want to put things on-chain, you want this to be succinct or sublinear.
+
+
+So you want to devise an MPC protocol where the size of the view of each of these parties in your head needs to be smaller than the computation. And here there is, again a work of Franklin and Yung back in the 90s, they introduced this concept called Packed Secret Sharing, which said that standard secret sharing can only share a single secret, but if you play with the thresholds a little bit, you can actually pack a lot of secrets in a single share when you distribute it among parties. And this also led to multiparty computation protocol with exactly this feature. So Ligero took advantage and actually you need to sharpen it and tighten it here and there to actually get a concretely efficient, but the first version of Ligero was that. And one of the, again, things about these MPC protocols is they had very simple structure. They used, like Reed-Solomon encoding, for which you have fast algorithms to do it. And as it turns out, I mean, Ligero remains as one of the fastest provers even today. And I'll tell you, Ligetron is faster than Ligero, but it still remains as one of the fastest prover time protocols. And even if you look at papers today, they still compare back to the 2017 numbers we just didn't publish more faster numbers, but they still compare with the numbers that we published in 2017.
+
+
+But Kobi, to answer, I'm only talking about Ligero, Ligetron has a lot more features, which I can talk about, but Ligero is, as a protocol, it's hash based. It's not a SNARK completely, because it's not sublinear. The complexity, the proof length is square root in the circuit size, as opposed to polylogarithmic, which is what people typically associate with SNARKs. But the second thing is also that the verification is not as is, is not succinct. But this is not... Again, I want to say it's not a bad or a good feature. In fact, all zero-knowledge systems, the verifier needs to spend time proportional to the circuit. It is just that when you repeat it many, many times, you can do some optimizations. But if I tell you I want to prove a single statement once, the verifier at least has to read the statement, otherwise, it doesn't know what it is being convinced. But in any case, the verification is also, it's not succinct. It can be when the computation is structured, which is what is the case in terms of machine learning applications or rollups and so forth, the computation is highly structured. When it's highly structured, Ligero is both sublinear in proof, but also the verification is succinct.
+
+
+[00:40:24]: Kobi Gurkan:
+
+
+Yeah. So why do you think it hasn't received so much attention like others SNARKs protocols, like Groth16, Plonk and STARKs? You have my guess, but I'm curious, what do you think?
+
+
+[00:40:39]: Muthu Venkitasubramaniam:
+
+
+Okay, I wasn't prepared for that question. Okay, so let me try to be as less or as much controversial now. Even after building a system, I think it takes engineering. It takes also applications, it also takes, I should admit, some business savviness to to bring in the forefront. Now maybe just comparing it with STARKs... Also maybe one more sentence I'll say here, because I listened to Justin's podcast, maybe someone needs to be quixotic and like, hey, go for MPC-in-the-Head, like he goes for sum-check. But maybe we'll do that.
+
+
+[00:41:18]: Anna Rose:
+
+
+Is that you? Okay.
+
+
+[00:41:21]: Muthu Venkitasubramaniam:
+
+
+I mean, in all, it's hash-based, it's post-quantum secure, just like STARKs are post-quantum secure. In fact, I mean, STARKs scale polylogarithmic while Ligero scales square root. But for up to a medium sized circuit, actually, square root beats polylog. And this is one of the misconceptions also that Justin had actually written about comparing Ligero and STARK proof lengths. I mean, I didn't answer your question, Kobi, but maybe the answer to your question, it's more that we didn't find the right application until now for showcasing this technology. And let me also say that we have applied our zero-knowledge technology in the MPC world. And this goes to also Anna, like maybe just your question before, I had just one sentence to add to it. Carmit said, there is a symbiosis between MPC and zero knowledge. I mean, MPC is more general than zero knowledge, but the techniques wise, they have gone from one to the other and back. So in that sense, we have actually employed zero knowledge quite a bit. In fact, our first RSA project, as well as in our auction project, we have used the zero-knowledge insights that we gained in Ligero back in MPC.
+
+
+[00:42:39]: Anna Rose:
+
+
+Back into MPC. Interesting.
+
+
+[00:42:41]: Muthu Venkitasubramaniam:
+
+
+Yeah, actually, Anna, maybe one thing tying back to the name of the company, I didn't get to name this our original work Leviosa, but the following work on MPC, there is a work on MPC with Carmit, me, Yuval that we named it Leviosa.
+
+
+[00:42:55]: Anna Rose:
+
+
+Okay. That does exist in the world.
+
+
+[00:42:58]: Muthu Venkitasubramaniam:
+
+
+Yes.
+
+
+[00:42:59]: Anna Rose:
+
+
+Cool.
+
+
+[00:43:00]: Kobi Gurkan:
+
+
+Yeah, I guess I'll add my guess, again, going back to Justin, which is the hidden participant in this episode as well.
+
+
+[00:43:08]: Muthu Venkitasubramaniam:
+
+
+He's just right across here in Georgetown, so.
+
+
+[00:43:10]: Kobi Gurkan:
+
+
+Yeah, exactly. So, one point that he made in his recent post was that as a community, at least in the crypto space, we've been very, very focused on optimizing verification time and on-chain verification and so on. And like you said, people still compare proving times with your 2017 paper. And now there are other use cases and other applications where proving times are much more important, and you'll deal with verification times in other ways. So I think that's one of my guesses, at least.
+
+
+[00:43:47]: Muthu Venkitasubramaniam:
+
+
+This is absolutely right. One of the hidden things that a lot of the ZK system, maybe this is the controversial point, is that they hide what are the prover resources that are spent in building their products. And I think for systems like rollups and so forth, I think this investment pays out. Like you can push those costs back down to your users. But in many scenarios, this cannot be the case. And focusing on prover time is important in these settings. I mean, we are looking at client-side proving with our technology, as well as proving very large scale computations frequently, like machine learning inference. And here prover time is going to be important and let me just say, I would not say prover time, I actually would say prover resources, because that's different.
+
+
+[00:44:35]: Kobi Gurkan:
+
+
+Yeah, that's true.
+
+
+[00:44:37]: Anna Rose:
+
+
+So you have teased Ligetron already in this episode. What is this? I'm assuming it uses things that Ligero has in it, or is it a new proving system or is it a new construction? Yeah, tell us what it is.
+
+
+[00:44:51]: Muthu Venkitasubramaniam:
+
+
+So I want to think of Ligetron as Ligero 2.0.
+
+
+[00:44:58]: Anna Rose:
+
+
+Okay.
+
+
+[00:44:59]: Muthu Venkitasubramaniam:
+
+
+And really, Ligetron follows the blueprint of Ligero, but differs in two key aspects. One is that it is memory efficient. In fact, I would say that it is the only zero-knowledge system that is concretely efficient, that is memory efficient without using techniques like recursive composition and incrementally verifiable computation. So it's, as it is, a memory efficient zero-knowledge system. And the second key factor is that... Key differentiator is that it can consume WebAssembly programs as input. In that sense, it's almost a ZK-WASM. I can tell you where it isn't and how we are making it a ZK-WASM or a zkVM, but it can take as input a WebAssembly program as an input. And one more thing I just want to tell about this is that it's also, maybe this might change... ZK advances come pretty fast, but I want to say today it stands as the only one that can run completely from your browser. So we actually have this. If you go to ligetron.com, you can put a C, C++ or Rust program... Well, right now only C or C++, Rust is not integrated, and compile it to WebAssembly and you and run the entire computation from your browser. We have tested it up to a billion gates. It takes 10 minutes or 20 minutes on the browser to go to that scale, but it will run. And the memory required by the zero-knowledge system is closely or proportional to the memory required by the underlying WebAssembly program.
+
+
+[00:46:39]: Anna Rose:
+
+
+Understood.
+
+
+[00:46:39]: Kobi Gurkan:
+
+
+Yeah, and that's pretty impressive because it's also fast for a billion gates. But also, a lot of other systems almost inherently require you to have all of this in memory at the same time, or at least in some level. So, yeah, that's pretty cool, it's pretty unique.
+
+
+[00:46:58]: Muthu Venkitasubramaniam:
+
+
+The current technology, again, I'm not going to say that, look, we observed the memory bottleneck a couple of years ahead, or at least before the blockchain community did with their rollups, because we had to do for DARPA, they wanted to scale trillions of gates on commodity hardware. They didn't want heavy hardware, but they wanted to go up to trillions of gates. So we had to solve the memory bottleneck. I want to say that this DARPA program, we are actually part of a group, with Stealth Software Technologies, it's another MPC company, there are other groups as well that participated. I bring this up because almost all of them did not work on a SNARK. They all worked on what are called VOLE-based zero knowledge, which is an interactive kind, they're not blockchain ready as is, like you got to massage it, but it is not meant for blockchains in some sense.
+
+
+[00:47:49]: Kobi Gurkan:
+
+
+Like, it's not publicly verifiable.
+
+
+[00:47:53]: Muthu Venkitasubramaniam:
+
+
+It's not publicly verifiable. I mean, there are new works that are trying to do it, but as is, it is not publicly verifiable. But we focused on SNARKs. And I want to say, for the VOLE-based, that's actually more close to being an MPC. It uses public key assumptions and so forth, but they get memory efficiency a different way. But in the SNARK scenario, I think either we were lucky or so forth, we encountered this problem and we tried to solve it, and we really, I want to say that one of... As part of our mission, we want to make it easy to use the system. I'll say that I've... Again, not pointing fingers or naming names, I've tried downloading all these open source repositories, and I did quite a bit of coding as an undergrad, but let's say that my skills aren't. But our top engineers have taken hours to compile and use this. There is still a significant learning curve to start using this technology. I'll say like our browser implementation, anyone write a simple C program, you can do it from a browser today. And this is one of the things that we want to keep in mind as we are evolving. I think bringing Web2 to Web3, which is something that we feel strongly about, I think this is going to be important. You want to make things that people are familiar with Web2 so that bringing development here is easy.
+
+
+[00:49:13]: Anna Rose:
+
+
+When you talk about memory efficient, I actually don't really understand what the memory is there. Can you describe that? And it sounds like there are other techniques to create this memory efficiency, like recursion, you kind of highlighted. But yeah, what does memory efficient actually mean here?
+
+
+[00:49:29]: Muthu Venkitasubramaniam:
+
+
+The current zero-knowledge systems, the way... Or the SNARKs, let me just be specific so that I don't bring other techniques in. You have to first run the computation and you observe all the intermediate values of these computation, and really the modern zk-SNARKs, what they try to prove is that every intermediate computation was performed correctly. Now, the way they do it to get succinctness is you need to do some kind of mixing in terms of checking these constraints. This is where all the error correcting codes, all these things like polynomial evaluations help you in sort of mixing the constraints in terms of checking it. Now, one of the things that modern SNARKs need to do is when they run a computation, they have to take all these intermediate computations and have it in your head, or you need memory proportional to... Like imagine that I expanded it out as a circuit, I have wire values, I have to put all of this in memory. And then after that apply certain cryptographic techniques on top of this. So in this sense, when I say memory efficient, the memory I need is proportional to the entire computation as opposed to, but when you run your program, you have a... When you run your program on your CPU or anything like, it does not need to keep past values, right? I mean, I only keep what is in my registers and a little bit in my memory, but as I do the computation, I don't need to keep the past values in memory.
+
+
+[00:50:59]: Anna Rose:
+
+
+Okay.
+
+
+[00:50:59]: Muthu Venkitasubramaniam:
+
+
+Now when I say Ligero is memory efficient, it can also do garbage collection. This is what I mean. Like  in modern computers you don't want to waste memory. As you do computation, there is something called garbage collection that removes all unused stuff.
+
+
+[00:51:14]: Anna Rose:
+
+
+Okay.
+
+
+[00:51:15]: Muthu Venkitasubramaniam:
+
+
+Now, modern zk-SNARKs, or at least what the last two years, what people are trying, how they are trying to address this is something called continuations, or like recursive composition is one example where you take your entire computation, you break it into chunks and you prove each chunk separately. And then you combine these proofs using a second layer of proofs, and you can do this multiple times. You can have a tree-like structure, and you can do it. Now this is memory efficient in that each chunk or shard can be... You just need to choose the size for which you have memory. So then after you have done the proof, you can move to the next shard, but this is not actually how people do this, because if you really did this, you'll run forever because you're going to do the first chunk, then the second, you'll do sequentially, this is going to take a lot of time. In fact, for example, Starknet, what they do is they have 200 computers that does this in parallel, and then they do recursive composition. So one thing that I want to kind of highlight here is back to my point about prover resources, these techniques of recursive composition and incrementally verifiable computation can get memory efficiency, but at the price of very heavy hardware. But Ligero, on the other hand, we can get this memory efficiency on standard hardware. And if you throw in more hardware, you can leverage parallelism, but on standard hardware, you can already get this memory efficiency.
+
+
+[00:52:39]: Kobi Gurkan:
+
+
+So when you talk about WebAssembly and Ligetron, it's one instantiation of how to use Ligetron, right, is building a specific zkVM for Wasm. And I guess my question is, is it especially useful to use Ligetron or Ligero for zkVMs? Or you see other, let's say, specific instantiations for other applications like ZKML or other kind of things?
+
+
+[00:53:12]: Muthu Venkitasubramaniam:
+
+
+Actually, your former question sounds to me more like a business answer, and the latter is a little more technical. But I'll try to address both these questions. For the zkVM itself, I mentioned that we are almost a zkVM. So where are we not a zkVM is that we can only take programs that have what I call oblivious control flow. Meaning that I cannot have an if-then-else in the program where I branch on a secret value, because the verifier needs to know really exactly how you flow through the program. We have a couple of papers in recent, like, I mean, the last year and this year that show how we can remove this, which is in the pipeline to make it a full fledged ZK-WASM. And it is different from how RISC Zero, SP1 and Jolt are doing it. They have this fetch-decode-execute cycle for every instruction to solve this problem. For us, we're going to solve it differently, that's going to give us a lot more mileage. Instead of fetching instructions at a time, we can fetch blocks at a time. So this amortizes the fetch-decode over a block as opposed to per instruction. So we hope to get much more mileage from making it a ZK-WASM. 
+
+
+But in terms of, okay, are we going to build this? Now I think the way, at least I'll say it's all a little bit in flux, but we want to think more about where this technology is going to be useful. We want to think about products. There's no doubt we're going to improve our ZK tech. Like it's going to... We want to make it faster, we want to still keep the memory efficiency, we want it to still be easy to code applications, but we want to think of applications, and the two domains we are looking at, one is enterprise, where we are looking for client-side proving for transaction level privacy for tokenization. And on the other end we are... On the crypto side, we are looking for verifying AI computations. And I just want to maybe mention one benchmark in the AI computation space and how it ties back to WebAssembly, which is one of the questions Kobi you asked, is that Modulus Labs recently made an announcement a couple of months back where they were able to verify, actually the first that verified the GPT2 inference on-chain.
+
+
+[00:55:29]: Kobi Gurkan:
+
+
+Yeah. very impressive.
+
+
+[00:55:31]: Muthu Venkitasubramaniam:
+
+
+Very impressive. And so we, in collaboration with Nim Network, we said okay, let's also benchmark. Now our proofs can't go on-chain yet, which is, I want to just point in comparison to Modulus Labs, but what we wanted to really do is we wanted to make it easy to do this. So we really took a pure C program, it was called by... There was one of these GitHub repository for, by Karpathy or someone who did for the Llama, 7 billion model, which is five times bigger than the GPT2-XL model, and we just compiled it to WebAssembly and ran it. We did no optimizations, no lookups, no nothing. Like we just ran it through our system and it came out in 14 hours, which is sort of like a 60x improvement, but if you look at the hardware, we were like 100x better hardware than Modulus Labs. So just coming back, I think, okay, between WebAssembly and say RISC-V, there is a question and I can spend a whole hour why WebAssembly is better. But the long story is that WebAssembly is more versatile. And we picked that for that reason, but there is no reason to keep that. We can really do any VM that we choose, but WebAssembly has some very nice features that we can take. Garbage collection being one of them.
+
+
+[00:56:43]: Kobi Gurkan:
+
+
+And do you specifically like VMs because it's highly structured.
+
+
+[00:56:48]: Muthu Venkitasubramaniam:
+
+
+No. Easy to deploy, easy for people to write applications. That was really... I mean, our motivation was to get a good intermediate representation. I mean, rather than using R1CS or these specific circuits that have a learning curve, we wanted to pick one that's easy.
+
+
+[00:57:06]: Kobi Gurkan:
+
+
+Okay. And maybe like you said, the elephant in the room, it's not on-chain verifiable yet, but how optimistic are you that it could be made?
+
+
+[00:57:15]: Muthu Venkitasubramaniam:
+
+
+I won't use the word optimistic. I mean, I'll say that, no, we are going to get the proofs on-chain. There are two steps specifically that we have to do. The first step is we have to go to what is called the pre-processing variant of this. This is the kind where I said like, hey, I want to prove something, but I'm going to prove this over and over, which means now I can give a small amount of a hint or information for the verifier that can verify these computations over and over again. So this is still, I mean, we have the research written internally, we know how to make Ligero pre-processing. This is required because we have to reduce the verification size. Now, our estimates say that from proving a statement to verifying its proof, there is a 50x reduction. So just to give numbers, let's say that I start with a 200 billion gate circuit, which was what the Llama 7 billion model, like if I get a 50x or 100x improvement, it reduces to 2 billion or 4 billion. I can recurse it one more time and I can make it 100 million, and now I can put anything. Like if you want into prover networks, DePINs, anything, you can just push it and we can get it on-chain. We are not looking to optimize. I mean, we will do the research, but it will be easier for us to just plug into some other system to finally bring this. Once it becomes a manageable size, we could just plug into the system. One point I want to mention here is that being ZK by default actually helps here, because we don't need to worry about the composition giving us privacy. If you start with a SNARK, as opposed to a zk-SNARK when you compose it, which you have to to bring proofs on-chain for many of these systems, you want a zero-knowledge system, but are you going to trust some other service to do that? But for us, we don't care because the first step is zero knowledge, we can push it in any network, because the second step, you only need a SNARK. Privacy comes already in the first step.
+
+
+[00:59:12]: Anna Rose:
+
+
+At what stage is the project? So Ligetron specifically, like you've announced it, but are you building it? How far along are you with that?
+
+
+[00:59:22]: Muthu Venkitasubramaniam:
+
+
+Ligetron as is, I mean, this is fully functional. People can start using this with the caveat that you need sort of oblivious control flow on your C program. But where we are going with it actually is we are right now aligning design partners to really build some products in the space to educate us how to evolve the ZK infrastructure. And we are starting with... I mean, we are close to having two partners, one in the enterprise space, with our Wall Street connections where we want to use ZK for transaction level privacy for tokenization. And this is going to require things like Anonymous Zether and Zether that they want, but with KYC AML. In this sense, we are different from like Aztec and Zcash that don't have that in their... Or at least in their immediate goals. We want to do it, like we want to be regulatory compliant and so forth. So we are going to enhance our browser-based ZK for these applications that require client-side proving. And on the other end of the spectrum, on the crypto side, we did this Llama 7 billion inference, we are thinking about how to build the next infrastructure for AI and we are looking to collaborate with this Nim Network for bringing AI gaming on-chain. Both of these in some sense, I mean, the first step for us is to bring the proofs on-chain, as Kobi said, that is kind of one of the biggest milestones, which I think we should... I mean, my estimate is like two to three months, we should be able to bring the proofs on-chain. But the way I think about it is we're going to have some design partners to build certain products, but on the same end, we want to build a unified ZK that's going to help everything, right? So, because when we bring a unified ZK, what we're really unifying is the developing tools more than the underlying ZK.
+
+
+[01:01:11]: Anna Rose:
+
+
+Now, what about the future research work? Are you actually going to be doing Ligero 3?
+
+
+[01:01:16]: Muthu Venkitasubramaniam:
+
+
+Yes, without a doubt. I think, again, one of the things for Carmit and me that's been really fantastic working in this, is the amazing research, both from the industry side as well as the academic side. How ZK has progressed is amazing. I'm going to be humble and honest and say it's like it's not going to... Ligero or Ligetron is not going to remain the best if we don't improve it. And I'll say for now, Carmit and I have five improvements down the line that we know what to do, but we don't know what new improvements are going to come down this year. One other thing that I want to point with the MPC-in-the-Head is what Carmit and I have really sharpened our skills in the last four years is we have looked at all the optimizations that go on elsewhere, and we know how to bring it back into MPC-in-the-Head. So we hope to continue to do that and stay competitive.
+
+
+[01:02:05]: Anna Rose:
+
+
+What's the most exciting work that came out recently to you outside of your own?
+
+
+[01:02:09]: Muthu Venkitasubramaniam:
+
+
+I'm a little afraid to say this because I haven't done the diligence, but I do think that the works of Lasso, of Justin, with the lookup arguments, as well as Binius, which is also something that is making its rounds. I know how to bring all the lookup arguments into MPC-in-the-Head, I don't know yet how Binius does. But interestingly, the Binius commitment is actually the structure is the Ligero polynomial commitment scheme. So I hope that that's going to also improve what we build.
+
+
+[01:02:46]: Anna Rose:
+
+
+Interesting. So I want to say thank you to both of you for coming on the show and sharing with us the story of Ligero, or Ligero, the advent of Ligetron, and some of the future work you have planned. Yeah, thanks so much.
+
+
+[01:02:59]: Carmit Hazay:
+
+
+Thank you. It has been a pleasure. And thank you, Nigel, for making the connections.
+
+
+[01:03:04]: Anna Rose:
+
+
+For the recommendation.
+
+
+[01:03:07]: Muthu Venkitasubramaniam:
+
+
+Thanks, Anna. And also, actually, special thanks to Kobi, too, who's also been advising us through this through the last few months, and thank you. I hope maybe someday I'd like to ask the two of you some questions in some podcasts, because I have so many to ask you guys.
+
+
+[01:03:25]: Kobi Gurkan:
+
+
+Yeah, it was a great conversation. Thank you for sharing all of this.
+
+
+[01:03:29]: Anna Rose:
+
+
+Cool. All right, I want to say thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners, thanks for listening.

@@ -1,0 +1,1132 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:28:
+
+
+This week, Tarun and I chat with Brian and Richard from the ZKP2P project. ZKP2P is one of the first ZK applications for real users. It uses ZK Email under the hood and is a peer-to-peer fiat to crypto on-ramp and off-ramp. And I feel extra happy to have them on the show since the first iteration of the product was built at ZK Hack Lisbon back in March 2023. ZKP2P came in second place at that event and the team continued to iterate and develop the product over the last year. Now, in our conversation, we cover the opportunities and challenges of building applications with ZK at this time, how it is still very early and there's a lot of tooling missing, but also how it's a very exciting time to jump in. We talk about the goals of the project, how a user could actually use ZKP2P, what is happening under the hood, the types of experiments and initiatives the project is running, as well as some of the challenges of building alongside Web2 systems. Now, before we kick off, I want to remind you that the ZK pod flagship event, that is zkSummit11, is happening in Athens on April 10. This is an invite-only event, and space is limited. There is an application process, and you do need to apply to be eligible for a ticket. I've added the link in the show notes, and I hope to see you there. Now, Tanya will share a little bit about this week's sponsor.
+
+
+01:42: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain asset-agnostic privacy via a unified set. Namada is natively interoperable with fast finality chains via IBC and with Ethereum using a trust-minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia, that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada, for more information, and join the community on Discord, Discord.gg/namada. And now, here's our episode.
+
+
+02:44: Anna Rose:
+
+
+Today, Tarun and I are here with Brian and Richard from the ZKP2P project. Welcome to the show.
+
+
+02:49: Brian Weickmann:
+
+
+Hi, how's it going? Great to be here.
+
+
+02:51: Richard Liang:
+
+
+Hey, yeah. Great to be here as well. Yeah, long time listener.
+
+
+02:55: Anna Rose:
+
+
+Cool. Hello, Tarun.
+
+
+02:57: Tarun Chitra:
+
+
+Hey. 
+
+
+02:57: Anna Rose:
+
+
+So in this episode, we are going to be exploring the project ZKP2P, which is a trustless peer-to-peer fiat to crypto on-ramp and off-ramp powered by ZK. And I sort of feel a special affinity to this project because I first learned about it at ZK Hack Lisbon in March 2023. The ZKP2P team was like a participant and actually this project came in second at our hackathon. That was the first time we ran a ZK focused hackathon. So there's just like, yeah, it was incredibly cool that you guys came in second, and then it was so cool that you went... You continued with it. So I'm really excited to have you back on the show to hear more about the project and yeah, what's happened since.
+
+
+03:38: Brian Weickmann:
+
+
+Yeah. Excited to be here, like I said. And yeah, it's been a fun run since zkSummit9 and I think the first ZK Hack.
+
+
+03:46: Anna Rose:
+
+
+Nice.
+
+
+03:47: Richard Liang:
+
+
+Yeah, exactly. Really excited to talk more about this and talk about basically the complete opposite of most of the historical episodes on the show where it's focused on research in terms of the land of, I guess, ZK application development.
+
+
+04:02: Anna Rose:
+
+
+Totally. I want to ask, where did the idea originally come from? And I kind of always was curious, was this a project that sort of had already been brewing before the hackathon? Had you worked on ZK Email before? Yeah, where did the idea come from?
+
+
+04:19: Brian Weickmann:
+
+
+So we originally came up with the idea at StarkWare Sessions in Tel Aviv. We were just sitting around, me, Richard, and actually two other team members, Sachin and Alex, we were all out there. We're even a little unclear who exactly kind of started it. But I think Sachin was having some frustrations with on-ramping using Binance P2P in India. So that's where he's based. And we'd been looking at different ZK stuff and had come across ZK Email and realized like, oh, this is potentially something we could use to prove some sort of off-chain payment. So then it's like, okay, well, what can you do with that? And one of the obvious things I think that came to mind was like, oh, maybe you could do some sort of on-ramp off-ramp type idea. And we actually rushed home. I didn't rush home, we went home and we were like, okay, we have another day in Tel Aviv, like after the conference, let's try to hack this together.
+
+
+05:19:
+
+
+Very quickly ran into a lot of issues, just getting set up, and actually after that, we're like, maybe we should do a company just helping people set up like their ZK proving systems and all that sort of thing. Yeah, so it kind of came out of there and then we were all gonna be in Lisbon for ZK Hack. And we were just kind of thinking of things to do and we're like, well, this is a really cool idea. I think people would be a little inspired by it too. It's like kind of, there's a little bit of a subversive quality to it. And so we thought it was just a really fun idea. We knew we had... It was probably achievable with ZK Email, but we didn't really have... We obviously didn't really have any of the work done. So that was just kind of a grind throughout the weekend to kind of actually implement it.
+
+
+06:09: Anna Rose:
+
+
+So cool. What were you both doing before? And actually maybe what were your teammates doing before all of this?
+
+
+06:16: Brian Weickmann:
+
+
+So we were all at Set Protocol. So that's like an on-chain index, a structured product type protocol. And we'd all kind of got ZK-pilled around the same time. I think actually Sachin was the one who kind of ZK-pilled a lot of us. Myself, Richard and Alex have been working together since 2018 at Set. Sachin joined, I think, like 2021. So we've all been working together for a long time. And yeah, so we were all just kind of helping out with that project. 
+
+
+06:51: Richard Liang:
+
+
+And we kind of took the last little bit over a year to do ZK exploration. And we just hacked around, built ZKP2P and also worked on building a couple random libraries for various projects. We were playing around with Axiom's halo2 library and also built something for Aztec, their Noir RSA.
+
+
+07:14: Anna Rose:
+
+
+This is in the last year.
+
+
+07:16: Richard Liang:
+
+
+Yeah, last year.
+
+
+07:16: Anna Rose:
+
+
+But just going back, so you were all at Set Protocol, so you actually were colleagues. You knew how to work together already.
+
+
+07:23: Brian Weickmann:
+
+
+It was clear who was going to be doing what.
+
+
+07:25: Anna Rose:
+
+
+Okay. At Set, was there any ZK in any of the work you were doing then? Or was it completely outside of what you were up to?
+
+
+07:35: Brian Weickmann:
+
+
+It was pretty outside. We'd kind of entered this time period of exploration within Set and trying to figure out what was next for the company to a certain extent at that time. There was a little bit of just like, let's go see what's new out there. Like what are the technologies that could enable the next thing? And so in that respect, we were all kind of starting that research internally, which is partly why we were out at StarkWare Sessions too, was just to kind of learn. But we never ended up implementing anything using ZK, but I'd started some exploration there.
+
+
+08:15: Richard Liang:
+
+
+So, you know, given that Set was sort of pretty early in terms of being an on-chain application in DeFi, right? I mean, arguably, I think Set probably existed before the word DeFi existed. So that's like...
+
+
+08:28: Brian Weickmann:
+
+
+We were in the original Telegram group. We actually...
+
+
+08:31: Richard Liang:
+
+
+Right, right, right.
+
+
+08:34: Brian Weickmann:
+
+
+Yeah, yeah, one of our colleagues, I think, may have even come up with the DeFi moniker. Although I'm sure that's a very contested thing.
+
+
+08:45: Anna Rose:
+
+
+Wow.
+
+
+08:46: Richard Liang:
+
+
+Correct, correct, correct. But you guys were definitely in the Genesis cohort. So that's why I think it's interesting that you kind of worked on an application on Ethereum before there were real applications other than ICOs at that time. And it probably feels similar in ZK, right? Because maybe as even you just pointed out, a lot of the stuff in ZK is so focused on infrastructure and not really focused at all on applications. So how do you think about the lessons you learned from being on the first Ethereum apps when there was no other apps to kind of being in the same position again? And what have you kind of taken from that. Because like, I think that to me, that's kind of one of the most interesting overlaps in the story.
+
+
+09:33: Brian Weickmann:
+
+
+Yeah. I mean, I think you just really have to be kind of... You know, you're gonna have to build or struggle around with a lot of the tooling yourself just from a technical standpoint. I'm trying to think like, where's the ZK tooling in relation to kind of like the smart contract tooling back then. I would say ZK tooling is even probably a little worse than what the smart contract tooling was in 2017. It's not that far behind maybe, but...
+
+
+10:01: Anna Rose:
+
+
+Exactly.
+
+
+10:01: Richard Liang:
+
+
+It only gets better by people building something and being like, this is broken, right? So like... 
+
+
+10:07: Brian Weickmann:
+
+
+Exactly. Well, you also need the... Kind of needs to work both sides of the funnel, right? You need the demand, you need... The people are just interested in building that stuff. Then you also need the demand from application developers to be like, this is painful. And they either have like somebody else builds it because they see the use for it. Or often like, back in the 2017 days, we were all using like 0x libraries because 0x was like, Oh, I have to... We have to build this.
+
+
+10:35: Richard Liang:
+
+
+Or Truffle.
+
+
+10:35: Brian Weickmann:
+
+
+Or Truffle. Yeah.
+
+
+10:37: Richard Liang:
+
+
+So forget about...
+
+
+10:38: Brian Weickmann:
+
+
+It was usually some mishmash of Truffle and 0x, like some Frankenstein monster, I feel like. But then there's this other element of like, okay you have tech that can do something, but you're trying to figure out really what it's limits are. People just didn't know everything you could do with smart contracts. Like as weird as that, it kind of like sounds, it's just kind of the case. And obviously, the silly language wasn't very future full. There were all these kind of quirks of it and pitfalls. And so you're trying to constantly figure out what you can actually build and what you can build that's meaningful. So there's just like weird experimentation process you have to go through much more than a lot of companies are like, okay, we're building this. And there's obviously some experimentation in there, but you're not deviating too far from the plan. Whereas here, there's a lot of like you have an idea of what you want to build, but you're also like, some of your core pieces may be shifting. We use ZK email, but we're also like, well, what else is out there that we can use to prove off-chain data?
+
+
+11:43: Richard Liang:
+
+
+Yeah. As app developers, we kind of push the limit of what you can do with the underlying library. And that kind of improves the library underneath. So we basically take the most simple example of what ZK Email had in their repo, and then let's try to prove this massive Venmo email that's several times larger and see where it breaks. And then that kind of creates feedback for us to talk to the ZK Email team and kind of help them on, hey, where should we improve the library? And so yeah, that's a really great feedback loop that app developers kind of feed towards more lower level primitives and the relationship we have with them, I guess.
+
+
+12:29: Tarun Chitra:
+
+
+It's a very funny analogy that ZK Email is the 0x for you guys. You know like that...
+
+
+12:34: Anna Rose:
+
+
+Interesting.
+
+
+12:36: Brian Weickmann:
+
+
+Yeah, it is. It's like, we're almost more directly integrating ZK Email than 0x. Like 0x, we just used their tooling. They weren't an integral part of the product. ZK Email is very much like a core part of what we're building too.
+
+
+12:51: Tarun Chitra:
+
+
+I just like the story of this. It's interesting to think about the early days of DeFi and the early days of ZK apps and things that are similar. And the fact that they have similar people involved is a very cool thing.
+
+
+13:05: Anna Rose:
+
+
+If you... I mean, so you just kind of said ZK today has tooling that's worse than smart contract tooling back then, 2017. What... Is there a different era that you think ZK is actually at? Like is ZK today more like Ethereum one year post launch or something?
+
+
+13:23: Brian Weickmann:
+
+
+So I can't speak to too much before 2017. So yeah, unfortunately, my history doesn't go back that far. It's not...
+
+
+13:34: Anna Rose:
+
+
+I'm also a 2017 joiner, by the way. So.
+
+
+13:37: Brian Weickmann:
+
+
+Yeah.
+
+
+13:38: Richard Liang:
+
+
+Yeah, I guess on my end, I can speak to one year earlier than 2017. And I think in 2016 was when stuff like Ether Delta was coming out. The first instance of what it looks like to have a smart contract that can escrow funds and perform, act as an order book, no matter how centralized it is. So it could be that ZK is kind of in that era where you can kind of start piecing together all the libraries, all the proving system tooling out there to build like that Ether Delta kind of application, which kind of analogizes what we did with ZKP2P.
+
+
+14:19: Anna Rose:
+
+
+I want to ask a little bit more about your onboarding yourselves into ZK as well. I get that you had this sort of period of time where you were researching, but what could you find? What are the resources for application developers who are super familiar with smart contract architectures? I don't know if you have some advice for them, how to get involved or like what you actually... Like how did you kind of navigate this?
+
+
+14:44: Richard Liang:
+
+
+Yeah, I can speak to that since I basically kind of went from zero knowledge of ZK to, I guess, some knowledge now since, I guess, a little over a year ago.
+
+
+14:56: Tarun Chitra:
+
+
+Do you remember the ZK-ZK-rollups?
+
+
+14:58: Anna Rose:
+
+
+Oh yeah.
+
+
+15:00: Richard Liang:
+
+
+Yes.
+
+
+15:02: Anna Rose:
+
+
+Actually another project at ZK Hack Lisbon was the ZK-Zk-zk-rollup, which exists in the world. But anyway, yeah. So you were zero knowledge on zero knowledge.
+
+
+15:11: Richard Liang:
+
+
+Yeah, so I think the first thing I ever did was probably just go over all of the 0xPARC initial videos they had back in the day on introduction to Circom. I think for me at least, I had to probably re-watch those videos like two or three times just to get into it. And then I actually watched a lot of the ZK Hack whiteboarding sessions to get familiar with the theory. So it's kind of interesting in ZK. As an app developer, you do have to dive into the theory. Otherwise, it's really hard to just get started. I guess over the last year-ish, it was basically alternating between watching YouTube videos on theory and trying to get my hands dirty writing some circuit code. And yeah, that kind of culminated in like ZK Hack where we try to put all those things together.
+
+
+16:09: Anna Rose:
+
+
+What's the sort of language track that you found kind of easiest to get into? Or maybe which one you did? Because I feel like there are now a lot of these ZKDSLs and they are, you know, these different ecosystems are building up tooling around them. Sounds like you started with Circom. Is that sort of the line you took? So it was like Circom Halo stuff or was there... Did you explore any of the other ZKDSLs?
+
+
+16:33: Richard Liang: 
+
+
+I started with Circom because they had the most, I guess, content out there when I started. Then I did go the Halo route because that was the next in terms of number of YouTube videos available to me. But I did do a couple months exploring Noir when that was kind of coming up like last year.
+
+
+16:53: Tarun Chitra:
+
+
+Do you have a procedure for when you explore a new DSL? Like you have some set of programs that you try to implement that you're like, this is like my way of comparing them. Like some sort of suite of things like Fibonacci or something. You know, I feel like everyone when they learn a new programming language has like X set of things that they re-implement just to see how hard or easy it is. Like what sort of your learning stack in that sense.
+
+
+17:18: Richard Liang:
+
+
+Yeah, so at the very beginning of, I guess, learning the DSL, it is probably that Fibonacci  or whatever is available in the YouTube video, right? And you just kind of follow along and implement along with them. As I get more familiar with the code, I do find that implementing something new that's not available in that language helps me learn the fastest. So for example, for when I was learning Noir, they didn't have that RSA library, so I kind of took a stab at implementing that library, which wasn't available in that language by referring to, I guess, Circom and Halo 2 implementations. And that kind of helped me learn a lot much faster.
+
+
+18:00: Anna Rose:
+
+
+That's really cool. So I think it would be really good for us to jump into ZKP2P and the project itself. But before we do that, I actually want to revisit ZK Email. You've mentioned this a few times as basically something that ZKP2P is built on top of or with. And we have done an episode on this show back in, I think, November or December where we did an episode with zkLogin and ZK Email where we talked about kind of what those are and how they could be used. But I want to revisit first ZK Email here and just maybe go over again what it is, and then I want to understand how exactly you used it. Because I know I left that interview roughly knowing how ZK Email works, but I think with a build on top, I might get a better picture for what you can actually do with it.
+
+
+18:51: Richard Liang:
+
+
+So the ZK Email library that ZKP2P is built on essentially is, I guess, two packages. One is using ZK to verify that the email is signed by the private key of the mail server of the person who has sent the email. And the second package is ZK Regex, which is using a ZK circuit to extract specific information from that email while preserving and redacting all the other parts of the email, essentially preserving privacy of other contents that you don't need in the email. I guess ZKP2P uses both the email verification side and also the ZK Regex. So on the email verification, it basically ensures that the RSA signature that's present in the email is in fact what the hash of the email is signing. So you can basically ensure that the email is signed by Venmo in our case. No one else can spoof any email because that signature would not match Venmo's, I guess, private key that has signed it.
+
+
+20:05: Anna Rose:
+
+
+In this case, you're trying to just connect the email of the user to Venmo, saying like yes, they also have a Venmo account. You're just kind of proving that this email and there is a Venmo account that's equivalent exist. Is that what you're trying to do?
+
+
+20:19: Brian Weickmann:
+
+
+We're basically proving that the email came from Venmo's server. I guess in theory there's another step of logic there of having to prove that it's the user's account. You're basically proving that whoever has possession, let's say possession of the email, you're essentially proving possession of that email and you're also proving that that email came from the Venmo server.
+
+
+20:43: Anna Rose:
+
+
+Got it. And when you're saying email, I think I kind of mixed it up. I thought email account, but you're saying the email itself, like the actual sent email from Venmo to an account, but you're just proving that that has come from Venmo.
+
+
+20:57: Richard Liang:
+
+
+Yeah, and this is the... I guess the email verification package that ZK Email offers. And then the next step is that ZK Regex, where you're basically proving that this piece of data, such as you paid this guy x dollars, you can basically regex or extract out that piece of data and prove that that piece of data was in that email.
+
+
+21:23: Anna Rose:
+
+
+Interesting.
+
+
+21:23: Richard Liang:
+
+
+That was also signed by Venmo. 
+
+
+21:25: Anna Rose:
+
+
+Are you doing that just based on the template email that Venmo always sends? It's like you know where it is in the email, and so you can kind of just say that this has happened in this exact character point in the email?
+
+
+21:40: Richard Liang:
+
+
+Yeah, at a high level, that's basically it.
+
+
+21:42: Anna Rose:
+
+
+Oh, interesting. But what happens if Venmo changes their template?
+
+
+21:47: Richard Liang:
+
+
+That is a good question. That would require a redeployment of the circuit right now.
+
+
+21:54: Brian Weickmann:
+
+
+It's one of the brittle features right now of using email and obviously by extension kind of ZKP2P 2. There are some of these like risks of template changing and things like that. 
+
+
+22:12: Anna Rose:
+
+
+Would there be any way to do kind of almost like a search for a format instead of relying on the exact point in the email or is that sort of beyond the scope of the ZK Regex module and stuff like that.
+
+
+22:26: Richard Liang:
+
+
+So that's what ZK Regex does today. We basically specify beforehand, what is that regex expression that searches the email for? There's some additional logic to it, such as specifying at which index we think this regex will start searching from, but yeah, that's more, I guess, in the weeds.
+
+
+22:47: Anna Rose:
+
+
+If Venmo changed the template, then, if it did have that transfer amount in a different point, could you still use it to find it? Or would you have to manually go in and be like, ah, it has moved, therefore we need to redeploy it.
+
+
+23:01: Richard Liang:
+
+
+So usually I guess when Venmo changes their template, they would change the HTML, like tags that surround it as well, which kind of break the regex search, depending on how stringent we make. 
+
+
+23:14: Anna Rose:
+
+
+I see. Because you're not looking for a text string. You're looking for some block in the email or something like that.
+
+
+23:23: Richard Liang:
+
+
+Yeah, yeah. I guess we look for the text string and all the blocks that surround that text string. So if any of the blocks that surround the text string change, then we can't find that text string anymore.
+
+
+23:33: Anna Rose:
+
+
+Okay. That's interesting. I really appreciate you kind of showing that in that detail, because this is where I think some of the ZK Email build, for me, was sort of still very theoretical. But this makes it a little bit more clear on exactly how it's used and what it can do.
+
+
+23:51: Brian Weickmann:
+
+
+Yeah, so from the user perspective, essentially what we're doing is we're proving confirmation emails that you receive from Venmo. So for people who aren't familiar, when you send a transaction or send somebody money on Venmo, you receive a confirmation email basically saying, you sent some amount to so-and-so. And so essentially what we do then is we will take that email and kind of submit it to our circuit. It'll run the verifications that Richard was talking about. Right? So it'll run the RSA check, and then alongside that, this is all kind of abstracted away from the user in the UI obviously, but alongside that we'll also submit kind of the amount and things like that. And then we can check that against the regex. And then those will be output in the proof as the signals that we're verifying against in our smart contract, basically. 
+
+
+So the flow is basically user comes, brings the email, runs it through the circuit. The output of that circuit is now some kind of like blob of data. That blob of data gets submitted to our verifier on-chain. And that verifier then is able to say like, okay, this is valid... Most importantly, this is a valid proof. And then we check a couple other things like, does the from address match the expected Venmo from address? Because in theory, it could be Venmo, like a Venmo employee's email. So you need to make sure that's from, like, the address that sends those confirmation emails. And then we also are doing... We do some like nullification of emails so you can't kind of replay them. Those broad strokes are kind of some of the checks that we have on just the email. And then there's obviously business logic checks that happen after. And a lot of those business logic checks will do on the kind of the signals that are output as part of the proof. And so that would be like the amount, like did you send the right amount? Did you send it to the right person, obviously? We do some checks to make sure that the email was sent after the funds were originally escrowed on-chain, things like that.
+
+
+26:15: Anna Rose:
+
+
+So it does sound like there's two actions happening, right? Like there's a transfer on Venmo from one user to another, and then there's a transfer on-chain from one account to another, right? Yeah, maybe kind of work out the steps here. From a user's perspective, they send to a Venmo account. Is it your Venmo account? Is it like some specific Venmo account or is it like anyone, anywhere's like Venmo account? It's like their friend who's also running the same thing.
+
+
+26:42: Brian Weickmann:
+
+
+Yeah, great, great question. So yeah, if you step back even further, like the first step for the user is saying like, okay, I want $10 on-chain or whatever it may be, $100 on-chain. And so what we have is we have depositors in our protocol and this can be anyone and it is anyone, right now. Obviously we do, we provide some liquidity as well, just because we like using our own product, but anybody can do it. And what you do is you say, okay, I want $10 and everybody can specify a rate at which they're willing to facilitate this on-ramp for. So you may say, okay, I want to get paid 50 basis points to facilitate an on-ramp. Or if you like need to off-ramp really fast, maybe like I'm willing to pay to get this money off-chain. Right? So you could say like I'll pay 50 basis points to get this money off-chain.
+
+
+27:33: Anna Rose:
+
+
+What is that in percentages? I'm just assuming that's an extra percent. Half a percent. 
+
+
+27:38: Brian Weickmann:
+
+
+Half a percent. Then as someone who wants to on-ramp, you can go essentially have this on-chain bulletin board of people saying like okay, I'm willing to help you on-ramp for some sort of spread. And you can choose your best price, or you can choose somebody that you're familiar with, however you want to do it. And then from that point, say I want to on-ramp $10, you say, okay, I'm going to on-ramp $10 to this depositor. And that $10 is then put into escrow in our smart contract. So the money's already in the smart contract, but we're basically setting it aside now. We're saying, okay, this $10 is set aside for, right now, 24 hours for the on-ramp to complete the transaction. And so then, in our UI, it'll pop up a nice little QR code. You can scan the QR code, and it'll show, it'll bring up the person you're supposed to Venmo. And so then you will also display the amount that you need to Venmo. You send them that Venmo. And then here, there's like, we offer a couple options. So the least friendly option, or least user friendly option, at least from just a user experience perspective, is you can copy and paste the email.
+
+
+28:57: 
+
+
+So you can go and actually get the raw email and copy and paste it into a modal. The other option that we offer is you can Google Auth. So if your Venmo account is tied to your Gmail, you could Google Auth in and then just select the email that you want to have proved. And obviously, our frontend is all open source. I mean, I understand there's definitely people who.... Because we are getting read access to your emails. So I understand the people that don't want to use it. But our frontend is fully open source. So you can see that there's no...
+
+
+29:37: Anna Rose:
+
+
+Other things being...
+
+
+29:39: Brian Weickmann:
+
+
+There are no... We're not sending those emails. But yeah, so then you select the email and then you have another option. You can either prove it locally. So that would be on your computer, which I think I'm sure as your listeners know that ZK proofs are pretty computationally intensive. So that takes about 10 to 15 minutes. Or there's a remote proving instance that we have where you can send the email to the remote instance and we'll generate that proof in about 30 seconds. And then that gets returned to the client, to the frontend. And from there, you submit a transaction on-chain. And as part of that transaction, we do all that proof validation I was talking about. And that releases the funds for the user. And now you've basically paid $10, or let's say $10.50... No, $10.05 off-chain if it's a 50 basis point spread, and received 10 USDC.
+
+
+30:38: Anna Rose:
+
+
+Okay, so you sort of mentioned this escrow process. I wanted to understand if that was USDC or US dollars. Because like...
+
+
+30:45: Brian Weickmann:
+
+
+USDC.
+
+
+30:46: Anna Rose:
+
+
+Yes. So yeah, the escrowing on-chain is obviously on-chain USDC. You start there, you basically say like... But wait, in this case, if I'm buying it, so I want to buy, I have the cash on Venmo, I don't have any crypto. Do I start by sending the Venmo transaction and then I receive someone else's escrowed USDC?
+
+
+31:11: Brian Weickmann:
+
+
+The current flow is you start, the first step is you have to put the money into escrow, right? So, because we want to avoid any race condition here. So let's say there's a deposit that has $10 left in it, and there's person A and person B, and they both coincidentally want to on-ramp at the same time. And so they both send $10 to the depositor, and then it just becomes like, okay, who submits their on-chain order first to get that $10? And so somebody's going to end up out $10, essentially. So the escrow step needs to happen first.
+
+
+31:51: Anna Rose:
+
+
+But this is the depositor sending it to you.  Like you don't have any USDC. So they're putting this USDC into escrow for you, I guess.
+
+
+32:01: Brian Weickmann:
+
+
+So there's two steps. So the depositor is first what we call depositing funds into the smart contract. And you can almost think of this as providing Uniswap liquidity. So they're just depositing some sort of liquidity, and they're defining a rate that they want for it. And then when the on-ramper comes to say, I want to get $10 on-chain, they're then taking a portion of that deposit and putting it in escrow.
+
+
+32:31: Anna Rose:
+
+
+I see. Okay. That's the way. It's just sort of the terminology that you're using. So in this case, the user who's on-ramping is grabbing a piece and putting it for themselves in escrow.
+
+
+32:40: Brian Weickmann:
+
+
+Correct.
+
+
+32:41: Anna Rose:
+
+
+And then they're sending the transaction, proving that they've sent the transaction on Venmo through this email and the copy paste or the Google Auth. And at that moment that it's proven, the escrowed USDC on-chain unlocks. And is it then sent to their account on-chain?
+
+
+32:59: Brian Weickmann:
+
+
+Yep, it's then sent to their account.
+
+
+33:01: Anna Rose:
+
+
+Cool. 
+
+
+33:01: Brian Weickmann:
+
+
+And you can even specify another account you want it to be sent to. And we're constantly trying to improve this experience. Obviously, there's a lot of steps there. So trying to reduce the amount of steps, or one thing will be, well, probably by the time this podcast airs that we'll have out is a fully built in kind of account abstraction flow there. So you now... So that essentially allows us to pay for your on-ramp. So now you don't even have to have crypto on-chain to on-ramp. So right now to do that initial kind of like...
+
+
+33:37: Anna Rose:
+
+
+How you still... Do you have to pay the gas or something?
+
+
+33:40: Brian Weickmann:
+
+
+Yeah, you need to pay the gas.
+
+
+33:41: Anna Rose:
+
+
+Okay. Okay.
+
+
+33:43: Brian Weickmann:
+
+
+Yeah, so we're now taking this like... All right, we want to make this so that if you've never touched crypto before, you can get money on-chain. And so that we'll hopefully have that here in the next, by the time this is released.
+
+
+33:57: Anna Rose:
+
+
+Oh, cool. Yeah, wow, this is so interesting, like these steps and sort of the way you've architectured this. It is different than I expected. For some reason, I thought there was like things being sent in parallel, but it's not quite that. It's the user having to do something on-chain and this is where they would need some sort of ETH for gas, I guess. So they already have to be an on-chain savvy entity to be able to initiate this. But it sounds like, yeah, the real goal of this is to on-ramp non-crypto users so far, right? Would you end up, like if you're talking about covering the gas fees, do you just have to pay it yourself? Or is there a way for you to get these fees covered?
+
+
+34:38: Brian Weickmann:
+
+
+Yeah, I mean, I think ultimately, certainly longer term, when volume picks up, that's something that we'll probably have to take a small portion just to cover the cost of doing that.
+
+
+34:49: Tarun Chitra:
+
+
+Actually, quick question. The 50 basis point fee right now goes directly to the liquidity provider, right?
+
+
+34:58: Brian Weickmann:
+
+
+Correct.
+
+
+34:58: Tarun Chitra:
+
+
+Do you ever imagine a version where some fraction of that actually goes to pay future gas fees for new users? So it's like a protocol fee, but it's literally only used for paying for future gas. So that way it's like, okay, if you have more user flow, then it makes it cheaper for the new users. Kind of a good type of Ponzi scheme in some ways, right? Because all it's really doing is like subsiding...
+
+
+35:21: Brian Weickmann:
+
+
+I don't endorse that...
+
+
+35:25: Tarun Chitra:
+
+
+Yeah, yeah, yeah, sorry.
+
+
+35:27: Anna Rose:
+
+
+That description.
+
+
+35:29: Tarun Chitra:
+
+
+I didn't mean to... Freudian slip, Freudian slip.
+
+
+35:35: Brian Weickmann:
+
+
+Yeah, no, absolutely. I do think that makes a ton of sense. At some point, we do in the protocol have what we've even termed a sustainability fee that could be added to do things like pay for gas. Yeah, I suppose that would be a big portion because that could just get sent directly to the paymaster that is being used to do the kind of account abstraction and 4337 onboarding.
+
+
+36:06: Anna Rose:
+
+
+Why did you choose Venmo specifically? What was the reason for that? To me, it's a very US product. No one uses it in Europe, really. So yeah, I was curious why you chose that.
+
+
+36:18: Brian Weickmann:
+
+
+A couple of things. First, all these products are pretty regionalized. So there's not really a global... Necessarily global payment system. There's some that have... Wise has its system set up in other countries, but a lot of these are hyper-localized. It's all just like one country. It's like one... Because all the banking rails are pretty localized. But to your original question of why Venmo, honestly, I think a lot of it is just three of us are US-based, and this is still new tech. This is still like we need to be able to quickly iterate and figure out how to make this work. And so as a starting point, it made the most sense for us. It was just easy, because we could now do all sorts of transactions and figure out the best way to make it happen. We do have... We released UPI integration a week ago, a little over a week ago now, which is the Indian banking rails. And so we integrated a pretty big bank there that also sends confirmation emails. Obviously, that's another dependency for what we do is like, are there confirmation emails? And are the confirmation emails data rich? So we would love to integrate stuff like Wise, for example. But the emails you get back aren't data rich enough, or they just don't even exist.
+
+
+37:43: Anna Rose:
+
+
+Had you thought about PayPal? Because that, to me, is also worldwide, or at least pretty worldwide. But yeah, I don't know what their emails look like. I know they send a lot of emails, but I don't know if they're appropriate.
+
+
+37:56: Richard Liang:
+
+
+Yeah, it's not data rich. 
+
+
+37:57: Tarun Chitra:
+
+
+Yes.
+
+
+37:58: Anna Rose:
+
+
+Okay. You had a look. It's interesting, this model, though, of having a Web2 payment flow happening and then a concurrent Web3.1. So the first time I had actually heard any model like that was Gnosis Pay. Do you know about this? The credit card that Gnosis recently released? So they also... I mean, they are working with Visa, and they're able to... Like, there's a Visa credit card, but the actual movement of funds under the hood, it's happening on Gnosis chain. So you're basically tapping into your Gnosis holdings when you're using this credit card directly. Unlike something like Crypto.com where there was like a centralized entity holding your Bitcoin XYZ, in this case there's an action on-chain as well. So for me there's a little bit of a parallel here. I don't know if they're actually using ZK. So that's a big difference. And in this case it does seem like... It sounds like it's going to be quite easy for you to add extra products, like extra payment entities if they have this data rich email, but I do wonder about that changing email interface or this brittleness. Are you worried that you might start implementing it in all of these different products and then every week one of them changes and you're chasing that down? Is this a bit of a fear of the sustainability of this model?
+
+
+39:21: Brian Weickmann:
+
+
+Absolutely. Absolutely it is. Yeah, and to that extent, I think we're always looking at what are other ZK primitives we can use, ZK data primitives that we can use too. So email right now is probably the best well formed. The ZK Email team's done an incredible job and so it's pretty easy to integrate. Part of our background is we're all grant funded, and so the majority of our grants have come from PSE, which is the Privacy & Scaling Explorations Group within the Ethereum Foundation. And one of the other teams there as well is TLSNotary. And they're essentially trying to do ZK proofs of TLS certificates that we're constantly kind of looking at, okay, what are these other things we can potentially try to integrate? JWTs, anything that's signed, any signed data that we can potentially get our hands on to help facilitate some of these off-chain to on-chain swaps.
+
+
+40:19: Anna Rose:
+
+
+Do I wanna add a little on that TLSNotary note? In that case, in the Venmo case, if a transaction is made, is there any sort of TLS certificate? No, right? Because it's all in the centralized database.
+
+
+40:34: Tarun Chitra:
+
+
+But they do publish it somehow, right? So if you think about services like Plaid, they are getting a signed payload from Venmo that something happened because they're offering some service to a bank or something that says you have a certain amount of money. So it's clear that there is someone publishing with enough certificates this data. The question is whether it's easily accessible to the end user. And so they could create the proofs themselves. That's the thing that I think is the real question. It exists somewhere, right? Like Plaid is doing it, and there's a bunch of these kind of data providers who are definitely doing it. So the question is, what's the injection point? And can you make that pain as painless as possible for the user? 
+
+
+41:19: Brian Weickmann:
+
+
+Right. And have no fear. We're trying to uncover it. We are digging.
+
+
+41:24: Anna Rose:
+
+
+This is so cool. I mean, it's interesting because it also reveals how opaque the traditional payments are. You're kind of reliant on these emails, but it would be so much nicer, obviously, if there was some sort of access by outside people to some of this information without obviously revealing amounts or whatever, but just so that you could use something to prove that a transaction had happened.
+
+
+41:49: Brian Weickmann:
+
+
+The ideal scenario for us is a signed endpoint, right? If Venmo just had an endpoint where they signed transaction history, and a user could just potentially give us a read key, for example, that would be the ideal scenario. Because then we can even do all that from our frontend, just grab it. It doesn't have to be this whole, all right, you either Google Auth or go pass, then copy paste your email and  that sort of thing. That would be the pretty ideal scenario.
+
+
+42:22: Tarun Chitra:
+
+
+Right, but at that point, they're making an Oracle for you.
+
+
+42:25: Brian Weickmann:
+
+
+Right, no, exactly. Yeah. I mean, you can really think a lot of this is just like, it's an Oracle, like some sort of... That's a great way to put it. And our inputs into the Oracle right now are just emails. And we do a proof of that email to prove that you have possession of that email, right?
+
+
+42:45: Anna Rose:
+
+
+Couldn't you use this also for cross-chain stuff as I'm thinking about this? Like, could you use it if you wanted to have sort of actions happening on one chain and then have some escrow happening on the other. Maybe it's the wrong use case, because I know you're focused very much on on-ramp, off-ramp, but wouldn't it be quite easy in that case to do it?
+
+
+43:04: Brian Weickmann:
+
+
+There are ZK bridges.
+
+
+43:06: Anna Rose:
+
+
+I don't know if they work exactly that way though. I don't know if this is... 
+
+
+43:09: Tarun Chitra:
+
+
+No, no, the ones that do the escrow are slower. So it's like, there's sort of, you have some design decision trade-offs with trying to do this. This way you have to do for off-chain stuff, like there's basically no one, but when you're on-chain, you can add more constraints and covenants to make it different. So I think you could do it, but it wouldn't make as much sense.
+
+
+43:31: Anna Rose:
+
+
+Okay.
+
+
+43:31: Richard Liang:
+
+
+Yeah, to an extent, we are kind of building a bridge. But yeah, from Venmo or UPI to, I guess, an L2.
+
+
+43:40: Tarun Chitra:
+
+
+So I actually want to dive into the UPI piece a bit, as someone who every time I go to India, I'm like, wow, it's the most advanced fintech. It's hilarious that nothing else works, like no electricity and water are always shut off and all this stuff. But the fintech stuff there is everyone is paying digitally and you can't even use cash to go on the subway anymore. It's definitely ahead of everywhere else in Asia too nowadays. So I think that user base is super into purely digital payments. So how are you thinking about that kind of market? Because yeah, for instance, I was in India in December of last year, and I remember I couldn't use any public transit without having a UPI account, but you can't get a UPI account unless you're a citizen right now. So you're kind of locked out, and then you have to find someone to pay for you. And there are all these apps where a UPI holder can take credit cards and pay on behalf of you. So I feel like there's clearly this whole world of pseudo smart contracts in the UPI system that people have built for doing loans, for doing all sorts of stuff. So it's way more almost crypto than 99% of these other fintech things. So I'm kind of curious how you think about interfacing with that system and expanding into it.
+
+
+45:06: Brian Weickmann:
+
+
+Yeah. I mean, I wish Sachin was here. Sachin, one of the other team members, he's based in India. And really, I can try to kind of relay some of what he sees. And I know he's definitely thinking about, okay, how can we use this for not just on-ramping funds, but how can I pay merchants via something like this? So I pay in stables, but the merchant receives rupees or something like that, right? And then there's also just this whole... They kind of just recently banned Binance P2P. And so there's this also this whole other market of like, they're looking for alternatives. And obviously we're in an interesting place potentially, alternative wise. But then the other thing is, the way UPI works is you're kind of directly hooked into the banking system rails, and it seems there isn't as much like, with Venmo, there's some sort of inheritance of the KYC. Right? So every Venmo user has been KYC'd. With UPI, you just have a UPI ID, right? So while we are using a bank to get the confirmation emails, the on-rampers side of the transaction is just sending a transaction from their UPI, kind of address account, however you want to think about it.
+
+
+46:32:
+
+
+And so now there's this like additional layer, and this is something we're just starting to unpack a little bit as we really launched UPI and we're having a little bit of trouble getting people to provide liquidity and it's because, oh well the people that are sending you funds are potentially kind of not fully KYC'd. So then it's like, okay, well what can we do to kind of reduce potential exposure for people who are kind of facilitating these on-ramps? Those seem kind of the bigger hurdles that we need to attack in the shorter term. And luckily there are people working on it. There's Anon Aadhaar, which I think is... Richard, is that another PSE project?
+
+
+47:14: Richard Liang:
+
+
+Yeah, I think so.
+
+
+47:14: Brian Weickmann:
+
+
+Yeah, it's a PSE project. We're all just piecing it together. But yeah, so now it's like, okay, well, what can we do to provide some level of comfort and KYC for these, for people who wanna potentially deposit? Because otherwise, like the Indian government, if you have tainted funds, they may just come and shut down your bank account. And then you have to manually go and say like, hey, this is just a crypto transaction. You know?
+
+
+47:39: Tarun Chitra:
+
+
+Yeah. So the kind of crazy thing, I guess, like for people who are listening or maybe are not familiar with UPI, you could basically think of the Indian government runs, like, arguably a blockchain effectively. Yeah, an L2 run by the different states in India, where they come to agreement on the notion of an ID. So every time a new person is born, every time a new cell phone is added into the network, because it's tied to your cell phone, they make a new public key private key pair and that private-public private key pair is shared across all the services you might use. So maybe you make a bank account, maybe you get another cell phone, maybe you like... Maybe you pay your utility bill. Like all of this... Maybe you use the subway. All of this is tied to the same identity. This is why you basically have something like smart contracts where someone can write some covenants against your identity and say like, hey, this person is lending me this amount of money. And if they don't, then freeze their account. So they kind of have a very rudimentary smart contract system. You can't do arbitrary code, but you can do much more than say like in China.
+
+
+48:45:
+
+
+But the problem is, yeah, this is like a persistent public key private pair. You can't really leave it, if that makes sense. And so losing it is very difficult, right? It's you're stuck with it forever. So there's sort of this question of like, the reason you want this, not anonymity, but maybe with some proof that you're not like... Of some properties of yourself. It's just so that you don't have to have this risk of being locked out of the system completely. If that makes sense. And that's sort of where the stuff comes in. That's where it's kind of scary when you even just go as a foreigner to India and you can't use any service because you don't have one of these IDs. That was the first time I'd ever felt that dystopian thing.
+
+
+49:31: Anna Rose:
+
+
+Is there any privacy guarantees on the UPI side?
+
+
+49:34: Tarun Chitra:
+
+
+No, no, no. All of these things are purposely made to have no privacy. They're government systems. Like Pix in Brazil, UPI, FedNow, they all are... I mean, I would say Brazil and India are probably the top two in the sense like they basically have smart contracts, like limited smart contract function. You can be a developer and write some code against their identity APIs and like you can make pooled assets across multiple accounts. And they're the only places in the world that do that. Like in China, they're very restrictive about pooling assets. Like you can't write something that's like, take these three UPI accounts, take $10 from all of them and write something that distributes pro rata. But in Pix and UPI you can. So I kind of think... But the interest... That's why it's interesting to me about things like ZKP2P, where it's like, I have a system that's kind of not private and has some limited smart contract functionality, and I have a system that's private and has full smart contract functionality, and how should they interface? That's kind of like the... Because I think interfacing with something that's just like bank accounts, no contract functionality, makes it harder. But you can imagine a version of ZKP2P where the liquidity providers on the UPI side, not in the US side, not the Venmo side, you could actually just pool together a bunch of UPI accounts and they act as the liquidity on the other side. And you actually could do that in that system, right? So it's like it has some kind of cool benefits, which is why I was kind of curious how you guys are thinking about that.
+
+
+51:06: Brian Weickmann:
+
+
+Yeah, I think so far we're still kind of thinking about things as kind of this more very like peer-to-peer construction, less than necessarily pooling assets together. Obviously, I think once you start getting the pooling asset side, it's probably like some sort of legal entity or things like that need to be set up. So right now, just kind of where we're at, we're looking at a very peer to peer. But yeah, I mean, I think that I am definitely personally in awe of kind of the functionality they've built into UPI. And I think while there is kind of this like you've alluded to, this little dystopian side to it. It is incredibly powerful. Basically anybody can start a fintech there pretty fast. So the pace of innovation that's enabled by it is pretty awesome. And I guess this just speaks to the power of blockchains. Right? It's like, okay, now let's...
+
+
+52:06: Tarun Chitra:
+
+
+Right. This like a shady blockchain.
+
+
+52:06: Brian Weickmann:
+
+
+Now let's add this to the anonymity part to it and fully like functional smart contracts and you're like, oh, okay, cool. Now we're ready to rock and roll.
+
+
+52:18: Anna Rose:
+
+
+So I want to hear where the team is at today, who's on the team, what you've just recently built, what's planned, yeah, where's the project at?
+
+
+52:28: Brian Weickmann:
+
+
+Yeah, so we're still the four of us. As I kind of alluded to earlier, we're all grant funded. So if there's anybody that is giving out grants and is interested in funding the work that we're doing, feel free to reach out. Yeah, so at the moment, that's kind of our construction and kind of how we're trying to move forward. I kind of mentioned probably by the time this podcast is out, we'll have this gasless on-ramping. The way we're, or kind of like default for the moment is like, okay, how can we get close to Binance P2P type feature parity and obviously better ideally. Like there's a lot of... We hear a lot of complaints about Binance P2P. And so for us, it's like, okay, well, what do we need to do that? And this account abstraction type of gasless on-ramping is one portion of that. And then we're looking to add in things like bridges. So since we're doing 4337 we can batch transactions together. So now it's not just, okay, you can get USDC on base. Maybe it's, oh, you can get... In one transaction, you can get USDT on MATIC or USDT on TRON, which is maybe sounds heretical, but USDT on TRON is the biggest stablecoin market out there.
+
+
+53:52: Anna Rose:
+
+
+Yep. Actually, I wondered, had anyone asked you to do that? Has that been like a request?
+
+
+53:57: Brian Weickmann:
+
+
+I'm sure somebody's like asked. It's one of those things I think we know at some point probably needs to. And I think it's very dependent on the market as well. So I think I'm not sure India is as much that, but definitely... So Turkey is a big one.
+
+
+54:14: Tarun Chitra:
+
+
+Iran.
+
+
+54:15: Brian Weickmann:
+
+
+Iran. Well...
+
+
+54:16: Tarun Chitra:
+
+
+One that might be annoying.
+
+
+54:17: Brian Weickmann:
+
+
+I'm not sure we're gonna go there.
+
+
+54:19: Tarun Chitra:
+
+
+Yeah, yeah, yeah that but that might be one of your reasons USDT on TRON's hard actually. It is the significant portion of the usage is in Iran. So if you have to deal with any regulated thing, it's probably.
+
+
+54:34: Brian Weickmann:
+
+
+Yeah That's very fair. Yeah, I mean like Turkey, South America, there's a lot of USDT on TRON. I think Africa as well. So it's pretty proliferated. All that to say, so we're looking to kind of add now, how can you get all this money anywhere? And then obviously the other thing you can do is potentially swap directly to non-stable cryptos as well. Right? So you can kind of almost buy ETH from Venmo if you want it.
+
+
+55:02: Tarun Chitra:
+
+
+We're back to LocalBitcoins.
+
+
+55:04: Brian Weickmann:
+
+
+Honestly, that's how I've kind of been describing this to a lot of people in the beginning. It's like, this is LocalBitcoins, but you don't have to meet some dude like in public.
+
+
+55:15: Tarun Chitra:
+
+
+I mean, that's a very killer description, honestly.
+
+
+55:19: Brian Weickmann:
+
+
+Yeah, so that's kind of close to what we're building, right? So that's kind of our guiding light, but we're still really early and there's still all of these new primitives, new constructions you could potentially think of. So we're gonna experiment. Yeah, it's too early to be like... We're focused on how do we facilitate on-ramps, but we're not going to be biased by like, it has to be just emails and we only want to facilitate a certain type of like on-ramp, like we want to just run a bunch of experiments for different like potentially end users. Our protocol is very like on-ramp or focus, like what would a very off-ramp or a focus look like. And so obviously we need to do that within... There's four of us, so we need to do that within the realm of reason. But that's really, I would say, kind of how we're looking at things going forward.
+
+
+56:19: Richard Liang:
+
+
+It's basically how we can increase limits. Right now, our protocol, it's like 250 USDC or 100 USDC for UPI every 12 hours. So very low limits. So how can we do that in a very safe way? How can we raise limits while reducing fraud at the same time, as Brian kind of alluded to earlier? And yeah, a lot of these improvements, I think, in the pipeline will hopefully help us test some of these hypotheses that we have.
+
+
+56:47: Anna Rose:
+
+
+Very cool. You also continue to go to hackathons. I've seen you participated in ETHIndia. Did you build that UPI kind of connection there?
+
+
+56:57: Brian Weickmann:
+
+
+That was probably a Sachin thing. Sachin loves hackathons.
+
+
+57:01: Richard Liang:
+
+
+Yeah, that was Sachin.
+
+
+57:03: Anna Rose:
+
+
+Okay.
+
+
+57:03: Richard Liang:
+
+
+Yeah, so he actually built, I think, yeah, it was UPI but using TLSNotary as the backend versus like ZK Email. So yeah, all these hackathons kind of help fund our exploration into what we should build next.
+
+
+57:20: Brian Weickmann:
+
+
+Yeah, no, we definitely are excited to try to kind of get out to some of these events this year. I mean, it's especially like... I remember going back to kind of talking about early ETH days was like, that's where a lot of the magic came together. It was just chilling with people, just people who are nerding out on stuff at conferences and hackathons. And the community is still so small that it's like... It's small and it's open. And there's not a bunch of pretense around people trying to push a product or protocol. It's just a bunch of people trying to hack cool things together still, which is really awesome about the zero knowledge community at the moment. Like this tech is incredible, and at some point it's going to become a little bit more like some of these, probably Ethereum conferences, probably, not necessarily your conference, I'm not gonna say, but just it's gonna become more commercialized, like just the industry as a whole.
+
+
+And in some ways that's great, because it's gonna push a lot of the innovation forward. We're gonna get to a point where, oh, I can run my ZKP2P proof on my machine in seconds versus 10 to 15 minutes, but there's gonna be some of these other like... The collaboration's gonna get a little harder. Like those sorts of... You're gonna have to find your ring of people instead of just being like, everyone is like big 10, you know?
+
+
+58:44: Anna Rose:
+
+
+So what you're saying is ZK is still underground.
+
+
+58:46: Brian Weickmann:
+
+
+ZK's still pretty underground.
+
+
+58:49: Anna Rose:
+
+
+Good.
+
+
+58:51: Tarun Chitra:
+
+
+It's kind of hard to imagine the ZK world reaching the level of like, say, rollups fighting with each other, but I I just like... I don't know, I guess I could see it, but it's just almost impossible for me to imagine.
+
+
+59:04: Anna Rose:
+
+
+But some of those teams, those rollups are ZK teams too. So I feel like...
+
+
+59:08: Tarun Chitra:
+
+
+Yeah, yeah. That's true.
+
+
+59:09: Anna Rose:
+
+
+I mean, that's maybe an image of the future.
+
+
+59:12: Tarun Chitra:
+
+
+I guess that's where the, whether they're bad or good habits will percolate down from.
+
+
+59:17: Brian Weickmann:
+
+
+I'll say this, the one thing that zero knowledge research and proofs as a whole have going forward is, it's not just like a decentralized tech, right? It's great for decentralizing things, but there's very real Web2 applications to it too. So it doesn't necessarily need to be all this speculative money that's funding it. There actually is very legitimate use cases from very, I don't want to say some money is more legitimate than others, but from money that's not necessarily looking to pump, dump, do all the crazy crypto things. So that will be an interesting kind of counterbalance, potentially, to ZK going forward.
+
+
+59:56: Anna Rose:
+
+
+Although I do think ZK's acceleration was definitely because of some of this sort of proximity to blockchain and....
+
+
+1:00:05: Brian Weickmann:
+
+
+100%.
+
+
+1:00:06: Tarun Chitra:
+
+
+And I mean, if I look at ZKP2P, right, arguably one of the main reasons for the ZK versus a non-ZK version is it really is good at getting around a particular set of systems that already exist. And I feel like that subversive element is still going to be true with a lot of ZK stuff. But I guess that's more to crypto's original ethos versus the current state, right?
+
+
+1:00:32: Brian Weickmann:
+
+
+Yeah. I mean, that's honestly one of my big takeaways over the last year is just how much ZKP2P kind of speaks to the original reasons people got into crypto, actually, which has been really cool to see is like, there is this subversive element to it. And yeah, I think there's a lot of people that you explain it to and they start to understand it. They're like, oh my god, this kind of reminds me of some of the reasons or some of the ethos of why I really wanted to get into crypto in the first place. And that's honestly just been really cool to see, especially a bunch of people that have maybe been around since 2017 and seen kind of how things have changed a little bit. That's always been kind of gratifying to see people's reaction to that.
+
+
+1:01:23: Anna Rose:
+
+
+Well, I want to say thank you to both of you for coming on and sharing. This is a proper ZK application, and one of the few out there where you can tangibly use it and touch it as an end user. I think it's really exciting what you've built. I'm obviously really happy that you built the first version of it at the ZK Hack hackathon. We kind of didn't expect that. We didn't know that from the first one there would actually be someone running with it. But yeah, it's really great to get to hear more about the project and what you're thinking.
+
+
+1:01:57: Brian Weickmann:
+
+
+Well thanks for having us on. As Richard said in the intro, long time listener, first time caller. So it's really great to be here. And yeah, thanks for providing the platform to do ZK Hack as well, you know. That's why you do hackathons. I guess it inspires people to build interesting stuff. So yeah.
+
+
+1:02:20: Anna Rose:
+
+
+It's like the next phase of the ecosystem, I think. It feels like we're getting there. Now people can start building things. 
+
+
+1:02:28: Brian Weickmann:
+
+
+Yeah. Just get the tooling better and better and better and make it more and more accessible. And it'll get there, it will.
+
+
+1:02:34: Anna Rose:
+
+
+Cool.
+
+
+1:02:35: Richard Liang:
+
+
+Yeah, just echoing all of what Brian said. And thanks for putting out all the resources as well, such as the whiteboarding sessions, to help someone like me or us get started. So yeah, thanks for that.
+
+
+1:02:49: Anna Rose:
+
+
+Cool, cool. All right, well, thank you, Tarun, for being on this one.
+
+
+1:02:53: Tarun Chitra:
+
+
+Hey, thanks for chatting. Obviously, extremely excited. The UPI stuff, to me, is the most interesting part, maybe due to personal reasons, but I just feel like it's going to be kind of like that's got to be the most interesting usage of ZK ever.
+
+
+1:03:08: Anna Rose:
+
+
+Cool. Nice. All right. Thanks again. And I want to say thank you to the podcast team, Henrik, Rachel and Tanya and to our listeners. Thanks for listening.

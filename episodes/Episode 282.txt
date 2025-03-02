@@ -1,0 +1,876 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week, Nico and I chat with Ron Rothblum, professor in computer science at Technion. Ron is someone who's been working for a very long time on the theory of cryptography and ZK topics, and in this conversation we chat about his work on Error Correcting Codes, Reed-Solomon coding, FRI, FFTs, Fiat-Shamir, and more. This was a pretty cryptography heavy episode even for this show, but I hope you enjoy. Before we start in, I just wanna let you know that the application to attend zkSummit10 is now open. The event will be happening in London on September 20th, and as always, we aim to bring together the top researchers, engineers, and practitioners working on ZK to share their latest research and new findings. So if you're interested in attending, be sure to apply. That is the only way you get access to tickets. So I've added the link in the show notes and hope to see you there.
+
+(00:01:18):
+Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:22):
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non-cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated stablecoins and more. Visit developer.aleo.org to learn more. Join their discord at aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose (00:02:06):
+So today we're here with Ron Rothblum, a professor at Technion, and someone who's been working on the theory of cryptography and ZK topics for the last 15 years. Welcome to the show, Ron.
+
+Ron Rothblum (00:02:17):
+Thank you for having me
+
+Anna Rose (00:02:17):
+And we also have Nico here to help co-host this one. Hey Nico.
+
+Nico (00:02:21):
+Hi Anna. Hi Ron.
+
+Ron Rothblum (00:02:22):
+Hey
+
+Nico (00:02:23):
+So this interview came about because I was having a conversation with Dev Ojha talking about potential guests and he thought it would be really great to have you on Ron, and his reasons were kind of like you do all these interviews about present day SNARK work, but you might be missing some of the earlier stuff. And so he thought it would be cool to have you on also, potentially to talk a little bit more about information theory. And then he also thought maybe error correction codes. So I know we have a lot to cover and we're very excited to hear more about you. Maybe we can get to some of those as we go. So Ron, why don't you tell us just a little bit about yourself. What was it that got you excited about this field and yeah, how did you get to the place that you are today?
+
+Ron Rothblum (00:03:07):
+Okay, so a tiny bit of of background. So it's back about 15 years ago I had been working in a company doing some crypto engineering. I actually worked with Kobi there for, for a short time
+
+Anna Rose (00:03:20):
+Kobi Gurkan?
+
+Ron Rothblum (00:03:22):
+Yeah.
+
+Anna Rose (00:03:22):
+Wow, nice.
+
+Ron Rothblum (00:03:23):
+So we know each other from a long, a long time back and I didn't like, it was like really low level crypto engineering. I didn't love it. And I went off to do a Masters and I thought I would do some sort of a theory math kind of thing thinking about algorithms or something. I really didn't think I would do crypto because I did not l love the crypto that I was doing before. But I went anyway, and I did a Master at the Whitestone Institute and I took this course on foundations of cryptography, which was given by Oded Goldreich, who is one of the sort of I would say main leaders of the foundations of cryptography in general, and specifically zero knowledge. He's one of the inventors of, you know, the famous 3-coloring protocol. It's the first general feasibility result for zero knowledge. And, but that gave the course, it was, you know, outstanding. I really, really loved it. It actually shows the protocol using, you know, physical transparency it's really something, a sight to be seen.
+
+Anna Rose (00:04:23):
+What what do you mean physical transparency? What does that mean?
+
+Ron Rothblum (00:04:26):
+Think about the 80s. I don't know if people were alive then, but where you had like a projector
+
+Anna Rose (00:04:33):
+Yeah.
+
+Ron Rothblum (00:04:33):
+And you have like transparency
+
+Anna Rose (00:04:35):
+Yeah.
+
+Ron Rothblum (00:04:36):
+That you would put and project. So it's really perfectly suited for the 3-coloring protocol. So you draw the graph without colors on it, and then you put the colors on top and you put another piece of paper hiding the colors. So you actually just like runs the protocol to the show.
+
+Anna Rose (00:04:52):
+Oh, neat.
+
+Ron Rothblum (00:04:53):
+Yeah, that's really nice. Anyway, it was fantastic and I started working with him, ended up doing also my PhD with him and did a postdoc at MIT and came back to the Technion. So what drew me to the field is a) an amazing course given by Oded. And to be honest, I just really love the math underlying it. It's challenging, it's interesting. It covers a lot of different fields in particular error correcting codes that maybe we can talk about. So it's been a blast so far.
+
+Anna Rose (00:05:23):
+Is it also because like, the fact that it's very, very cutting edge or I guess a lot of research is very, very cutting edge, would it be the fact that it's getting used or applied?
+
+Ron Rothblum (00:05:34):
+I think research by definition is sort of cutting edge. No, it is not at all about it being applied, to be honest. I mean, when I started working on this, you know, 10, 15 years ago, it was no one thought. I think maybe except for Eli Ben-Sasson and a few others, back like 2008, 2009, people did not think that any of this would be possible. You know, FHE the first basic idea of an FHE scheme was coming out and it looked like, you know, it became from like something totally, you know, we had no idea how to do it. It just became, went down to science fiction, but still science fiction, you know? Someone had like a feasibility idea. So that was not what drew me. It is something that nowadays that it's happening, I find it really exciting and it's sort of what I like to do is for it to motivate my still like, theory research. So the fact that it's being used raises some fundamental questions. And if I can frame these questions as something neat, as a clean theory question for which we don't know solution, that is the kind of thing that I really like to work on.
+
+Anna Rose (00:06:42):
+I'm sort of curious like how much of the actual implementation and engineering, or like, almost like the research that comes out of that, does that filter back into what you're doing? Or would you say the theory side is just its own track and it just kind of plows on, doesn't need to kind of get that input? Because I know like, research on the industrial, like the industry research and the implementation, there's a big back and forth there, but I don't know about just pure theory.
+
+Ron Rothblum (00:07:11):
+Definitely. I mean, especially, so I'm getting sort inspired for my questions, questions that I'm working on from practice and I see the things that practitioners or from my end, like sort of engineering research that's going on and improvements that are happening. And I can be kind of concrete. I've had some works on linear time proving that have come out of that, and it was sort of understanding what currently can be done and can I frame a clean theory question for which we don't know an answer and then try to work on that. So definitely it's been from my perspective back and forth
+
+Anna Rose (00:07:45):
+Which protocol or project, like who was using that, that kind of gave you that feedback loop. I wonder if it's anyone we know.
+
+Ron Rothblum (00:07:54):
+So I mean, hard to trace exactly back, but I mean, I was certainly aware of, so Justin Thaler and, and coauthors had this like CMT protocol, which is an improvement of GKR. The author is another Rothblum, which happens to be my brother Guy, so definitely was on my mind and I understood that it's something that people in practice are really interested in. And maybe this is jumping ahead, thinking about sort of error correcting codes. What are the bottlenecks, why people are sort of only using specific types of error correcting codes nowadays. Made me start to think of, you know, how do I bypass these barriers?
+
+Anna Rose (00:08:37):
+You just mentioned your brother who's also a cryptographer. Who got into it first?
+
+Ron Rothblum (00:08:41):
+He did, he did. It actually gave me motivation to sort of not join the field, so we wouldn't be like stepping on each other's toes.
+
+Anna Rose (00:08:49):
+It kept you away more than anything.
+
+Ron Rothblum (00:08:51):
+It kept me away a little bit, but then, you know, Oded was just too charismatic
+
+Anna Rose (00:08:55):
+Nice.
+
+Ron Rothblum (00:08:56):
+Yeah.
+
+Nico (00:08:57):
+So you said you started with an experience in practice and you disliked sort of the very low level practice, and then you went into theory.
+
+Ron Rothblum (00:09:03):
+Yeah.
+
+Nico (00:09:03):
+And now what's happening in the industry research, like the more practical world is feeding back into theory bits. Do you feel dragged to practice ever or you really have a dislike for it and stay away?
+
+Ron Rothblum (00:09:20):
+I mean, dislike is too strong of a word. It was just like, not my forteÃ© and it was, it's also like, was very different from like relevant things that are happening now. So I certainly find the fact that these things are becoming practical, super exciting. And if some of the ideas that I have end up, you know, through some papers and I think this happened going into practical work, that's fantastic.
+
+Anna Rose (00:09:45):
+Cool. So a few episodes ago, maybe a little over a month now. Ariel Gabizon and I went through this sort of trilogy of SNARKs that he had in mind. And I know we spoke just before this episode, you mentioned you had heard it, that was one of the episodes I was hoping you'd listen to because I really wondered what someone from your perspective, who's been working on it from where you have been working on it for so long, how you would interpret that if you agreed, if you see things sort of differently or if you're kind of like focus, like if you look at big breakthroughs, are you looking kind of at a different level of the stack?
+
+Ron Rothblum (00:10:22):
+So, it's interesting question. I think from a theory perspective, if you look at the basic question of things like succinct arguments, SNARKs and so on, from a theory perspective, you could say this problem was solved in '92. So people developed this
+
+Anna Rose (00:10:37):
+1992.
+
+Ron Rothblum (00:10:39):
+1992. So people developed this extremely strong tool called PCP published checkable proof. They knew how to do Merkle trees on top of it. You do that put on Fiat-Shamir. Fiat-Shamir is from '86 and you have yourself a SNARK and that was all well known in 1992. And it was also considered something that has no chance of ever being feasible. What I think happened and this development of the trilogy and so on, is I think people sort of found ways to get improvements on speed by sort of shifting to different ideas. This idea of linear PCPs, IKO and you know, Groth and so on, building on top of that. And these gradual improvements have more hope and more interest. And from some of, from my perspective, the ideas that this eventually led to nowadays are really going back to some of the ideas from the early '90s. So some sum check based things but you have to go through all of these steps in between, sort of give you enough hope that this thing is indeed doable.
+
+Anna Rose (00:11:45):
+Going back to that time though, could you have just combined them and it would've worked fine? Or were there some other breakthroughs that needed to happen for these to be like reincorporated into the proving systems?
+
+Ron Rothblum (00:11:57):
+So it depends on under definition of the word fine. There is the theory definition and there is the practice definition.
+
+Anna Rose (00:12:06):
+The fine in theory
+
+Ron Rothblum (00:12:07):
+Yeah. So, the basic theory definition says the prover runs in polynomial time but the practice definition says that, you know, cubic time is a no-no. But this sort of, from my perspective, it so when I said that it was solved problem in the early '90s, I meant that it was fine in this like very broad theory perspective. But now that there's an understanding that there's a bottleneck of prover time in practice, this raises a theory question. You know, can you get the same result that we had in the '90s, but with quasi linear time prover, a linear time prover. So that is something that I've been working on and I'm really interested in.
+
+Nico (00:12:48):
+So when you're making this distinction between like the theory and the practice, does theory consider things like pairing based cryptography? Or does that fall already too much in the realm of practice?
+
+Ron Rothblum (00:12:59):
+No, absolutely. Absolutely does. And I think a lot of these papers, some fall there, there were right on the edge of theory and practice a lot of these papers and a lot of the people doing them, especially if you look at some like Alessandro Chiesa papers. He often has a theory paper followed a little bit later by a practice paper that builds on the theoretical idea. He's someone who really is very good at like, sort of thinking of a conceptual idea and articulating it as a theory advancement, but then also trying to build that into a system.
+
+Anna Rose (00:13:31):
+Interesting.
+
+Nico (00:13:31):
+Yeah. The reason I was bringing up pairings is because, so Ariel's trilogy is very most based around pairings and sort of
+
+Anna Rose (00:13:38):
+He caveated that, that was the pairing-based SNARK trilogy
+
+Nico (00:13:43):
+Yeah and I think here we have a chance of talking about everything else that's sort of been excluded from the pairing land, like STARKs and the work of Ben-Sasson is sort of almost, you know, hidden away in Ariel's trilogy and I think that's maybe closer to the stuff you've been working on.
+
+Ron Rothblum (00:14:00):
+Absolutely. And I mean, I think, you know, when, when Ben-Sasson's, when he introduces himself, or at least the way he used to, it was as a complexity theorist, not as a cryptographer, because that's what he did for, you know, like, you know, that's what his PhD is about and what he did as a researcher until he did this like, big shift and a lot of things like the basic, you know, FRI and stuff that Starkware is doing is based on sort of deep theory and deep theoretical advancements that happened in the realm of PCPs.
+
+Nico (00:14:30):
+Should we take a bit of time for, I guess, definitions or making sure that we know what we mean when we're saying complexity theory, information theory, that kind of thing?
+
+Ron Rothblum (00:14:40):
+Sure so complexity theory is sort of broad fields that is trying to understand computation. So what tests can be computed and at what cost and what tests cannot be computed. And you can vary the type of resources that are available, whether it be time, space, depth, if you're talking about circuits. And a lot of the field actually has developed around proof systems. So if you think of the most basic question I think in computer science, arguably also in math is the P vs NP question. This is clearly a question about the existence of or what can proof systems do and what they cannot do. And the advancement of our understanding or suggestions for the notion of a proof have, these have led notions like contract proofs, PCPs, and zero knowledge, which nowadays are having a big impact in practice. But they've had an enormous impact throughout the years on this entire field of computational complexity theory, generating entire subfields within. So I don't know if people are aware of this, but this this tool called PCPs, it was introduced in the early '90s for about 20 years. Almost all of the research that went into it was about its relation to a totally different field in complexity theory called hardness of approximation.
+
+Anna Rose (00:16:01):
+Hardness of approximation?
+
+Ron Rothblum (00:16:04):
+Yeah.
+
+Anna Rose (00:16:04):
+Okay.
+
+Ron Rothblum (00:16:04):
+Yeah. So this is a field that deals with showing that some problems are hard not just to solve, but even to approximate. So this is kind of using this sort of machinery that we think of as very positive PCPs. It's a useful tool. It was being used to show lower bounces, to show that some tasks are hard. So anyway, that was me trying to articulate that field of complexity theory.
+
+Anna Rose (00:16:31):
+Can I ask one thing before you move on?
+
+Ron Rothblum (00:16:33):
+Yeah.
+
+Anna Rose (00:16:34):
+People use the term PCPs. I've totally had this defined for me, but what does it stand for?
+
+Ron Rothblum (00:16:39):
+Okay. So it is probabilistically checkable proof.
+
+Anna Rose (00:16:43):
+Okay. And and this is what you mean by probabilistic. So you're trying to approximate the hard
+
+Ron Rothblum (00:16:49):
+No,
+
+Anna Rose (00:16:51):
+Not that. Okay.
+
+Ron Rothblum (00:16:51):
+It's coming from somewhere else. Let me actually, maybe remind the efficient of a PCP and I think maybe in retrospect it would've been a better name for this object would've been a locally checkable proof. So the idea is you have a proof that you want to check it's written down, but you're only allowed to read a very small number of bits from this proof. And based on the small number of proofs you should be convinced is the statement that you care about. True or false? It sounds paradoxical. Like how can you get any information from reading a small number of bits, but miraculously we can build this kind of thing. And IOPs or interactive oracle proofs are a generalization of this notion in which it's not just like one static proof from which you read small number of bits, but it's sort of this interactive thing where you send a proof, read a few bits, send another proof, read a few bits, and so on.
+
+Anna Rose (00:17:45):
+So going back to the why is it, so the reason, what is it? The hardness of, I'm sorry, I'm blanking on what you just said.
+
+Ron Rothblum (00:17:51):
+Hardness of approximation.
+
+Anna Rose (00:17:52):
+It's nothing to do with the word probability
+
+Ron Rothblum (00:17:55):
+It is.
+
+Anna Rose (00:17:55):
+Oh it is?
+
+Ron Rothblum (00:17:55):
+Definitely. But so first of all, the, why is the word probabilistically there? Because the places that you choose to read from the proof are chosen at random. Okay. So there's some process that chooses these points and maybe to remind the readers why are we talking about PCPs in this context? So there's a way to take a PCP which is this long proof and turn it into a succinct argument. Basically, you can do something like Merkle tree for the entire proof, and then you want to read the points, the few relevant points. You can open up the Merkel paths. And this basic idea is underlying all IOPs that are around, why is this related to the hardness of approximation?
+
+(00:18:40):
+It's a little bit technical, but the point is that you're saying the fact that this PCP exists means that there's a reduction mapping any problem to a problem in which there is sort of this gap. If you start off with something that is true, you get this proof that kind of no matter where you check, you'll see truth. Whereas if you started with something that is false, you get something in which in most places you see something that is false. But in most places. So you've sort of generated this kind of gap. And if you could solve this gap problem, you could solve the original problem. As long as you believe that the original problem is hard, it means that even solving this gap problem is going to be hard.
+
+Anna Rose (00:19:18):
+Okay.
+
+Ron Rothblum (00:19:19):
+That is the connection to hardness for approximation, which is a huge field inside of complexity theory
+
+Anna Rose (00:19:24):
+And not related to cryptography?
+
+Ron Rothblum (00:19:26):
+Related in this indirect way.
+
+Anna Rose (00:19:28):
+Okay. In the fact that the same technique could be used for that.
+
+Ron Rothblum (00:19:32):
+Yes.
+
+Anna Rose (00:19:32):
+And that's maybe where the boom of the '90s came from.
+
+Ron Rothblum (00:19:35):
+Yes.
+
+Anna Rose (00:19:36):
+Was it '90s?
+
+Ron Rothblum (00:19:36):
+Yes.
+
+Anna Rose (00:19:36):
+'80s '90s and interesting. So it's very much borrowing from another field.
+
+Ron Rothblum (00:19:43):
+Yes. And I mean, there have been amazing developments, amazing ideas in that field, which I think could very well end up being used also in the context of our sort of use of PCPs.
+
+Anna Rose (00:19:55):
+Cool.
+
+Nico (00:19:55):
+So there's a lot more to bring from that field that we haven't been using yet. Oh, that's very interesting. That's very promising.
+
+Anna Rose (00:20:03):
+Let's move on to another point, Nico, you just mentioned, which was information theory. So I know those two words, and I feel like people have mentioned this on the show before. It's the mathematical theory of communication. I don't know if that, that's what I found on the internet. I'm not actually clear on what that is.
+
+Ron Rothblum (00:20:20):
+So you define that beautifully, I think. So mathematical
+
+Anna Rose (00:20:24):
+Thank you, nternet theory.
+
+Ron Rothblum (00:20:25):
+Yeah mathematical theory of communication is great. It's a big field. There is a lot going on there, very deep and beautiful math. I think the most relevant part to proof systems is error correcting codes, which is sort of a subfield within information theory. And that again, like underlies essentially all the sort of underlying interactive oracle proofs, PCPs and non-cryptographic components that go into building stuff like SNARKs.
+
+Anna Rose (00:20:55):
+So this is where, would you say that's the primary within the information theory field? Is the error correction or error correcting
+
+Ron Rothblum (00:21:04):
+Error correcting code
+
+Anna Rose (00:21:04):
+Codes. Is that the primary link then to cryptography and ZK, or is there a lot of, I sort of picture information theory as this big umbrella term? Like are there other things that we're already using in SNARKs that would fall under that?
+
+Ron Rothblum (00:21:19):
+Yeah, I mean, there are definitely, so information theory gives a lot of tools. So I'm sure people are using things like notions of entropy and so on to argue about proof systems. But as a sort of a big hammer that's being used, I would say that error correcting codes are the number one thing.
+
+Anna Rose (00:21:35):
+Okay. So I think this is a really good moment to introduce error correcting codes. Tell us what this is.
+
+Ron Rothblum (00:21:41):
+So error correcting codes are this really basic object in computer science. The idea is the following. So suppose that Alice wants to transmit a message to Bob, but she wants to do it over this a noisy communication channel, okay? So just send, if you just send a message in the clear, some of the bits could disappear, could flip and you're unhappy. So what you would like to do is to first encode the message in such a way that even if this encoded message gets partially corrupt, Bob could still recover the message. And this basic idea sort of comes from Shannon's amazing work in the late '40s introducing this problem. And it's been extremely well studied since then. So we have a fantastic understanding of error correcting codes. Maybe just to give an example so people have in mind, so that maybe probably the most famous example of an error correcting code is what's known as the Reed-Solomon Code, in which code words are basically just low degree univariate polynomials. And because polynomials don't like each other so much that you don't like to agree on a lot of points, if you take your message, you encode it inside a polynomial. If Alice does this and sends over this polynomial to Bob, even if a few of the coordinates are flipped, let's say we know mechanisms for recovering the underlying polynomial and underlying message.
+
+Anna Rose (00:23:02):
+And that is this error correcting code?
+
+Ron Rothblum (00:23:05):
+Yes. So this would be an example of an error correcting code, probably the most famous one.
+
+Anna Rose (00:23:10):
+Interesting.
+
+Nico (00:23:11):
+Yeah. I think, and this is territory that's often covered when you have like SNARK tutorials these days, it's very much like, oh, here's a polynomial IOP and here's a polynomial commitment scheme. And everything revolves around polynomials.
+
+Ron Rothblum (00:23:23):
+Right?
+
+Nico (00:23:24):
+But here you're sort generalizing,
+
+Ron Rothblum (00:23:26):
+Right? So everything like Starkware is doing to the best of my knowledge nowadays is based on this Reed-Solomon error correcting code and building this mechanism around it so that you can prove statements when you are encoding your witness or your computation using this type of code. But there are a lot of other great codes around there, and we have yet to understand how we can use them in this context, but we have some new ideas. So a lot of the linear time proving is coming from a better understanding of that.
+
+Nico (00:23:55):
+Yeah. So there's a lot of things that I would like to unpack and get to. So one thing you mentioned, the Ben-Sasson's work like FRI and FRI actually stands for Fast Reed-Solomon, as you were saying, Reed-Solomon Codes interactive oracle proof of proximity. So this thing that interactive oracle proof of proximity, I'm curious to chat more about sort of what its role is within the SNARK construction and how it interacts with the error correcting code. And then the other thing is obviously talking about some more recent error correcting codes and some more recent works that use those.
+
+Ron Rothblum (00:24:28):
+So here's a basic template of how to build an IOP ineffective oracle proof. You take your, think of it as the witness or the entire computation, you encode it under an error correcting code, and you send that as your first oracle. Okay? So you send over that entire thing, and now you want a couple of mechanisms. One mechanism that you would like is to check that the message that was sent was indeed a correct code word. Okay? So that's one thing that you would like. And once you have that guarantee that it's a correct code word, then you want other mechanisms on top that allow you sort of to check that this code word represents a correct computation. Okay? FRI is basically a protocol solving the first problem. So you took your computation, you encoded it under the Reed-Solomon encoding. Now you'd like a protocol that lets you check that something is indeed a valid Reed-Solomon encoding. So that is exactly what FRI does.
+
+Nico (00:25:24):
+Okay? So proximity there is proximity to a code word.
+
+Ron Rothblum (00:25:27):
+Okay. So I should correct the word exactly because it is approximately what FRI does. So what FRI guarantees to you is that the message that was sent is close to a valid code word, but in this context, close is sort of good enough.
+
+Anna Rose (00:25:40):
+I wonder if you'd allow me a little bit of a step back to the definition of error correcting codes because you'd say it's Reed-Solomon encoding. But I guess like I saw that more as like an action, like some sort of tool, but when there's a entire paradigm that encodes it in that way, I don't actually understand where the error correction happens ike is it?
+
+Ron Rothblum (00:26:08):
+Right so let try to be a bit more precise. So think of Alice, poor Alice has her message and she wants to transmit it. What she's looking for is a function, it's a function mapping from a set of possible messages. So we think of this as the message space, a set of possible code words. This is a code word space. We definitely want this function to be injective because given the code word, you want to be able to recover the message, but we want it to be beyond injected. We want it to have the property, it's property called distance, that if you take any 2 code words in the code word space, so if you take any two messages and encode them, you want the resulting code words to be far apart from one another and the reason for that is that, you know, think of Alice taking a message and encoding it and sending it. If the number of bit flips say that happened is relatively small, and you have this guarantee that around the, so think we have this code word that Alice sent, the message that is received by Bob is going to be close to it, right? Because the number of bit flips, let's say is bounded. And then as long as there are no other code words floating around near to the code word that Bob received, then at least theoretically should be able to recover the code word and hence the message.
+
+Nico (00:27:24):
+So here distance is a measure of how many bits are different, right?
+
+Ron Rothblum (00:27:28):
+Yes. This is called hamming distance. Actually, Shannon was looking at a situation in which each bit is flipped with some probability, whereas here we're just bounding the absolute number of bit flips, which is sort of more relevant to when using error correcting codes to build proof systems.
+
+Anna Rose (00:27:44):
+I'm sort of trying to go back to the initial definition though, which was like, if this message were to be somewhat corrupted, it would still be recoverable. I don't really know. I don't understand why the proximity matters for that.
+
+Ron Rothblum (00:27:58):
+Okay. So imagine that you, let's go by counter example. Suppose that you have an error correcting code in which you have two messages, which map to code, which that differs only on one bit. Now, suppose that one of these messages else attempted to send one of these messages and a code is received by Bob, but now Bob is uncertain, you know, did that bit flip happen or did it not? And depending on whether it happened or not, then the, you know, he's confused about what message Alice meant to send.
+
+Anna Rose (00:28:29):
+So this would be not very easy to recover. So this would be kind of like a bad error correcting code.
+
+Ron Rothblum (00:28:36):
+Yeah, this would be a terrible error correcting code
+
+Anna Rose (00:28:38):
+Okay, got it
+
+Ron Rothblum (00:28:39):
+So the property that we want realize that for, if you take any 2 messages and you look at their encoding, their codings will be far from one another.
+
+Anna Rose (00:28:47):
+I see.
+
+Ron Rothblum (00:28:47):
+So that is the basic definition of an error correcting code.
+
+Nico (00:28:50):
+Okay. I'll give you a bit of a visual example of how you can pick up on an error very quickly. So if you're using Reed-Solomon codes, so polynomials, you could very well have that your message gets encoded into like a straight line. Like if you're drawing it in a graph, you'll have a straight line, right? Or some graph of a polynomial
+
+Ron Rothblum (00:29:09):
+Some nice elegant polynomial.
+
+Nico (00:29:11):
+Exactly. Things are nicely aligned, but then only one of the points is like slightly off from the pretty line.
+
+Anna Rose (00:29:17):
+Ah
+
+Nico (00:29:18):
+So in that case you do know like, okay, that point is where the bit flip happened. This is the error, and it should have been on the pretty line.
+
+Anna Rose (00:29:26):
+Because it's complicated enough. Like it would be almost probabilistically impossible that you'd have sort of like a wrong polynomial
+
+Nico (00:29:36):
+Exactly. If you were to draw a smooth line that went through all those points, it would be very high degree. So it'd have a lot of bounces. And this is why we're talking Reed-Solomon codes, or you use low degree polynomials, right? So you don't allow too many bounces.
+
+Anna Rose (00:29:52):
+I see.
+
+Nico (00:29:52):
+It has to be a nice smooth line. I hope that makes sense, Ron. I see you're nodding. So I'm
+
+Ron Rothblum (00:29:57):
+Yeah, I like that explanation.
+
+Nico (00:29:59):
+Okay, cool.
+
+Anna Rose (00:30:01):
+I always and this is maybe in a tangent here, I always thought that FRI was similar or something to like Fast Fourier Transformations, is it?
+
+Ron Rothblum (00:30:11):
+So it's inspired, but that is sort of how the protocol works, but it's important for us to understand what is the problem that is protocol is trying to solve. And the problem that it's trying to solve is, you know, the prover sent over a code word, which it allegedly encoded as a low degree polynomial and I want to check that that's indeed the case, or at least approximately the case that that's a problem that's trying to solve the way that it does, it is inspired by how FFT works
+
+Anna Rose (00:30:38):
+But the purpose of FFTs is something else.
+
+Ron Rothblum (00:30:41):
+Yes.
+
+Anna Rose (00:30:42):
+I see. Okay. The outcome, I kind of forget what, what are the, what is the purpose of a Fast Fourier Transformations again? I learned it years ago in the context of like music technology. So like, yeah
+
+Ron Rothblum (00:30:55):
+So I wouldn't say that it's unrelated, but it's not sort of, there is a way to frame it so that it is similar. But anyway, what is, what is FFTs? Okay. So with polynomials, there are two nice ways to view them. One is via the sort of what's called the coefficient basis or perspective, you know, to describe a polynomial. I'll just tell you what its coefficients are. So that, that is one way to view polynomial. A different way to view the polynomial is, you can think of it as kind of the graph that Nico described. So just the values that this polynomial obtains on some sufficiently large set. Okay. So these are two different bases or two different views of how to look at a polynomial
+
+Anna Rose (00:31:33):
+To depict them. Okay.
+
+Ron Rothblum (00:31:34):
+And the FFT is a fast algorithm, a very fast algorithm that lets you move from one to the other.
+
+Anna Rose (00:31:41):
+Oh okay. And so what you're saying is FRI uses that technique of moving from two views?
+
+Ron Rothblum (00:31:48):
+No, so it has to do with I mean that is also true in a sort of more involved way but I'm saying that the way that FRI, so, again, the goal of FFT is what I described to move between these bases. The way that FFT works is somehow to try to decompose this polynomial into parts and work with the parts and so on. And FRI is following this also the same basic thing. It's trying to decompose the polynomial work with the parts and recurse.
+
+Anna Rose (00:32:19):
+Okay.
+
+Ron Rothblum (00:32:19):
+So they're both recursive. What is a recursive algorithm? FRI is a recursive protocol? Both work by decomposing degree D polynomial into let's say 2 degree D over 2 polynomials and sort of combining them or working with them.
+
+Anna Rose (00:32:34):
+And as you do that, which direction are you going? Are you going from a number of points along a graph with the line through it? Or are you going to the coefficients?
+
+Ron Rothblum (00:32:42):
+In FRI? So in FRI you were just working. So you start off with so you're looking at the evaluation perspective and you're going from a problem of checking that you, so you're given the evaluation of something that is claimed to be a degree D polynomial. Remember, you're only allowed to look at very few points and FRI's giving you a reduction of how to reduce that into checking a similar statement about a degree D over 2 polynomial
+
+Anna Rose (00:33:07):
+I'm sorry, I think I was still talking about the FFTs. I was actually wondering which direction are you going with FFTs? Do you go both directions?
+
+Ron Rothblum (00:33:15):
+Both.
+
+Anna Rose (00:33:17):
+The reason I was asking is I thought what you were describing was one direction and that FRI was using the techniques of one direction.
+
+Ron Rothblum (00:33:26):
+The directions are very related. So there's FFT, which is going from the, I guess, coefficient perspective into the evaluation perspective or basis is the proper mathematical term and there's an inverse FFT that does the reverse.
+
+Anna Rose (00:33:42):
+Is there one that FRI is more similar to?
+
+Nico (00:33:45):
+I think the forward one?
+
+Ron Rothblum (00:33:46):
+Yeah I guess, so usually people also think of the forward one. It's like that's FFT and it does look very similar to that.
+
+Anna Rose (00:33:53):
+Say that one again. What is the forward one?
+
+Ron Rothblum (00:33:55):
+Yeah, so it's going from the coefficient perspective to the evaluation perspective.
+
+Anna Rose (00:34:00):
+I see.
+
+Ron Rothblum (00:34:01):
+So FFT, by the way, is also kind of the reason why, it's a big part of why people love the Reed-Solomon code because it allows for a very fast encoding of messages. So if you view your message as a bunch of coefficients and you want to encode them and get the polynomial, voila, that's exactly what FFT does and it does it very, very well.
+
+Anna Rose (00:34:23):
+Interesting.
+
+Nico (00:34:24):
+So why would we want to work with other codes than the Reed-Solomon code if it's so efficient?
+
+Anna Rose (00:34:30):
+It's so great.
+
+Ron Rothblum (00:34:32):
+Okay so two reasons. One is that it's great, but it is not the greatest at least asymptotically speaking. So the running time of doing an FFT, if say you have a coefficient or working of computation of size N then time that it takes to do it is something like order of nlogn. Whereas we know other codes for which then coding is o(n). So, you know, nlogn is pretty awesome, but o(n) is even more awesome. So why not?
+
+Nico (00:35:04):
+So is this where the line of work on linear prover sort of starts coming in?
+
+Ron Rothblum (00:35:08):
+Yes.
+
+Nico (00:35:09):
+Okay.
+
+Ron Rothblum (00:35:09):
+Another related thing, which is sort of more directly related to some work of mine is that Reed-Solomon works over a very large field. So you need your field to be large enough sort of for your graph that you were drawing to make sense. You need the number of points that you can talk about to be at least a message length. What this means is that when using Reed-Solomon based techniques, you need the field to be at least the circuit size. The field size needs to at least the circuit size and and this forces. So that is what like a lot of people are doing, so that that's what Starkware is doing. But I feel like, so it's true that Reed-Solomon has this property, but other codes don't. So you have other efficient codes that work over small fields. Can we use them and maybe try to support computations, sort of non-arithmetic computations, Boolean computations much more efficiently.
+
+Nico (00:36:01):
+I see. And then is there a trade off between, I guess the speed at which you can encode with your error correcting code and how you do your IOP of proximity?
+
+Ron Rothblum (00:36:13):
+A trade off in terms of efficiency? I mean that if you're using
+
+Nico (00:36:18):
+Yeah. Efficiency, yes
+
+Ron Rothblum (00:36:20):
+Okay. So maybe this is a good time to point out that. So Reed-Solomon has a lot of amazing properties. One of them is this very fast encoding, not the best, but very good. The other one, which is really fundamental to all of the IOP constructions is what's known as double duplicative property. Okay. So actually maybe before that let me talk about the additive property, which is more basic one. So right, if you take 2 degree D polynomials and you add them up, the result is going to be a degree D polynomial. And that is very useful for sort of, we use this property when trying to handle, think of a circuit that has addition gates that is something that's very useful. The other very nice property that Reed-Solomon as a code has, is that if you take any two polynomials and you multiply them point-wise, so each point of the polynomial is multiplied, the effect is like you are basically multiplying the entire polynomials.
+
+(00:37:18):
+And it means that the degree doubles. Okay? So if you take 2 degree D polynomials, you've got a degree 2D polynomial, and it means that if you take, so in other words, if you take 2 code words and you do this point-wise product between them, the result is going to be a not too bad code word in itself. Does that make sense? So it's not, it doesn't live in the same code because the degree has doubled, but as long as you make your field large enough it's going to have error correction properties. And this multiplicative property is really, really key to all of the IOP constructions except some very recent ones, and it is very hard to come by. So we have very few codes that have this magical property.
+
+Nico (00:38:04):
+I see. Is it a requirement? No, I'm sure we can work without it. Right. So
+
+Ron Rothblum (00:38:09):
+I view it used to be a requirement in the sense that the only way that we knew how to do arithmetization involved multiplication codes. So the reason that you hear about univeriate polynomials and multivariate polynomials throughout all these works to a large extent to a very large extent, is due to this multiplicative property. And until, you know, I would say that roughly speaking until a couple of years ago, we didn't know any other way. So when I was talking about sort of barriers that we would need in order to get better efficiency, I viewed that as a big barrier that we had to overcome, right? So we want this multi multiplicative property. We have Reed-Solomon that has it, but Reed-Solomon, you know, it has its features, but it also has its disadvantages, which we would like to avoid.
+
+Anna Rose (00:38:58):
+As we talk about all of this, and I think Nico, you did say this very briefly, you know, a few beats ago, but you know, we always learn about the polynomial commitment schemes and FRI falls under that category. Does that mean that error correcting codes, like are all of those polynomial commitment schemes that we've learned error correcting code schemes? Like is that what those are? Or is it sort of like some of the polynomial commitment schemes that we are using, use the technique of error correcting codes?
+
+Ron Rothblum (00:39:37):
+So maybe it's worth clearing things up a little because I think there's some, some confusion because, so we have this, let's say we have an IOP and in the IOP we said that we want to send code words right? So kind of the IOP side, that's what happens. You send over code words, whether it be polynomial, whether it be something else later on, what we'd be interested in doing is compiling this into a succinct argument. You don't want to actually send this huge code word, you want to send something short that represents it. Okay? That is exactly what sort of polynomial commitments do with respect to the Reed-Solomon code. Or if you're talking about univariate polynomials or sort of Reed-Muller, what's known as Reed-Muller code. If you're talking about multivariate, low degree polynomials in general, you could think of, you know, given a particular error correcting code C, do you have the analog of a polynomial commitment with respect to this specific code C? Does that make sense?
+
+Anna Rose (00:40:34):
+Sort of. So I think what you're saying is like the error correcting code part is sort of bridging between these two sections of a SNARK.
+
+Ron Rothblum (00:40:43):
+So the error correcting code sort of lives in the IOP land.
+
+Anna Rose (00:40:46):
+Okay.
+
+Ron Rothblum (00:40:47):
+And the polynomial commitment is what is allowing you to translate that from IOP land into SNARK land.
+
+Anna Rose (00:40:55):
+Okay. And, but then why is FRI considered a polynomial commitment scheme?
+
+Ron Rothblum (00:40:59):
+Right. So FRI the way it is phrased and the way that you know, if you look at the paper, the way it's phrased is as a component inside an IOP. However, if you take FRI and you compile it using Merkle trees, basically what you will get is polynomial commitment.
+
+Anna Rose (00:41:15):
+Okay.
+
+Ron Rothblum (00:41:16):
+Okay. So you can kind of, sort of, FRI is part of this bridging between let's see between a polynomial IOP and a SNARK, and then you can sort of push FRI to either side. If you push it towards the SNARK side, you view it from the lens of polynomial commitment. If push it to the polynomial IOP you can transform the polyomail IOP into the honest to God IOP.
+
+Anna Rose (00:41:39):
+Okay. I think I sort of get it. It seems a little in the weeds
+
+Nico (00:41:44):
+Actually, I'd like to share with my mental model there. So we were saying earlier, like, okay, Reed-Solomon codes are evaluations of polynomials, and you as a verifier, you don't want to read the whole thing, you just wanna check a few values. So when I give you like a short commitment to something, you want to know, was it a commitment to Reed-Solomon code or not? If I translate that into polynomial, and I could re-say it as, was this a commitment to a polynomial?
+
+(00:42:12):
+So this is where like FRI acts is a polynomial commitment scheme because it makes sure that some commitment, the values behind that commitment are actually the evaluations of a polynomial or close enough. Does that make sense?
+
+Anna Rose (00:42:26):
+Kind of.
+
+Nico (00:42:27):
+Kind of. Okay.
+
+Anna Rose (00:42:28):
+I mean, it sort of follow what I was trying to say there, which is it sounds like if FRI out of context of a STARK, it's not necessarily doing all that its name pertained, like it's acronym.
+
+Nico (00:42:41):
+So you're translating the name, right? You're replacing Reed-Solomon by polynomial.
+
+Ron Rothblum (00:42:48):
+So, the I on FRI stands for an IOP or molecularly an IOP of proximity. You can, the point is you can take any IOP in particular this one and compile it using Merkle trees, and you get an argument, a succinct argument. So if you did that directly to FRI, rather than the entire protocol, what do you end up getting is a polynomial commitment.
+
+Anna Rose (00:43:07):
+I still don't get, I still don't understand if the Reed-Solomon part of it is still in it.
+
+Ron Rothblum (00:43:12):
+Yes.
+
+Anna Rose (00:43:12):
+Is that always there? It's always there.
+
+Ron Rothblum (00:43:14):
+Yeah. It's the Reed-Solomon, whenever someone tells you, Reed-Solomon, just delete, replaced by the word polynomial.
+
+Anna Rose (00:43:19):
+In that context though?
+
+Ron Rothblum (00:43:21):
+In and any context.
+
+Anna Rose (00:43:22):
+In all context. Oh, okay.
+
+Ron Rothblum (00:43:23):
+Reed-Soloman is just equal to univariate polynomial.
+
+Anna Rose (00:43:26):
+I think I almost get it. I probably at some point need to see this on a whiteboard, but thanks so much for explaining it.
+
+Nico (00:43:33):
+Of course. I wanted to, I think circle back to something we're talking about just now. So we're still in Reed-Solomon land. What comes after, what kind of codes have you been using in your work on the near time provers?
+
+Ron Rothblum (00:43:46):
+Okay, so going back to what I was saying before, we seem to be having this barrier where we need this multiplicative property on the one hand, but codes that have it are a tiny bit slow. We would like to use faster codes that are available and
+
+Nico (00:44:00):
+By slow we mean the encoding, right?
+
+Ron Rothblum (00:44:02):
+Encoding. So FFT is awesome, but we have this annoying logn factor that we would like to get rid of. And we know that in principle we have codes that are faster. So I was working with a coding theorist, Noga Ron-Zewi also on Haifa like me. And we had this idea, which we call code switching, which is saying the following. So instead of encoding the computation using the slow code, we'll encode it using the the fast code. Great so far, so the problem that we run into is that we were, we wanted to use this multiplicative property, which we don't have anymore. So what we proposed is to pretend as though we did have, as though the message that we had sent was indeed the polynomial, the Reed-Solomon encoding. You sent super fast encoding of whatever you want of the computation, let's say
+
+(00:44:52):
+The approver and verifier pretend as though what had been sent was actually you know, a polynomial, a polynomial coding, run the protocol as if it were that at the end of the day, now the verifier wants to access, let's say, a point in this polynomial. And our observation was that you can now run a subprotocol proving that, if you took the message that is encoded within the super-efficient code, if you had encoded it as a polynomial and looked at that point, you would've seen a particular value. And we show that we can do this sort of using subject-based techniques.
+
+Nico (00:45:28):
+Wow. Okay. And does this come at a big cost for the verifier or in proof size?
+
+Ron Rothblum (00:45:36):
+Not so much. So, wow. It adds more interaction because you need to run a sub protocol, but that you sort of can feature your way later on and this is so this basic idea. So we had this paper with Noga in which we did this in the context we had, like, we were constructing IOPs that are extremely short. So the amount of communication in the IOP is just barely more than just sending over the witness which is what you would do if you had like no locality constraints. So it's say 1.1 times the length of the witness. And the ideas there was to use a very efficient encoding in terms of like number of bits for the first message and then later on switched to the polynomials
+
+(00:46:20):
+But later on, this basic idea was used in a paper by Jon Bootle, Alessandro Chiesa and Jens Groth. And they were saying, you know, at least the way I view what they were saying is construct the first encoding using a very, very fast code. One of these linear time in codeable codes, pretend that you had sent the polynomial run the protocol and then verify. And then this work of Justin Thaler and others breakdown builds on that. And Orion, a more recent one builds on that. So in all these papers, the basic thing that you want to have is a very fast linear time in equitable code with this property that you can sort of, after the fact at the end check properties related to, you know, if I had taken this message and encoded it as a polynomial, would I have seen something?
+
+(00:47:09):
+It turns out that that property is relatively easy to get, you can use it using, basically you can transform any efficient code into a code that supports that with relatively small overhead. This is in an operation called Tensoring. And this is what all, all these linear time provor works do
+
+Anna Rose (00:47:27):
+Tensoring.
+
+Ron Rothblum (00:47:28):
+So they start off with an efficient linear time and codeable code, and then they do on top of that they do Tensoring. And I think there's now a lot of room to try to optimize the basic linear time and codeable code that you're using.
+
+Anna Rose (00:47:41):
+Is Tensoring a known phenomenon?
+
+Ron Rothblum (00:47:45):
+Tensoring is it's a known phenomenon. It's an amazing thing. I mean, in a sense, whenever we say sum check, would we actually mean it's Tensoring?
+
+Anna Rose (00:47:53):
+Okay.
+
+Ron Rothblum (00:47:53):
+It sounds complicated, but it's actually really simple. So Tensoring is a way to take a code and build from it a new code that has some amazingly nice properties. Okay. And the way that the construction works is really simple. So supposedly you already have a great code that you love. I'll tell you how to build a new code from it. It's called the Tensor the square Tensor of it or whatever. So, right. So we already have a code, we're trying to build a new and better code. The way that this new and better code works is you're going to look at your messages as matrices. Think for example of it's simplest if you think of a square matrix
+
+(00:48:27):
+And now you're going to go to each one of your rows and encode the row using the code that we have, right? So we started off with some number of rows, we got some extra columns, kind of cause we encoded these rows. And now you go to each one of both original columns and these new columns and you encode them again using this code. I wanted to give like an example of why like sort of a concrete example. So if, if you take the Reed-Solomon code and you Tensor it, if you Tensor it more than, so if you Tensor it once, what do you end up seeing is a bivariate polynomial? If you, Tensor it a lot of times what you're end up seeing is a low degree multivariate polynomial. And in fact, if you take Nico's example from before of the read settlement code with the line, that's a very, that's an encoding for encoding sort of, I want to say either 1 or 2 bit messages. If you take that very basic code and you Tensor it enough times, what you end up getting is sort of multilinear polynomials and this Tensor operation is what really underlies the sum check protocol. Did that make sense?
+
+Nico (00:49:32):
+It does. Yeah. I'm just taking a second to absorb it because it is what we're doing when we're putting all our points into like the Boolean hyper-cube, but then we're still like defining our polynomial on a way bigger thing.
+
+Ron Rothblum (00:49:45):
+Yeah.
+
+Nico (00:49:46):
+I never thought of it this way. Yeah. So in that sense, when you do Tensoring, you have some kind of glowup of the original code. Okay.
+
+Ron Rothblum (00:49:56):
+Yes. So it kind of in terms of the parameters of the code so you get a lot of magical properties from this. So you get the subject protocol, you get something called local testing, which is an analog of FRI in this situation. The cost comes in in two ways. First of all, in terms of the amount of redundancy that you've inserted. So previously said you were encoding K bits into N bits. Now you're encoding K squared bits into N squared bits. And if you look at it as a ratio, the ratio is kind of squared, right? So if you look at K over N now it's K squared over N squared. If you were say you had this, this ratio was half, now it's a quarter. So you've inserted sort of more redundancy. Your code is longer and you're a little bit sadder.
+
+(00:50:43):
+So that's one place where you pay a little bit. The other place that you pay is in terms of this notion of distance that I was talking about. So how far apart different code words are from one another. So it turns out it's not a hard exercise to show that in terms of like the relative number of bits that are different between these messages, it's going to also square. So if you started off with a code with, usually we use Delta to indicate this parameter. So it's the percent of bits that you have to flip in order to go from one code word to another, the minimal number of such a bit flips and that percent is going to square,
+
+Nico (00:51:19):
+Which is a good thing, right?
+
+Ron Rothblum (00:51:20):
+No, it's a bad thing
+
+Nico (00:51:21):
+Oh, bad thing.
+
+Ron Rothblum (00:51:22):
+Yeah. You're paying both this squaring thing happens both in terms of the redundancy. So you're paying there and you're paying in terms of the distance, but you're gaining a lot of amazing properties.
+
+Nico (00:51:34):
+So if I then look at the IOP as a whole that we're starting to build here, is that going to translate into like some soundness error?
+
+Ron Rothblum (00:51:44):
+Yes. Essentially.
+
+Nico (00:51:44):
+Okay.
+
+Ron Rothblum (00:51:45):
+Yes. So the distance is closely related to the soundness error. And because we are taking some limited hit in terms of the distance, this will, you know, we'll pay in terms of soundness error or rather, we will need to compensate for that by doing some sort of repetition or amplification to bypass that.
+
+Anna Rose (00:52:07):
+Let's talk about some of your recent work, because I feel like we've spent a lot of time talking about the error correcting codes, which is useful, but I feel like yeah, from when doing a little bit of research on you Ron, it sounded like there was quite a body of work and quite a few threads that you were excited about. So yeah, why don't you tell us about some of the other work that you're looking at?
+
+Ron Rothblum (00:52:28):
+Sure. So one body of work that I've done a lot of work on is related to the Fiat-Shamir transform. So maybe it's worth to quickly remind the, the audience what that is. So it's basically this magical method of taking any interactive protocol it needs to satisfy one thing that I will say in a second and take this interactive protocol and make it non interactive. So instead of a ping pong back and forth between verifier and prover, boom to single message that prover sends can put on the blockchain or God knows where, and that's it. So, so it's, it's fantastic. The only like star that I had to add there is that the original protocol has to be what's called public coin, which means that throughout the protocol, all the verifier does is just toss random coins and tell the results of the approver no like fancy messages that the verifier needs to send.
+
+(00:53:17):
+And the basic idea of how to do this is that rather than the verifier actually sending out these coins, the prover is going to compute them by herself by taking some very complicated hash function and applying it to basically everything that the prover saw so far throughout the execution. And the hope is that because, so if you sort of follow this logic, you apply you apply the hash function to everything that happened in the execution, and only then you get the result, then you can not sort of tailor your previous messages for this result. Because if you were to try to modify previous messages, then the hash value would also change. Okay. So that is the Fiat-Shamir transform, we've known of we've known it since this work of Amos Fiat and Adi Shamir from '86.
+
+(00:54:07):
+And in terms of security, there's a lot to be said there. So first of all, we know that this thing is secure in the random Oracle model. So that has been shown and that is why it is incredibly popular in practice. So people are using it all over, whether it be in zero multiproofs or in signatures that we're all using. So it's incredibly popular. In theory land we are somewhat unhappy with this random oracle situation. We would like to base things on, you know, standard model. Can we do it based on discreet log or factoring or something concrete?
+
+Anna Rose (00:54:41):
+Why o you dislike the random oracle model?
+
+Ron Rothblum (00:54:43):
+Okay, so one of the reasons is that there exist examples of protocols that are interactive public coin protocols, which are, you know, sound secure, they're great, but if you apply Fiat-Shamir to them, no matter what hash function you use, the resulting the result is going to be insecure.
+
+Anna Rose (00:55:02):
+Okay.
+
+Ron Rothblum (00:55:03):
+Okay. So there are specific protocols where if you apply Fiat-Shamir, no matter in what way the end result is going to be insecure.
+
+Nico (00:55:11):
+Are these protocols kind of built for that property? Like are they slightly pathological in the way they're made?
+
+Ron Rothblum (00:55:17):
+So yes and no. So the first such protocol is so this start with the work of Ran Canetti, Oded Goldreich, and Shai Halevi related work, which does a more, sort of more directly does this. And if you look at those protocols, they're extremely contrived. You, you think, you know, these were exactly built in order to be insecure when you applied Fiat-Shamir. But nevertheless, it shows you the reason why we think Fiat-Shamir is secure is because it just looks like it should always be secure and not because of any special properties of the protocols that we're using. That's what I think, you know, common sense tells us. These counter examples are saying that the common sense does not suffice if this thing really is secure, it has to do with some specific properties of the underlying protocols.
+
+(00:56:03):
+So one related thing that I wanted to mention is that I had this work with other co-authors a couple years ago where we actually gave an example of, so like going back to this template of how we build SNARKs. We take something like an IOP, we compile with Merkle trees and we get a SNARK. So we gave an example of an IOP for which you follow this paradigm of compiling with the Merkle tree. You apply Fiat-Shamir, it's gonna become insecure. So it's a secure IOP. But if you go through all this machinery, the end result, non interactive Fiat-Shamir thing is insecure. In other words, if when applying Fiar Shamir, you know, you take the IOP as a black box, which you don't want to look into and understand. We have counter examples for when Fiat-Shamir when doing this is insecure.
+
+Anna Rose (00:56:55):
+When you say sort of secure and insecure is, are these binaries?
+
+Ron Rothblum (00:57:01):
+It's extremely insecure
+
+Anna Rose (00:57:02):
+Like to be insecure it's broken, unusable?
+
+Ron Rothblum (00:57:06):
+Yes. There is a false statement for which you can efficiently construct a proof that is going to be verified with probability one. So strongest possible attacks you can imagine
+
+Anna Rose (00:57:16):
+Very, very insecure. Got it. Okay.
+
+Ron Rothblum (00:57:20):
+Very, very, The most insecure I can imagine.
+
+Anna Rose (00:57:22):
+It's broken, it breaks it.
+
+Ron Rothblum (00:57:24):
+Yes. Absolutely. Not a little bit all the way.
+
+Anna Rose (00:57:27):
+Okay. Not a little bit. Yeah, I just wanted to be sure. I see
+
+Ron Rothblum (00:57:32):
+So one thing, like I will give some hope and then take it away. So one reason for hope is even this like
+
+Anna Rose (00:57:38):
+Oh no
+
+Ron Rothblum (00:57:38):
+This IOP that we have constructed is itself, it looks very weird. There's a component there that if you look at other IOPs they don't have it and it's baked in there as a catch 22 to kind of, to ruin it. And you'll say, okay, no, good. We usually don't have these in IOPs. The reason why I am going to take the hope away, sorry about that, is that this component looks, to me it looks very reminiscent of SNARK composition, of recursive composition. So there is something about some form of diagonalization of running a program on itself as input, which is going on there. Which, you know, if you just look at an IOP, you don't see that, but when you're starting to do recursive composition, you do see, this kind of thing, which I find worrying. I've tried to think of attacks, I haven't come up with any so far, but it certainly would no, it I would not be shocked if there was an attack based on this.
+
+Anna Rose (00:58:32):
+And when you say you called it sort of recursive constructions of SNARKs, but are you also talking about like accumulation and folding scheme type stuff?
+
+Ron Rothblum (00:58:40):
+No, I'm talking about recursive composition. So you have a SNARK or IVC or whatever you have a SNARK and then you're start think to prove statements about the verification of the SNARK itself.
+
+Anna Rose (00:58:54):
+Okay. After the SNARK is finished?
+
+Ron Rothblum (00:58:55):
+Yes.
+
+Anna Rose (00:58:55):
+Not, you're not talking about this sort of like internal accumulation or internal refresh
+
+Ron Rothblum (00:59:01):
+Yeah. Everything is a little bit like too concrete I think too, too concrete in the sense that I don't, it's hard for me to see how to frame things in to view them similarly.
+
+Anna Rose (00:59:12):
+Okay. Okay.
+
+Nico (00:59:13):
+Is it about this issue of, so we have our SNARKs in the random Oracle model, and then we want to do a SNARK of a SNARK. We actually the circuit of a SNARK verifier. So our random Oracle is no longer is a random Oracle. It's an actual circuit.
+
+Anna Rose (00:59:26):
+Yes.
+
+Nico (00:59:27):
+Is that kind of the prong that's linked to it?
+
+Ron Rothblum (00:59:30):
+Yes. And this is all based on it's hypothetical just like it feels to me, similar to this contrived examples that we have.
+
+Anna Rose (00:59:39):
+Ah
+
+Ron Rothblum (00:59:40):
+I would've loved to, to show an attack. I mean, maybe others would've been sad, but I would've been happy. I have yet to, do that so far. So that is, you know, it's all hypothetical.
+
+Nico (00:59:50):
+I mean, if we realize that it's insecure, I think everyone's better off if you find the attack.
+
+Ron Rothblum (00:59:54):
+Right.
+
+Anna Rose (00:59:55):
+What was you sort of started to talk about, like do you have an alternative? You said you don't want the random Oracle model, right? I think you mentioned what you would prefer to have.
+
+Ron Rothblum (01:00:04):
+Yeah. So there's been a huge body of work on trying to make Fiat-Shamir secure when we have a hash function, right? What if we use the hash function based on one of our favorite hash functions like Pederson or something based on lattices or something like that. Can we use a concrete hash function in order to do Fiat-Shamir and just prove that it works? And even in, in theory then where we are a lot more flexible in terms that we don't have things, things to be concretely efficient we didn't know how to do anything positively. We had counter examples. We had these like contrived counter examples and we didn't know how to do anything positively until 2016, I think.
+
+Anna Rose (01:00:43):
+Okay.
+
+Ron Rothblum (01:00:44):
+And then we had this paper showing for the first time a concrete hash function based on a very strong but still concrete cryptographic assumption. However, this and all of the follow ups that I'll mention in a second, they work only for particular nice protocols. So they work as long as the interactive protocol that you start off with is a proof rather than an argument. So it has security even against an unbounded proven. So for those type of protocols, since that work and we've had amazing follow-ups since we basically, at least in theory land, we now know how to instantiate Fiar-Shamir securely,
+
+Anna Rose (01:01:23):
+But only for that limited set of protocol. Do you have any examples of those? What were the nice ones?
+
+Ron Rothblum (01:01:29):
+The nice one would be GKR. So GKR is an interactive protocol for all bounded depth computations. And it's an interactive proof with statistical soundness. And so we know how to do Fiat-Shamir to GKR, for example.
+
+Anna Rose (01:01:42):
+Okay.
+
+Ron Rothblum (01:01:42):
+We even know how to go beyond that but it is so it's a very rich class but still limited. And also in terms of efficiency, the hash functions for which we know how to do this are essentially based, you could say that they're based on FHE, so they're not going to be completely efficient.
+
+Nico (01:01:59):
+What was the very strong cryptographic assumption you're referring to?
+
+Ron Rothblum (01:02:03):
+So that was in the earlier work, it's still, it's been improved since. In the early work we needed to assume that some sort of encryption scheme was optimally hard. Meaning that there is basically no attack better than brute force in some quantitative way and even stronger than that. But it was a basic feasibility result. It showed that in principle, something that we did not know at all could be done based on some assumption. Nowadays we can base it on an assumption called learning with errors, which is sort of the cornerstone of all lattice-based cryptography and a very widely studied assumption.
+
+Anna Rose (01:02:39):
+So what other open problems or topics themes are you interested in these days or working on?
+
+Ron Rothblum (01:02:47):
+So actually I'll go back to something we were talking about before with the efficient approvers. Because there's a question that I'm really interested in and I think it's also very relevant to practice. So these works that I mentioned before, breakdown Orion, BCG work from before that which achieved linear time provers, they're all considering arithmetic circuits over large fields. And they over this, in this setting, they indeed achieve a linear time prover. The thing I was curious, as, you know, an innocent theoretician is what can we say about Boolean circuits, right? So we have hash functions SHA or whatnot that are natively described as bullying circuits. One direction that I think that the industry and people are taking is, you know, these are not nice functions because they're not friendly toward their arithmetization. Let's invent new hash functions.
+
+(01:03:38):
+And I'm saying, you know, let's try to work with these, what can we do in terms of proving correctness of bullying circuits? And they're the ideas underlying the linear time provers sort of breakdown. I had a couple of works on this. And the first work, which is also with Noga, we managed to construct even in this harder setting of Boolean circuits strictly linear time prover. But the downside was that the soundness error was a constant rather than being some, you know, negligible function, which is what we prefer. So that was unfortunate. I mean, we were very happy to have the linear time prover in this setting, but the sums error was large. I had a follow up with Justin Holmgren in which we could show that you can get 2 to the minus
+
+(01:04:26):
+So if you take this basic protocol with Noga and you repeated Lambda times, you're gonna get 2 to the minus Lambda soundless error, which is good. But the running time now becomes, you know, size of circuit times Lambda. I have worked with Justin Holmgren in which we managed to reduce this to something like n x log Lambda. Okay. So that is sort of framed in the right way. It's an exponential improvement in terms of the pencil, right? Instead of take, if you think of concretely, instead of multiplying N by 128, you're multiplying N by log of 128. So that is a big improvement. But the basic theoretical question for me is, can you construct IOPs and succinct arguments where the prover is strictly linear time and the soundless error is negligible. That is something that we do not know how to do. And I think that has the potential to save another order of magnitude in terms of improvement potentially also for practical linear time proving.
+
+Nico (01:05:25):
+So was this for bullion circuit specifically or for all circuits?
+
+Ron Rothblum (01:05:29):
+So it basically works for, it kind of takes away the restriction on the field. So it can work for any field that you like.
+
+Nico (01:05:35):
+Okay, cool.
+
+Ron Rothblum (01:05:35):
+The hardest case being when the field is just 0 1 F 2, that's the hardest case. What's the most challenging case? But it works for any field that you like.
+
+Anna Rose (01:05:43):
+I think you've mentioned a few times someone named Noga. Can you maybe introduce who that person is?
+
+Ron Rothblum (01:05:48):
+Yes. It's Noga Ron-Zewi who is a fantastic coding theorist at the University of Haifa and I mean, we cooperated on these things because there's this very intimate connection between error correcting codes and PCPs and IOPs. And I think this joint perspective of coding from her side proof systems for me is what sort of enabled these developments. And I think that nowadays, if you look at like optimizing the prover run time and constructing better error correcting codes, I think the coding theory perspective is really, really important. there.
+
+Anna Rose (01:06:22):
+Well, cool. Well thank you Ron for walking us through complexity theory, information theory, error correcting codes, all the way to Fiat-Shamir transformation security. Yeah, thank you so much for sharing with us all of this information and all of this insight.
+
+Ron Rothblum (01:06:38):
+Thank you so much for having me. Thanks.
+
+Nico (01:06:40):
+Yeah, this was a pleasure.
+
+Ron Rothblum (01:06:41):
+Likewise.
+
+Anna Rose (01:06:41):
+And I wanna say a big thank you to the ZK Podcast team, Henrik, Rachel and Tanya. And to our listeners, thanks for listening.
+

@@ -1,0 +1,1080 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+This week I chat with Yi Sun from Axiom. He covers how Axiom works, what a co-processor has been historically in computing, what it means to be a co-processor to Ethereum, how ZKPs can be used to help bring historic data into smart contracts and the new use cases that this can enable. Now, before we kick off, I do want to direct you to the zkJobs board. There you'll find jobs from top teams working in ZK. So if you're looking for your next job opportunity, be sure to check it out. And if you're a team looking to find great talent, be sure to add your jobs to the jobs board today. I've added the link in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (01:08):
+Aleo is a new layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated stablecoins and more. Visit developer.aleo.org to learn more for questions, join their discord at aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose (01:44):
+Today I'm here with Yi Sun, co-founder of Axiom and recent guest of the zkPodcast. Welcome back Yi,
+
+Yi Sun (01:50):
+Thanks for having me back on Anna
+
+Anna Rose (01:51):
+Last time you were on, we actually did this episode about ML. It was for me a really important episode. I feel like I learned a lot. What we didn't cover in that episode though was Axiom, the project you're actually working on or we just mentioned it in passing and so yeah, I wanted to have you back on to really talk about that.
+
+Yi Sun (02:09):
+Yeah, definitely. So we've been building Axiom for a little over a year now, and Axiom is building a ZK co-processor for Ethereum.
+
+Anna Rose (02:16):
+Okay.
+
+Yi Sun (02:17):
+And what that means is that we allow smart contracts to do new things using ZK. So we let developers access historic data on-chain and use it in their smart contracts. And that wasn't possible before, without using ZK to make that whole process trustless.
+
+Anna Rose (02:34):
+Got it. Let's talk a little bit about the sort of creation of Axiom. So in the previous episode that you were on, we did hear your bio and background, but yeah, maybe let's start that story again. From the founding of Axiom, what is it? Who are the co-founders? How did it come together?
+
+Yi Sun (02:49):
+Yeah, so the origin of Axiom was really in a pretty concrete developer problem. So I was helping out a friend build a DeFi protocol called Anti Finance and Anti allows projects to commit to certain on-chain unit tests about whether, for example, for a lending protocol assets will be greater than liabilities. And they had the very specific problem that they wanted the test to fail. If at any point in the past assets dip below liabilities. And so we were just thinking through whether this was possible for a smart contract and we quickly realized it means smart contracts need to access history. So you can imagine my surprise when I realized that was not possible
+
+Anna Rose (03:29):
+That was not possible, damn. Let's explore this idea of history. What do you mean by that?
+
+Yi Sun (03:36):
+Yeah, so essentially if you look at what smart contracts can access on-chain today, when you go to the web front end for an on-chain application, you'll see lots of very informative data about, for example, for OpenSea, the historic owners of an NFT, all the transactions that have occurred, the price history and if you try to circle which of those numbers actually OpenSea itself on-chain can access, you'll realize quickly that there's only one of those pieces of data, namely the current owner.
+
+Anna Rose (04:07):
+Yeah.
+
+Yi Sun (04:07):
+And so you realize from a smart contract point of view, the developer's actually quite limited in what it can do and of course developers today really mask that from the user by presenting it in nice front end and hacking around the problem. But fundamentally, if you want to do things on-chain in a trust minimized way today, you're quite limited.
+
+Anna Rose (04:25):
+Wow. So what are they doing in that case? Is it just like on a centralized server where they're just like every time there is a change record is kept like in the kind of Web2 way but then and it displays on the website. But actually if you were try were to try to like scan the blockchain today, you wouldn't necessarily easily be able to find it.
+
+Yi Sun (04:44):
+So if you scan the blockchain today, you could query all this information from an archive node.
+
+Anna Rose (04:48):
+Okay.
+
+Yi Sun (04:48):
+And I like to think that archive nodes exist to serve the human eyeball so developer queries, archive node puts it on their web front end and the user can see the information, but what it's not good for is serving the smart contract.
+
+Anna Rose (05:01):
+I see.
+
+Yi Sun (05:02):
+So if you want to take for example, the historic transaction data from OpensSea and do some on-chain operation as a consequence, that's very difficult today.
+
+Anna Rose (05:10):
+Got it. So you mentioned sort of the archival node. When you're dealing with a smart contract, it can't look into the contents of this node, can it?
+
+Yi Sun (05:19):
+Yeah, that's exactly right.
+
+Anna Rose (05:20):
+Okay.
+
+Yi Sun (05:20):
+So as a human you can of course query an archive node and you're implicitly sort of trusting that the archive node is sending you correct results. So when you see something on the Uniswap front end, that's what's happening.
+
+Anna Rose (05:31):
+Okay.
+
+Yi Sun (05:31):
+Now a smart contract obviously can't query an archive node off-chain. And even if it could, well just be getting a number and you know, we all know on-chain you're not supposed to just accept numbers that an arbitrary person put on-chain.
+
+Anna Rose (05:45):
+Okay. But then, okay, so then how do you get this archival part? Like if you're saying a smart contract can't do it, what can do it?
+
+Yi Sun (05:52):
+Yeah, so every blockchain has a unique twist, which is that the current block commits to the past block and the block before that and so on. So actually the current block contains a commitment to the entire history of the blockchain.
+
+Anna Rose (06:04):
+Yeah.
+
+Yi Sun (06:05):
+And if we were able to cryptographically reverse that commitment, we'd be able to give a cryptographic proof, namely via chain hashes that any piece of historic information appeared in the history of Ethereum. Now the catch is that verifying that proof is quite expensive. You might imagine if you want to prove something a million blocks ago, you have to present the million intervening blocks.
+
+Anna Rose (06:27):
+Oh wow.
+
+Yi Sun (06:28):
+Which is quite a bit of data.
+
+Anna Rose (06:29):
+Yeah and in a smart contract context, you would never do something like this.
+
+Yi Sun (06:33):
+That's exactly right.
+
+Anna Rose (06:34):
+You can't kind of
+
+Yi Sun (06:35):
+You basically can't
+
+Anna Rose (06:36):
+Okay. But then is there anything that, maybe not a smart contract, but something else can actually query to get that that isn't so expensive?
+
+Yi Sun (06:44):
+So, when you query an archive node, you can sometimes ask it to produce more data. This is called a Light Client proof, which allows you to cryptographically verify that the piece of historical information provided is actually in the chain. If you want to use that on-chain, you can attempt to verify the Light Client proof on-chain.To reduce the expense, what we do at Axiom is to incorporate this into ZK. We utilise the succinctness property of zero-knowledge proofs to decrease the amount of data that must be put on-chain, both to prove access and to make the verification cheaper.
+
+Anna Rose (07:19):
+I recently met a developer named Tracy who is looking really closely at this space and he was really kind enough to like map out a little bit what this looks like. And what he had described was that the thing that's in the smart contract, the call, can't directly talk to this archival node. So instead you're doing this like separate call to the archival node. What is that called? What is that?
+
+Yi Sun (07:43):
+There's a optional extension to the JSON-RPC API, which gives a call, which is eth_getProof.
+
+Anna Rose (07:50):
+Okay.
+
+Yi Sun (07:50):
+And actually Alchemy and Infura both implement this call. And so it allows you to, in addition to requesting a piece of contract storage, you can accompany it with a Merkle Proof that that storage value was actually committed to in the history of Ethereum.
+
+Anna Rose (08:06):
+I see. Is that very, very heavy? Like is that not verifiable? Like what's wrong with just having that and then immediately writing that to chain?
+
+Yi Sun (08:14):
+Yeah, so it is verifiable, you basically check some hashes, but the difficulty is it's pretty large.
+
+Anna Rose (08:20):
+Okay.
+
+Yi Sun (08:20):
+And the cost of verifying these proofs adds up. So if you want to query one piece of historical data, you would have to verify this Merkle Proof against a historic block hash.
+
+Anna Rose (08:32):
+I see.
+
+Yi Sun (08:33):
+And we can get into how you get these block hashes, which is its own thing.
+
+Anna Rose (08:36):
+Okay.
+
+Yi Sun (08:36):
+But suppose you wanted to query, let's say a thousand pieces of historic data. Now it's approximately one kilobyte per proof.
+
+Anna Rose (08:45):
+Okay.
+
+Yi Sun (08:45):
+A kilobyte times a thousand is a megabytes, which quickly adds up.
+
+Anna Rose (08:48):
+So you're just saying like you might be able to do this thing, but it would just be like completely impossible if you were actually trying to do more than this one query meaning like it's very, very limited.
+
+Yi Sun (08:58):
+Yeah, that's exactly right. If you think about most applications you actually want to do, you need to query quite a few pieces of on-chain data to really do anything.
+
+Anna Rose (09:07):
+So then are you creating sort of a intermediate interface or an intermediate environment? Do you have something that's like hearing the smart contract going off-chain and then doing this query and then it goes back to it? Yeah. Maybe describe a little bit what this looks like.
+
+Yi Sun (09:22):
+Yes, that's exactly right. When a developer wants to query into Axiom, they send us an API call that can either be just a standard off-chain REST API call or they can emit an on-chain event which triggers us to fulfil the query. On our side, we look up the historical data and perform some post-processing and computation on top of it. Once we obtain the result, we generate a zero-knowledge proof that everything we did was kosher, that we fetched the right data and we did the computation correctly. Finally, we verify that proof on-chain in our smart contract and deposit the result for the on-chain application to use.
+
+Anna Rose (09:58):
+But in that case, you actually, I think you just said it, so say we're, say we're starting from a smart contract, somebody writes a smart contract, they somehow in that smart contract ping you or access you, you then do the query, you then create a proof, you bring it back. But like, do you actually do something as well? Are you like changing the state in the Axiom environment?
+
+Yi Sun (10:22):
+We actually, in our smart contract, we have a list of verified results of queries. And so developers can read into our verified results and use that information downstream in their application
+
+Anna Rose (10:34):
+To change state on the main chain?
+
+Yi Sun (10:36):
+Yeah, that's exactly right?
+
+Anna Rose (10:37):
+How do you force that though? Like, it, like I can't even really imagine what, like, is the smart contract written in a very specific way? Is it different than normal smart contracts or like, is there a different, even like formatting if you're like sending code off-chain? Or is that just like normal? I'm not a Solidity developer, so maybe it's just like a normal thing that always happens.
+
+Yi Sun (10:55):
+It's just a normal smart contract.
+
+Anna Rose (10:57):
+Okay.
+
+Yi Sun (10:57):
+So the difference is that everything we put into our smart contract, it has to be verified with a zero knowledge proof verifier that also occurs on-chain in our contract. So it's very similar to how an Oracle works. So if you request, let's say a price feed from Chainlink today, you make a request either off-chain or on-chain.
+
+Anna Rose (11:16):
+Okay.
+
+Yi Sun (11:17):
+Chainlink provides a fully trusted price on-chain and then your application reads from that price from Chainlinks smart contract. The only difference with Axiom is that all the results we put on-chain, you don't have to trust us.
+
+Anna Rose (11:30):
+Okay.
+
+Yi Sun (11:31):
+We already have a proof that verifies that they're correct
+
+Anna Rose (11:33):
+So you're replacing that trust with a ZKP and are they also doing this like archival data or is this actually also novel the fact that you're like specifically focusing on the historic data?
+
+Yi Sun (11:45):
+Yeah, we're focused on historic data because it allows us to verify it without any additional trust assumptions. So our philosophy is anything you get from Axiom shouldn't impose any cryptographic assumptions beyond what you're already trusting on Ethereum.
+
+Anna Rose (11:59):
+Okay.
+
+Yi Sun (12:00):
+So any number we give you, you can think of it as the same as a number you read from a smart contract.
+
+Anna Rose (12:05):
+Hmm. What kind of ZKPs are you actually using? Have you decided that?
+
+Yi Sun (12:10):
+We actually think of it quite holistically today. We're using Halo 2 with the KZG backend. So we're employing standard SNARKs and using lookup tables and custom gates, essentially the entire modern toolbox of ZK. However, I believe that building and working with ZK is somewhat similar to operating in the early semiconductor industry. There are constantly new technologies being developed to improve ZK proofs. You have to continually upgrade your backend to deliver better performance. As the jumps are quite large, you really need to keep up or risk being left behind.
+
+Anna Rose (12:44):
+How hard is it to update your SNARKs though?
+
+Yi Sun (12:47):
+You know, it's honestly a question of art rather than science.
+
+Anna Rose (12:50):
+But like do you have to redeploy the entire system every time? I'm guessing? Yes.
+
+Yi Sun (12:55):
+Yeah, you definitely have to redeploy the on-chain verifier.
+
+Anna Rose (12:58):
+Okay.
+
+Yi Sun (12:59):
+But we've designed our system to be somewhat modular. So we have a core system which serves the function of hashing all block hashes of Ethereum from Genesis until the current block. And we have systems which call into that to verify user queries against those block hashes. So we can opt to upgrade pieces of that as needs arise or as we can deliver greater efficiencies.
+
+Anna Rose (13:24):
+In terms of the querying, like are you running a Full Node, a Full Archival Node as well in your system? Or is that like, are you pinging a stranger?
+
+Yi Sun (13:32):
+Currently, we're pinging, frankly, Infura. Eventually, we plan to run an Archive Node. However, the beauty of our system is that the user doesn't care about how we're producing the results, because we're producing a proof that the results are correct. To the user, we could have potentially done everything by pen and paper, but as long as the proof verifies, they should be okay with the result.
+
+Anna Rose (13:55):
+Yeah. How does the proof verify on-chain that it's correct? How does it know it's correct?
+
+Yi Sun (14:01):
+Yeah, so the key, that's a great question actually. So whenever you verify as your knowledge proof, you have a root of trust, meaning that there's no sort of absolute truths about the chain, you really can only verify that if you believe that a certain block hash was present on Ethereum, then you should believe that it contains a commitment to some potentially very complex if historic statement.
+
+Anna Rose (14:23):
+Okay
+
+Yi Sun (14:23):
+So we always have to check that claimed block hash for a specific block number actually was the block hash that occurred on Ethereum
+
+Anna Rose (14:32):
+But when it's verified on-chain, it still can't look into the archival note. Right.
+
+Yi Sun (14:36):
+Yeah, that's exactly right.
+
+Anna Rose (14:37):
+So you're basically relying on like the ZKP to say, because we're using the ZKP, this is why it's correct.
+
+Yi Sun (14:44):
+Yeah, that's right. The only aspect that the EVM provides to look into the Ethereum data structures themselves is the block hash-off code.
+
+Anna Rose (14:53):
+Okay. So you can use, so there is a view from the smart contract on-chain into just that.
+
+Yi Sun (14:59):
+That's right. Just that it's very limited.
+
+Anna Rose (15:00):
+That's what you're taking advantage of.
+
+Yi Sun (15:01):
+Cool. So you can see the last 256 block hashes, but nothing further.
+
+Anna Rose (15:05):
+Okay. Oh, that's interesting
+
+Yi Sun (15:07):
+And we actually have to work very hard to extend that view from 256 block cashes back to Genesis.
+
+Anna Rose (15:13):
+Okay. Why do you use the term co-processor? What is actually a co, like is it mimicking something on in computers? Like yeah, where's that word coming from?
+
+Yi Sun (15:23):
+Yeah. You have to dig kind of into the dark history of semiconductors to, back in the day before everything got integrated into CPUs when you built a computer, you'd have your generic CPU processor, and then you would have different co-processors that were specialized to different operations.
+
+Anna Rose (15:41):
+Okay.
+
+Yi Sun (15:42):
+So I went back on the internet and found a picture of actually a math co-processor. So it was a co-processor that allowed you to do floating point arithmetic fast.
+
+Anna Rose (15:50):
+Oh wow.
+
+Yi Sun (15:51):
+And it was actually made by a company called Math Co.
+
+Anna Rose (15:53):
+Very nice.
+
+Yi Sun (15:54):
+So yeah, back in the day, you would buy like your processor and then you'd buy a co-processor and hook them up. And so we think of our system as an analogy of that for smart contracts. So smart contracts are really good at doing synchronous small computations and accessing a small amount of data in a synchronous fashion, whereas Axiom allows them to access huge amounts of data asynchronously and do kind of big computations on top.
+
+Anna Rose (16:21):
+What era when you talk about like that math chip, what era is that from?
+
+Yi Sun (16:25):
+I think the last one I was able to find was the early 90's.
+
+Anna Rose (16:29):
+Okay.
+
+Yi Sun (16:29):
+So from the 70's to the 90's, it was kind of a thing to have a co-processor for your physical processor.
+
+Anna Rose (16:35):
+Do you think we sh we can think about the blockchain as being in that state then in a way? Like, are we 1985?
+
+(16:44):
+In terms of what a computer looks like and how it works?
+
+Yi Sun (16:47):
+I went back to see what it, you know, and in terms of clock cycles, how fast is Ethereum?
+
+Anna Rose (16:52):
+Yeah.
+
+Yi Sun (16:52):
+I think I concluded it was something pre-80's.
+
+Anna Rose (16:55):
+Whoa.
+
+Yi Sun (16:55):
+So definitely in the 70's.
+
+Anna Rose (16:56):
+Really?
+
+Yi Sun (16:57):
+And I want,
+
+Anna Rose (16:59):
+I wonder, do you think that like actually developers in the space in general should be looking at those models to like sort of predict what other tooling will be needed? Or actually should we like not do that because maybe computers need to be rethought?
+
+Yi Sun (17:12):
+I think a combination is helpful. So blockchain computers are certainly extremely limited computers in some ways, and that's where I think looking at historical analogies can be helpful. On the other hand, the constraints of blockchain computing are pretty weird. For an example, there's this distinction between synchronously accessing state and asynchronously accessing state, which doesn't quite exist on a standard, you know, old school computer.
+
+Anna Rose (17:36):
+Why is that? Is it because of the decentralized nature because there's nodes everywhere and like information is flowing in different places or why does asynchronous not exist there?
+
+Yi Sun (17:47):
+Yeah, it's exactly this requirement, decentralization. So when you run a transaction on Ethereum, what's really happening is that all of the validating nodes on Ethereum are rerunning your transaction and coming to consensus about whether they ran the transaction correctly. So first of all, that's tremendously expensive. There's a 500,000x overhead. but secondly, you have to actually come to consensus every time. So when you run asynchronous transaction on Ethereum, you're paying that overhead. So what ZK is fundamentally allowing us to do is to run that transaction asynchronously.
+
+Anna Rose (18:24):
+Wow. When you say asynchronous, like are you kind of saying that like the Axiom environment might actually be taking more time? Like would it take, I don't know, 3 blocks where if you had tried to do something like this, it would normally be 1 and then it comes back 3 blocks later and changes the state? Is it like that or?
+
+Yi Sun (18:42):
+Yeah, we let you access way more information, but the price you pay is that you have to commit to some historic block at which you're reading that information. And once you're finished processing that block and generating the proof, you can put your conclusion on-chain in a trustless way.
+
+Anna Rose (18:57):
+But it doesn't have to be the next block.
+
+Yi Sun (18:59):
+It doesn't have to be the next block.
+
+Anna Rose (19:00):
+And that's the asynchronous. We're like, something can be happening over here and it comes back later.
+
+Yi Sun (19:04):
+That's exactly right. So you have to wait a little bit to process off-chain.
+
+Anna Rose (19:07):
+Is there anything else from the main chain that you could be accessing? Like you've talked about historic data, maybe that is the only thing that's there, but is there anything else that one could try to derive from these nodes?
+
+Yi Sun (19:20):
+We do want to access sort of all on-chain data. So today we offer access to block headers, account data, so your account balance your Nonce and contract data.
+
+Anna Rose (19:30):
+Yeah.
+
+Yi Sun (19:31):
+And finally, local account storage. So we're in the process of adding transaction and receipt data which would in particular give developers access to events.
+
+Anna Rose (19:40):
+Would it ever make sense to have like another node tier that like is analyzing these nodes, maybe this is actually what this could be, where it itself becomes a source of truth that could be queried. Does that sound totally insane? You can totally be like, you're not a computer scientist. Stop suggesting stupid shit.
+
+Yi Sun (19:59):
+It's actually something we've thought about
+
+Anna Rose (20:01):
+Okay.
+
+Yi Sun (20:01):
+As being uniquely enabled by ZK. So, so at the beginning of the conversation we mentioned that, you know, smart contracts can't read archive nodes.
+
+Anna Rose (20:10):
+Yeah.
+
+Yi Sun (20:11):
+But really that's just because any read a smart contract does from an archive node would need to be accompanied with some type of proof. And at present, those proofs are huge and difficult to verify. So one vision we have for the future is to actually put an entire archive node in ZK. So imagine proving the correct execution of your full archive node.
+
+Anna Rose (20:30):
+Okay.
+
+Yi Sun (20:30):
+So that's a huge task, but if we were able to do that, we could serve every query from our archive node on-chain
+
+Anna Rose (20:37):
+Wow.
+
+Yi Sun (20:37):
+In a provableway
+
+Anna Rose (20:38):
+Interesting. Would there ever be, I'm going to tell you a little bit more what I'm actually envisioning, which is almost like there's an analysis of historic data that's then stored in a new structure to always be easily queried, but like, not that you'd have to run the computation each time. Could that exist? Is that sort of what you just described?
+
+Yi Sun (20:57):
+That's what we're that's the direction we're going in. So we're thinking you could process the chain once and in the process
+
+Anna Rose (21:03):
+In a certain way.
+
+Yi Sun (21:04):
+In a certain way. Yeah. So imagine an archive node, but as a side effect, generating a zero knowledge proof of every step and recording those proofs in a ZK friendly format. Once we're in that format, if a smart contract queries against it, we could return the result of the query much faster than it, than the initial process of generating the proof.
+
+Anna Rose (21:24):
+Got it. Oh, this is cool
+
+Yi Sun (21:25):
+And if you think about a normal archive node that is kind of what it's doing, it listens to blocks, somehow processes them and ingest them into its database and it can return queries to a user quickly. What we're thinking of doing is adding ZK over this whole layer.
+
+Anna Rose (21:41):
+Interesting. I've had another question just about Axiom and not just Axiom, projects that I think fall in sort of a similar category. What are you, I mean you're using the term co-processor, but like in the ZK context, are you a tool, are you another category? Are you like a platform, an environment? Like I've actually, when I do lists, if I list Axiom on it, it's sort of like ZK++ because I don't know what it is. What is it?
+
+Yi Sun (22:07):
+I would say we're somewhere in between a developer tool and a platform.
+
+Anna Rose (22:11):
+Okay.
+
+Yi Sun (22:12):
+So we intend ourselves to be used by smart contract developers who don't have to know anything about ZK. And the problem we think we're solving is that ZK can do many things, but it's really inaccessible to developers today. Like maybe if you're very interested, you can write circuits and get deep into ZK but if you just want to build a more powerful and expressive application, there's really nothing there to help you use it today.
+
+Anna Rose (22:38):
+Yeah.
+
+Yi Sun (22:38):
+And we're just really focused on helping developers do more in their applications.
+
+Anna Rose (22:43):
+When you're writing those initial smart contracts though, do you need to know a certain like syntax to communicate specifically with you or what's going on in that?
+
+Yi Sun (22:52):
+Yeah. We strive to make our smart contract interface as simple as possible. Developers frankly don't need to know anything about ZK. They just have to read from very standard Solidity data structures. And the trick is that the ZK is powering the fact that all of our results can be relied upon in a trustless fashion.
+
+Anna Rose (23:10):
+Hmm. But like in the smart contract itself, it's just regular smart contract language. They're not like doing new things.
+
+Yi Sun (23:16):
+Yeah. Just regular Solidity.
+
+Anna Rose (23:17):
+Okay but is it true that, like, say you're looking for like a historic piece, like there is no query currently to be done in a smart contract for the base chain. So like is it just sort of a blob of text that's like not being read in the smart contract?
+
+Yi Sun (23:31):
+Yeah, that's exactly right.
+
+Anna Rose (23:32):
+Okay.
+
+Yi Sun (23:32):
+So the query in Axiom is made to be interpreted off-chain.
+
+Anna Rose (23:35):
+I see.
+
+Yi Sun (23:36):
+So it's simply an off-chain REST API query or just a blob of encoded data that's emitted on-chain and interpreted off-chain
+
+Anna Rose (23:44):
+Where the smart contract is that I don't even, is there a memo field? Like where does it go?
+
+Yi Sun (23:48):
+We intend for developers just to admit an event
+
+Anna Rose (23:51):
+Okay. It's an event.
+
+Yi Sun (23:53):
+Yeah. So it's actually quite similar, we're mimicking an on-chain Oracle call. So when developers call into Chainlink, they either can hit Chainlink's off-chain server or also admit an event with their call.
+
+Anna Rose (24:04):
+I see. So you're kind of following that model.
+
+Yi Sun (24:06):
+Yeah, we think we just want to be as close to what developers are used to as possible.
+
+Anna Rose (24:10):
+In this example though, like, so everything we've been talking about is sort of like getting a piece of data or getting some data maybe range, but like would you be able to calculate like an average over a period of time or like can you actually do like a calculation on that and kind of to what extent can you do things?
+
+Yi Sun (24:29):
+In the beginning we're offering very basic post-processing of data so we can feed you arbitrary historic data and give you the Merkle root of that data and developers can access that in a self-serve fashion today.
+
+Anna Rose (24:39):
+Okay.
+
+Yi Sun (24:40):
+We're also offering sort of custom ZK circuits to do specific processing that can enable specific powerful applications. What we're building in the future is a virtual machine that can layer on top of that and allow developers to specify compute in a query language on top of the data that they're accessing.
+
+Anna Rose (25:00):
+Where does the VM live?
+
+Yi Sun (25:01):
+So the VM is executed fully off-chain.
+
+Anna Rose (25:04):
+Okay.
+
+Yi Sun (25:05):
+And what's important is that the correct execution of the VM is proven in ZK off-chain.
+
+Anna Rose (25:10):
+Okay. And this is living, then the VM would live in the Axiom environment.
+
+Yi Sun (25:14):
+Yeah, that's right.
+
+Anna Rose (25:15):
+And how complicated could these processes be then? Like how are the computation? Like do you have a upper limit to what still could not be done? Or do you feel like anything?
+
+Yi Sun (25:27):
+Yeah, we think what's kind of special about this post-processing setup is that there's no fundamental blockchain limitations to the computation you have to do.
+
+Anna Rose (25:35):
+Interesting.
+
+Yi Sun (25:35):
+So long as you can prove the validity of the computation in ZK, then you can use it on-chain. Whereas in, let's say a rollup, you actually have these considerations like should you be occupying all the block space of the rollup for your computation at the expense of others?
+
+Anna Rose (25:50):
+I actually was just about to ask you like what's the interaction then with a rollup? Like I can imagine that you could live on a rollup.
+
+Yi Sun (25:55):
+Yeah, that's right.
+
+Anna Rose (25:56):
+But if you're able to like run computation and all it is, is writing a proof, are you then sort of competing with like the value proposition of a rollup? They're kind of saying that they're the environment for all of this computation because it's so cheap, but you're sort of saying like, well actually there's this VM where you could do a lot of the computation and you only have to write like a single proof.
+
+Yi Sun (26:15):
+Yeah. We think we're offering a really complimentary type of computation from what rollups do. So we think rollups are really good for things like trading on an AMM and that's very synchronous computation where the transaction right before you really affects your transaction. We're thinking of operations like performing a neural network inference or computing your on-chain reputation. These are things where it's a pretty long-running computation and it's relatively independent of other participants on the chain. So as you mentioned earlier, we can definitely serve rollups and we can also feed information from let's say ETH L1 to rollups.
+
+Anna Rose (26:53):
+You sort of mentioned earlier the Light Client, you are not building a Light Client are you? Like, would you put yourself in a similar category as something like Succinct at all, the project? Because I in the past have lumped you guys to, but then realized like, I don't know if you really are doing the same thing.
+
+Yi Sun (27:10):
+Yeah. I think we're pretty complimentary.
+
+Anna Rose (27:12):
+Complimentary. Okay.
+
+Yi Sun (27:13):
+Yeah. Succinct is proving the Ethereum consensus. So it's really operating at the consensus layer and we are taking the consensus as a given and verifying against the block hashes that consensus already agreed on.
+
+Anna Rose (27:24):
+I see you're interacting with Light Clients, but you're not creating a Light Client of your own.
+
+Yi Sun (27:28):
+Yeah, that's right. We're we're using Light Clients, but we're not creating one.
+
+Anna Rose (27:31):
+I see.
+
+Yi Sun (27:31):
+And the reason is we don't want to impose any additional trust assumptions. So if, because we're verifying on Ethereum itself, if a user is willing to accept Ethereum, then we have a cryptographic equivalence between the data we're providing and what Ethereum itself provides.
+
+Anna Rose (27:47):
+Is there any sort of cross chain-ness to this? Because as you're describing it, I'm sort of like basically the smart contract would write from one rollup and you could then actually, instead of querying like base chain rollup or base chain L1, you could just like query another rollup and then you're delivering information back. Is that at all what you're doing? Like are you kind of a bridge?
+
+Yi Sun (28:09):
+We're definitely not a bridge.
+
+Anna Rose (28:11):
+Okay. You don't want to be a bridge? Not, well definitely not a token bridge, but like are you a message passing bridge? Maybe?
+
+Yi Sun (28:17):
+I think we are part of a modular construction of a bridge.
+
+Anna Rose (28:21):
+I see.
+
+Yi Sun (28:22):
+So our perspective is that we're going to deliver what we view as objective facts and we want our users to choose what sort of mechanism they want to use to bridge those facts between Ethereum and other chains or rollups. So in the case of rollups, there's a native bridge and so there's not really much controversy of what over what to use, but we think for cross chain applications, users all have their own favorite bridges. And what we want to do is verify facts on Ethereum and users can choose how to port those facts to other chains.
+
+Anna Rose (28:55):
+I see. With the system that you've built today, you would never be querying the block header headers of another chain for Ethereum, but you're only doing that query to the Ethereum chain, right?
+
+Yi Sun (29:06):
+Yeah. Today we support reading from Ethereum mainnet and verifying against a block hash of Ethereum mainnet and the user can choose what trust assumptions they want to put on that block hash. So if that's on Ethereum, we provide a way for them to access those block hashes, fully trustlessly. If that's on a rollup, then the native bridge provides a way for them to access Ethereum block hashes. Now if it's on another blockchain, then the user can choose what sort of bridge they use to get access to those block hashes.
+
+Anna Rose (29:38):
+Okay. Could someone build, I guess they could build something like Axiom on another network, but I guess the thought is like, since most of the activity, I guess most of the interest is on Ethereum, that you wouldn't have as many queries that way.
+
+Yi Sun (29:51):
+Yeah, we can definitely support reading from any EVM equivalent chain. So that includes rollups or even alternative L1s. Right now we're really focused on Ethereum mainnet, that's where most of the developers and users are. Yeah. But if that changes, we're definitely open to supporting developers where they are.
+
+Anna Rose (30:08):
+Have you looked into any of the other ecosystems about like how they would feed you historic data? Like are other blockchains built differently than Ethereum? I assume so. Yeah.
+
+Yi Sun (30:17):
+We've done some basic investigation. Some blockchains are easier than others.
+
+Anna Rose (30:21):
+Okay.
+
+Yi Sun (30:21):
+So there are some chains like NEAR where every block actually natively contains a commitment to all previous block hashes.
+
+Anna Rose (30:29):
+Okay.
+
+Yi Sun (30:29):
+And so that makes things a lot easier for us. Of course we still have to adapt to their storage formats, but that's not a huge deal. Other blockchains like Solana have a much more complex way of committing to historic state. So there's no individual commitment to the full state. And so that's a lot more challenging for us to handle.
+
+Anna Rose (30:45):
+Interesting. But I guess like this, it sounds like you're not doing work in those directions right now anyway. You just sort of evaluated.
+
+Yi Sun (30:51):
+Yeah, right now we're really focused on sticking with the EVM.
+
+Anna Rose (30:53):
+Cool.
+
+Yi Sun (30:53):
+And we're starting with Ethereum mainnet and we're thinking of adding rollups to start with.
+
+Anna Rose (30:58):
+Nice. I want to hear about potential use cases. Like we've talked just now about like the architecture and some of the, where the information's going, but we haven't really talked much about like, who uses this? Why do you use it? Why do you need this historic data? What does it actually enable? So yeah, like tell me a little bit about the kind of use cases that you are envisioning. Yeah, I'd be really curious to hear that.
+
+Yi Sun (31:21):
+Yeah, definitely. We're pretty excited about use cases that are fundamentally new and not possible without this access to historic data. One of the big patterns we like is enabling decentralized applications to have accountability. And what I mean by that is the whole purpose of a decentralized protocol is to coordinate the actions of some group of participants. And we think the most fundamental tool is to be able to reward good behavior and punish bad behavior.
+
+Anna Rose (31:50):
+What's bad behavior though, in this case?
+
+Yi Sun (31:53):
+Bad behavior would be just anything slash so if you,
+
+Anna Rose (31:56):
+Okay.
+
+Yi Sun (31:56):
+If you have a protocol, typically you want to slash people for doing something that's against your rules
+
+Anna Rose (32:01):
+Your consensus rules?
+
+Yi Sun (32:01):
+Your not necessarily consensus. It could be a decentralized application.
+
+Anna Rose (32:07):
+I see. Okay.
+
+Yi Sun (32:08):
+Or it could be something that you don't want to put into consensus, but what, which you still consider to be bad. One example would be if you have some sort of consortium of validators or block producers, you might want to say, Hey, we are like good block producers, we're not going to mine a sandwich attack. So maybe you could stake some collateral saying you're not going to do that. And we could prove like, hey, this producer mine a sandwich attack, they should be slashed.
+
+Anna Rose (32:33):
+But in the case here, bad is not like you are a hacker, you can't undo that. You're not watching for that. If they're able to hack a smart contract and take funds, you can't like stop that.
+
+Yi Sun (32:44):
+That's right.
+
+Anna Rose (32:45):
+It's more on this the validators, the MEV side, it sounds like
+
+Yi Sun (32:49):
+It could be sort of any on-chain protocol, just as a different example where maybe the consequence is not slashing. If you have an on-chain asset management protocol, you want to see the performance of your asset managers. And typically you want to see things beyond just their profit. At the end of the day you want to see how much risk they took, what was the type of drawdown they had, and you might want to pay them or even potentially slash them based on what they actually did.
+
+Anna Rose (33:16):
+Interesting. So in this case like this, I mean I guess these are examples where historic data, accurate historic data and nuanced in-depth historic data is really interesting.
+
+Yi Sun (33:26):
+Yeah. We want to give developers more programmable control over how they design their applications. Today you kind of have to bake your reward or punishment mechanism into the fundamental design of your smart contracts. And we think that if developers can do that much more flexibly, they can design just richer applications.
+
+Anna Rose (33:45):
+Hmm. Can you imagine something like insurance becoming more on-chain? Because I'm just thinking like there have been these insurance protocols, but they're kind of clunky it seems like, and I don't know that they're tracking things at that level, but there you could almost like decide like what is the rate of insurance based on actual historic behavior of some on-chain protocol or on-chain application?
+
+Yi Sun (34:09):
+I think there's sort of two directions we're interested in. One is underwriting. So if you can look at a user's historic behavior or look at a protocols historic, you know, loan to value that might feed into some sort of machine learning system that determines the parameters of let's say your insurance protocol or even your lending protocol itself.
+
+Anna Rose (34:28):
+Wow.
+
+(34:28):
+This is not a credit score, is it?
+
+Yi Sun (34:31):
+I don't think it's quite a credit score. Credit score comes with connotations of like uncollateralized lending, which is tricky on-chain, but I think of it more as underwriting.
+
+Anna Rose (34:39):
+Okay.
+
+Yi Sun (34:40):
+So if, if a protocol has set some risk parameters and they're doing quite well, maybe they can be a bit more aggressive with those parameters. Or if there's been a couple close calls, maybe you should have some autonomous system to back off a little bit.
+
+Anna Rose (34:54):
+What are some other use cases where you'd need that
+
+Yi Sun (34:56):
+In another sort of DeFi setting? We sort of think that DeFi protocols today have very simple parameter sets on-chain and the reason is that they're not able to adjust them in a trustless fashion and high resolution. So in AMMs they pretty much have a default set of fees, whereas we think that fees should really depend on market conditions. If it's a very volatile market, maybe users should pay more for the privileges trading yet in AMM, whereas if the market's not doing much, maybe the AMM needs the lower fees to incentivize trading. And so we think that there's a new generation of DeFi protocols that can be built using this awareness of historic information.
+
+Anna Rose (35:36):
+That's interesting. Are there teams that have already shown interest in that or is it almost like because this tool is being developed, these new opportunities are there? Like have you heard desire for that?
+
+Yi Sun (35:48):
+We, seen some teams essentially changing the parameters but in a fully centralized way. So the team itself just changes the parameters and
+
+Anna Rose (35:57):
+Because they're looking at historic data like by eye?
+
+Yi Sun (36:00):
+Yeah, exactly. They're running some off-chain computer program. And they kind of pick the parameters and sometimes this is called an Oracle and I don't think it's necessarily bad but I do think that if it's switched to this more trustless model, they can change those parameters at a higher resolution and just more frequently
+
+Anna Rose (36:17):
+What are some other like tangible maybe like user facing use cases that people might think about?
+
+Yi Sun (36:22):
+One big vertical we're really excited about right now is governance. So if you think about what's necessary for governance, the most fundamental object is voting. And to vote you need to know how many votes you have.
+
+Anna Rose (36:35):
+Okay.
+
+Yi Sun (36:35):
+And so in a lot of settings on-chain there are sort of DAOs that for whatever reason did not bake in the recording of how many votes everyone has into their smart contract
+
+Anna Rose (36:46):
+Really.
+
+Yi Sun (36:46):
+And yeah. And today they just can't vote.
+
+Anna Rose (36:47):
+Oh damn
+
+Yi Sun (36:49):
+One thing we're we're doing is building on-chain voting for a DAO that can't vote.
+
+Anna Rose (36:55):
+Was this sort of like, because this DAO was deployed a long time ago and that gets changed since then? Or is it like, yeah. Is there some reason why that you can't calculate how many votes you have?
+
+Yi Sun (37:05):
+Essentially that's the reason. So the smart contract for the DAO was deployed a long time ago. And they just weren't thinking of on-chain governance at the time.
+
+Anna Rose (37:14):
+Okay.
+
+Yi Sun (37:14):
+And it's obviously you can't modify this for our contract now. And so we're helping them retroactively put that back in.
+
+Anna Rose (37:20):
+Oh, that's interesting. Is there some use case that sort of would be more focused on the identity front? Because even like that first use case where we talked about like insurance and stuff like this, I feel like there was something about like credibility track record. So like yeah. Is there an identity play here?
+
+Yi Sun (37:36):
+Yeah. So we can let anything you do on-chain be provable and that ties into your identity in different ways. So today if you collect an Airdrop, you sort of claim to some protocol that you did a set of good actions and they should give you your Airdrop. But it's fully centralized. The protocol team kind of looks on-chain and sees what you did. We can envision a future where teams simply deploy a smart contract laying out the rules for what gets incentivized and what doesn't and users can autonomously prove to the contract to get their token reward. In slightly less Airdrop-y, fashion. We think that you can actually use this for a user acquisition. So maybe I'm launching a new lending protocol and I want to just give better rates to users who have used a competing lending protocol.
+
+Anna Rose (38:25):
+Oh.
+
+Yi Sun (38:26):
+And we allow you to actually set those criteria in a pretty programmable way. So you can try whatever programs you want to attract users to your protocol.
+
+Anna Rose (38:33):
+Damn the Airdrop farmers are going to have such a hard time, they're just going to have to be doing everything all the time now. Exactly.
+
+Yi Sun (38:40):
+And the developers have some tools to fight back. We you can set very fine grain criteria.
+
+Anna Rose (38:45):
+Yeah. Any other ones? You keep mentioning inference ML, is that one of the main focuses?
+
+Yi Sun (38:52):
+I wouldn't say it's a main focus, but we're pretty excited just to give developers better tools to adjust their applications on-chain. And so for machine learning we think it can be applied initially to DeFi. So if you want to change your lending rates or if you want to change your fee schedule, maybe you should be using some machine learning. So in traditional finance, that's what they're doing. They're massive teams that trade based on very complex machine learning algorithms. But none of that is really possible in DeFi today. If you look at the code for an AMM, it's pretty straightforward.
+
+Anna Rose (39:25):
+In a way, when you say that too, does that mean like the predictive nature? Like it's using it to predict, right? It's like predict what the rate should be, not what it is according to today?
+
+Yi Sun (39:35):
+That that's right. Today what's on-chain is a pretty crude approximation of what could be an ideal rate. And I don't think that you can necessarily deploy an autonomous model to get the ideal rate, but I think that you can make the on-chain systems a much closer approximation to a more efficient financial system.
+
+Anna Rose (39:52):
+Is there any future like more complicated ML things that you could imagine?
+
+Yi Sun (39:56):
+Yeah, we're actually pretty excited about application of ML to NFTs. So there's this whole area of sort of generative art NFTs. And if you look into it, you'll realize that there's nothing on-chain proving that,
+
+Anna Rose (40:09):
+That it's generative
+
+Yi Sun (40:10):
+That it's actually generated from anything
+
+Anna Rose (40:11):
+Uh oh
+
+Yi Sun (40:11):
+And so we think that we could tie the identity aspect to generative NFTs by allowing you to prove that an NFT was generated based on your on-chain activity. And so this would give sort of farming for the best looking NFT, like a new meaning. So you can imagine promotional NFTs, like if you are a heavy Uniswap user, maybe you get an NFT that has more of a Uniswap theme but interpreted through this generative algorithm.
+
+Anna Rose (40:41):
+Oh, that's neat. So like, since we're talking about ML, the last time you were on the show, that was the main topic we were talking about works that you and Daniel had done. Obviously those were like very specific machine learning plus ZK cases, but are you using like machine learning somewhere in the Axiom stack? Are you, are you still engaging with that or are you just creating a platform for like use cases of ML?
+
+Yi Sun (41:04):
+At the product level, we really want developers to use ML on our platform.
+
+Anna Rose (41:08):
+Okay.
+
+Yi Sun (41:09):
+But actually within the development we started using co-pilots a couple months ago. It's been pretty transformative.
+
+Anna Rose (41:15):
+Is it just faster what's going on?
+
+Yi Sun (41:17):
+It's faster and particularly for things like front end development, it really fills in all the boiler plate.
+
+Anna Rose (41:23):
+This is GitHub, right?
+
+Yi Sun (41:24):
+Oh yes, this is GitHub co-pilot. I'm kind of a novice at it, but it's been incredible. If you haven't tried it, you definitely should
+
+Anna Rose (41:30):
+And have you seen, like, I guess a lot of your engineers are doing it, your team just more productive? Do you notice it?
+
+Yi Sun (41:36):
+I think on more well-trodden types of programming, we definitely notice it. So on backend APIs and front end code, it's a big multiplier on some of the circuit code and smart contracts less so.
+
+Anna Rose (41:49):
+Okay.
+
+Yi Sun (41:49):
+And actually on smart contracts we deliberately do not use it. Sometimes it hallucinates various lines of Solidity that are subtly wrong and it's much harder to pick up those bugs when you didn't even write the code.
+
+Anna Rose (42:01):
+Oh no.
+
+Yi Sun (42:02):
+So yeah, we're, we're a little bit careful on the security critical parts, but on things like the front end, we're really excited to use it
+
+Anna Rose (42:07):
+Cool. Just generally, like what is the state of the Axiom product? Are you on testnet? Are you, like, is there any sort of sense for when this will actually be usable?
+
+Yi Sun (42:18):
+Yeah, we put a demo out on mainnet in January and the reason it's on mainnet instead of testnet is we're all about accessing history and obviously there's no history on testnet.
+
+Anna Rose (42:27):
+Oh yeah.
+
+Yi Sun (42:28):
+So you can go to our website today, demo.axiom.xyz and you can check out a few toy apps we built on top. So we got a grant from the Uniswap foundation to allow users to access Uniswap TWAP values in a trustless way through Axiom. And there's a couple other toys you can prove your account age. We're working towards production release coming soon and we'll have a couple of launch partners to share at that time.
+
+Anna Rose (42:53):
+Okay, cool. Where do you see sort of the general blockchain space going? Do you actually think we're on the precipice of like an explosion of computational power? We're like, we could have on-chain games for real or like on-chain, like big complicated programs or do you think we're still like just taking small steps towards that?
+
+Yi Sun (43:15):
+I think we're definitely getting some pretty big unlocks. At least at a conceptual and proof-of-concept level, I think what's missing is actually the developer tooling to a lot developers that don't know anything about ZK or the other technologies going into it to actually access that power. And once we do that, I'm pretty excited about the new wave of trust minimized applications that that's going to enable.
+
+Anna Rose (43:39):
+Do you think the, like as you're saying this, I'm just thinking about like existing development suites or environments, something like Unity or something like huge. Is there ways that they could start to like interface? Would they just need to like add a few things to their system to be able to deploy some of this stuff on-chain?
+
+Yi Sun (43:57):
+I think proving Unity on-chain, that'd be awesome. I think we're a little far away.
+
+Anna Rose (44:02):
+Okay.
+
+Yi Sun (44:02):
+I feel the direction for that to happen is to be able to reuse some of their code and actually prove the execution of that code in some type of virtual machine. The difficulty today is that the performance hit you take by doing that is truly immense.
+
+Anna Rose (44:18):
+Okay.
+
+Yi Sun (44:19):
+And you kind of can't even think of using it in a similar fashion. I tend to think that the way
+
+Anna Rose (44:24):
+We are still in the 70's, right?
+
+Yi Sun (44:26):
+Yeah, exactly.
+
+Anna Rose (44:26):
+That's what you said
+
+Yi Sun (44:27):
+Unity is a
+
+Anna Rose (44:28):
+We're not ready for it. Okay. Okay.
+
+Yi Sun (44:30):
+But I think what's exciting is applications typically have two pieces. One is the core business logic and the rest is sort of user-facing stuff. And I think that applications will be rearchitected to put the core business logic in some sort of trustless fashion on-chain and have everything else done off-chain. So imagine it as smart contracts on steroids.
+
+Anna Rose (44:53):
+Whoa. Cool. I wondered like since you're here and the last time you were on, you know, we did this ZK ML, I wanted to take a minute just to kind of recap what's happened. You know, we're recording this beginning of May. You were on the show I think in February. What have you seen on that front maybe outside of just the work you guys are doing or maybe even outside of like Axiom specifically?
+
+Yi Sun (45:17):
+Yeah, I think there are a number of pretty exciting teams building in that space. So there's open source framework called Ezekiel, which is trying to support sort of all manner of primitives for ZK ML and Daniel has continued work in that space. He recently open sourced his framework, which is called ZK ML and he's been using it to address a bunch of quite interesting models. So he recently SNARKed GPT2, I believe, and then he also verified the Twitter algorithm in ZK
+
+Anna Rose (45:51):
+I saw that actually. We'll link to those pieces in this, in the show notes. We've been talking to Daniel a little bit about that idea of after zkpod.ai came out and I got kind of freaked out. It was like, is there ways that I could start to prove the, you know, providence of audio being recorded by me and like, you know, actually released by me versus something like the AI's answers. Yeah. I mean I hope that we get to see more on the audio front for that. Because I know you guys had already done a lot of work on images, but seeing it in these different mediums I think is going to be useful.
+
+Yi Sun (46:24):
+Yeah. And I think it'll be interesting to see where ZK ML gets deployed. So there's always a question of the data provenance. So I think that can either come from some sort of a tested sensor or if it comes on-chain from some sort of proof that the data is actually validly read from the chain. Yeah.
+
+Anna Rose (46:40):
+That's crazy. What is the makeup of a team trying to enter ZK ML at this time? Like what do you, I guess you need the ML experts need the ZK experts, you need the blockchain experts, but like, yeah. Is this, is this a very difficult to find combination or do you think, are you seeing more groups like this pop up?
+
+Yi Sun (46:57):
+I think people coming into ZK ML really come from one of two directions. One is you are already interested in blockchain applications and you want to apply ML to those applications. The other direction would be you're interested in trustless ML and then you view blockchains as one potential application, but not necessarily the only one.
+
+Anna Rose (47:18):
+Do you think the fear that kind of emerged after GPT4 came out, do you think that has also like, I don't know, encouraged more people to look at ZK? I actually, I am curious how much has even permeated the imagination of some of the ML people? Do they know about it?
+
+Yi Sun (47:32):
+I think very few of them know about it.
+
+Anna Rose (47:34):
+Okay.
+
+Yi Sun (47:35):
+We recently submitted our paper to a conference and frankly none of the reviewers really thought about this concept too much.
+
+Anna Rose (47:44):
+Wow.
+
+Yi Sun (47:44):
+I do think what GPT4 has brought into the public consciousness is a need for provenance in communications of all forms.
+
+Anna Rose (47:55):
+Yeah.
+
+Yi Sun (47:55):
+You see this with text and also with deepfakes and fake phone calls. And I actually think that blockchains and cryptography as a whole are sort of the way to solve this. Once you can't trust what you see with your eyes, really the only thing you can trust is some type of signature.
+
+Anna Rose (48:12):
+Yeah. I think it also plays though on the ID front, like, you're going to need better ID and then the ZKPs along the way because like that starting point, the thing that signs also needs to somehow be yours. It has to for sure come from you. And this is where it's like, is this forcing an acceleration of these ideas that we thought were like kind of interesting and cool to like all of a sudden they're like actually needed.
+
+Yi Sun (48:37):
+It's definitely presenting the general population what the first real application where they actually want to verify whether something is real.
+
+Anna Rose (48:45):
+Yeah. It's pretty crazy. I still am due to do like a episode on zkpod.ai which I don't know if listeners aren't familiar with it Kobi has created a LLM of me speaking and him actually answering questions about ZK fed with the podcast transcripts. It's not perfect. You should check it out if you haven't seen it though. But yeah, like that's definitely brought it up for me. Like that was the big wake up call that like the, you know, I'd had sort of these like fleeting like, oh, maybe sometime in the future this kind of thing could happen and then all of a sudden it's like in front of me and I'm like, wow, this is now, I needed some tools yesterday that don't exist yet. And kind of amazingly it's like our community, we are in a position to build some of these. It's kind of crazy. It's good.
+
+Yi Sun (49:31):
+There's definitely some urgency. Maybe in a few months the episode will record itself.
+
+Anna Rose (49:36):
+Yeah, I think, I mean it's pretty messy still. You're, I don't know, I think I'm safe for a little while because zkpod.ai answers very confidently, not always correctly and pronounces things sometimes strangely. But anyway, to wrap up, I do want to just ask you a little bit about ZK generally. You've sort of mentioned the sort of tech that you're using today and this idea of upgrading, but yeah. What's your take on ZK itself?
+
+Yi Sun (50:00):
+What we're seeing is a continuation of the really fast advancement in proof systems and I think the feedback loop with actual applications is definitely helping. There's much more engineering going into these systems and really understanding their trade offs. I would say that recent, a really exciting recent idea is folding and accumulation schemes in general. And this really started with the introduction of Nova I think early 2022. And although Nova was really interesting, there were some limitations which prevented it from being applied very widely and recently there's been a flurry of papers, one a week almost, that remove a lot of those limitations and show that folding is more of a generic idea rather than, you know, Nova or SuperNova or HyperNova being a specific scheme that you have to stick to. And so we're thinking through how that can be incorporated into our systems and what ways we can almost weaponize these ideas to produce the most efficient ZKProofs. I think it's actually very similar to the phase in between the introduction of PLONK in 2019 and the invention of sort of plookup and UltraPLONK ultimately in the next few years.
+
+Anna Rose (51:12):
+Interesting.
+
+Yi Sun (51:13):
+Where people digested these ideas and realized they could be used in more creative ways.
+
+Anna Rose (51:19):
+I've been thinking a lot about this, this sort of development pattern and it does seem to almost be these like steps that are reached. There's no standard fully or that step only lasts for a certain period of time. But it's like from move from step 1 to step 2, there's this flurry of research all these different proving systems and then it's sort of like there's a settling around one. A lot of tools get built around that built off that you might get variations of that. And then there's these, like this next step recently I had Ariel Gabizon on and we talked about these two kind of streams of thinking, which is like the accumulation advancements and then the lookup table advancements and that like these are moving at kind of different paces. I don't know if there's been any like sort of proving systems that have unified them as effectively as they can because sometimes they're using similar underpinnings, like if KZG'S additive homomorphism.
+
+Yi Sun (52:09):
+Yeah, I think there's sort of 3 really cool ideas coming in the space right now. There's sort of some check based methods from HyperPLONK. There's sort of folding and IVC from Nova and its descendants. And then there's this idea of tasks quotient for large lookups developed by Ariel and his collaborators. And I think we're sort of digesting to what extent they could be mixed and matched, what are the precise limitations and how things will look in actual real world engineering. Yeah.
+
+Anna Rose (52:38):
+Yeah because I mean HyperNova does include sum checks
+
+Yi Sun (52:41):
+Exactly
+
+Anna Rose (52:42):
+But as I understood, not much. And maybe there's more that could be incorporated and you're going to get some interesting trade off space there.
+
+Yi Sun (52:48):
+Yeah. And I think the space as a whole is undergoing that process faster and faster. I think people are realizing, hey, if we implement this very quickly, get some benchmarks, we know exactly what to do next and that this iterative process is actually possible.
+
+Anna Rose (53:03):
+Yeah.
+
+Yi Sun (53:03):
+Like when PLONK came out, I don't think it was very obvious that you could just think more about the circle of ideas around PLONK and get much more out of it. And now everyone I think sort of knows that's possible. And so with folding it's sort of happening much faster with sum check as well.
+
+Anna Rose (53:18):
+Totally.
+
+(53:18):
+One sort of, I don't know if I should say drawback, but maybe like challenge or threat to this model. Like, I think it's so exciting cause we're seeing these like stepping points, but there is this idea or issue of like auditing these systems, knowing actually are these libraries like super fully usable? If you think of the speed of the development, it's very, very exciting. People are very like excited and, and into it and you're bringing new minds to look at these problems. That's all good. But what is kind of sometimes a little scary is like you're having things built on things built on things and like there could be some primitives or some like ideas there that haven't been fully battle tested and then you're all of a sudden layering on top of that like lots of value potentially. How do you think about that? Like in a way, especially because like you're going to be using a ZKP that I'm assuming will have like some form of standardization at that moment. You're going to feel confident about it, but yeah. Like how are you looking at that? Are you worried about that? Would you actually have an auditor audit the exact circuits that you're doing? Or would you kind of depend on the open source community there?
+
+Yi Sun (54:22):
+No, we definitely take security super seriously and we think of it in many different dimensions. So first off, we are getting an audit and actually all our circuits are getting audited as we speak and we're even getting the auditors to look at the verifier, which is actually the most crucial piece because it's the only thing that is deployed on-chain.
+
+Anna Rose (54:40):
+Okay.
+
+Yi Sun (54:41):
+In terms of new proof systems, it is tough. you, I think it's very exciting to prototype very new proof systems, but I think as a space we should be clear that it's very experimental. It's important to prototype, to get a sense for the performance, but I think when we get a production, we really want as many eyes as possible to look at it both from the open source community and even from a more rigorous audit or a very formal writeup.
+
+(55:08):
+Broadly we think it's important to crystallize on what is the best expression of an idea and commit to formalizing that proof system and really devoting resources to that implementation. And I think with PLONK we saw like UltraPLONK be the final forum and many different teams are building production ready implementations of that today. With folding, I think it's still unclear.
+
+Anna Rose (55:32):
+Yeah.
+
+Yi Sun (55:32):
+And with sum check and large lookups, that's also to be determined. I also think that audits aren't the end all be all of security. I think as a team looking to go to production, we want to be pretty deliberate. That's why we put our demo up with a ton of warnings. If you go to our website, it'll say like, don't use this for anything valuable. And we think we want to climb the ladder of application value. We want to start with, you know, things where even there's some issue, it's not a big deal and only layer on things that are more valuable and could lose users money once we have a higher degree of battle testing.
+
+Anna Rose (56:07):
+Yeah, I mean I think like just on, on my front, I've been thinking about like how do we incentivize more of the white hat stuff and like disclosures and making sure that like, people are incentivized to look deeply into these libraries. Especially, I mean it's sort of the, the challenge of open source in a way where it's like the maintenance in a way is making sure that these things are correct and, but it's like less fun and you don't get rewarded really that much unless you're, I mean if you're an auditor and you're hired, that's one thing. But like how do we get all of those eyes really spending the time to try to break these things before or break them ethically and share that. Yeah.
+
+Yi Sun (56:46):
+Yeah. There's definitely a bunch of work that people in running bug bounty programs or platforms like Comunify have done in smart contract space and we're hopeful that they can be applied to ZK as well. One line of work that I think is really interesting in ZK but quite early is formal verification
+
+Anna Rose (57:02):
+Of ZK circuits. Yeah. I've been hearing about this a little bit.
+
+Yi Sun (57:05):
+Yeah. So there's a company called Veridise that we played a small part in a paper they recently wrote on developing a DSL for Circom that makes it easier to formally verify Circom circuits.
+
+Anna Rose (57:18):
+Oh wow.
+
+Yi Sun (57:19):
+And I actually,
+
+Anna Rose (57:19):
+It's a DSL for Circom. It's a DSL for a DSL.
+
+Yi Sun (57:23):
+It's exactly, it's a DSL squared. It forces you to write in this very, in this subset of Circom that they kind of know how to formally verify.
+
+Anna Rose (57:33):
+I see. Okay. Oh, it's a subset. It's because they've been able to check these ones completely, but is it a DSL?
+
+Yi Sun (57:40):
+It it really is a DSL of a DSL.
+
+Anna Rose (57:42):
+Okay.
+
+Yi Sun (57:43):
+It is some new language which compiles to Circom and it's, yeah, it's quite complex.
+
+Anna Rose (57:48):
+Nice.
+
+Yi Sun (57:49):
+But we think the pattern that it enables is really powerful. because today as a developer you kind of write some ZK circuits and you do your best. You test, you audit, you internally audit, you externally audit, but it's very hard to take effort and make your circuits more secure. Whereas formal verification, even if it's quite onerous, you can really put in some elbow grease. And if you get to something formally verified and your spec is clean, like you have a lot of confidence. So I think that's a really exciting direction.
+
+Anna Rose (58:20):
+That's actually, that's really promising. Cool. Well listen, thanks so much for coming on and sharing with us a little bit more about Axiom this time and sharing this little update on sort of what's going on in the ZK ML space too.
+
+Yi Sun (58:32):
+Thanks so much for having me, Anna.
+
+Anna Rose (58:34):
+Cool. And I want to say a big thank you to the podcast team, Henrik, Rachel and Tanya. And to our listeners, thanks for listening.
+

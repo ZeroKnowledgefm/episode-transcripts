@@ -1,0 +1,840 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online. This week we dive back into accumulation schemes with Benedikt BÃ¼nz and Binyi Chen from Espresso. We chat about the recent ProtoStar work, a non-uniform IVC scheme for PLONK that supports high degree gates and vector lookups. In our episode, we explore some of the backstory to these techniques, share some definitions for commonly used terms in the accumulation literature, and discuss recent works like Nova and HyperNova, and how these compare to ProtoStar. Now, before we kick off, Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:00:58):
+Aztec Network is building a next-generation encrypted blockchain powered by Ethereum. The team is proud to announce Noir - the world's first universal zk-language. Noir makes it safe and intuitive to write zk circuits and encrypted smart contracts, enabling novel use-cases like encrypted DeFi, private governance, and zk gaming.As a universal language, Noir is domain-specific, but blockchain agnostic. Build powerful zk applications compatible with multiple proving systems and verify your program on any EVM chain.Get started with Noir today at docs.aztec.network/noir. Now, here's our episode
+
+Anna Rose (00:01:43):
+So today I'm here with Benedikt BÃ¼nz, co-founder at Espresso Systems, and Binyi Chen, chief cryptographer at Espresso Systems. Welcome both of you to the show.
+
+Benedikt BÃ¼nz (00:01:52):
+Thank you.
+
+Binyi Chen (00:01:52):
+Thank you.
+
+Tanya (00:01:53):
+Alright, Benedikt, you have been on the show before. We were just, before we started reminiscing a little bit about the fact that you'd been on quite early in the show's life I think 2018, 2019. To anyone who isn't familiar, you're one of the co-authors of Bulletproofs. You're one of the inventors of verifiable delay function, HyperPlonk. You have so many works that I think our audience will be familiar with and if they've heard the episodes before that you've been on, they might know a bit about you, but still, I think it would be great if you can share a little intro to yourself and maybe what you've been working on more recently.
+
+Benedikt BÃ¼nz (00:02:27):
+Yeah. So I did my PhD at Stanford, and then I also co-founded Espresso Systems which we'll talk about a little bit. But in the research space, I'm also a researcher. I'm an academic. I'll be starting as an assistant professor at NYU in the fall and yeah, I'm generally interested in a bunch of cryptography that, helps and improves blockchains. So zero knowledge proofs are in the forefront of that, but also verifiable delay functions and other, just cryptography that helps to make blockchains more private, helps make them more efficient, helps make them more environmentally friendly. So these are the things that get me excited. And today we're gonna talk about a work called ProtoStar, which is sort of in a family of works that I and many others in the field have been working on over the last couple of years.
+
+Anna Rose (00:03:24):
+Fantastic. Binyi share a little bit about your background. What led you to work on ProtoStar?
+
+Binyi Chen (00:03:30):
+Yeah, so my name is Binyi. I'm a chief cryptographer at Espresso Systems. I did my PhD at UCSB and I also spent one year at University of Washington as a visiting PhD scholar. And after graduation, I spent one year at Google as a cryptography engineer. So during my PhD I'm mainly working on proving the security of some symmetric cryptography primitives like hash functions or memory hard functions. We are the first one to prove the security of the script, which is very renowned script hash functions. And only after the graduation, I kind of started working with Benedikt and Ben and start my journey of exploring the ZKP field and SNARKs, and started working on this really intriguing and exciting field. And I guess that's the reason I started working on things like HyperPlonk and ProtoStar. Yeah.
+
+Anna Rose (00:04:23):
+Cool. What is it about it that got you excited? Is it because it's very cutting edge? Hard? Like, is what, what is it exactly?
+
+Binyi Chen (00:04:32):
+It's two perspectives. First is that it really involves some really advanced mathematics, which make me very interested because I'm interested in probably theory and mathematics. So it really has some really deep theory on top of it. And also it really has really exciting applications, for example, like in blockchain and machine learning. So I kind of like the intersection on this kind of two fields. Basically. You can do some really cool stuff in math, but this cool math stuff can have real impact in the world that can maybe like, have real influence to the real applications. I think that's the main reason I kind of find it really intriguing and exciting.
+
+Anna Rose (00:05:14):
+Cool. Actually, I just was thinking, Benedikt, you've been in this field for so long. I am curious how you feel about its evolution recently. Like, you were working in this when it was pretty obscure still, I feel.
+
+Benedikt BÃ¼nz (00:05:30):
+Yeah, I mean, I consider myself like the first generation of PhD students that actually got into cryptography from an interest in blockchain. So for me, like I was like, I was into blockchain since 2011, like, when I was barely born but, and blockchains were barely born. But like, and then I came to Stanford to do my masters and I took like one cryptography class and with Dan Boneh and I was really excited about it, not just because the subject itself is interesting, but because I already knew the application so well.
+
+Anna Rose (00:06:06):
+Wow.
+
+Benedikt BÃ¼nz (00:06:07):
+But that was at a time where like, most cryptographers, I would say a little bit shunned the field of like the blockchain application because it's, it's like noisy. It's, like there's a lot of like things going on.
+
+(00:06:21):
+But it's not as clean maybe as some of the things we have in academia but I was always excited about that. You know, I was excited about like the potential application and also, that there is like, I'm not sure how many other cryptographic subfields have their own podcast. That's like, it's a really cool thing and those are the things that get me excited. Another thing that is really cool and interesting to see is that it's now the innovation is coming not just from academia, but also from industry and like, I'm not talking about like, oh, sort of better implementations, but like, this kind of whole work of ProtoStar and the stuff that we talk about set up with Halo
+
+(00:07:13):
+which was developed by Griggs, Hopwood and Sean [Bowe] and Zcash who are cryptography engineers and obviously incredibly smart people, but it's really cool, right? Like this is really like, at the forefront of academic research. But the initial spark, I would say came from industry and that like is, I don't know, I'm still more and more excited about it and I have not yet gotten bored of the field in any way.
+
+Anna Rose (00:07:42):
+Nice.
+
+Benedikt BÃ¼nz (00:07:43):
+Quite the opposite, I would say.
+
+Anna Rose (00:07:44):
+Do you think ZK is also breaking out of blockchain a little bit? Like that's something that seems to be happening where it started obviously on its own, got brought into the blockchain context, received a lot of attention and funding, and it's like there's this boom of new development, like you just described this connection industry feeding academia and back and forth. Is there anything you've noticed with it sort of even expanding past that?
+
+Benedikt BÃ¼nz (00:08:10):
+I think so. I mean, like, I've thought a lot about like, why blockchain? Like why is zero knowledge in blockchain? Why is this the perfect marriage? I think like one of the fundamental answers that I've gotten to is that sort of the properties of blockchain and the properties of zero knowledge and SNARKs are sort of a perfect match. So what do I mean by that? Well, in blockchains, you have one person who creates a transaction and then everybody has to verify it, right? Everybody runs the, like, all the nodes, all the phone nodes, runs the smart contract that checks this transaction. So this is, in some ways it's like very redundant, but also inefficient, right? Because it's like one person, creates something and then everybody has to check it so there's kind of a one to many.
+
+(00:08:57):
+And SNARKs have interestingly have exactly the sort of the opposite properties where one person creates the proof and everybody who checks it, it does much less work, right?
+
+Anna Rose (00:09:08):
+Wow.
+
+Benedikt BÃ¼nz (00:09:08):
+So you can kind of level the playing field there by using zero knowledge proofs by saying like, yeah, okay, now one person creates something, but they can attach a SNARK to it. Like they can create a rollup block. Even though multiple people have to check that SNARK, each individual person does a lot less less work. And so that's a perfect match. And the question is like where else do we see these applications? I think, very recently there's been a lot of hype. I mean, there's always hype about AI, but you know maybe there, we get similar scenarios where, you have one person who has some model and wants to, you know assert that some property is like this text really comes from ChatGPT, and then everybody has to check it.
+
+(00:09:54):
+And if we can find scenarios like that, I think this will lead to new applications. And so that's one angle. And then the cool thing is, with the blockchain adoption, just so much more maturity and software libraries and new research and all of that has come that, and I think this also enables new applications. So yeah, very hopeful. It's not quite there yet, I would say for other applications, but very, very hopeful that this is going to come over the next 5 to 10 years.
+
+Anna Rose (00:10:24):
+Cool. Binyi, I actually wonder from your perspective, like having worked at Google, was it at your time at Google where you started to learn about this stuff?
+
+Binyi Chen (00:10:32):
+No, I start after that.
+
+Anna Rose (00:10:34):
+I see, okay.
+
+Binyi Chen (00:10:35):
+Mostly working on general cryptography, rather than just the zk-SNARK that is like, after that I talked to Benedikt and Ben and start to get interesting zk-SNARKs, because already the notion and some very classical papers during my PhD, I just didn't like didn't touch much on the practical side of it. But after that, after meeting with Benedikt and Ben started to, to work more deeper into it and become more interesting in it.
+
+Anna Rose (00:11:05):
+Cool. Are you also observing it sort of branching out even further?
+
+Binyi Chen (00:11:09):
+Yeah. So like my conjecture is that it can be really useful in any scenarios that has to become asymmetry like class, right? Well, basically there's a one party which has really big power and has a lot of computational power and wants to prove something, some computation is correct and this all happens in blockchain field as long as in LLM like ChatGPT, which in the machine learning field, well, some company, they have a lot of machine to train some really powerful model, but they can provide services to average people. And in this kind of scenario, I totally believe that the zk-SNARK can be really useful. And not only this scenario, any scenario that can, has this kind of similar environments will will be getting like benefits from zk-SNARKs. I think
+
+Anna Rose (00:12:01):
+So cool.
+
+Benedikt BÃ¼nz (00:12:02):
+I was just thinking, like one, I mean there's also like, there's this general paradigm, but then there's also other cool applications that are popping up. Like I think recently Trisha Datta and Dan Boneh had at Real World Crypto, they had this cool idea which existed before which is that, now again, it's related to AI, but it's not really AI. It's like you want to know that the photo that, like someone posts a photo on Twitter and you want to know whether this was AI generated or real right? And actually there is some solution, which is that your phone, your iPhone or your Android phone actually signs, cryptographically signs the photo that you take. But the problem is like, you don't want to just post that photo, you might want to crop it, right?
+
+(00:12:59):
+Like you might want to do some small edits that don't significantly alter the integrity of the photo and you don't want to, you know like you want to say that basically this used to be an original photo, and then I've done these like very small edits to it and now it's still a valid photo, and it turns out that you can use zero knowledge proofs to actually do this and do it like very practically and that's, yet another cool application, you know?
+
+Anna Rose (00:13:27):
+Yeah.
+
+Benedikt BÃ¼nz (00:13:27):
+Of sort of giving journalistic integrity through zero knowledge proofs
+
+Anna Rose (00:13:33):
+Benedikt, I actually want to tell you about something that we're working on, which is with Daniel Kang, who has also done some work in that direction where we're looking at a very similar thing for audio. So audio providence, because we created zkpod.ai, which is like a copy of my voice answering questions. How do you actually prove the difference besides the fact that that voice knows everything that's ever been spoken about on the show? And I wouldn't necessarily be able to say it so succinctly but yeah.
+
+Benedikt BÃ¼nz (00:14:03):
+That's awesome. Yeah. I love that.
+
+Binyi Chen (00:14:04):
+Be really cool. Yeah. Cool. Photo, audio, video, everything. Yeah.
+
+Anna Rose (00:14:10):
+But the one thing we're still missing is attested sensors for all of those things, if you really want the end-to-end proof. At this point, the experiment we're doing, there is no attested microphone that we know of. So we're sort of like emulating that with an early signature. So we should introduce the audience to Espresso and what your company is working on. I want to do a very, very quick intro to it now, focus on ProtoStar and then come back to it at the end of the episode. But yeah, share a little bit about what Espresso Systems is, and maybe I will note we did do an episode on the project last year, I think, or 2021, so I'm gonna add a link to that also in the show notes if people want to find out more.
+
+Benedikt BÃ¼nz (00:14:49):
+So at Espresso Systems, we're developing products and infrastructure to sort of make blockchains better. So in particular, we have two products. One of them is called CAPE, which gives you customizable privacy for Ethereum assets. So it allows you to specify what kind of privacy your Ethereum assets should have, and the other like, distinct product. These are two distinct separate products is called the Espresso Sequencer. So this is allows you to sequence transactions for these rollups, so either ZK-rollups or optimistic rollups. And it's a decentralized and shared sequencer, which means that multiple rollups can use this sequencer, and it's not controlled by a single party like current sequencers which could then sensor transaction and charge high fees.
+
+Anna Rose (00:15:44):
+Yeah.
+
+Benedikt BÃ¼nz (00:15:45):
+But it is decentralized
+
+Anna Rose (00:15:46):
+Which is kind of a big issue right now, right?
+
+Benedikt BÃ¼nz (00:15:49):
+Yeah.
+
+Anna Rose (00:15:49):
+Like this has come up, this idea, this need for decentralized sequencers or at least some criticism of some of the rollups for not having those yet. I think every rollup project at least suggests that that's on the roadmap. I think
+
+Benedikt BÃ¼nz (00:16:02):
+That is correct
+
+Anna Rose (00:16:03):
+But like how they actually get there is not necessarily clear yet.
+
+Benedikt BÃ¼nz (00:16:06):
+Exactly. Everybody has it on the roadmap because everybody knows that this is a need. But we are sort of providing at first, and also the idea is to have a shared sequencer that, that multiple rollups can use together.
+
+Anna Rose (00:16:18):
+Whoa
+
+Benedikt BÃ¼nz (00:16:18):
+But also as part of, of our company, we have, many amazing people like Binyi and others at the company. And we're also doing some research and our goal is to put that research out. This is, not even necessarily directly related to what we do, but our goal is to help this space because we're very, involved and active in this space. So our goal is to make this research a sort of gift back to the community and make it public and accessible for everyone. And ProtoStar falls exactly into that category.
+
+Anna Rose (00:16:52):
+Cool. And I think this is a perfect time to jump into ProtoStar. I feel like, as a primer, I will suggest that folks listen to a previous episode we did maybe 2 or 3 episodes ago with Srinath Setty about Nova, SuperNova, HyperNova, as well as like, some ideas for what a future protocol could look like. I've understood ProtoStar is sort of a continuation, at least partly of this kind of line of thinking. I'll add the link to that in the show notes. But before we even jump into ProtoStar, I wonder if it would make sense for us to kind of refresh some definitions and things that those works I just listed brought to the table. So maybe we can start with the one that comes up the most, which is folding or accumulation. Maybe a first question is, do you see a difference between folding and accumulation schemes?
+
+Binyi Chen (00:17:45):
+From my understanding it's basically just the kind of description to the same abstract object, I would say.
+
+Anna Rose (00:17:52):
+Okay.
+
+Binyi Chen (00:17:53):
+Yeah. So what's folding saying that they are folding some statements and there's some witness behind it and checking of witness in the accumulation language is exactly the decision. So basically in the accumulation language, there are 3 steps. First isl, accumulation, and second is accumulation proofing and accumulation verification and deciding and accumulation verifying is very similar to what folding scheme it is for folding two empty statements or R1CS statements.
+
+Anna Rose (00:18:27):
+Interesting.
+
+Binyi Chen (00:18:28):
+And check the correctness of this witness or statements at the end. And last step is basically equivalent to the decision step in accumulation.
+
+Anna Rose (00:18:38):
+Can you list those again? Accumulation, you sort of said it was like, yeah. So the first one is gathering
+
+Binyi Chen (00:18:43):
+Accumulation includes like accumulation proving and accumulation verifying. And accumulation verifying is very similar to the folding of the statements in the folding scheme.
+
+Anna Rose (00:18:54):
+Okay.
+
+Binyi Chen (00:18:54):
+And accumulation proving is very similar to the folding of the entire, like both statements and the witness of the empty statement or R1CS statement in the folding language. Interesting. And finally, there is a deciding algorithm in accumulation, which basically I think is similar to checking the correctness of these statements with respect to certain weakness in the folding language.
+
+Anna Rose (00:19:17):
+Okay. Why is there that split of language? Is it because of different papers and groups that are working on the same thing, but just describing it differently? Or is it like there was an older definition that has been revamped?
+
+Benedikt BÃ¼nz (00:19:31):
+No, it's essentially, it's
+
+Anna Rose (00:19:34):
+a paper thing
+
+Benedikt BÃ¼nz (00:19:34):
+Different papers that sort of yeah, it's a paper thing.
+
+Anna Rose (00:19:37):
+Okay.
+
+Benedikt BÃ¼nz (00:19:39):
+I can give you like, the precise history. It's like or it started with Halo which introduced this concept of delayed sort of verification. So when I do these recursive SNARKs, the idea is that instead of fully checking the entire SNARK, I'm gonna postpone some of these checks. I'm going to like batch them or fold them or accumulate them with other checks. Right. All the same things. And then basically check them later and so this idea was introduced by Halo, and then we formalized this in a works, I was one of the co-authors of that together with Pratyush Mishra, Nick Spooner and Alessandro Chiesa. We formalized this and sort of showed that like gave like very precise proofs that this really gives you, the same thing as recursive SNARKS.
+
+Anna Rose (00:20:35):
+What was that paper?
+
+Benedikt BÃ¼nz (00:20:36):
+It's called, it doesn't
+
+Anna Rose (00:20:41):
+It doesn't have a grade.
+
+Benedikt BÃ¼nz (00:20:42):
+We made the mistake
+
+Binyi Chen (00:20:44):
+Name for that.
+
+Benedikt BÃ¼nz (00:20:46):
+You know, you get you get criticized whether you have, you come up with some fancy name and then you get ridiculed for it, and you don't come up with a fancy name and then
+
+Anna Rose (00:20:56):
+And everyone forgets the paper, okay
+
+Benedikt BÃ¼nz (00:20:58):
+No, I think it's not quite true, but there's some truth so the paper is called Proof Carrying Data from Accumulation Schemes.
+
+Anna Rose (00:21:05):
+Okay.
+
+Benedikt BÃ¼nz (00:21:06):
+And then actually later on that same year, I think this is 2020, we had a paper showing that, this was all based on kind of these Bulletproof inner product arguments. Like that's where both Halo and this paper were based on and then later on there was a paper by actually Ben Fisch and, and Dan Boneh and, and others that was called Halo Infinite, that sort of extended this to arbitrary polynomial commitment schemes. Like, so it doesn't have to be the Bulletproof polynomial commitment scheme, but can be arbitrary polynomial commitment scheme. And around the same time, or slightly afterwards I had another paper with the same qualities of the accumulation scheme paper, which sort of gave the first accumulation scheme for R1CS.
+
+(00:21:58):
+Okay. So this is basically just directly saying, okay, here is your circuit written as an R1CS, and how can we give a folding scheme? And it was very efficient. It has, three group operations. And then after that, shortly after that, Nova came out and brought it down from,
+
+Anna Rose (00:22:15):
+I see
+
+Benedikt BÃ¼nz (00:22:15):
+3 to 2, and they also gave it a new name, calling it folding schemes.
+
+Anna Rose (00:22:19):
+Okay.
+
+Benedikt BÃ¼nz (00:22:20):
+Which admittedly is a better name like, I think it's like, they could have used our name, like I have to say accumulation schemes as a name was there first, folding schemes is just a better name. I completely admit it maybe we should just use folding schemes.
+
+Anna Rose (00:22:34):
+Wow.
+
+Benedikt BÃ¼nz (00:22:34):
+But it's now like
+
+Anna Rose (00:22:36):
+A little academic split there but good to know. Wow, that's fascinating. And do you think, I mean, so the Nova breakthrough then was using something that you're saying was kind of introduced in this previous work, but did it become more efficient? Did it become like more tangible with Nova?
+
+Benedikt BÃ¼nz (00:22:55):
+I mean, it gets down from like 3 group operations to 2 group operations, which is 50% better. I think like our scheme before was also already absolutely practical.
+
+Anna Rose (00:23:04):
+Okay.
+
+Benedikt BÃ¼nz (00:23:05):
+I think they would say that their work was concurrent. They were working on it on at the same time. So it was like, I would say, those works you can put into the same basket. I would say, like they sort of, they're very similar, to be honest.
+
+Anna Rose (00:23:22):
+Cool.
+
+Benedikt BÃ¼nz (00:23:22):
+But, like 2 is better than 3 in this world. We want smaller numbers so, you know. Yeah.
+
+Anna Rose (00:23:28):
+That work that you're describing that came before. What's the name of that paper? Is that the Infinite or is that something else?
+
+Benedikt BÃ¼nz (00:23:34):
+It's called Proof-Carrying Data without Succinct Arguments and because the innovation there is that previously we've gotten like recursive SNARKs from SNARKs, right? So, there had to be something SNARKs, the S in SNARKs stands for succinct, right? So you have to start with a succinct proof, something that is very short in order to do this recursion. And it seemed to be like, that there's an inherent reason for that. But it turns out that with these folding and accumulation schemes, we can actually build sort of these recursive proofs or these chains of proofs from something that isn't even like, where the proof isn't even short, as long as basically we have an efficient folding scheme for their proof system. So that's kind of the, sort of when we look at it, not in terms of concrete numbers, but in terms of like, fundamentally what is the new innovation is like, it's kind of amazing how little we need in order to get this really, really powerful thing that previously we only got from recursive SNARKs.
+
+Anna Rose (00:24:47):
+And that distinction between accumulation and recursion is that distinction made because of where this sort of combining is happening is like recursion, I always thought of that, like the end of a full SNARK process. You then combine those and do it again, whereas the folding seems to be happening at an earlier stage, like within a SNARK. I don't know if that's the right mental model, but
+
+Binyi Chen (00:25:13):
+Yeah, I think so that's, that's correct. Basically the idea of accumulation is that basically you just folding this list of statements into your merge statements and just check it at last step. That's very similar to what Halo, like in philosophically it is very similar to the idea of Halo but recursive SNARK is very different. Like basically every step, you verify this SNARK directly in the circuits, but that makes this much less efficient because basically you need to verify the SNARK in the circuit, and that requires the cycles of pairing friendly curves or mostly you might also need to trust the setup, so on and so forth. Yeah. So I guess your understanding is correct. Well, the distinction between accumulation scheme and SNARK is like that. Yeah.
+
+Anna Rose (00:26:01):
+And with the recursion, right. A few more definitions. We might want to cover IVC, incrementally verifiable computation. What does that refer to? Is that what you fold?
+
+Binyi Chen (00:26:14):
+So I think IVC is kind of different. It's like a very, very useful crypto primitives for proving the correctness for multiple iterative execution of some step functions, step functions. For example, you can understand the step function as a single op code in EVM, for example, or a single iterated function in the verifiable delay function. But here are the key requirements of IVC is that the proof size as well as the verifier course of IVC should be independent of the number of these executions of these single step functions. That makes this much useful than naively using a zk-SNARK for proving the correctness of this entire gigantic computations. So that's general idea of what IVC is. And IVC has wide applications like verifiable delay functions and succinct blockchains like Mina and also zkEVM, which I think is one of the most intriguing applications of IVC, I guess.
+
+Anna Rose (00:27:14):
+And I guess the work you're doing, like anytime you're doing folding, this is what we learned on a previous HyperNova episode, which was, if you have these kind of repetitive processes that becomes something that you would want to use one of these works on.
+
+Benedikt BÃ¼nz (00:27:28):
+So one like this is really actually cool thing about incrementally verifiable computation. Like I encourage the readers to read the first paper on incrementally verifiable computation, which is I think from 2008
+
+Anna Rose (00:27:42):
+Oh wow.
+
+Benedikt BÃ¼nz (00:27:44):
+By Paul Valiant.
+
+Anna Rose (00:27:45):
+Oh, yes, yes, yes.
+
+Binyi Chen (00:27:46):
+Yeah.
+
+Benedikt BÃ¼nz (00:27:46):
+And it's like, the introduction is great because it has sort of this, there's perhaps the simplest way to introduce the computational problem we address is to address it as like there's a human motivation and a computational setting, and the human motivation is like imagine humanity. It's literally the what is it? Hitchhiker's Guide to the Galaxy thing. So imagine, we have the super computer that computes the answer to everything, for like, what is it exactly?
+
+Anna Rose (00:28:14):
+It's 42
+
+Benedikt BÃ¼nz (00:28:15):
+To everything in the universe and exactly, it's 42, so but it runs for like, multiple centuries in order to compute that answer. But the problem is you want to know, like, you want to like stop it in the middle and check that like, so far it's been doing the correct thing, and you also want to be able to hand off this computation. So say you have some newer, like hardware you want to hand it off on the next computer, but like, you want to basically be sure that the computation so far was correct without having to rerun it. And this is exactly incrementally verifiable computation. It's computation that runs like almost indefinitely, but at every single step I can check that the computation was correct. Right. I can stop at any step and I can see, okay, currently this is, the, the computation and it's, so far it's been correct and okay, one natural application is, is, Binyi is talking about ZK EVM, but like, another one is, is similar to what Mina is doing, is these, these succinct blockchains where at every block, like a blockchain is an infinite computation
+
+(00:29:17):
+Right? It just adds block to it. But at every block, I want to check that so far everything's, all the transactions were valid without having to go through the entire history. And that is IVC and folding an accumulation allows us to build IVC, which is something that previously we needed recursive SNARKs to.
+
+Anna Rose (00:29:33):
+I see.
+
+Benedikt BÃ¼nz (00:29:33):
+So it's the hammer or the, I don't know, like the tool that we use to build IVC. Right.
+
+Anna Rose (00:29:39):
+Okay. So IVC is almost the meta architecture, like the meta concept you're trying to achieve with all of these different feature
+
+Benedikt BÃ¼nz (00:29:47):
+It's the goal. Yes,
+
+Binyi Chen (00:29:47):
+Exactly. The goal, the ultimate application you want to build.
+
+Anna Rose (00:29:50):
+I see. Cool. Okay, one more definition and then we're gonna move on to ProtoStar properly. Error vector or slack vector, this seems to have something to do with folding. What is this and are they the same thing?
+
+Benedikt BÃ¼nz (00:30:06):
+Yeah, so it's yeah, I think they're the same thing. I've also heard cross terms, it's essentially the way that a lot of these folding schemes work. And one of the main things for shattering one of the main things we do in ProtoStar is generalize the recipe of how to build these things is that you have two statements and you take a random linear combination between them, and then you multiply some things together, which gives you some polynomial, so it has multiple coefficients or terms, but you only care about two of them. Like, you care about the smallest one and the largest one, and then there's a bunch of middle ones in the middle, and essentially those are the error terms or the slack terms. And this is an idea and what you do is like, you essentially, you send these error terms in the first step, and then you get a random challenge, and then you can check sort of the correctness by evaluating the polynomial at this random challenge. So there's kind of this two-step process. I first sent the error terms and then I sent the challenge, and then I check that, these error terms are correct and this is a general technique that, appears all over the place. So you can understand bulletproofs in that way you can understand many prior works in that way, many following works. They all kind of use this technique of committing to some error terms and then evaluating a polynomial at a random point.
+
+Anna Rose (00:31:41):
+Each step of the folding though, are you using the same error terms? Is it sort of like a one-time thing that will be used for all of the steps, or is it just done once I have trouble visualizing this still. I kind of follow the other stuff, but this one's tricky.
+
+Binyi Chen (00:31:56):
+Yeah. It has a different intermediate cross factor in each step of folding. Well, it basically just what, what we call the accumulation proof. But you also need to maintain the single error vector commitment, which is part of the folding statements or accumulation. That's also why in Nova they introduced the so-called relaxed R1CS statement, because traditionally you can understand the R1CS statement as some empty statement that has no error, right. And the error is just 0. But you can definitely generalize that to make it a relaxed R1CS statement so that it adds some slack vector so that it both covers the original non-error empty statements, but also cover the one that's that statements being built after a folding. And the reason it has this slack vector exactly what band explains when you multiply two things, there are some the first term and the higher degree term, but also there are some intermediate terms that cause these kind of errors.
+
+Benedikt BÃ¼nz (00:32:58):
+I think maybe one way to understand this is that, say I have 2 multiplications, I have 2 simple multiplications, right? And I want to check that both of them are correct. So I want to check that 3 times 5 is equal to 15, and 4 times 2 is equal to 8 and what I can do then is I take sort of, I want to combine them into 1. So I take some linear combination between 3 and 4 and 5 and 2, the problem is that then, so then I get essentially, I get some result of this, I get both, like the small coefficient is going to be the 3 times 5 multiplication and the large coefficient is going to be the 4 times 2 multiplication.
+
+(00:33:48):
+So those I can check. The problem is that in the middle, everything gets kind of mixed up. Like, I get 3 times 2 and 4 times 5, so I somehow need to, cancel those out. That is kind of, those are the error or the slack terms. Those things need to be canceled out and they need to be canceled out in a way where the prover cannot cheat. So what it does is it, it essentially sends this cross product or this error term, slack term beforehand because it can compute beforehand what it's going to be. And that basically cancels it out in the final process.
+
+Anna Rose (00:34:23):
+It's not that like when it says slack or error, it's not that it gives like a wider range of correctness. It's not that, it's like when, and when you say relax, it's not that okay, you're actually just removing that messy part.
+
+Benedikt BÃ¼nz (00:34:35):
+Yes. It's exactly removing the messy part, canceling out the messy part. It doesn't give you a wider range of correctness. Yeah.
+
+Anna Rose (00:34:42):
+Cool. All right. That helps actually. Thanks Benedikt. Thanks Binyi. I think we're getting somewhere.
+
+Benedikt BÃ¼nz (00:34:49):
+Cool. That's awesome.
+
+Anna Rose (00:34:51):
+Okay, so one of the things that I guess over the last month or so that had been kind of coming up was this, excitement around folding and there was sort of another camp who were excited more about sum checks and there was almost like a vs happening between these two camps and then HyperNova comes out and uses both techniques. I thought when ProtoStar came out that it also incorporated sum check and folding, but I just heard that that might not be true. So tell me a little bit about what ProtoStar is doing and maybe help us like, we've been sort of following the Nova / HyperNova trajectory. Where does it differ?
+
+Binyi Chen (00:35:32):
+Yeah, sure. I think first the goal of both HyperNova and ProtoStar is very similar. The goal is basically to support like high degree gates really efficiently without the use of like large heavy cryptography operations. So before that we see that there's actually some new work called Sangria. They kind of achieve this, they support PLONK relation, but when they generalize Nova to the high degree gates, there are some caveats. Basically the prover complexity and also the recursive circuit size are both proportional to the gate of the degree. So both HyperNova and ProtoStar wants to minimize this, want to emulate this cost.
+
+Anna Rose (00:36:15):
+Okay.
+
+Binyi Chen (00:36:15):
+So that's basically the same goal for both ProtoStar and HyperNova. But the routes to solve this is kind of different. What HyperNova did is that they use a new accumulation scheme or new folding scheme that afforded two empty statements in a different way using sum check protocols.
+
+(00:36:37):
+But our scheme basically doesn't use sum check protocol at all.
+
+Anna Rose (00:36:41):
+Okay.
+
+Binyi Chen (00:36:42):
+For folding, the folding is very similar to Nova, but it's a generalization to Nova. The key here is that we change the relation to be folded into a new relation so that the check used is a compressed check. So that basically there's only one equation to be checked in this relation, and this makes the error vector commitments, which Benedikt already mentioned before to be much, much easier. So basically,
+
+Anna Rose (00:37:09):
+Okay.
+
+Binyi Chen (00:37:10):
+Before, in the traditional case, what you do is need to check N gates, right? You need to check N equations where each equation is a D gate, and to cover that, you need to commit to some error vector whose length is number of gates, basically N
+
+Anna Rose (00:37:26):
+Okay.
+
+Binyi Chen (00:37:26):
+So that's the reason why you need to commit a lot of error terms, basically proportional to D as well as to the number of gates.
+
+Anna Rose (00:37:36):
+And that was expensive, right?
+
+Binyi Chen (00:37:38):
+That's what is expensive
+
+Anna Rose (00:37:39):
+This is what was making a lot of this kind of like clunky and right
+
+Binyi Chen (00:37:42):
+Right.
+
+Anna Rose (00:37:42):
+Is it slow or is it just costly?
+
+Binyi Chen (00:37:45):
+Very costly, especially if you want to use really high degree gates, like D equals like 100.
+
+Anna Rose (00:37:50):
+Okay. And it was, because you're creating lots of error vectors.
+
+Binyi Chen (00:37:53):
+Yes
+
+Anna Rose (00:37:54):
+When we talked about this, there was like one general error vector, but there was also like these smaller ones
+
+Binyi Chen (00:37:58):
+The general vectors. When the degree becomes D the error vector becomes from change from 1 to D.
+
+Anna Rose (00:38:03):
+Okay.
+
+Binyi Chen (00:38:04):
+And basically in HyperNova, they still has this large vector, but what they do is they use a sum check to do this folding so that there doesn't involve any group operations at all for that. But what we did is quite different. Basically we merged this kind of N gate into a single gate. So basically there's only one equation to be checked. So that means there's only one error element for each error vector. So a commitment to a single element can just be a trivial identity function rather than a group-based homomorphic vector commitment. So that's our trick.
+
+Anna Rose (00:38:38):
+Isn't that what the sum check's supposed to do? Isn't it supposed to combine it into one? Like what did you use if not that?
+
+Benedikt BÃ¼nz (00:38:44):
+I would say, I mean, yes. So exactly, completely right. I think like to some degree you could say that the sum check is an overkill here.
+
+Anna Rose (00:38:52):
+Ooh.
+
+Benedikt BÃ¼nz (00:38:54):
+So the sum check protocol again, also allows the, it's like a SNARK almost in itself, right? It's like it has the, it makes the verifier efficient and it has short proofs, but it turns out that, what sort of these folding schemes and these accumulating schemes, delay verification showed us is that it's okay to sort of do more expensive things as long as you can delay them, as long as you can push them to the end. Right? So what we do is no fancy sum check protocol. We just take what is called a random linear combination. Like, we just batch them all together in sort of the most trivial way.
+
+(00:39:34):
+And the amazing thing is that, that if you did this, this would not give you a SNARK for this statement. But we don't care because we can delay the check of this random linear combination until the very end. We can push it until the very end. And yeah, I think what is really nice, like what I'm quite proud of in ProtoStar is that we kind of, usually there's 2 things. You know, you can build something very general that works for a lot of protocols, but you might give up on, sort of some features or some efficiency. And what we do is we like extract this very, very general recipe. Like we really break it down into building blocks. Like okay, you start with like, your most simple, like our recipe would totally explains like sort of it explains how you could get Nova, from something like Nova or something like Sangria.
+
+(00:40:25):
+But we both do this general recipe, but it's also practically extremely efficient. So it has better parameters than HyperNova. It's like sort of the best folding scheme that is out there because sort of once you break it down into these very simple building blocks, it's very easy to think about them and sort of come up with, with very efficient building blocks. And this gives us a very efficient scheme. So I think that like, it's a sum of things, but it's not a sum check or yeah, I would say yeah, the sum check is the overkill here.
+
+Anna Rose (00:40:57):
+Interesting.
+
+Binyi Chen (00:40:58):
+Yeah and also this adds some efficiency advantage because basically in the sum check we need to do some hashes and number of hashes is really related to the number of gates and we eliminate those hashes. Basically we are reducing to the number of hashes as well as the full operations by a factor of log in the circuits.
+
+Anna Rose (00:41:21):
+Cool. So you had sort of mentioned that Nova had originally been built really with like R1CS in mind. I know Sangria came along and enabled more of a PLONK-like arithmetization to be used with it, I don't know if I'm saying that right. What is ProtoStar used with? Like where does it fall on that? Is it also R1CS or something else?
+
+Binyi Chen (00:41:44):
+No, it's something else. Before that I really want to highlight the general recipe we have as Benedikt said. So basically this kind of general framework for building IVC scheme is really, really useful for us to build a new IVC scheme that supports really fancy and advanced gates.
+
+Anna Rose (00:42:01):
+Okay.
+
+Binyi Chen (00:42:01):
+The reason of that is that this kind of modularity can very easily incubate new IVC innovations because we can kind of advertise a lot of steps into a general compiler. So basically now if you really want to build an IVC scheme, this becomes a really easy problem in our framework. What you do, it just needs to come up with some so-called special sum interactive protocols for this target relations. And this relations can be R1CS, can be PLONK relations, can be Turbo-PLONK, can be UltraPlonk or like ++ lookup or even the recently introduced customized constraint system by I think by Srinath.
+
+(00:42:43):
+Yeah. And for all these kind of relations, you only need to give a very naive and a simple interact protocol for that. Most of the scheme are justly just basically letting the prover send the entire witness of this statement and verifier, just check that this witness is correct with respect to this statement. We don't have any kind of succinct requirements or non interactive requirements for this. And this makes this much easier to design this kind of scheme for these kinds of very complicated relations like lookup PLONK. And after that, after having this relation having this protocol for this relation, we just fit it into our very generic compiler and boom, you get a new IVC scheme that satisfies some new very cool features.
+
+Anna Rose (00:43:28):
+Interesting.
+
+Binyi Chen (00:43:28):
+And also with great efficiency,
+
+Benedikt BÃ¼nz (00:43:31):
+So just as an example of that, right? Like, so we originally wrote it with PLONK
+
+Binyi Chen (00:43:34):
+Okay.
+
+Benedikt BÃ¼nz (00:43:36):
+The PLONK arithmetization also supporting lookup gates really, really efficiently. We can talk about that also a little bit. So, sort of just supporting the latest state of the art of PLONK constraints. But then, sort of HyperNova and these customized constraint systems came out. So Srinath had this, really cool new arithmetization which might have some significant advantages of a PLONK that's still to be seen a little bit but at least he would claim it has significant advantages. And we then, like very quickly we were like, oh, let's see, whether this works with our compiler.
+
+(00:44:16):
+So we sort of press that through our compiler and bam, like it takes like sort of the proof of security is like a couple lines and we sort of now put that into the appendix of the paper because it turns out that you get exactly the same efficiency benefits and the same sort of other benefits by using now customizable constraint system. And even in a year someone comes out with, I don't know, error ++ CCS, whatever, like the coolest news constraint system, as long as it has like, the right sort of properties then or it most likely will fit into the compiler and, give you a new folding scheme.
+
+Anna Rose (00:44:57):
+I just wanted, like you just sort of mentioned, is constraint systems almost a category of itself in this modular stack that you described? Like we have the folding accumulation schemes, we have the lookup tables. Is this a third, the constraint systems that one should sort of be looking at development forward?
+
+Benedikt BÃ¼nz (00:45:15):
+Yeah, I would say so. And like what is,
+
+Anna Rose (00:45:16):
+Oh, interesting.
+
+Benedikt BÃ¼nz (00:45:17):
+You know what oftentimes happens in this field is that, sort of in the beginning people design, schemes sort of like more monolithically I'm thinking, like sort of the first Zerocash
+
+Anna Rose (00:45:35):
+Zerocash or like more Zerocoin.
+
+Benedikt BÃ¼nz (00:45:37):
+Yeah exactly. They build like, one big SNARK, that like does the arithmetization and does everything and does, like one poly and then, sort of like people pull them apart and say that oh actually, like we can view them as modular components so, you can swap out the polynomial commitment, you can use the arithmetization from PLONK, but you can replace the KZG polynomial commitment scheme with like in a product-based polynomial commitment scheme or with a FRI based polynomial commitment scheme. And this gives you something new and you can give it a new name, but it's really just like, taking the Lego pieces and putting them together and then, you can add lookup like in the beginning maybe we thought of lookup as like being part of PLONK, but really no, it's kind of separate and it's very important and to sort of pull these pieces apart because then like innovation can happen more quickly because an innovation on one Lego piece sort of innovates the whole stack.
+
+(00:46:38):
+One thing that's absolutely true, like you said, should now think of the arithmetization as something separate.
+
+Anna Rose (00:46:45):
+Wow.
+
+Benedikt BÃ¼nz (00:46:46):
+You know, and then sort of our compiler gives you an a folding scheme for that arithmetization.
+
+Binyi Chen (00:46:52):
+Exactly.
+
+Anna Rose (00:46:52):
+So I just want to sort of repeat, because I've pulled out four things from what you described there. There's constraint systems, look up arguments, accumulation schemes and arithmetizations or like versions of it.
+
+Benedikt BÃ¼nz (00:47:06):
+I would say constraint system and arithmetization, are
+
+Anna Rose (00:47:10):
+The same?
+
+Benedikt BÃ¼nz (00:47:10):
+Pretty similar.
+
+Anna Rose (00:47:11):
+Okay.
+
+Benedikt BÃ¼nz (00:47:12):
+Yeah, I would say it's the same, although, like maybe someone pulls, the things apart there. So like you never know. Right.
+
+Anna Rose (00:47:18):
+Is there anything else?
+
+Benedikt BÃ¼nz (00:47:18):
+There's more to do.
+
+Anna Rose (00:47:20):
+Is there anything else that we should be on the lookout in terms of that like modules that you think, I mean you just, maybe that could be one, but yeah, is there anything else that you're examining you might be able to distinguish and start optimizing?
+
+Benedikt BÃ¼nz (00:47:32):
+One thing that is kind of cool is that, so I think, one of the things that Nova did originally is that you at the end, you have this decider and right, like we said like, the whole idea is we don't need succinctness anymore. We don't need SNARKs anymore. And it turns out that this is true to some degree, you don't need succinctness in the recursive step anymore, but at the end of the day, right, like at the end, like you then might get, like if I do this IVC for say a blockchain, you get a proof that is about as large as 1 block, right? That has the size of 1 block. So you might still want to, compress that proof, right? Like maybe even 1 block is too large if you're downloading this on your phone, right? So you might still want to attach a SNARK at the very end, right? Like you can always do that, like, throw a SNARK at it at the very end. So that's, yet another component.
+
+Anna Rose (00:48:36):
+This is recursion in a way,
+
+Benedikt BÃ¼nz (00:48:39):
+Yeah, it's recursion
+
+Anna Rose (00:48:40):
+or this is the compression?
+
+Benedikt BÃ¼nz (00:48:40):
+It's I would say compression is the better word at the very end, right? Like it's only, we don't do this like multiple times anymore. We only do it once sort of we plug the hole at the end. Like and Nova for example, introduced like a very efficient SNARK for their folding scheme. Like for example, we did not do this for our scheme. Like we left this as kind of, you could throw some generic SNARK it, but like there's more work to be done to make this like, very efficient and specific and like looking at it precisely but this is again, like the reason why we left this sort of out is because it's modular, right? Like someone, like again, like other, like this is a separate work almost.
+
+Anna Rose (00:49:24):
+How close to implementable is ProtoStar? Like, would you say it's built, like in the way you've described it, could someone already turn this into a VM or do you think that we're sort of like still on the lookout for some monster protocol that brings all of this new research together? I'm kind of wondering just in the same way, like PLONK sort of like it grabbed Mindshare for a period of time and then Halo2 I feel has grabbed mindshare. Do you think ProtoStar could be that, or do you think that there's like work still coming that unifies some of these things?
+
+Binyi Chen (00:50:00):
+I think first for implementation, I think it's very close to be able to implement.
+
+Anna Rose (00:50:06):
+Okay.
+
+Binyi Chen (00:50:06):
+As long as we write a monolithic, like combine all this modulars task in integrate into a single protocol, then I think can be like very efficient to implement. And in certain scenarios, I do think that it can be very advantageous over other kind of approaches like directly using a SNARK, for example, if you want to prove some EVM transactions, right, which involves a lot of op codes, then our scheme is really fit for that because basically it supports high degree gates and it look up and more over supports some kind of non-uniform computations. What it means is that you can select which circuit to run or to prove at one time. Like for example, in EVM there's an hundreds of op code, right?
+
+(00:50:58):
+And in the traditional way what you do is you want me to capture the proving of this 100s of code in 1 single small circuit. But that's really expensive because you almost embed all the costs for every op code rather than the op code cost first for the one that you run at the step. But we have a really, really simple way to get around this. And basically the circuits in each step is only proportional to the cost or complexity of a single op code rather than multiple op codes.
+
+Anna Rose (00:51:30):
+Okay.
+
+Binyi Chen (00:51:30):
+And this makes it very, very advantages for solving this kind of problem compared to the monolithic zk-SNARK scheme.
+
+Anna Rose (00:51:38):
+Actually, this made me wonder, is there a specific lookup argument that goes well with ProtoStar you sort of say it's modular, but does it use, and I don't know if this is described, but as far as I know, some of the most advanced lookup arguments are reliant on KZG'S homomorphic additiveness, what was it again? This property. So does ProtoStar have that characteristic? Is it working with something like KZG or is it something else?
+
+Binyi Chen (00:52:08):
+I guess we do have a lookout protocol for our ProtoStar. But you can plug into arbitrary that commitments if you want. Like you, if you use like Pederson commitment it is fine and using KG is also fun and the key innovation here is we do have a new, again, special sum interactive protocol for lookup relations. And that's something new. And that's something really, really useful because basically with this new kinds of protocol, which by the way is inspired by some previous work called logarithmic derivatives by HabÃ¶ck, I think, which is really great work. It inspires our protocol design and the resulting IVC prover for lookup now is only related to the number of lookup gates in this lookup relation, but independent of the lookup table size. This is some like kind of feature that also achieved by some other lookup arguments like CQ, but we are really in a very different flavor. Like we are interesting basically more related to the IVC framework.
+
+Anna Rose (00:53:14):
+So you have a unique lookup argument part of this.
+
+Benedikt BÃ¼nz (00:53:17):
+Yeah
+
+Anna Rose (00:53:17):
+Okay.
+
+Benedikt BÃ¼nz (00:53:17):
+And the interesting thing is that it's both like, it has better properties like asymptotic properties than like something like CQ it sort of is completely independent of the table size. It's, completely linear versus CQ is has some end login factors, but it doesn't even require the pairings of KZG. So you might ask yourself like, how is this possible? Right? Like how can it achieve more and sort of require less? Well the idea is that again, we can delay some of the verification, right? We're in some ways in an easier setting where we can delay the check, we can fold the check of this lookup argument itself.
+
+Anna Rose (00:53:58):
+Oh wow.
+
+Benedikt BÃ¼nz (00:53:58):
+And so basically at the very end of the cycle, like where, at the very end of the recursion, you need to do work that is linear in the size of the table that you're looking up in and, and yeah.
+
+(00:54:12):
+The size of the table that your look ups in. But the thing is, you only have to do this once. You don't have to do this every step. So in every step your work is very cheap. In every step, the work is only like proportional to the number of lookups you do, not the table size. And only at the very, very end we push that work until the very end. You do the work that is linear on the table. And this is why we get basically a lookup argument that is both simpler. Like sort of, you can, you don't need pairings, you can do this without pairings, without FFTs, without all of those shenanigans. and still has better properties. But that's because we're basically playing a different game.
+
+Anna Rose (00:54:49):
+Got it. Yeah. I want to just quickly, can you please fix what I said before when I said homomorphic additiveness? What was I trying to say?
+
+Benedikt BÃ¼nz (00:54:59):
+You say homomorphic additiveness.
+
+Anna Rose (00:55:02):
+ or additive homomorphism.
+
+Benedikt BÃ¼nz (00:55:04):
+Both of those are correct. Okay.
+
+Anna Rose (00:55:06):
+Anyway
+
+Benedikt BÃ¼nz (00:55:07):
+But actually it's, I think it's the multiplicative homomorphism, like there's both additive and some multiplicative homomorphism.
+
+Anna Rose (00:55:13):
+Yeah.
+
+Benedikt BÃ¼nz (00:55:14):
+That's the partial thing
+
+(00:55:17):
+Partial multiplicative homomorphism that these lookup arguments take advantage of
+
+Anna Rose (00:55:22):
+I see. But it sounds, yeah, so I think what you just described though is that like you have a almost bespoke lookup argument that's so built in, it's built into the folding
+
+Benedikt BÃ¼nz (00:55:30):
+Exactly.
+
+Anna Rose (00:55:30):
+In a very different way and makes use of those properties. That's cool.
+
+Benedikt BÃ¼nz (00:55:35):
+Right. But inspired by, this logarithmic derivatives work. I mean, of course, like, we didn't, everything we do is inspired by some prior works. The shoulders of giants we stand on. Yeah.
+
+Anna Rose (00:55:49):
+I want to ask you about security assumptions made on some of these different protocols or constructs. How should we think about that in this case? Like is there a ranking or like yeah, how do you kind of place ProtoStar?
+
+Binyi Chen (00:56:03):
+I think for if I understand correctly, so basically currently almost all the IVC schemes are from some like heuristic security assumptions, because the, basically, because you most of the scheme are proving in the random org model, but in the recursive circuit you have to instantiate this hash in the circuit, but it's never possible to instantiate a random article in the circuit. So what we have assumed is that heuristically, we assume that after we instantiate a random Merkle or the hash in the circuit, it's still secure. So from that point of view, like you can understand that like there's no standard model security for all the IVC scheme yet, but still they give you some like confidence why it is secure be beyond this, this part beyond this age. That's also why when we say that when we get an accumulation scheme, when we get the IVC scheme, accumulation scheme, we are assuming some conjecture from like the on the secure assumptions.
+
+Benedikt BÃ¼nz (00:57:06):
+Yeah. I think it's a very, actually, it's an interesting question because I would've answered it completely differently. And it really depends on who you ask if you ask a theoretician, so this is the theory answer. So like in cryptography, we sometimes fall into theory and, and apply it research and people do both, right? Like, I think Binyi and I both, fall somewhere in the middle. So the theory answer is exactly what Binyi said, that the security of these IVC schemes is, is really difficult to prove. And we don't really know, like we need to sort of some like, it's essentially related exactly to what Binyi said and the recursive stuff that we don't really know how to like fully give a security proof. But then there's also the practical thing, which is, for example, what kind of elliptic curves do you need to use?
+
+(00:57:53):
+And it turns out that all of these, like since Halo, kind of all the work that followed, so all the Nova work, all the accumulation for work all also ProtoStar basically is able to build this without pairing friendly curves. So just, sort of like curves that don't even have a pairing. And why is this better? Well, it's better for 2 reasons. A) we have slightly more, pairings are great because they give you a functionality, but they are slightly less secure, like right. They, it's a pairing is almost like a vulnerability in the pairing and in the security that we can take advantage of, like this partial multiplicative homomorphism. So not having to rely on pairing friendly curves is better from a practical security perspective. Also, it's better from an efficiency perspective because like pairings are expensive and sort of these curves are slightly more expensive. Like, they might be factored 5 or 10 or I don't know more expensive. So from a practical perspective, I would say that these IVC schemes actually have better security than, sort of like a PLONK SNARK or like Groth16 SNARK.
+
+Anna Rose (00:59:07):
+Interesting.
+
+Benedikt BÃ¼nz (00:59:07):
+From a theoretical perspective though, it's really weird because we have to rely on these heuristic assumptions and we don't know how to prove security. So
+
+Anna Rose (00:59:16):
+Interesting.
+
+Benedikt BÃ¼nz (00:59:16):
+Yeah. Both are true.
+
+Binyi Chen (00:59:17):
+Yeah. One more words in the theory perspective, like in theory you can also instantiate these vector maintenance using lattice-based hash functions, or even hash, like in that case it's even post-quantum secure, I guess in that part compared to the pairing based commitment schemes. Right. I think I am correct
+
+Benedikt BÃ¼nz (00:59:35):
+I think
+
+Binyi Chen (00:59:37):
+In theory
+
+Benedikt BÃ¼nz (00:59:37):
+I'm not sure that this is actually quite true because you like, or it's difficult at least to do because in these latter schemes you have some error and if you do the recursion over and over again, the error grows. So I don't think we quite know how to do this.
+
+Binyi Chen (00:59:52):
+Oh, I see. That's an open question, but
+
+Benedikt BÃ¼nz (00:59:55):
+I mean, it's an open question actually. It's an open question of how to do this sort of post-quantum secure, so secure against quantum cryptography, quantum adversaries but a very important one, like can we do this? Because everything we do so far is broken by quantum computer, but maybe, maybe in the future we can build something that is even secure against quantum computers.
+
+Anna Rose (01:00:22):
+I want to ask a last question. A lot of the folding work has been focused on this like repetitive computation things that also look identical being folded in together. But what happens if that isn't the case of the underlying data? Is there any work or exploration of like a more variant underlying computation?
+
+Binyi Chen (01:00:44):
+Yes, I think so. Actually there's a like kind of pattern you can use if you want to do that for this kind of task, if the task itself is not repetitive, right? For example, if you want to building a SNARK for a program execution or like circuit, what you can do is, what you do is do just split this circuit into some, like a lot of parts and prove them separately and combine them using PCD or IVC that can also help you with proving something that's non-repetitive. And so that's why it's also useful in this kind of scenario.
+
+Benedikt BÃ¼nz (01:01:18):
+I think that, one interesting thing to think about is that well, how do computers work? Well they have some, at the end, you have some program and that gets compiled down into instruction and actually, like you chip, right? Like it doesn't know at, sort of at the beginning like how to execute all different programs. It only knows how to do some basic instructions like adding and multiplying or like,
+
+Anna Rose (01:01:47):
+Add chore
+
+Benedikt BÃ¼nz (01:01:48):
+Exactly. All of these things. And like modern CPUs do quite a bit more things and similar, like the EVM, right? As as Binyi has mentioned multiple times, right? Like it has different op codes, right, for how it gets up. So it turns out that if you actually can do, just some of these basic instructions, that's actually enough to do like all of computation.
+
+(01:02:13):
+And one thing that sort of, SuperNova did this first but we also sort of support and ProtoStar very, very directly is what if I want to support multiple kinds of instructions, so, not like multiple op codes. One way to do this is just to have, 1 circuit that does like instruction 1, instruction 2, does all of them in parallel and every single time they executes sort of all of them. And, but like really only 1 of them counts. But the problem is then you work like, then you have to, in every step work as much as, like say you have a 1000 different op codes, you have to work as much as your 1000 op codes. So what, what SuperNova did first, and we do like very natively and very directly in ProtoStar is so-called non-uniform IVC. So we are able to support different instructions but the work is only proportional to the instruction that you actually execute not all of the instructions that ever exist.
+
+Anna Rose (01:03:13):
+I wanted to bring this back to Espresso and I wanted to ask you this work ProtoStar, is there connection to any of the work that you're doing at Espresso?
+
+Benedikt BÃ¼nz (01:03:23):
+Yeah, I mean, I think that that again, right, it's really important to point out that this is, open research and the main purpose is giving back to the community. But of course, long term, like it's, it's not what we directly work on. So it is, does not have direct immediate impact on the products that we work on. But, long term for example, we also benefit from the innovations in zero knowledge proofs. So for example in CAPE we use some, we currently are using PLONK as our proof system, and maybe in the future we'll use something that is based on ProtoStar. If that more develops more and more or for the sequencer you might, like have a smart contract that efficiently, verifies your consensus and that could be easily done, using like, something like ProtoStar, but that's more far out and right now it's really, for the community to give back.
+
+Anna Rose (01:04:20):
+Cool. I was curious, like in the stage of development that both of those products are, do you sort of build them just using some proving system, something that you could potentially swap out? Does it not matter really because you're gonna be using some existing proving system and instead you're working on like the architecture around it? Or does the proving system have a deep impact on how you have to build these architectures?
+
+Benedikt BÃ¼nz (01:04:42):
+I mean, this is like an engineering question where, where like in theory, yes, we can swap out the proving system always, you know but in practice of course, like the specific efficiencies have impacts down the line and, like impact how much gas, you're burning. So of course like I think in practice these things have have real impacts and matter but of course we're also trying to build things modular enough that we are able to respond to innovation coming from inside and outside of the company.
+
+Anna Rose (01:05:19):
+Cool.
+
+Benedikt BÃ¼nz (01:05:19):
+I could talk about sequencing all day. It's like, something, the main thing we're working on and, maybe we should have a separate podcast on this
+
+Anna Rose (01:05:28):
+Yeah. Sounds like.
+
+Benedikt BÃ¼nz (01:05:29):
+But it's there's like really cool and interesting stuff happening there and, but we are building a sequencer that is agnostic to the rollups that are using it. So it's a sequencer for different rollups and different rollups, both optimistic or zk rollups could use it. And yeah, the sequencer does not care what kind of proving system is being used for it
+
+Anna Rose (01:05:51):
+I see, I see. I think I already said, I was gonna say a last question, but I have one more last question, which is about the names that we use in this space. ProtoStar following HyperNova and Nova, also PLONK and Sangria. I feel like Nico, who is actually the co-host on the Srinrath episode on HyperNova. He had sort of made some sort of Venn diagram of like the, what is it, ZK protocol names that are about alcohol, about space, and then, I don't know what he called this, but basically have the words Hyper, Proto, Turbo, Ultra. So it seems to be, I almost feel like we're one step away from being able to make, like, I don't know if you ever saw these, like indie band name generators which would just be like combining, like I feel like we're getting close to being able to do it for us. Directionally, where do you think we should go if we want to introduce a new cannon of naming things?
+
+Benedikt BÃ¼nz (01:06:58):
+I don't know. Binyi, you do have ideas?
+
+Binyi Chen (01:06:59):
+Like ask ChatGPT
+
+Anna Rose (01:07:03):
+Could be biology
+
+Benedikt BÃ¼nz (01:07:04):
+zeroknowledge.ai.
+
+Binyi Chen (01:07:06):
+Yeah
+
+Benedikt BÃ¼nz (01:07:08):
+It's like Apple, right? Like at some point they switched from like big cats to like places in California. Right?
+
+Anna Rose (01:07:15):
+Totally
+
+Benedikt BÃ¼nz (01:07:15):
+I think they ran out of like big cats and then yeah, I mean ProtoStar like I mean we were thinking like, is there something combining alcohol and the galaxy and whatever, but there's like a tiny bit of like meaning to the name.
+
+Anna Rose (01:07:32):
+True.
+
+Benedikt BÃ¼nz (01:07:33):
+Because it's like we were like HyperNova, that's very at the end of, of the Star life.
+
+Anna Rose (01:07:38):
+Yeah.
+
+Benedikt BÃ¼nz (01:07:38):
+I think and so we're going like back to the beginning
+
+Anna Rose (01:07:42):
+ProtoStar
+
+Benedikt BÃ¼nz (01:07:42):
+And, you know because it's also like, because it's, yes, it's like a new protocol and improves on it, but it also explains sort of like, where these stars come from, like it explains how these folding schemes work and the different building blocks. So that was like the,
+
+Anna Rose (01:07:59):
+Nice
+
+Benedikt BÃ¼nz (01:07:59):
+The meta idea behind it but yeah.
+
+Anna Rose (01:08:04):
+Cool.
+
+Benedikt BÃ¼nz (01:08:05):
+I don't know. We, yeah, maybe we gotta go back to Earth, like maybe, but like the galaxies, like there's huge, like, there's many names
+
+Anna Rose (01:08:12):
+There's many names in the galaxy. But also, I mean I would also keep an eye out for what Zac comes up with, because recently he created Goblin PLONK, he went way off card. So it would be interesting to see what else comes out there. Oh, he's got Goblin PLONK & Honk, so we'll have to see where that, where that goes.
+
+Benedikt BÃ¼nz (01:08:34):
+There's I'm all for like, creativeness and naming
+
+Anna Rose (01:08:39):
+Yeah.
+
+Benedikt BÃ¼nz (01:08:40):
+As a frequent offender myself. Like I think it's, it's great. Like, and it's kind of fun and a little bit silly, but it also like, makes people remember easily.
+
+Anna Rose (01:08:51):
+Remember for sure.
+
+Benedikt BÃ¼nz (01:08:52):
+Yeah. It's really helpful. I think
+
+Anna Rose (01:08:54):
+It really is.
+
+Binyi Chen (01:08:56):
+I would say that's one of the funest thing in the paper writing.
+
+Anna Rose (01:08:59):
+Yeah.
+
+Binyi Chen (01:08:59):
+For getting a name brand, for getting a cool name brand.
+
+Anna Rose (01:09:03):
+Nice.
+
+Benedikt BÃ¼nz (01:09:03):
+Yes, exactly.
+
+Anna Rose (01:09:04):
+Cool. All right. I want to say thank you to both of you for coming on the show and sharing with us sort of the background to ProtoStar, all about ProtoStar and how this relates to what you're doing. Thanks so much for coming on.
+
+Benedikt BÃ¼nz (01:09:17):
+Thank you so much.
+
+Binyi Chen (01:09:17):
+Thank you.
+
+Benedikt BÃ¼nz (01:09:17):
+Yeah, thank you.
+
+Anna Rose (01:09:19):
+Cool. And I want to say thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners. Thanks for listening.
+

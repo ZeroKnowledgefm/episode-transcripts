@@ -1,0 +1,1688 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:26:
+
+
+This week, Nico and I chat with Ulrich Haböck, an applied cryptographer at Polygon Labs. We talk about his journey into applied ZK cryptography, from teaching to becoming a full-time practitioner. Through this story, we learn about the contributions he's made to the field, in the form of many write-ups and manuscripts, like the ones on FRI and Breakdown. We also discuss how he found new breakthroughs with his work on multivariate lookups in the form of logUp, and on logarithmic derivative lookups using GKR. We also talk about his work at Polygon Labs on STARKs over finite fields. 
+
+
+01:00:
+
+
+Now, before we kick off, I want to let you know about our upcoming multi-week virtual event, ZK Hack 4. Starting on January 16th and running until February 6th, 2024, we will be hosting weekly workshops with top teams in ZK, showcasing the state of the art in tooling for ZK builders. Every week, we also host a ZK puzzle hacking competition. In it, we share a ZK system that has something wrong with it. You are meant to find the bug and hack the protocol. The fastest hacker will make their way to the top of the ZK Hack leaderboard. There, you can find prizes and glory. Now, this is our fourth time running this event series. The ZK Hack online series is not a hackathon, but rather it's a chance to learn the latest in ZK tools with members of the ZK Hack community, as well as learn the intricacies of ZK security through the puzzle hacking competition. And because it runs over a few weeks, participants often make friends, find future colleagues or co-founders, and we really get a chance to dive into the ZK world together. The event is free and open to all. I've added the link on our website. Please join the mailing list so that we can let you know when we have more info to share about the event. Also, be sure to join our Discord, that's where all communication around this event will be happening. So yeah, hope to see you there. Now Tanya will share a little bit about this week's sponsor.
+
+
+02:24: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain asset-agnostic privacy via a unified set. Namada is natively interoperable with fast finality chains via IBC and with Ethereum using a trust minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia, that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada for more information, and join the community on Discord, discord.gg/namada. And now here's our episode.
+
+
+03:23: Anna Rose:
+
+
+Today we're here with Ulrich Haböck, an applied cryptographer at Polygon Labs. Welcome to the show, Ulrich.
+
+
+03:30: Ulrich Haböck:
+
+
+Hi. Thanks for having me.
+
+
+03:32: Anna Rose:
+
+
+And Nico is the co-host for this one. Hey, Nico.
+
+
+03:35: Nico Mohnblatt:
+
+
+Hey, Anna. Hey, Ulrich.
+
+
+03:36: Anna Rose:
+
+
+So today's interview came about Paul from RISC Zero had suggested bringing you on, and he wanted to talk about a few things. So I'll just sort of list what his message had said, but you should cover things like his manuscript on FRI, his work on lookups, logUp, and GKR logUp, as well as the work he's doing on STARKs in finite fields that aren't NTT friendly. Now I think we may get into more than just this, but here's sort of a starting point and a bit of a summary about some of the things we're going to talk about. But first, before we do that, Ulrich, tell us a little bit about what got you started. How did you jump into all of this?
+
+
+04:12: Ulrich Haböck:
+
+
+Where did I start? So that's a good point. I mean, by study, I never studied cryptography when I was at university. So I took the chance to dive into cryptography actually by teaching. So I held a teaching position at an applied university of technology. It's called Fachhochschule for quite a long time. I think it was more than eight years or maybe even 10 years, I can't remember. And that actually, I had quite a lot of freedom because I was not under the pressure of doing research. So I could reorient completely. So, I ran into cryptography because there was a lack of people teaching math and cryptography related stuff. So I really started with the classical primitives like RSA, discrete logarithm problem, all these things, and in the end, I found myself, thanks to a friend of mine, Stephan Krenn, I found myself in zero-knowledge proofs. The classical world of zero knowledge-proofs, the Schnorr.
+
+
+05:13: Anna Rose:
+
+
+So wait. You started by teaching kind of like technical topics, then discovered cryptography in teaching it. So you had to learn it to teach it. It wasn't like you had learned it in a class and you were re-teaching it to someone.
+
+
+05:27: Ulrich Haböck:
+
+
+Exactly. Actually what I studied was, I mean a mixture of many things, but I would say it was a lot of probability theory and dynamical systems that was back then when I did my PhD. But to be frank, I never felt at home in this realm. So that was probably also the reason why I switched over to a teaching position.
+
+
+05:46: Anna Rose:
+
+
+Okay. You didn't like being a student in a way.
+
+
+05:51: Ulrich Haböck:
+
+
+No, it's not that. It's just like I never found in dynamical system, this was not my math. 
+
+
+05:56: Anna Rose:
+
+
+Okay.
+
+
+05:57: Ulrich Haböck:
+
+
+I don't know. So it just happened that I found myself there. And it happened that I stepped out of it. So I'm a late starter, I would say. I probably needed the time to reorient when I was teaching, to find cryptography and to find that I really love it.
+
+
+06:15: Anna Rose:
+
+
+Cool.
+
+
+06:15: Ulrich Haböck:
+
+
+And that brought me in the end to classical zero-knowledge proofs.
+
+
+06:18: Anna Rose:
+
+
+What was it about cryptography that you liked?
+
+
+06:21: Ulrich Haböck:
+
+
+I would say it's... Is it the right word in English? Versatility?
+
+
+06:24: Anna Rose:
+
+
+Versatility?
+
+
+06:26: Nico Mohnblatt:
+
+
+Yeah.
+
+
+06:26: Ulrich Haböck:
+
+
+It's so manifold from the type of math you meet. I mean, you can start off with all the statistics that's needed for symmetric cryptanalysis. You can go further to all these number theoretic constructions behind public key crypto, and even then, all these different primitives starting from elliptic curves or just ordinary cyclic groups with a hard discrete logarithm problem up to lattices to... It's all the different math you meet in crypto. It's a mixture of all different things. You can position yourself where you feel comfortable. And the second thing that I missed actually in my PhD studies and what I had to do previously is its immediate usefulness in practice. And that's actually also the thing that drove me in the end to industry.
+
+
+07:20: Nico Mohnblatt:
+
+
+Actually, to your first point, something funny that I've noticed in sort of the history of cryptography is how once in a while you have ideas that aren't new to math at all, but that get injected into cryptography, and suddenly we have like a whole new field of cryptography that shows up.
+
+
+07:35: Anna Rose:
+
+
+What are you thinking?
+
+
+07:36: Nico Mohnblatt:
+
+
+Like elliptic curve cryptography, for example. Right? 
+
+
+07:39: Ulrich Haböck:
+
+
+Yeah, I think it was Menezes, no? In the 90s with the cryptanalysis, actually.
+
+
+07:45: Nico Mohnblatt:
+
+
+Oh, I wouldn't know. Same thing with pairings, you know, later on.
+
+
+07:49: Ulrich Haböck:
+
+
+Sorry, sorry. Yeah, yeah, yeah. Pairings came with cryptanalysis of the discrete logarithm problem, and I think it was Menezes who was one of the driving forces of using elliptic curves as the discrete logarithm structures, let's say.
+
+
+08:05: Anna Rose:
+
+
+So Ulrich, what was your first move into working in our industry? Where did you first find yourself after being a teacher?
+
+
+08:15: Ulrich Haböck:
+
+
+Actually, quite randomly at the first position that I just found, that was here in Milano where I'm still based, it was at Horizen Labs, the engineering arm of the Zen Foundation, Zen cryptocurrency. 
+
+
+08:31: Anna Rose:
+
+
+Yeah, actually, when I was looking into your background, I saw that you had worked at Horizen. I had Alberto on the show, I think, two years ago.
+
+
+08:39: Ulrich Haböck:
+
+
+I remember this.
+
+
+08:40: Anna Rose:
+
+
+Yeah. So were you there...
+
+
+08:41: Ulrich Haböck:
+
+
+I think it's longer than two years ago, but I remember that at the time I was already there.
+
+
+08:47: Anna Rose:
+
+
+What were you doing there? What kind of focus did you have?
+
+
+08:50: Ulrich Haböck:
+
+
+Actually, that was perfect position for myself to learn SNARKs. So what I did essentially is learning SNARKs, first of all, learning all the technical subtleties of proof recursion in the context of aggregation scheme, not folding back then, didn't exist, but the mother of folding. And besides that, I made Marlin, a proof system, Marlin recursion friendly, so to speak. But it was just an exercise in the end with all the details you need in recursion. And besides that, of course, it was a lot of instructing and priming the developers of our team.
+
+
+09:30: Anna Rose:
+
+
+I see. So you did continue almost in that educational side of things. You're still learning and teaching.
+
+
+09:36: Ulrich Haböck:
+
+
+It had also educational aspect, but let's say, it was more about learning actually.
+
+
+09:42: Anna Rose:
+
+
+Okay.
+
+
+09:43: Ulrich Haböck:
+
+
+But actually you can't separate, never. Teaching is learning.
+
+
+09:46: Nico Mohnblatt:
+
+
+Exactly. Teaching is an incredibly good way to learn. Really forces you to know what you're talking about.
+
+
+09:51: Anna Rose:
+
+
+Okay, so after Horizen, you... Actually, maybe, yeah, just tell me what kind of work were you working on there? What led you to then switch over to Polygon Labs?
+
+
+10:01: Ulrich Haböck:
+
+
+So I worked on really the classical, let's say elliptic curve based aggregation scheme, Zcash pushed off aggregation scheme like recursive proof system, which we had in mind. And I don't know if it ever came to it. I didn't follow much when I left the company, but the initial idea was to have a full decentralized system of provers even with an incentivisation market, a market that drives certain incentivization for the provers themselves. So the PCD scheme or let's say the recursive proof system itself was not just a linear one, a tree-wise one, dynamically arranged tree-wise one. And yeah, we did take over actually everything that Halo1 did to Marlin in that tree-like setting. And that means you had to think about the subtleties of, let's say, kind of having flexibility in expressiveness. That means we considered having different base proofs and you have to have a key ring with it.
+
+
+11:07:
+
+
+And what does that mean if you have a tree-wise recursion with all the subtleties of accumulators or aggregators in the cycle of curve and non-pairing friendly and deferred arithmetics? And it was... To be frank, it was a masterpiece for learning. A pain in the neck, wouldn't recommend. So I don't envy anyone who has to do with both aggregation folding and deferred arithmetics, if that's still needed. Nowadays it's not needed anymore, I suppose. But...
+
+
+11:40: Nico Mohnblatt:
+
+
+Oh, it's still a thing. Yeah.
+
+
+11:42: Ulrich Haböck:
+
+
+And having, let's say a flexible topology, a nonlinear topology of the PCD scheme itself, it's a hell of work of engineering, of defining the right data structures. In the end, it comes down to define the right structures and the right traits, and it's highly complex. Much more complex than with STARKs.
+
+
+12:03: Nico Mohnblatt:
+
+
+Did you double into the engineering side?
+
+
+12:06: Ulrich Haböck:
+
+
+Well, I was influencing a lot, or let's say had a lot of exchange with our engineers to help them define what I thought is a good notion of our good structs and so on. 
+
+
+12:21: Anna Rose:
+
+
+At what point did you move over to Polygon Labs? Like, was there a research reason? Was there something that drew you to working on something they were working on? Yeah, how did you make the move?
+
+
+12:31: Ulrich Haböck:
+
+
+I think one of the main reasons was something that also in the learning process, I completely underestimated back then and it was off my radar, was the STARK side of life. And that's in particular the feasibility of zkVMs. And that actually led me to an intermediate step, which wasn't Polygon. I worked for like two months for Orbis before, unfortunately, due to the FTX, they went bankrupt. So, and Orbis was working on Cardano. I'm not sure, I hope I don't say anything wrong, it was partially financed by Ardana. One of the co-founders of Ardana founded Orbis.
+
+
+13:15: Anna Rose:
+
+
+Ardana?
+
+
+13:16: Ulrich Haböck:
+
+
+Ryan.
+
+
+13:17: Anna Rose:
+
+
+I don't know if I know this.
+
+
+13:18: Ulrich Haböck:
+
+
+It also went bankrupt a few weeks later after FTX. So I think it was a stablecoin on Cardano, but don't ask me, I never... Due to time, just two months, three months there, I never....
+
+
+13:34: Anna Rose:
+
+
+Sounds like you didn't get that attached or something.
+
+
+13:35 Ulrich Haböck:
+
+
+Never get a big overview of what's happening on Cardano. So actually that was the…because Orbit's target was to do a zkVM based second layer or rollup like solution for Cardano. That's how I found myself there.
+
+
+13:52: Anna Rose:
+
+
+All of a sudden you were kind of playing in the zkVM land and then FTX happens and the company goes under... I guess at this point though, you must have been very familiar with the Polygon Zero work.
+
+
+14:04: Ulrich Haböck:
+
+
+Actually, I was familiar with Polygon Zero's work because Plonky2 was really, hit the scene. So that was like half a year before I left Horizen Labs. 
+
+
+14:15: Nico Mohnblatt:
+
+
+Especially if you were already looking at recursion, Plonky2 was a big deal, right?
+
+
+14:19: Ulrich Haböck:
+
+
+Yeah, it just, to me, it was like something that I completely underestimated when watching just the papers. You know, if you looked at Aurora or Fractal, two large proof sizes. You can't take... That's another thing, people will kill me for that probably, but it's my honest opinion that you can't take any benchmark you didn't do by yourself serious.
+
+
+14:45: Nico Mohnblatt:
+
+
+Agreed.
+
+
+14:46: Ulrich Haböck:
+
+
+So, I just didn't pay much attention on that side, on the STARK side, and then came Plonky2. And that completely proved myself being fully ignorant before.  Yeah, so I knew the work of Polygon Zero. Beyond that, I learned a lot since… I learned a lot about from Ben-Sasson's track of work, the whole FRI thing, starting from FRI, deep FRI, and the proximity gaps paper from, when was it.. 22, the last one, the most important one for proof sizes.
+
+
+15:21: Anna Rose:
+
+
+Got it.
+
+
+15:22: Nico Mohnblatt:
+
+
+And you wrote a very comprehensive summary of...
+
+
+15:24: Ulrich Haböck:
+
+
+Exactly. That summary actually brought me to Orbis.
+
+
+15:28: Nico Mohnblatt:
+
+
+Right.
+
+
+15:29: Ulrich Haböck:
+
+
+So that summary was just an outcome for learning because everybody, I guess everybody who went over the track of papers that start off with FRI and end up with this proximity gap thing, it's a hard, it's not easy read.
+
+
+15:45: Nico Mohnblatt:
+
+
+It's a hell of a climb. 
+
+
+15:47: Anna Rose:
+
+
+Are you talking about the FRI paper right now?
+
+
+15:50: Ulrich Haböck:
+
+
+The survey.
+
+
+15:50: Nico Mohnblatt:
+
+
+Yeah, and the line of work that goes with it.
+
+
+15:52: Anna Rose:
+
+
+Okay, okay. And, Ulrich, did you create the summary of the FRI low degree test? Is that the work that you produced?
+
+
+15:58: Ulrich Haböck:
+
+
+Exactly. That summary is just... I just wrote for myself. Actually, everything that I write is just for myself to learn, to clarify my own thoughts, that's why I write.
+
+
+16:07: Nico Mohnblatt:
+
+
+And ePrint is your Google Drive, right?
+
+
+16:09: Ulrich Haböck:
+
+
+Yes.
+
+
+16:10: Anna Rose:
+
+
+So Paul actually had suggested we talk about this. He just described the manuscript on FRI that a lot of people will actually use to learn FRI instead of the original paper. At least if that's what he felt. So yeah, this is even before you joined the Polygon team. Was this also though inspired by Plonky2? Was it like Plonky2 comes out...
+
+
+16:31: Ulrich Haböck: 
+
+
+It was kicked off by proving my ignorance to the STARK side when Plonky2 came out.
+
+
+16:38: Anna Rose:
+
+
+Got it, okay, so Plonky2 sort of triggered your realization you needed to learn FRI. And then this is your learning FRI. Cool.
+
+
+16:44: Ulrich Haböck:
+
+
+Yeah, so I don't know how useful it is for others, I just really did it only for myself, to keep the things clear, to be able in the end to propose concrete parameter setting with a good feeling that they are correct. So not just like picking out some result and two months later you don't know anymore what you did.
+
+
+17:06: Anna Rose:
+
+
+Well, I'm going to add the link to this in the show notes for anyone who wants to see it as well. Why don't we continue though with your story? So at this point, you've written this manuscript on FRI, I guess you've gotten to know the Polygon Zero team as well, like Plonky2 had come out.
+
+
+17:19: Ulrich Haböck:
+
+
+That's happened.
+
+
+17:20: Anna Rose:
+
+
+Yeah.
+
+
+17:21: Ulrich Haböck:
+
+
+And I mean, personally, I was in contact with Daniel from Polygon Zero during my time with Orbis because I was already working on logUp on the logarithmic derivative lookup back then, which was actually triggered. It's always like you see something, you hear something that was triggered by my first zkSummit. I was passively as a listener, it was the zk8, I think the one in Berlin.
+
+
+17:48: Anna Rose:
+
+
+Okay. Did you come or did you just watch the videos?
+
+
+17:50: Ulrich Haböck:
+
+
+I was there. I was there in person, but I didn't give a talk or so.
+
+
+17:55: Anna Rose:
+
+
+Yeah, yeah.
+
+
+17:56: Ulrich Haböck:
+
+
+So I was just in the audience. It was the first time back then that I was confronted with multilinear provers.  And I saw Benedikt's talk, and not just Benedikt's, also from William that also there was a track in the big room, there was a track of multivariate prover stuff ending with Hyperplonk. And just starting thinking about how would I prove Hyperplonk because Benedikt didn't provide all the details, or maybe I didn't understand them back then, you know. So I was just thinking to myself, how would I do it? And the main thing is about how would you do the permutation argument for Plonk, actually, in the first place. And that brought me to an idea I had even back then at Horizen Labs time, which was just for fun working with logarithmic derivatives, formal logarithmic derivatives. And I call it just a selector mixed collections of IOPs that I just was playing around with sumcheck in a different manner, the one that's often referred to, just a Plonk way where you have running sums instead of running products.
+
+
+19:03: Anna Rose:
+
+
+Actually, I want to clarify something. So you're saying you kind of looked at lookup arguments based on the logarithmic derivatives, but what were lookup arguments based on before that? Like, I actually don't know the change here.
+
+
+19:16: Ulrich Haböck:
+
+
+Change is from encoding witness data elements to be looked up as zeros of polynomials to encode them as poles.
+
+
+19:25: Anna Rose:
+
+
+As poles?
+
+
+19:26: Ulrich Haböck:
+
+
+Yeah. And the funny thing is counting zeros of polynomials is much more difficult because it's more multiplicative things. So, it's like a linear factor to the power of something. It's hard to prove the powers, whereas poles just add up. So multiplicities, they just add up. And this simple structure is actually the benefit of logUp or flookup, which just came out one week before we published the logUp thing, which is the same underlying idea, just a different focus, not saying that it's the same piece of work, but the same underlying idea.
+
+
+20:00: Anna Rose:
+
+
+So I'm a little stuck, because I don't know what a pole is, and I'm so sorry if this is like something that I should know, but the zeros part I think I got, but I actually don't know what that means. 
+
+
+20:11: Ulrich Haböck:
+
+
+Pole is just the inverse of a linear factor with a zero. You can't divide by zero, so if you remember from calculus school, calculus one, you take a point, consider the linear factor that has a zero at the point, this X minus that point, and then takes its inverse.
+
+
+20:30: Anna Rose:
+
+
+Okay.
+
+
+20:30: Ulrich Haböck:
+
+
+This has exactly a pole of order one, because it behaves like one over the difference to that point.
+
+
+20:37: Anna Rose:
+
+
+Okay. Seems like I need to revisit calculus, high school level calculus here, but I vaguely remember that maybe.
+
+
+20:47: Nico Mohnblatt:
+
+
+I don't know if this is high school level, but the idea is, yeah, if you have X minus something equals zero, you take one over that and that's it. You now have a pole. The something now becomes your pole.
+
+
+21:01: Anna Rose:
+
+
+And so you were doing the lookup argument based on this pole instead of on over zeros. Where did the idea for this come from? Like, why had the earlier ones not done that?
+
+
+21:11: Ulrich Haböck:
+
+
+Well, that's what I said before. One week before, flookup, which is Khovratovich and Gabizon, and I think somebody, I know it's just Ariel and Dmitry who did it, I think, that did use the same underlying idea. That's why it's called flookup for fractional decomposition.
+
+
+21:30: Anna Rose:
+
+
+Okay.
+
+
+21:31: Ulrich Haböck:
+
+
+So it's like the analogon. It's from in algebraic geometry, a field that I was back then not very familiar with. But algebraic geometry, you can say a polynomial, you have two types of composition. Let's say in calculus, you take always the composition of polynomials into its linear factors, into its roots, whereas in general, you have functions that are uniquely decomposable using the poles. It's a fractional decomposition. And actually, I now prefer much more that view instead of the view that brought me to it, which was more the logarithmic derivative.
+
+
+22:08: Anna Rose:
+
+
+Okay. Huh. So you guys both... Like both groups basically came to a very similar next step.
+
+
+22:16: Ulrich Haböck:
+
+
+Very similar, yeah.
+
+
+22:17: Anna Rose:
+
+
+At the same time.
+
+
+22:17: Ulrich Haböck:
+
+
+It was like, Ariel said, oh, he didn't realize that actually you could view it also as logarithmic derivative. I now changed my mind, now I approach to see it actually like a fractional decomposition because it's more nice to talk about you at poles.
+
+
+22:32: Nico Mohnblatt:
+
+
+I guess this is also what I meant earlier with once in a while someone comes up with an idea that we know from math, but we haven't used in cryptography yet, and suddenly unlock new protocols. Yeah, this idea of logarithmic derivatives or fractional decomposition is one of those examples.
+
+
+22:49: Ulrich Haböck:
+
+
+Yeah, and it's important to point out, so we were not the only one who were thinking in that direction. Liam Eagen, so he actually, I was just not aware of that piece, and I think Ariel back then wasn't aware either. There is something like, is it called Bulletproof ++ or something? A publication of his where he already was using logarithmic derivatives. Not fully formalized, but he was using it. I mean, the rest... Yeah, if you have the idea, the formalization step as for most ideas in cryptographic protocols is just formality. And I know from one session I was participating, was in the audience, it was at the London session, that some other mathematician also pointed out an approach which is equivalent to the... I think it was in the context of having a truly distributed prover for Plonk and it was about how to do the permutation argument and somebody pointed out the same thing, the logarithmic derivative approach. So it was in the air, I suppose.
+
+
+23:55: Anna Rose:
+
+
+I'm trying to draw the connection though between the work you were doing on FRI and recursion to lookups. It seems like a bit of a leap. Was it just like a new area that became interesting to you when you came up with that work?
+
+
+24:09: Ulrich Haböck:
+
+
+It just happened. I was just lucky to run over Benedikt's talk on Hyperplonk.
+
+
+24:14: Anna Rose:
+
+
+Oh, I see. That's okay. That's why.
+
+
+24:15: Ulrich Haböck:
+
+
+It was just trying my own exercise and then I came with using these logarithmic derivatives to prove the Plonk permutation invariance argument. And then I thought... I mean, it's clear, it was just an exercise, but it took me quite a few weeks to discover its usefulness for exactly the situation you often face in the context of zkVMs. And it is you have a lot of columns. Often it's just a range proof, but they're subject to one and the same table., lookup. And exactly this situation is where stumming poles is superior over having a grand product argument that needs to involve all these functions, all these columns. And the main reason for this is that grand product arguments, they don't scale easily down without increasing algebraic degree. That's a deeper explanation. Whereas sumcheck, they just patch without increasing the degree.
+
+
+25:19:
+
+
+And that's the main reason, so actually I was...  And that's also the main difference between what flookup was targeting and what my work was targeting. I was exactly targeting this situation back then as Orbis, I think, I don't know how many columns, 16 columns subject to one at the same range... Not even range proof. It was more, their zkVM was more along the lines of Bootle and others, the ARIA paper 2018, '19 or something like it, and they were using a sort of this filter-like bit pattern-like decomposition for doing bitwise operations efficiently over the prime field. And these lookups, we had a lot of columns subject to this exactly being of the form, having a zero bit at every even position.
+
+
+26:09: Anna Rose:
+
+
+How does this work? Like, if we look at the history of lookup tables or lookup techniques and evolution of that, like I know that Caulk comes out at some point. Is this like a predecessor to that, or is it happening in parallel? Yeah, I'm just curious if it's optimizing in the same direction at all as something like that.
+
+
+26:30: Ulrich Haböck:
+
+
+It's a different track, or let's say different application. I mean, the whole line of work triggered by Caulk, which in the end found its highlight with CQ.
+
+
+26:41: Anna Rose:
+
+
+CQ, yeah. 
+
+
+26:42: Ulrich Haböck:
+
+
+This is something I wouldn't know outside the KZG regime, how to do it. It's so specific that you have a commit where commitment actually is already evaluated at some hidden point. And it's so specific to KZG and pairings that it's a whole world on its own.
+
+
+27:05: Anna Rose:
+
+
+Got it. So that line of work is the pairing focused on one KZG track. Which kind of polynomial commitment scheme then is the logUp for?
+
+
+27:17: Ulrich Haböck:
+
+
+For arbitrary actually, but therefore because it looks at the commitment scheme generically, it doesn't make use of any specific properties.
+
+
+27:25: Anna Rose:
+
+
+And can it be used... This is actually something I've always been curious about, can it be used with FRI?
+
+
+27:30: Ulrich Haböck:
+
+
+Yeah, yeah, exactly.
+
+
+27:31: Anna Rose:
+
+
+Okay, and this is...
+
+
+27:32: Ulrich Haböck:
+
+
+That's actually what the connection is, that's how I met Daniel from Polygon Zero because I was looking just for other zkVM applications and was asking how many columns for the same range proof or lookup table do you have? Turns out that, don't name me down on the number, but I think the zkVM of Polygon Zero, I always have to ask again, but it's like it exceeds several dozens of columns, let's say like this. If it's 80 or even more, it depends on the chip design in the end.
+
+
+28:07: Anna Rose:
+
+
+And in like this work that you did, so I'm sort of seeing the thread here, so you had done the FRI work kind of... Plonky2 introduced you to FRI STARKs. Then you were introduced to this lookup stuff, and you were like, actually, let's create a lookup improvement.
+
+
+28:23: Ulrich Haböck:
+
+
+Lookup was just a side product. It was just a side product.
+
+
+28:27: Anna Rose:
+
+
+But that could be used with FRI. Now my question is, like Plonky2, Plonky3 is out, is Plonky3 incorporating something like this?
+
+
+28:37: Ulrich Haböck:
+
+
+Plonky2 already incorporates logUp. And now pretend I now like to call this logarithmic derivative lookup, logUp, though I'm not a fan of all these protocol names.
+
+
+28:49: Anna Rose:
+
+
+Oh really? I find them useful. But...
+
+
+28:52: Ulrich Haböck:
+
+
+Yeah, yeah, of course it's useful to a certain kind, but sometimes this name just happened also because I was tired of always saying logarithmic derivative lookups, logarithmic derivative lookup, logarithmic derivative lookup, and so on.
+
+
+29:04: Ulrich Haböck:
+
+
+So at a certain point it just happened to be logUp.
+
+
+29:07: Anna Rose:
+
+
+logUp, yeah.
+
+
+29:10: Ulrich Haböck:
+
+
+So Plonky2 implements logUp, and we're going to have it in Plonky3 as well.
+
+
+29:18: Anna Rose:
+
+
+I see. Are you still working... I guess you made this sort of big shift to the logarithmic derivative or the variation that you described, you think about it now, but are there any more improvements? Are there any other kinds of techniques borrowed maybe from other works that you've been able to incorporate into this? Is that even still something you're working on? That's actually maybe the first question.
+
+
+29:40: Ulrich Haböck:
+
+
+Apparently I mean, not right now, but recently, like this was in August, I was happy to work together with Shahar Papini from StarkWare, and he was essentially driving a very simple observation that came out of our learnings from Lasso and Justin Thaler's work on, let's say, multilinear work. He did a lot of publications in that field. And it's just something that also... Something that I was not aware of, that these, what I always considered as a pre-SNARK protocol, the GKR protocol, the Goldwasser-Kalai-Rothblum protocol, that this is useful in practice. And it just shows once again my ignorance here, because consensus did already did some, used GKR in a similar context. So the thing is just popped up, okay, just learn, okay. There was this hint, I would rather say in one of the many protocol variants of Lasso, the Lasso paper, which was say you can also do this grand product argument without committing to the running products using this and that from quite old paper of Justin Thaler.
+
+
+30:53:
+
+
+And that immediately brought Shahar to the idea, okay, why don't we do that for logUp too? And I said, yeah, should work actually, you're right. Should work. And actually this improvement is cool from the point of view that you can reduce the whole lookup arguments. If you have hundreds of columns subject to one at the same table, say one column table, single column table, you can say the only thing you need to commit to as the prover is one additional column and this carries just the multiplicities of the table entries, that's it. So no additional thing here. I mean, I would need to dive into logUp a bit. 
+
+
+31:32: 
+
+
+So in logUp, you not just commit to the multiplicities of the table entries. Unfortunately, you need some helper columns, and these are needed to turn a fractional subject, means a subject over fractional expressions. You sum up the poles into a polynomial one. Just a technical thing, actually not nice. You need these helper columns, you need as many as you have columns subject to the lookup. It was already an improvement over the grand product situation of lookup. But now we can say, thanks to Shahar Papini and GKR, we can completely remove the need of committing to this help of stuff. Because we have a protocol that's round by round, it's a multi-round protocol, though, but still, you don't have to commit anything. You prove layer by layer the sum of the poles being overall zero. You always normalize the lookup balance as to say that if you take the poles from the table with the multiplicities and the one from the witnesses, they all need to balance out.
+
+
+32:43: Nico Mohnblatt:
+
+
+Do we pay for this somewhere else? Say like in the proof size?
+
+
+32:49: Ulrich Haböck:
+
+
+Where you pay essentially... I mean, let's first look at prover time. So you get rid of the cost of committing, but what it costs on the other hand, the price you have to pay for it is to run the GKR protocol, which is a multi-round protocol that in each step, that means let's consider the computation we do is tree-wise. So consider that the leaf of a binary tree carries all the poles, to make it simple, and you want to add them up, so fractional expressions. So with each, in each layer of the tree, you combine two children from the layer below and add them up, and this is the topology of the circuit you prove. So what you do is you have a layered circuit and you prove, given the inputs which are already determined from what you have committed, you prove the output, the overall pole balance will be zero. And that's done layer by layer. And for each layer, you have a multilinear sumcheck to be done. 
+
+
+33:48: 
+
+
+I mean, it's a tree. So the layers get half in size at each level, that's still fine. But still it works, because the sumcheck itself is a multi-round protocol. And multi-round protocols... I mean, it costs all this extrapolation effort you have to do in a sumcheck. It's not for free, but our operation counts in the paper indicate that it's worth it. The more costly the commitment scheme itself is measured as a reference in, let's say to commit one field element, what is the equivalent number of say field multiplications to oversimplify the thing here. Then, more costly the commitment scheme is, the higher effective is this change.
+
+
+34:37: Anna Rose:
+
+
+Just to clarify though, what is the name of the work you just described? So this is with Shahar Papini from StarkWare. Was there other co-authors on this too?
+
+
+34:46: Ulrich Haböck:
+
+
+No, it was the two of us. I don't know how did we call the title. It's improving logarithmic derivative lookups using GKR or something like it.
+
+
+34:58: Anna Rose:
+
+
+Okay, and short form for this format, would it be GKR logUp?
+
+
+35:03: Ulrich Haböck:
+
+
+I would say yes, exactly GKR logUp.
+
+
+35:05: Nico Mohnblatt:
+
+
+I think Shahar gave a talk on the topic at zkSummit10.
+
+
+35:10: Ulrich Haböck:
+
+
+Yeah, he did. Exactly.
+
+
+35:12: Nico Mohnblatt:
+
+
+It was originally under a different title, like polynomial tricks for STARKs or something, and he rug pulled everyone.
+
+
+35:19: Ulrich Haböck:
+
+
+I know, I know. I mean, it just happened, you know. We share a Telegram group and it just happened that, yeah, it was, I would say, love on the first sight.
+
+
+35:33: Anna Rose:
+
+
+Nice.
+
+
+35:33: Ulrich Haböck:
+
+
+Shahar will kill me for this.
+
+
+35:38: Anna Rose:
+
+
+I feel like I'm going to definitely dig up the zk8 talks that you just mentioned had influenced you. You did a zk9 talk on logUp, and then the zk10 talk we'll try to also dig up so that we can add this to the show notes if people want to dive a little bit more into these in detail. I want to sort of shift a little bit to another topic that Paul had actually suggested we talk about, which is the work on STARKs in finite fields.
+
+
+36:05: Nico Mohnblatt:
+
+
+That are not NTT friendly.
+
+
+36:08: Anna Rose:
+
+
+That are not NTT friendly. Let's talk about this work. It seems like again a little bit of a shift from lookups, but maybe I'm wrong. How did this work happen? And actually I guess at this point in your story, by the way, you've joined Polygon Labs, right?
+
+
+36:24: Ulrich Haböck:
+
+
+Exactly. 
+
+
+36:24: Anna Rose:
+
+
+Okay. When did you join them?
+
+
+36:26: Ulrich Haböck:
+
+
+This was almost one year ago. I think in two days it's one year ago.
+
+
+36:31: Anna Rose:
+
+
+Okay, okay. So like end of 2022.
+
+
+36:33: Ulrich Haböck:
+
+
+Exactly. So...
+
+
+36:35: Anna Rose:
+
+
+Okay.
+
+
+36:35: Ulrich Haböck:
+
+
+Yeah, I mean, the first month I was just finalizing the logUp paper and this thing, but I think it was essentially Daniel pushing. We should understand the Breakdown approach to the tensor PCS approach, which was also, I mean, I remember that Orion, that was like '21 even, no?
+
+
+36:58: Nico Mohnblatt:
+
+
+Yeah, I don't want to say anything stupid, but I think '21 or '22.
+
+
+37:02: Ulrich Haböck:
+
+
+Yeah, I think it was autumn '21 or something like this. This was the last publication on that track I had in mind, or we had in mind, we should take a closer look, is this an option? Because I mean, at that point in time, Polygon Zero was still and still is putting a lot of effort in finalizing the type 1 zkVM based on Plonky2 but Daniel was already, let's say, trying to get an idea, let's sort out what will be the next generation proof system, what could be.
+
+
+37:33: Anna Rose:
+
+
+So this is, you mentioned the paper Orion. Who is that by?
+
+
+37:38: Nico Mohnblatt:
+
+
+I've quickly looked it up because I always forget the names of the authors, but it's Tiancheng Xie, Yupeng Zhang and Dawn Song.
+
+
+37:45: Anna Rose:
+
+
+Okay.
+
+
+37:46: Nico Mohnblatt:
+
+
+But coming back to the predecessor Breakdown, you also wrote a summary of this one, is it in the same line as your summary of FRI or does it do more than that?
+
+
+37:55: Ulrich Haböck:
+
+
+One could say it's of similar character. It was learning about expander codes and their expander analysis, filtering out the quite succinct chapter on the expander analysis from the Breakdown paper. And my learning process on it is also essentially, and moreover, it did some small exercise refinements that have some impact for the target field sizes of Plonky3, which is 31-bit, particularly Mersenne prime, which is our love, I would say.
+
+
+38:30: Nico Mohnblatt:
+
+
+So that brings us nicely to another one of your works on this Mersenne 31 prime and the field that comes with it. Can you tell us more about that? What it is? What are the advantages over other small fields that we've seen?
+
+
+38:45: Ulrich Haböck:
+
+
+Exactly. So, I mean, the whole thing is about next generation proof system from Polygon Zero, and the field choice is not an easy thing, as field choice goes often with what type of proof architecture, or let's say proof system you use and so on. I mean, as we talked before about Breakdown and expander codes, I mean, this is a highly promising track of work for certain situations, I would say, because it's poorly succinct. It means it seems like there is, I would say, a law in proof systems. Everything that improves prover speed goes on the cost of the verifier. And in a similar way, Breakdown or Orion or now the recent work, the improvements that is done from the Ulvetanna team, Benjamin Diamond and Jim Posen.
+
+
+39:39: Anna Rose:
+
+
+Binius.
+
+
+39:39: Ulrich Haböck:
+
+
+Binius, exactly. So these type of proof systems, they have comparable poor succinctness compared to even FRI, though Binius approaches FRI, gets closer down to. And, but compared to the elliptical world case where Nico is based, this is like incredible huge proof sizes. And but it's super fast. So coming back to my point, it depends on the application very much where you would choose a Breakdown-like, expander code-like, or not even expander code, tensor PCS-like proof system in the style of Breakdown. And if you combine it with more succinct systems, FRI-based or elliptic curve-based, whatever you like, so for very large instances, and this is also one thing where often when it comes to multilinear proof systems, as well as expander code in particular, it's so often people use quite in cautious manner the word linear time and you think it's better in any situation. It's not necessarily.
+
+
+40:52: Nico Mohnblatt:
+
+
+As in because we are paying in proof size, saying linear time is not so...
+
+
+40:58: Ulrich Haböck:
+
+
+Not even practically. This is asymptotically it's linear time. If you use expander code base, linear time, even here quite difficult, let's say, even Breakdown is linear time only under the assumption that your field in the whole SNARK needs to grow with the circuit size anyway, because it does a lookup argument or permutation argument. And for that, the field needs to be large enough to encode, to host the zeros or the poles, whatever technique you use for that.
+
+
+41:33: Nico Mohnblatt:
+
+
+Is this something that Binius addresses? This idea of towers of fields and you can keep making them bigger and bigger as you go?
+
+
+41:41: Ulrich Haböck:
+
+
+That's a different thing with Binius. So asymptotically also Binius would need to... The fields which serve soundness, which is like at least a 128-bit large field. These fields need to grow with circuit sizes. I mean, and maybe better to clarify here, so the term linear time is often used in quite loose notion. But actually, besides that, it's often something that is said to be a linear time prover, which in a stricter sense isn't linear time. Much more than that, it's about practical performance. And often, at least to my understanding, it depends very much over which field and which concrete setup of the expander code is linear time encoding. We observed that if you use classical Reed-Solomon encoding, that the breakeven point, say with a Breakdown-like expander code is at a quite large message size. Don't name me down, but something like 2 to the 20 field elements for the Mersenne 31 or something like that.
+
+
+42:55: Nico Mohnblatt:
+
+
+We're saying our circuits need to be of size 2 to the 20 for it to be worth it?
+
+
+42:59: Ulrich Haböck:
+
+
+The message sizes you encode. So that's even again a different thing if you look at tensor code. 
+
+
+43:05: Nico Mohnblatt:
+
+
+Right. So it's some multiple of the circuit size.
+
+
+43:09:  Ulrich Haböck:
+
+
+It's a fraction of it if you use the square root reductions. So typically it's like, depends on how you lay out your reduction step. There is some optimum ratio between width and height of the trace, or of the reduction step that is done, or the interleaved encoder, or the tensor dimension. So there's a sweet spot, which I can't remember where it is. It's not the square root, the symmetric square root case, where square root in width, square root in height. And maybe I would need to look, double check here where the breakeven bound with Reed-Solomon encoder was. Maybe it's 2 to the 18 or something like this, but it was unexpected high. So that actually brought us again back to Reed-Solomon with the M31.
+
+
+44:03:
+
+
+And we were exploring, Daniel, Jacque and I, we did explore about what can we do, maybe just even ordinary approaches using the smoothness of the multiplicative group of the Mersenne 31, which is not absolutely non-smooth. It's not NTT-friendly in the best sense, but there are small prime factors. Three, five, seven, I think even 11, I don't know it by heart, but we were exploring, trying to find out using with different radices in the FFT and certain improvements on how to treat large radices like we were looking into radar algorithm and likewise. So a lot of FFT stuff.
+
+
+44:46: Anna Rose:
+
+
+I still don't understand what Mersenne 31 is though. Is it something you made? Is it a paper? Is it a technique?
+
+
+44:54: Ulrich Haböck:
+
+
+No, Mersenne, it's just a certain prime number, which seems to be for standard CPU architectures extremely friendly or for having a... 
+
+
+45:05: Anna Rose:
+
+
+It's a particular number.
+
+
+45:07: Ulrich Haböck:
+
+
+Exactly, it's 2 to the 31 minus 1.
+
+
+45:10: Anna Rose:
+
+
+Okay.
+
+
+45:10: Ulrich Haböck:
+
+
+Is this prime? Not every, like if you take 2 to the 30 minus 1, that's not prime.
+
+
+45:15: Anna Rose:
+
+
+It won't give you this thing. Okay.
+
+
+45:17: Ulrich Haböck:
+
+
+So some... There are few powers of 2 minus 1 which are prime, 2 to the 17 minus 1, 2 to the 31 minus 1. 
+
+
+45:28: Anna Rose:
+
+
+And is this then the number of the field that you choose, kind of, and then you construct things around it?
+
+
+45:36: Ulrich Haböck:
+
+
+Exactly. So...
+
+
+45:36: Anna Rose:
+
+
+Okay.
+
+
+45:37: Ulrich Haböck:
+
+
+If you look at NTT-friendly fields like Goldilocks or...
+
+
+45:43: Nico Mohnblatt:
+
+
+Baby Bear.
+
+
+45:43: Ulrich Haböck:
+
+
+Baby Bear. Wonderful name, I love it. They're always of the form, I think it's sometimes called Pseudo-Mersenne, so they're like 2 to some high power, which is the field size essentially, like 2 to the 31 or 2 to the 64 in the sense of Goldilocks.
+
+
+46:03: Anna Rose:
+
+
+And these are NTT-friendly? Those are NTT-friendly.
+
+
+46:06: Ulrich Haböck:
+
+
+Yeah, they're a few bits set in their binary representation, which actually there is a whole classical track of work that comes exactly speeding up computations. And even if you look at standards of primes for elliptic curves, old standards, they typically use exactly primes that have such a similar structure. Either you have a few bits set, it's like 2 to the sum power minus 2 to another power and so on. And just a few bits set because that eases arithmetics, that eases modular reduction. And the most radical ease you can have here is having a prime that is just 2 to the 31 minus 1 and nothing in between.
+
+
+46:51: Anna Rose:
+
+
+Okay, but that that you just described, that is not NTT-friendly, or it is?
+
+
+46:56: Ulrich Haböck:
+
+
+Not as Goldilocks, not as Baby Bear.
+
+
+46:58: Anna Rose:
+
+
+Not as friendly as these, okay. 
+
+
+47:00: Ulrich Haböck:
+
+
+Much less friendly.
+
+
+47:02: Anna Rose:
+
+
+I know we've actually covered this on the show, I think in like the hardware episodes. I might have even done it on the episode we did last week with Binius, like I don't know, but the NTT-friendly, I kind of don't remember what that is at all. So can we actually define, we probably should have done it before asking the question, but like why do we want it to be NTT-friendly? What does that do?
+
+
+47:25: Ulrich Haböck:
+
+
+NTT or FFT-friendly, I prefer even to say FFT, fast Fourier transform.
+
+
+47:32: Anna Rose:
+
+
+Friendly. Okay.
+
+
+47:32: Ulrich Haböck:
+
+
+That's extremely helpful for polynomial arithmetics. I mean, all the SNARKs, STARKs, they use what I like to call the SNARK principle. They have polynomial IOPs. So you encode the witness data into polynomials. You rephrase your target, which is to prove certain constraints on the witnesses. You translate that into the language of their polynomials, which carry the information. And the nice thing with polynomials and relational polynomials called the polynomial identities is that you can test them probabilistically, often just at a single point. And that makes the proof succinct, because instead of checking something where you would need to compute on full length polynomials, length 1 million or even beyond.
+
+
+48:25: Anna Rose:
+
+
+Yeah, here you just, you get a shortcut, it sounds like.
+
+
+48:27: Ulrich Haböck:
+
+
+You just test...
+
+
+48:29: Anna Rose:
+
+
+The one.
+
+
+48:30: Ulrich Haböck:
+
+
+Your target identity, which is equivalent to the initial goal at one or few points. And that brings us to polynomial IOPs, as it's called, because all the SNARKs and STARKs are essentially built from polynomial IOPs. This is just the underlying principle of the proof. How do you encode into polynomials and how do you rephrase your target goal into polynomial language?
+
+
+48:59: Anna Rose:
+
+
+So why with Binius, the reduction of the field, does it make it less NTT-friendly or more NTT-friendly?
+
+
+49:07: Ulrich Haböck:
+
+
+I didn't get the connection with Binius. Can you repeat the question?
+
+
+49:12: Anna Rose:
+
+
+So they take it down to a binary field, right? They make it a very small field. So does that make the system more or less NTT-friendly?
+
+
+49:23: Ulrich Haböck:
+
+
+Binary fields is a different world. For other reasons, I will return to that question. Let me first say, let us revisit why FFT is useful. It's for fast polynomial arithmetics. And there are two options. You either have a field that has a cyclic multiplicative group, which is large enough. And this group is the one where you do FFT or NTT. So either you have a field that has a multiplicative subgroup which is smooth enough, nice enough to do FFT, or you have a binary field.
+
+
+50:02: Anna Rose:
+
+
+Okay. Ah.
+
+
+50:03: Ulrich Haböck:
+
+
+The binary field, since 2014, you have a quite efficient analog on of the FFT there, which is called the additive FFT.
+
+
+50:12: Anna Rose:
+
+
+But you would do something else then. It's like you're not trying to get the binary field NTT-friendly, you're just using a different kind of FFT.
+
+
+50:20: Ulrich Haböck:
+
+
+Exactly. No. So let's say binary fields per se are NTT-friendly. It's a bit hidden, so when you mentioned that Binius went down to bits fields, that's not the field where they do their FFT.
+
+
+50:38: Anna Rose:
+
+
+I see. Okay. There's two sides then. There's the binary field...
+
+
+50:40: Ulrich Haböck:
+
+
+They use one in between. I think it's the 16-bit field that they, which is for their application, the sweet spot. And they use this 16-bit field and they do Reed-Solomon encoding, which is FFT based or additive FFT-based to be concrete here. The problem with the Mersenne 31 over Baby Bear or even GF 2 to the 16, which is the Binius Reed-Solomon alphabet field, is that it's not a binary field, so can't use the additive FFT, but its multiplicative group is not as smooth as wished, like with Baby Bear or Goldilocks. So that was just an open question to us. Is it useful, this prime? Can we do something with this prime?
+
+
+51:29: Nico Mohnblatt:
+
+
+So, I guess the question is, how do you get around that, and is it useful?
+
+
+51:35: Ulrich Haböck:
+
+
+The funny thing is, yeah, we can get around, and this just happened when we were exploring all this classical FFT stuff, from starting with the Radar's algorithm for the larger primes in our multiplicative subgroup. And it just happened that I was thinking about, why not just going to the complex numbers? To the complex extension, what I mean just the degree 2 extension, because Mersenne prime minus 1 is not a square root. In other words, x squared plus 1 doesn't have a root over the Mersenne field. And therefore you can just invent your imaginary unit. You can extend the Mersenne like you do in calculus, going from the real to the complex number. You extend the Mersenne as 31 to its degree 2 extension, the complex extension. The funny thing is that this behaves very much like... 
+
+
+52:25: Nico Mohnblatt: 
+
+
+So does that behave like a FFT-friendly field, the extension?
+
+
+52:28: Ulrich Haböck:
+
+
+Yes. Exactly. Thanks for helping me out here. Yeah, exactly. So this is in contrast to the base field M31, which is short for the Mersenne 31, its quadratic extension is highly smooth. It allows multiplicative subgroup up to order 2 to the 31. Because p squared, what's the size of the field? If p is the Mersenne prime, the size of the field is p squared, its multiplicative group is p squared minus 1, and that factors into p minus 1 times p plus 1. And p plus 1 is the sweet factor here.
+
+
+53:07: Nico Mohnblatt:
+
+
+Wonderful. I guess maybe taking a step back from these explorations of Breakdown and multilinear land and explorations of different fields, what's the recipe for Plonky3 that you settled on?
+
+
+53:23: Ulrich Haböck:
+
+
+That we settled on?
+
+
+53:23: Nico Mohnblatt:
+
+
+If there is a recipe that's settled on, I'm not sure what the stage of the project is.
+
+
+53:29: Ulrich Haböck:
+
+
+It's still not fully converged. One thing, as I understand, also from Daniel, it should be a repository that is more modular than Plonky2, therefore, it will support not just a single proof system and also not just a single field. But with the M31, the Mersenne FFT, as we like to call it, going to the complex extension, is one of the things we're working on.
+
+
+53:57: Nico Mohnblatt:
+
+
+Very curious to see benchmarks when they're out.
+
+
+54:00: Ulrich Haböck:
+
+
+Yeah. So in the end, it's exactly... So maybe one thing that I didn't point out, what's the usefulness, because you can always go to extension fields to be FFT-friendly. But the thing is with the M31 going to the complex extension, there is a bulk of well-known optimization just from classical signal processing that makes the complex FFT of real data, of real valued data, efficient. And in the same way, all these techniques apply to that case of M31 either. That means even though you go to an extension, in this case, only a degree 2 extension, but still it's an extension. In FFT cost, you don't pay much compared to as if you had a native FFT, not much more. In a number of multiplications even equivalent.
+
+
+54:51: Nico Mohnblatt:
+
+
+So correct me if I'm wrong, I'm going to say this in my own words, I guess from my own understanding. You have this prime field that is not NTT-friendly. You do your NTTs in the extension, but luckily enough the cost is you don't really pay for extending.
+
+
+55:08: Ulrich Haböck:
+
+
+Exactly.
+
+
+55:09: Nico Mohnblatt:
+
+
+Or you don't pay too much for extending. 
+
+
+55:11: Ulrich Haböck:
+
+
+Just very few. So we expect, if we have optimized everything down and do a fair comparison with an equally sized FFT-friendly field like Baby Bear, that we will be in FFT of same speed. When it comes to commit Reed-Solomon encoding, we can do also a trick. And that's actually, let's say, the other result of that Mersenne FFT paper over the circle group, as we call it, or over the unit circle, I think, is that you can also, if you look closer, and it's just a simple calculation using FFT, Fourier series in the end. If you look at the extrapolated values, that they can be rectified. In other words, it's like polar coordinates. A complex number can be written just as a radius times the angle. If you know what the angle is, you can just say, just the radius is the thing that counts. And something similar happens to the extension of real value data over the trace to another domain, which is the FRI domain or the Reed-Solomon evaluation domain.
+
+
+56:24: Anna Rose:
+
+
+I need to ask something. So you mentioned this M31 paper. Is it a paper? Is there work? 
+
+
+56:29: Ulrich Haböck:
+
+
+This is a write-up on everything that a publisher would like or rather call a write-up.
+
+
+56:35: Anna Rose:
+
+
+A write-up, okay, so this is another summary of... Is this in the summary of Breakdown or is this a summary of something else?
+
+
+56:40: Ulrich Haböck:
+
+
+No, no, this is a separate one. I think, let me see what the name is.
+
+
+56:45: Nico Mohnblatt:
+
+
+Reed-Solomon Codes Over the Circle Group.
+
+
+56:47: Ulrich Haböck:
+
+
+Thanks.
+
+
+56:49: Anna Rose:
+
+
+Okay. Cool
+
+
+56:49: Ulrich Haböck:
+
+
+Reed-Solomon Codes Over the Circle Group.
+
+
+56:51: Anna Rose:
+
+
+Yeah, well, we'll try to add this as well. I think we're near the end of our interview and I want to understand what you're working on now. I'm almost curious, like now, what will you be presenting at potentially future zkSummits? But yeah, what is the... We were sort of talking about Plonky3, would you say that's the focus of your work? Is there other kind of... 
+
+
+57:11: Ulrich Haböck:
+
+
+Yeah, it's Plonky3.
+
+
+57:12: Anna Rose:
+
+
+It's Plonky3. Okay.
+
+
+57:14: Ulrich Haböck:
+
+
+It has to do with M31, it has to do with...
+
+
+57:16: Anna Rose:
+
+
+It incorporates all this stuff, I guess.
+
+
+57:18: Ulrich Haböck:
+All these concrete things you meet when thinking about fields and proofs.
+
+
+57:24: Anna Rose:
+
+
+Cool. 
+
+
+57:24: Ulrich Haböck:
+
+
+There's some ongoing work with StarkWare, again with Shahar and David. I'm not... Afraid, I'm not allowed to say what it is about, but that will be a zk11 is it not the next one?
+
+
+57:38: Anna Rose:
+
+
+Yeah, that's the next one.
+
+
+57:39: Ulrich Haböck:
+
+
+That would be a ZK11 topic.
+
+
+57:42: Anna Rose:
+
+
+Cool.
+
+
+57:42: Nico Mohnblatt:
+
+
+I guess from the hints you've given so far, if we're looking at FFT-friendly fields, you were still in univariate polynomials?
+
+
+57:51: Ulrich Haböck:
+
+
+It's still univariate. Yeah. 
+
+
+57:53: Nico Mohnblatt:
+
+
+Okay. Interesting.
+
+
+57:55: Anna Rose:
+
+
+Yeah.
+
+
+57:56: Ulrich Haböck:
+
+
+It's an improvement over the work that we opened up with the M31, the circle group thing and should be ready soon.
+
+
+58:07: Anna Rose:
+
+
+Cool. Actually, I can maybe make a little announcement here. This is potentially our last episode of the year, one of our last episodes of the year, but zkSummit11, Ulrich, I don't know if you know this, but we have a date set for April 10th in Athens. So this is our current plan.
+
+
+58:25: Ulrich Haböck:
+
+
+Excellent. I love Athens. 
+
+
+58:27: Anna Rose:
+
+
+Yeah. So people should mark their calendar. We're going to open applications in the new year for talks. Just so I don't know if people are familiar with how we do zkSummits, but we actually have a selection committee. We get our talks through application. So it's not sponsored talks like other conferences. So yeah, it's a separation there. So we're going to be opening that up in January. And we also do an application form to attend. So if people want to attend, they should also fill out the application form. It's often limited space, so yeah.
+
+
+58:57: Nico Mohnblatt:
+
+
+Maybe we should ask them to explain Mersenne 31 to a friend.
+
+
+59:01: Anna Rose:
+
+
+Yeah. We usually pick a question that seems really in the weeds, I don't know. But yeah, maybe something. Actually, I have one more question.
+
+
+59:12: Nico Mohnblatt:
+
+
+I would choose a more, a more...
+
+
+59:15: Anna Rose:
+
+
+General. Of course.
+
+
+59:15: Nico Mohnblatt:
+
+
+Definitely, too in the weeds.
+
+
+59:16: Ulrich Haböck:
+
+
+Explain Orion
+
+
+59:17: Anna Rose:
+
+
+No, no. I'm gonna do that. But actually Ulrich, when you saw the Binius work, did that change in a way the direction you were going? Is this a pivot moment for your work, for the work of your team?
+
+
+59:35: Ulrich Haböck:
+
+
+Not sure. It definitely puts also binary proofs again on the plate, maybe even for classical CPU architectures. But it has to be understood, the concrete performance on these architecture, not talking about hardware. For hardware, I think...
+
+
+59:53: Anna Rose:
+
+
+It's great.
+
+
+59:55: Ulrich Haböck:
+
+
+But it's the way to go. For CPU architectures, we'll see in the end which is more performant. And in the end, it's so extremely hard to make fair comparisons between proof systems, even different fields, because you mixture not just the proof system itself in its performance, it depends on the application, on the way you arithmetize and so on. There are so many... 
+
+
+1:00:23: Nico Mohnblatt:
+
+
+And what task is it you ask people to do? Like there's... Yeah. Benchmarks are hard.
+
+
+1:00:29: Ulrich Haböck:
+
+
+Yeah, extremely hard. Extremely hard. I remember benchmarks, I think even back to my Marlin learning times, benchmarks that I think in the Marlin paper, which if you look at the code did the benchmark was setting up an example Rank 1 CS circuit that did not capture what it should capture actually in terms of performance. I think it even was very much in favor to Groth16 to the very specific structure of that sample circuit. So actually it picked Marlin in a much... Less in favor of Marlin back then actually. And so long story short, it's extremely hard, first of all, to make meaningful benches that capture really the generic case. And the second is to make fair comparison between different proof system with different construction, different field sizes and so on. It's super...
+
+
+1:01:34: Anna Rose:
+
+
+This is a challenge.
+
+
+1:01:35: Ulrich Haböck:
+
+
+Super hard. I personally, if I may say something here, what I would like to have just from the entire community that is working on them. It's a super vibrant field. But in general, what would make me much more happy is less advertisement of benchmarks that are not either hard to reproduce. I mean, in any case, it's always a contribution. That's not the thing. But when it comes to benchmark and advertising, I don't know, maybe it's just me who gets older.
+
+
+1:02:04: Nico Mohnblatt:
+
+
+No, I agree with you. We see too many papers that show a table in which the columns of the table are chosen in a way that their performance is going to be better everywhere. And it's not always true. There's always, most of the time, there is a trade-off. And I see more value in papers that show you those columns where they are worse, because now I get to compare fairly. I get to get a sense of the trade-off space.
+
+
+1:02:28: Ulrich Haböck:
+
+
+Yeah, it seems there's currently a culture of advertisement, which I don't like too much, actually.
+
+
+1:02:35: Nico Mohnblatt:
+
+
+I mean, we're in a weird space where research is partly academic, partly marketing, right?
+
+
+1:02:42: Ulrich Haböck:
+
+
+Yeah, but it not just comes from industry, also in academia.
+
+
+1:02:48: Anna Rose:
+
+
+I know there are a few groups that are kind of like chain-agnostic, project-agnostic, like academic groups that are just focused on benchmarks, but don't actually have something they're trying to optimize or at least optically show is better. So hopefully there's more work like that coming out where people are just observing actually doing benchmarks where potentially they could show these different sides.
+
+
+1:03:11: Ulrich Haböck:
+
+
+Reproducibility would be one thing, but for the field we're working in, that's not the only thing. It's really just, it's so hard to compare. And for certain situations, just look at Breakdown-type proof system versus more succinct. It depends on the use case.
+
+
+1:03:27: Anna Rose:
+
+
+Yeah, that's totally fair. Cool. Ulrich, thank you so much for coming on the show and sharing with us all of the work you've been doing. I think your journey from like teacher to one of the authors on many of these works and kind of pushing the field. This is very cool and hopefully inspirational to people.
+
+
+1:03:47: Nico Mohnblatt:
+
+
+Yeah, thanks for sharing, Ulrich, and thanks for all the explanations.
+
+
+1:03:50: Ulrich Haböck:
+
+
+Thanks for having me.
+
+
+1:03:52: Anna Rose:
+
+
+I want to say thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners, thanks for listening.

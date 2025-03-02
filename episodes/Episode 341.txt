@@ -1,0 +1,868 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Nico and I chat with Ais and Lukas from Taceo. We discussed their early work and interest in cryptography as well as privacy-preserving technologies. We then cover the founding of Taceo and their recent work on coSNARKs, or collaborative SNARKs that combine MPC and ZK. We discuss exactly how these are created, their coCircom language, the characteristics of these coSNARK systems, and real world applications of this technology, both live implementations and possible future uses.
+
+
+Now, before we kick off, I want to remind you about ZK Summit 12 coming up in two weeks in Lisbon. The program and tickets are now available on the website. There was some confusion about the event being sold out. Early bird tickets are sold out, but general tickets are still available. Head over to zksummit.com to find out more and I hope to see you there. Also, I wanted to highlight the ZK Jobs Board. If you're looking to jump into ZK professionally, this is a great place for you to find your next job. I've added the link in the show notes, so do check it out.
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:01:33]: Tanya:
+
+
+Attention! All projects in need of server-side proving, kickstart your rollup with Gevulot's zkCloud, the first ZK optimized decentralized cloud. Its flexibility and customization supports any proof system such as SP1, Polygon, RISC Zero or ZKsync at rates 5.8 times cheaper than AWS with two times the performance. Get started with a free trial plus extended grant opportunities for premier customers until Q1 2025. In addition, Gevulot is currently onboarding institutional prover node operators. Register at gevulot.com. So thanks again Gevulot.
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure Internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. 
+
+
+And now, here's our episode.
+
+
+[00:02:56]: Anna Rose:
+
+
+Today, Nico and I are here with Ais and Lukas from Taceo. Welcome to the show, both of you.
+
+
+[00:03:02]: Ais Connolly:
+
+
+Hello. Very glad to be here.
+
+
+[00:03:04]: Lukas Helminger:
+
+
+Hey, Anna. Hey, Nico. Thanks for having me.
+
+
+[00:03:07]: Anna Rose:
+
+
+Hey, Nico, how are you doing?
+
+
+[00:03:08]: Nico Mohnblatt:
+
+
+Very good. How are you?
+
+
+[00:03:09]: Anna Rose:
+
+
+Good. So this is the first time that I have you on the show, and also, I'm not that familiar with what Taceo is. Like is it a company? Is it a kind of consulting firm? Like this is something I've been trying to figure out. So maybe we can kick off with just a quick description of what Taceo is.
+
+
+[00:03:28]: Lukas Helminger:
+
+
+So it may start out as more of a consulting project, but it's now a full blown project. And at Taceo, our vision is to develop MPC encrypted compute for web3, with the ultimate goal of creating a secure compute layer for the Internet. Just as TLS was created to secure communication, we believe there is a growing need to secure computation itself, making sure that privacy and security are built into every online interaction. And we departed our mission by building the first tooling for collaborative SNARKs.
+
+
+[00:04:06]: Anna Rose:
+
+
+Nice. I can't wait to jump into this. It sounds so exciting. But maybe before we do it, let's have just quick intros to you and how you got into the space. So, Ais, why don't we start with you? What were you working on before and what led you to work on this?
+
+
+[00:04:21]: Ais Connolly:
+
+
+So I actually, pretty much, since I got into cryptography, I met Christian, who's also the Chief Scientist at Taceo. And so I was doing my PhD in cryptography in Paris. I met Christian, actually in a workshop in Bogota in Colombia in 2016, I think, where I was talking about blockchains, and he was talking about designing efficient hash functions and this kind of stuff. So we had a kind of interesting start of conversation. But he's also somebody who's very interested in privacy in his personal life and relative to technology, and me too. So we always kind of had a lot of nice conversations. And at the same time, I was also working in the payments industry, sort of looking at how to add a bit of a privacy layer to payments as they were at the time. And given that I was working in cryptography and payments and privacy and all this sort of stuff, it naturally led to the blockchain topic.
+
+
+And then when you talk about the blockchain topic and payments and privacy, you very naturally fall into MPC, in this multiparty computation because you're in this distributed setting and you want to do, yeah, kind of very stuff like computation that needs security and that there's a lot of regulation around and all of this. So, yeah, I was working a lot on sort of trying to build MPC into the traditional payments industry and realized that the traditional payments industry is a bit slow to adopt these things. And while they might like to think about them and say that they want these things, actually realizing these things in practice is not going to happen this decade or the next. I think maybe it's a bit pessimistic, but in any case, I --
+
+
+[00:06:10]: Nico Mohnblatt:
+
+
+For the traditional sort of payments industry, yeah.
+
+
+[00:06:12]: Ais Connolly:
+
+
+Yeah, actually that's true. The newer ones -- like newer ones are coming around now. But in any case, I left and started working full-time in the blockchain industry. And so since about three years ago, I was working a lot on threshold crypto, but recently, this summer, I joined Lukas in Taceo. Now going back to my origins and focusing on MPC again and the privacy topic.
+
+
+[00:06:35]: Nico Mohnblatt:
+
+
+I saw actually your twitter bio, you’re Head of Privacy at Taceo. What does that mean?
+
+
+[00:06:41]: Ais Connolly:
+
+
+We talked about this a lot, actually. And for me it's like -- I mean, this was always what I wanted to do. And we talked a lot about whether this actually makes sense as a role, because normally if you hear some sort of privacy leadership role, it's usually around legal stuff or like GDPR or regulation or internal systems. Are you managing the customer's data in a privacy friendly way, and all of this. And of course in web3, none of those questions apply. So that doesn't make any sense in a sort of web3 organization. But for me, this might be quite a long rabbit hole that you lead me down now, but for me, it's super important that any company that is building sort of security-related tech thinks a lot about privacy and tries to ensure that whatever they're building is used in a nice way for the right reasons.
+
+
+I think with cryptography it's one of those things that shifts the balance of power. And for me, I for sure want to shift the balance of power in the right way. And so this for me, generally comes down to the privacy topic and privacy for individuals, privacy for groups, like allowing people to have dignity in a digital world, all this kind of stuff. I mean, there's just so, so, so many problems now wide open, no one's looking yet because everyone's so focused on the cool math and the cool proofs and whatever but it's like there's so much more. And like, with every, everything that we do at Taceo and that I do in particular, I really want the privacy aspect to be shoehorned in there and that really we build the nicest possible tech for people.
+
+
+[00:08:40]: Anna Rose:
+
+
+And, Lukas, what about you? What got you started and what got you excited about this?
+
+
+[00:08:45]: Lukas Helminger:
+
+
+So I started out after high school as a software engineer. And after one and a half year working at a very traditional bank, I kind of want to go to the details of what computers are doing, and for me, then I choose the more theoretical field of mathematics. And over the next couple of years, I spent a lot on specifically discrete mathematics and was then very drawn into cryptography. Actually, I ended up in Christian's group at the Graz University of Technology, very much focused on the intersection of cryptography and privacy back then. And Ais was a guest lecturer, actually, she did a talk on the right to encryption.
+
+
+And exactly at this time, I worked on MPC applications in EU funded projects. In these EU funded projects, we had all these amazing technical solutions with MPC for secure and collaborative data analysis, and people were liking it. So the other project partners. But in the end, it came always down to the same question, sure, we trust you that this is secure, you can prove it, and it's better than what we have, but how does it align with the General Data Protection Regulation in the EU? Because this, in the end, mattered most. And I had no clue. I knew that there was a regulation, but that's it. And I had also the feeling the legal teams didn't really understand how impactful this, what we now call programmable cryptography, is compared to some, let's say, standard security measures. There was just this huge disconnect.
+
+
+So over the next year, Christian and I worked hard to bridge the language barrier, basically between cryptography and legal scholars. So there were not much really new work, but really just helping understand each other. And this eventually led to the first paper on MPC in the GDPR. And along this way, for this whole one year, Ais would act as advisor, because not a lot of people are interested in this kind of intersection between cryptography and legal scholars. So it's hard to find somebody you can talk about this.
+
+
+[00:11:04]: Ais Connolly:
+
+
+I think, with this talk about the right to encrypt, I really loved this because -- I mean, I don't know anything about the law, but for me, this was so cool because there was stuff in the law that said that people should have privacy online and that they should be able to live their lives as they do in the real world, but also online and the same, like within the UN Declaration of Human Rights, and like all sorts of things, like all sorts of official documents, where so many people, lawyers and leaders of countries, sat around tables and decided, yes, we want protection for our journalists, yes, we want protection for our citizens. And that means using things like encryption on the Internet and using things like pseudonymity or anonymity, whatever you can guarantee. And yes, Lukas said there was quite some disparity between the language used in the law and the understanding of the lawyers and what the computer scientists understood. And so the work that they did was very much trying to bridge this, and I just went around shouting about it, like you should think about this more. And they did, so it was great. I was really happy.
+
+
+[00:12:13]: Nico Mohnblatt:
+
+
+And so is that sort of the origin story for Taceo? Is that how things got started?
+
+
+[00:12:17]: Lukas Helminger:
+
+
+So this is more of the story, how Ais was always around us.
+
+
+[00:12:21]: Nico Mohnblatt:
+
+
+Right.
+
+
+[00:12:22]: Lukas Helminger:
+
+
+So the first time the Taceo team, so the people, the core team behind Taceo, came together or worked together on an industrial project was right at the start of the pandemic. We got a request from the government asking if we could explore how to combine mobility data, on the one hand, with information about people who are COVID positive, and to do this all in a privacy-preserving way, so that they can see some hotspots where infections might happen often. And it was a huge challenge to do this in a privacy-preserving way. What came out of several intense weeks of work was something we called the Corona Heat Map. It basically was a proof of concept that involved aspects of every major privacy-enhancing technology, so MPC, homomorphic encryption, zero-knowledge proofs, and differential privacy.
+
+
+And to us, this project was really pivotal because it proved that you could do this on a large scale. And even if you combine these technologies, which in practice, you most often have to do to make any impact. But as an academic team, we got also some hurdles. So we quickly realized that the tech worked, but something more was actually needed to make it practical for deployment. And that's when we knew we had to move beyond academia if we want to see this tech on a large scale in practice. And that's how Taceo was born.
+
+
+[00:13:58]: Anna Rose:
+
+
+Was this a project that was more from a single institute, or was this like a larger scale collaboration? Because I had heard a lot about -- like around this time, these multi-institution projects trying to tackle COVID. I know there was other initiatives like this, and larger call outs for research by governments. Was this similar? Were there multiple institutions working on this?
+
+
+[00:14:19]: Lukas Helminger:
+
+
+So this one, I think you're referring mostly to the content discovery stuff. So this was really multi-institutional stuff that a lot of cryptographers and people from different areas work together. So for this, at least, all the cryptographers were from Graz University of Technology. We had then also some legal scholars from Belgium. So this was like working with mobility data from cell tower, so you could really go to the telecommunication providers for the state there. But it never happens. It is a scientific paper published, but because of the limitations you have as an academic team to move beyond proof of concept, we couldn't deliver fast enough.
+
+
+[00:15:01]: Nico Mohnblatt:
+
+
+So what is Taceo building these days? We hear often the name Taceo linked with collaborative SNARKs.
+
+
+[00:15:07]: Ais Connolly:
+
+
+Yeah. We're working a lot on collaborative SNARKs now at the moment. And I think, as Lukas mentioned at the beginning, I think the ultimate goal is to build this layer of security for computation on the Internet. So something like TLS. So we're calling it at the moment CLS, this compute layer of security. But that's kind of a distant dream, that everything on the Internet is encrypted and you can do all your computation over this. And so in a first step, any sort of privacy-preserving computation is interesting for us. And given that we as a company, but also as individuals, have a lot of experience in MPC and zero knowledge, and given that zero knowledge is very prevalent, let's say, in the web3 world, now, there's kind of a lot of sense in people like us looking at how do you do zero knowledge in an MPC in a distributed way?
+
+
+And then the question comes like, well, does it actually make sense to do that? Why are you just trying to find nails to hit with your hammer? And actually, it turns out that, yes, when you look at the progression of how things have gone in the ZK world, this makes absolute sense, right? Because from my perspective at least, and I think most people would agree, in general, roughly speaking, at least, the kind of introduction of zero-knowledge proofs were a lot for scalability in the blockchain world. So it was more the succinctness that was used rather than the zero-knowledge property of these proofs. And so using zero-knowledge proofs for the succinctness reason really advanced the field, let's say. And then you have this kind of wide scale -- well, wide scale, somewhat wide scale, a few times deployed, and quite efficient SNARKs. Then you might think, okay, well, why not add some privacy? Now you have these well developed tools, why don't we actually use the ZK property? Okay, it's maybe a little bit more heavy in terms of computation. Maybe you need to do a little bit warm out, but it's there. So let's start using this.
+
+
+And you saw this starting to happen over the last few years with projects like Aztec and Aleo, who went to mainnet recently. So, yeah, there are these networks now where they have smart contracts and you can use zero-knowledge proofs, and they have this sort of public states and private states, and you're trying to do things between them. And sometimes it's clear how you would compute on a public state as you would in a normal blockchain like Ethereum or something. But in trying to compute on private states, okay, you can do a lot with zero-knowledge proofs, and we've seen very nice examples of people kind of twisting and turning things so that they can manage with zero-knowledge proofs. I think one example we were looking at during the week was about some marketplaces. So kind of ZK marketplaces. And you can, let's say, commit to some information and put it in a marketplace and say, like hey, here's some encrypted information, here's the zero-knowledge proof that it's legit and that you should want to buy it. And then a buyer can come along and say, okay, even though I can't see the information, I trust you that it's legit and the kind of information that I want because you've given me the proof, so I buy it, and then they engage in a transaction. 
+
+
+But this requires the sort of manual step of the buyer actually finding the encrypted thing for sale. So there's no sort of matching protocol between buyers and sellers as there normally is, let's say, in a DeFi protocol or something like this, or in a decentralized marketplace. And this is exactly this point where you need something like MPC or these collaborative SNARKs or some sort of place where you can actually compute zero-knowledge proofs either together or some functions or whatever. So MPC is the thing that just kind of lifts all this fancy ZK stuff that we've been doing further into this sort of fully decentralized and kind of even autonomous, if you want, world more than it could without.
+
+
+[00:19:19]: Nico Mohnblatt:
+
+
+From solo player to multiplayer game.
+
+
+[00:19:21]: Ais Connolly:
+
+
+Yeah, exactly.
+
+
+[00:19:22]: Nico Mohnblatt:
+
+
+I remember the original collaborative SNARKs papers. And so one was the Dan Boneh and Alex Ozdemir one, and the other one -- another one was actually presented at ZK Summit 7. So there's a nice little link here by Pratyush Mishra this was the EOS paper. And back then the way these things work was one party had to split the witness into shares of a witness and then distribute those. And then parties with the shares could collaborate to create a SNARK together. Is that still where we are today, or have things changed? What are you guys doing?
+
+
+[00:19:55]: Lukas Helminger:
+
+
+So if we're talking about the private proof delegation case where you only have one party client side that is maybe limited and wants to outsource the proof to some proof marketer to some beefy machine, this still applies and is a very good way to you compute locally your extended witness secret shared to the network, and then the proof generation is extremely fast. But for actually the things that Ais mentioned, if you have multiple players, because in the multiparty setting, you have to compute this extended witness in an MPC protocol itself. And we have done work with our first tool in coCircom, which also does this witness generation step. But for full disclosure, it's not as easy as the private proof delegation use case. So there you run into these problems that you always have with generic MPC.
+
+
+[00:20:50]: Nico Mohnblatt:
+
+
+What is coCircom?
+
+
+[00:20:52]: Lukas Helminger:
+
+
+So coCircom is our first tooling for collaborative SNARKs. It allows you to build programmable collaborative SNARKs based on the Circom language. So the front end, the domain specific language you can now use to write collaborative SNARKs, or as I mentioned, even now MPC programs, is Circom.
+
+
+[00:21:10]: Nico Mohnblatt:
+
+
+Amazing. So people can today write like Circom, plug it into the Taceo tooling, and get the software for collaborative SNARK.
+
+
+[00:21:19]: Lukas Helminger:
+
+
+Exactly.
+
+
+[00:21:20]: Nico Mohnblatt:
+
+
+What's the performance like?
+
+
+[00:21:22]: Lukas Helminger:
+
+
+So we have now here to differentiate between these two parts, the witness generation and MPC. Or if you're just doing what you mentioned was done at the ZK Summit 7, I guess, for the later part, the MPC part is extremely fast because ZK is very MPC friendly, we would call it. So the computations you have to do in a ZK proof are to 80%, maybe linear. So it's FFTs, MSMs, and this is quite cheap to do in MPC. So for example, I give you some early benchmarks of our tooling, in this multiparty setting, we are as fast as SNARKs TS which has no MPC, and we are a bit far off of Rapidsnarks, but I think theoretically we can go even to Rapidsnarks. So that's the claim also in the original cooperative SNARKs paper, everything you can do on a single machine, you should also be able to do in the MPC setting.
+
+
+[00:22:26]: Anna Rose:
+
+
+You mentioned MSMs, and that sounds like it's elliptic curve SNARKs. So I'm just curious, in the construction that you created, is that always like with elliptic curve or pairing based SNARKs? Or could that also be a combination with hash based SNARKs?
+
+
+[00:22:41]: Lukas Helminger:
+
+
+So you're exactly right. It's very friendly for the elliptic curve based stuff, because there are group operations and we know how to do very fast in MPC. Hash functions are particularly unfriendly to MPC because they're designed in a way to have many rounds to be highly non-linear, and that's some stuff you don't want to have in MPC. There are some tricks around this, but which get you some more costs at the verifier level. This is really a very interesting open research question where we also try to get some teams involved to pick up this topic of collaborative SNARKs that are hash based.
+
+
+[00:23:19]: Ais Connolly:
+
+
+So there are two parts, really. One part is the witness generation. And so this is probably very clear to people who know about zero knowledge that you have a witness, and then you prove some statements on this witness. And this witness is either -- I mean, if you care about privacy, this witness is usually a secret piece of information. So one part is actually generating this witness in a privacy-preserving way, and this was done in an MPC, this can be done in an MPC fashion across different parties. And so this is what we kind of refer to now as computing or collaborating on private shared state. So maybe you have different private states across different users in, let's say, a privacy-friendly blockchain, and then they would all collaborate together on their different pieces of state to generate a witness.
+
+
+And then this witness -- the second part of it basically is that with this witness, then you want to generate the zero-knowledge proof. And so the question is, do you do this in a single party setting or in a multiparty setting? And so here again, you can do a multiparty setting to generate the zero-knowledge proof. So it's really MPC and ZK at the same time. It's computing a zero-knowledge proof across different machines. So, yeah, each machine or each party or each user or each node or whatever the machine might be, computes some part of the proof. And then at the end, all these parts are brought back together, and then you have one zero-knowledge proof at the end. And this is the outsourced proof generation part. So, yeah, two parts. One is the witness generation, and the other part is the actual proof generation.
+
+
+[00:25:01]: Nico Mohnblatt:
+
+
+Would it be fair to say that this is sort of two zero knowledge, what multisigs are to signatures.
+
+
+[00:25:09]: Ais Connolly:
+
+
+I would not say that.
+
+
+[00:25:13]: Nico Mohnblatt:
+
+
+Okay. How come?
+
+
+[00:25:14]: Ais Connolly:
+
+
+Because multisigs, what do you do? Right? Multisigs are -- the thing is with -- I hate multisigs. I shouldn't say that out loud, but I really hate multisigs. But with multisigs, you don't have shares of keys first, right? You have each individual keys with which you sign. And also the group is fixed in advanced, right? So you can't have this sort of ad hoc situation where people can come and go or whatever. So I would say it's not -- so I would say it's more like the threshold, like threshold ZK more than multisig ZK.
+
+
+[00:25:49]: Nico Mohnblatt:
+
+
+Interesting.
+
+
+[00:25:49]: Anna Rose:
+
+
+Actually, this leads me to another question, like if you're doing -- this is actually news that anyone can kind of join this. It's not a fixed group. But is it fixed on a single round? Do you have to have x amount of participants to create the proof? But then the next round, they could be different. Is that sort of what you mean or -- yeah. Is it like within one round that people are coming or going?
+
+
+[00:26:16]: Lukas Helminger:
+
+
+You could reshare it. So this is not a new concept in MPC to reshare your secret shares and then you can choose completely different nodes during the computation.
+
+
+[00:26:27]: Anna Rose:
+
+
+During the single round?
+
+
+[00:26:28]: Lukas Helminger:
+
+
+Yes.
+
+
+[00:26:28]: Anna Rose:
+
+
+Oh, okay. Wild. Okay.
+
+
+[00:26:31]: Nico Mohnblatt:
+
+
+So it sounds like possible, but painful.
+
+
+[00:26:33]: Lukas Helminger:
+
+
+It comes with you have some certain trust assumption, maybe. And also if the state is huge, you also have to transfer it and send all the data over the network. So it depends on the use case if it is feasible and also makes some sense.
+
+
+[00:26:48]: Nico Mohnblatt:
+
+
+So now that we have this sort of little black box of our collaborative SNARK, this multiplayer game that we can do, I was curious, what kind of applications do you have in mind for this technology inside and outside of the blockchain space?
+
+
+[00:27:01]: Lukas Helminger:
+
+
+So from a very abstract point of view, you need collaborative SNARKs whenever you want to compute on more than one private state. So you can think of it like every time you do some matching algorithm, every time you have some kind of information asymmetries, like in poker game or something like this, then you have to create this private shared state and that's what collaborative SNARKs are best for.
+
+
+[00:27:29]: Ais Connolly:
+
+
+So I think the use cases where we see people generally most interested are when -- yeah, like if you have -- I think marketplaces, I think is a nice one because it is the place where you can't just get away with zero-knowledge proofs alone. You need some sort of computation to get you over there to find buyers and sellers to match people. And so any sort of, as Lukas says, anywhere you need matching, so like job boards or dark pools or dating apps or I don't know, all this kind of stuff, just general marketplaces if you're trying to -- I think this Dark Forest game had a marketplace where they're using zero-knowledge proofs to sell locations and things like this.
+
+
+There, there is a manual step done by people where of course there's room to fail. So there they could use coSNARKs for example to do this matching. There are a lot of the main places and as well the proof delegation. So suppose I want to do some computation on my private state on my phone, but my phone doesn't have the capacity to do big proofs or I want to do the proof in an app, but I don't want to download all this zero-knowledge proof libraries in this app and have this huge bloated system on my mobile phone just for whatever small thing. There maybe you do some outsourcing, and in these kinds of cases we're seeing that people are interested.
+
+
+[00:29:05]: Anna Rose:
+
+
+Would the privacy be maintained in that outsourcing step?
+
+
+[00:29:08]: Ais Connolly:
+
+
+Both yes and no. I mean you have the option. So this again goes back to the two points. Either you can do the proof generation just in a multiparty setting, but you can also do the witness generation and the privacy, like you can have privacy for the witness there as well.
+
+
+[00:29:24]: Anna Rose:
+
+
+Wild. I'm just wondering with the prover marketplaces that exist and yet people want to do some proofs on their phones or on client side, but then they are sending it to be batched or to be in some larger system. One of the big issues is that privacy is often lost along the way. Like if you send something to a prover network for someone else to prove on, then they can see what you're doing. And I'm just wondering here if you could do the witness splitting beforehand that would somehow keep that secret even if you're sending it to another agent to prove.
+
+
+[00:30:01]: Lukas Helminger:
+
+
+Yeah, you could exactly do this. And actually this was also how we got to work on coSNARKs because we did work, I think it's now more than one year ago, work on a purely ZK project. And we realized that the computations that we want to do are just infeasible client side, but it had a privacy component. So we realized we have to do something else here. And everybody else was like brushing over just outside it to a proof market. And we said, you actually know the prover always have has to know the witness, except if you're doing collaborative SNARKs. And so the first -- we did go down the rabbit hole, started all these papers about collaborative SNARKs and presented it at ZK Summit 11. So this was then more on the theoretical side, which led us three months later to the first implementation.
+
+
+[00:30:57]: Ais Connolly:
+
+
+But I think for us exactly this -- like the proof markets is, I think, for us probably one of the most exciting areas for this now, because it is a sort of hot topic and it is somewhere where we can immediately fit in with the tooling that we have now. It might not be super, super efficient or maybe it's not perfect, but it's something that we can already do. And I think for us -- well, at least for me, I think this is pretty cool.
+
+
+[00:31:23]: Nico Mohnblatt:
+
+
+With all these use cases, do you have anything that's already deployed, already live that people can use?
+
+
+[00:31:28]: Lukas Helminger:
+
+
+So we have used our own tooling to demonstrate the capabilities just at EthCC. So we did this with what basically a private guessing game that needed coSNARKs, and so it was online for one week and in the end we rolled proof on Optimism, a coSNARK that actually did the witness generation and the proof generation in our library.
+
+
+[00:31:59]: Nico Mohnblatt:
+
+
+And how fast or slow was that?
+
+
+[00:32:01]: Lukas Helminger:
+
+
+So the witness generation was quite expensive, so it took like, I guess one hour. The proofing then is done in a few seconds, I think.
+
+
+[00:32:09]: Nico Mohnblatt:
+
+
+We recently had Andrew Miller on the show talk about TEEs and specifically how they're a good solution to the problem of collusion in MPC. Since we're here discussing MPC, I wanted to bring it up to you guys, like is collusion a big problem with collaborative SNARKs? What are the mitigating factors? Are TEEs an option, and are you looking at these things?
+
+
+[00:32:32]: Lukas Helminger:
+
+
+So yes, in MPC you always have to consider the potential attacks that could come from collusion. There are certain MPC schemes where if you're part of the computation yourself, you can be confident your data is kept private, even if all the other parties collude. However, if we saw, like in this private proof delegation setting, this perfect setting isn't feasible, especially if you're dealing with a large number of parties or some restricted devices. So when the use case doesn't allow for this ideal setup, we have to think seriously about the possibility of collusion. There are several strategies one could use to mitigate the risk, and to me the two most interesting approaches, at least from a technical side, are first, you can make sure by randomly selecting nodes from a really decentralized set of operators that you get some good probabilistic guarantees. And second, what you mentioned with Andrew Miller, the MPC inside a trusted execution environment is a very powerful way to prevent or at least get the bar on collusion very high because you first have to break the TEE and then you have to find somebody else that wants to collude with you. And maybe the second one even runs a different TEE. So even if you have some exploit for one TEE vendor, you don't necessarily have something for a second party.
+
+
+[00:34:08]: Ais Connolly:
+
+
+Lukas is very diplomatic about his answer.
+
+
+[00:34:11]: Nico Mohnblatt:
+
+
+Would you be less diplomatic?
+
+
+[00:34:12]: Ais Connolly:
+
+
+Yeah, I'm less into the TEE story. I mean, I totally agree with Lukas that, yeah, like if you have TEEs from different vendors and MPC nodes, like if you have a fully decentralized setup and whatever, it's great. And I think it's good when you stack these things on top of each other. And I think that's the solution that many people are suggesting at the moment. And I agree that, yeah, for sure it makes it harder. But something that I think I don't like is that there's always this sort of negative connotation with privacy. Everybody always talks about it in this sort of weird way. And MPC also has this, oh, but collusion. And it's like, yes, this is like the best thing about MPC. It's like, okay, we have a super awesome problem to try and overcome and then people just say, throw TEEs at it. And it's like, is that your best answer? Like, come on, let's think about this. This is a super cool problem that exists in a distributed setting in computer science, like let's work on it instead of throwing TEEs at it.
+
+
+And the other thing is that in these places, like even the university where Lukas studied, there's labs of people like bachelor students breaking TEEs for their homework. Like it's not hard to break TEE. So, and it makes sense. I do think it's good. But like if, I just hope that people don't see this as like the ultimate solution and I really do hope that people actually think about the collusion problem one, because it's a cool problem. As Arnaud -- I think you, Arnaud was on your show recently as well, and he always says, like it's just neat. It's a neat problem. Like I want to work on these neat problems, but it's also super useful for every single decentralized system that we have right now. So yeah, I think work harder. Don't be afraid of collusion problems and things like this and coming up with new ways of doing things or new types of networks or new ways to join and communicate and compute and all sorts of stuff. So yeah, TEEs are cool and they get us some of the way.
+
+
+[00:36:22]: Nico Mohnblatt:
+
+
+But don't stop there.
+
+
+[00:36:23]: Ais Connolly:
+
+
+But don't stop there. Yeah.
+
+
+[00:36:25]: Nico Mohnblatt:
+
+
+So is the collusion problem the main research topic at Taceo right now, or it's just in the back of your mind and has nothing to do with your company?
+
+
+[00:36:33]: Ais Connolly:
+
+
+I would say yes. I mean it's one of the -- it's the main long term research problem. It's obviously that we don't expect to solve it today or tomorrow, but I think it is like the number one long term research problem, I would say. Maybe Lukas doesn't agree, but I think I would say so, yeah.
+
+
+[00:36:54]: Lukas Helminger:
+
+
+It's maybe also the most interesting because you can approach it from not only cryptography but from economic security, and you have different vectors to it. They are more like cryptography and engineering research questions we ask ourselves. One that comes up often is how to do lookups and MPC so such that we can support proof systems and collaborative SNARKs that use lookup tables. And the second big one is like how do you construct general purpose MPC in terms of the architecture? Do you go for a virtual machine approach? How do you model Oblivious RAM? So just a short question. In zero knowledge, if you're the prover, you know what memory operations you have to do and where stuff is located. In MPC, you cannot reveal the access pattern, because if the person computing the collaborative SNARK knows which memory it touches, it leaks some secret information. So this is a problem we don't see in the ZKVM approach, which is now kind of new to the program or cryptography world.
+
+
+[00:38:12]: Nico Mohnblatt:
+
+
+Just to make sure I understand this, are we saying the access patterns of the program that's being ZK'd or being MPC'd, or are we talking about the computer that is running the MPC or running the ZK?
+
+
+[00:38:23]: Lukas Helminger:
+
+
+So for example, in MPC, if you have an if branch, you have to do both sides of the program, because otherwise you would leak the information which branch you're going. And if you have a lot of these informations coming together, you actually have quite a good understanding of the witness in the end.
+
+
+[00:38:41]: Nico Mohnblatt:
+
+
+Yeah, well true. Same problem we have with circuits back in the day.
+
+
+[00:38:45]: Lukas Helminger:
+
+
+Yeah.
+
+
+[00:38:46]: Nico Mohnblatt:
+
+
+Just before we maybe move on from collaborative SNARKs, I wanted to ask, is there other tooling than the Circom sort of library that you have?
+
+
+[00:38:56]: Ais Connolly:
+
+
+Not yet, but maybe soon.
+
+
+[00:38:58]: Nico Mohnblatt:
+
+
+Okay.
+
+
+[00:38:59]: Ais Connolly:
+
+
+I think we have hinted a few times that -- so I think with the coCircom, this collaborative Circom tooling that we have, we did it with Plonk and Groth 16, and I think we hinted that we were also working on Honk. And I don't know if any big fans of Honk know where it's used, but I think it won't take long for people to piece it together that we might be looking at Noir. So I think the next sort of release or batch of tooling will be around collaborative Noir. And maybe --
+
+
+[00:39:37]: Nico Mohnblatt:
+
+
+And then private shared state starts to make a lot of sense with the private blockchain.
+
+
+[00:39:41]: Ais Connolly:
+
+
+Exactly. So this was -- I mean. Yeah, so this will maybe be talked about at ZK 12. So hopefully things get done on time.
+
+
+[00:39:51]: Anna Rose:
+
+
+Yeah. Actually this episode will be airing before ZK 12, so people should be on the lookout. We heard you're also working with Worldcoin. Tell us a little bit about what you're doing there.
+
+
+[00:40:02]: Lukas Helminger:
+
+
+So, with Worldcoin, we're working on an MPC only use case, so there is no ZK involved. The idea is that in the Worldcoin tech tree, you have this database of iris codes which are maintained to check uniqueness, so that once you verify, you cannot verify a second time. And the use case is to move this from a centralized database where you have only one owner that sees all these iris codes into a decentralized setting with MPC, where none of the operators knows anything about your iris codes. So basically MPC-fying the whole uniqueness check in the Worldcoin tech tree.
+
+
+[00:40:46]: Nico Mohnblatt:
+
+
+Amazing. Is that in the works now? Live soon? Is there things that people can check out, like documentation, maybe?
+
+
+[00:40:52]: Lukas Helminger:
+
+
+Yeah. So the first version, I think, went live in May, and we're working on a second version with better privacy and security properties, and moving from a two-party setting to a three-party setting. And I think it will be deployed in the next couple of weeks, which also will be GPU implementation, which gives us much more throughput.
+
+
+[00:41:14]: Nico Mohnblatt:
+
+
+Actually, that's a great point. Two to three parties. We've been mentioning all this collaborative SNARKs and MPC. We never really discussed the size of the part -- like how many parties we allow for. In these use cases in your benchmarks, how many parties do you usually foresee? And sort of in a close and distant future, what will those things look like?
+
+
+[00:41:34]: Lukas Helminger:
+
+
+So, for the benchmarks, we mostly used a three-party setup, although we also have Shamir's secret sharing, which theoretically you can do with n parties. And three parties is, for most of the use cases, the most efficient protocols. So I guess we will see if the use case allows these three-party setups, we will tend to see three-party setups.
+
+
+[00:42:00]: Anna Rose:
+
+
+Would you say that the work that you're doing going forward is more focused on the ZK side or the MPC side? Where is your research headed? What kind of parts are you trying to make more efficient? Where are you looking for gains?
+
+
+[00:42:15]: Lukas Helminger:
+
+
+So I would say we are very much focused on the MPC side, but with the restrictions of MPC computations that appear in zero-knowledge proofs. So it's like we have to really understand the ZK system very much and at some point we might even make some tweaks to some proof systems to make it more MPC friendly.
+
+
+[00:42:37]: Anna Rose:
+
+
+I see. Have you come into contact with other MPC projects then? Like are you working with other MPC teams to share info or working on kind of building on some of the work they're doing?
+
+
+[00:42:50]: Lukas Helminger:
+
+
+We're generally coming, most of us from academia, so we do a lot of collaborations also with other universities. So across the stack, like doing with researchers that doing more of basic research, very theoretical stuff, and incorporating this learning into our tooling, but also like people want to use our tech that kind of build upon us. And so there's both directions that have a lot of influence of how we think about the tooling.
+
+
+[00:43:20]: Anna Rose:
+
+
+What do you think the big picture is for MPC? Where is it at? Is it really usable yet? Or do you think it's still sort of in this almost usable state? What would be its end goal?
+
+
+[00:43:33]: Ais Connolly:
+
+
+I think we've seen with the Worldcoin case that it is actually usable now. Like I'm generally the type of person that doesn't like to overstate how ready things are, but this I think is actually ready. So with the iris uniqueness checks, the Worldcoin database right now is about 6 million people. And whenever anybody joins the Worldcoin network or whatever, whenever they scan their iris in one of these orbs, this iris scan needs to be checked against all 6 million other entries in the database. And an iris scan is not just like -- it's not like a signature or anything, it's like it's lots and lots of strings because there's fuzzy data and it's a camera picture and it's like your iris, which is super detailed information and there's a left one and there's a right one and it's really, really a lot of information. And all of this, like a lot of information about each of your irises needs to be checked against a lot of information about two irises from 6 million other people.
+
+
+So there's really, really, really a lot of computation. And so to do this in an MPC setting, now I think we are doing around, let's say ten uniqueness checks per second. So this is, for me, completely practical. This is a very practical large industrial use case. So it's not like FHE or something like this, which is just further away from being practical. It's not fully practical yet that you don't notice it happening at all, but it's there. And I think the end goal is that kind of going back to what we talked about at the start and even how we met, like communication on the Internet -- when I used to give these talks a while ago, like when I first started getting into cryptography, like TLS, you have this lock in your browser. Okay, the lock is gone now, but everyone used to say, oh, look, there's a lock in your browser. This was very recent. It was only ten years ago, really, that became quite prevalent or maybe 15 years ago now. But TLS is new, and it's kind of crazy to me to think that a few years ago, we were just sending our credit cards around in the clear on the Internet. Like it's Ethereum. I mean, it's like if you send your credit card or your passport around -- okay, it's not so public like Ethereum, but it's very public.
+
+
+And so kind of very quickly and overnight, people -- when TLS got switched on somehow by Fluke -- okay, it wasn't overnight and it took years of work and whatever, but when it was switched on, kind of people very quickly went, of course we want privacy for our communication. And so when it actually happens, like when this flip happens, it happens very quickly. And so for me, when I look at the amount of information we send to Google and we use Google Docs and we -- okay, I should, maybe I shouldn't mention specific big tech companies, but Google and Facebook and whatever, that we send so much of our private information and all of my life sits in these platforms upon which they're mining and doing whatever and training AI models and all sorts of stuff and controlling and shaping the way that I interact with the world. I think this is crazy. It's actually crazy that this is just sent in the plane.
+
+
+And so for me, the end game for MPC ultimately, is that Internet computation is encrypted. It's as simple as this. It's like the communication thing, overnight it'll just be like, of course, how could we have possibly built a business on Ethereum without confidentiality? How could we possibly have sent all our bad trades and our NFTs and how can you possibly see every time I got rugged, and now you're judging me, and it's terrible. Okay, at the start, it's funny because we're all playing around and we're trying and using new stuff and helping our friends and testing, basically being the beta testers for this stuff, but if you want to go into the real world, I mean, it can't be this way. Yeah, so for me, ultimately, it's a private world powered by MPC or something like this.
+
+
+[00:47:50]: Anna Rose:
+
+
+Interesting. You just mentioned -- I mean, you mentioned Worldcoin. You work with them. I find Worldcoin still, to this day, terrifying. But it's interesting because you talk about the iris matching. We're talking about eyeballs, right? They are scanning eyeballs, and they're matching irises. But I guess, like, you need such a -- it's such an extreme case that, if that wasn't properly private, which I am concerned it isn't, but then it would be really bad. I think it's maybe an example of the level of dystopian that it could reach if it was out in the open, and I know that they are working at least --  like they talk a lot about being more private and being as open source as possible. You guys actually are working on some part of it, so you probably know better. But, yeah, it's almost like the lighter the use case, the less we care. But over time, even those light use cases could become -- like it becomes like the pattern of your behavior that also gets mapped.
+
+
+[00:48:49]: Ais Connolly:
+
+
+I love that you're scared of this Worldcoin thing. Sorry. Like there was always -- like in the privacy circles, there were always like two no go areas. It was like, don't give your biometrics away and don't put secrets on a blockchain. And here we are putting our biometrics on a blockchain.
+
+
+[00:49:08]: Anna Rose:
+
+
+Well, I haven't.
+
+
+[00:49:10]: Ais Connolly:
+
+
+I haven't either.
+
+
+[00:49:11]: Lukas Helminger:
+
+
+I do. After we have deployed the first version.
+
+
+[00:49:14]: Ais Connolly:
+
+
+You did.
+
+
+[00:49:14]: Anna Rose:
+
+
+You will after you've deployed the first version. Is that what you said?
+
+
+[00:49:17]: Lukas Helminger:
+
+
+No. After we have deployed the first version, I did after the first version.
+
+
+[00:49:20]: Anna Rose:
+
+
+You did it. Okay. Because I guess you knew the cryptography itself deeply.
+
+
+[00:49:25]: Nico Mohnblatt:
+
+
+That's big trust in your own engineering team there.
+
+
+[00:49:28]: Ais Connolly:
+
+
+Yeah.
+
+
+[00:49:29]: Anna Rose:
+
+
+Yeah. I mean, what I do also find crazy, though, and this is not only blockchain, this is like the fact that 23andMe owns the genetic code of people, and it's not in the most private way, is insane. And so many people have done it. And if any family member of yours has done it, you're kind of exploited. It's terrible. Anyway, this is where I think these things become ever more important. And it's nice to hear you working on it and that you're thinking about this.
+
+
+[00:49:58]: Nico Mohnblatt:
+
+
+Actually circling back to the origin story of Taceo, is there a world where you're collaborating with maybe governments again, or more traditional industry to bring them into this new private computation world?
+
+
+[00:50:12]: Lukas Helminger:
+
+
+Yes, I do see that this programmable cryptography, which we're developing now in the web3 will eventually be everywhere. Maybe we don't call it web3 as we don't call something an online business today anymore, which we maybe did 15 years ago.
+
+
+[00:50:27]: Anna Rose:
+
+
+Online business. Yeah, it's true.
+
+
+[00:50:30]: Ais Connolly:
+
+
+E-commerce.
+
+
+[00:50:30]: Anna Rose:
+
+
+E-commerce.
+
+
+[00:50:33]: Ais Connolly:
+
+
+But, yeah, I definitely think so. And I agree. And I think in pretty much every aspect of old industry, let's say, or the government, like digitizing the government, these are all systems and they're falling apart and they're hard to maintain and they're held together with like cellotape and pencils type thing. And they're all talking about upgrading and they're all looking at ways to actually do these upgrades.
+
+
+And I think a lot of them, at least from what I have seen in many conversations that I've had with banks and with governments and with insurance companies and payments companies and whatever they all do look at blockchain because it is actually practical for what they need, and especially the banks and payments and insurance and document storage, doctors, medical staff, governments. They need to share data across them. They need to share data across different departments, but not to every department. And there are strict rules on what they can share and what they can't share, and they're under heavy regulations. And so they're kind of stuck between a rock and a hard place because they want to upgrade, but the tools that are available to them now, like public blockchains, are public. And so since always -- I mean, since as long as I've been in the field, they've wanted to do this, and sort of now it starts to become -- I think this Worldcoin example is probably -- I mean, I'm scared to say it, but I think it's like the leading deployment of MPC protocol. It's the most practical big industry project. Would you say, Lukas?
+
+
+[00:52:13]: Lukas Helminger:
+
+
+Yeah, definitely. If you look at the throughput of the MPC, how much MPC computations are done, definitely.
+
+
+[00:52:21]: Ais Connolly:
+
+
+So having something like this now is at least a nice tool in our bag to go around to the industry and say, hey, look, you don't have to ignore blockchains anymore because they're doing it and it's super sensitive data. They did it based off governmental pressure, regulator pressure, so it can work. And I think it's a way to bring the old industry and the new industry together.
+
+
+[00:52:47]: Anna Rose:
+
+
+Interesting. It's getting battle-tested too, I guess. Right? Like it's exposed. So, yeah. Are you concerned about it being hacked or anything like that?
+
+
+[00:52:56]: Ais Connolly:
+
+
+There is the paper. I mean, in theory, it's secure. And I mean, as far as we're concerned, the implementation is good and it has been audited and it's open source.
+
+
+[00:53:07]: Anna Rose:
+
+
+I guess if there's listeners who are interested in the work that you're doing, are there ways for them to engage with this kind of stuff? Like to get involved with building MPC or the collaborative SNARKs?
+
+
+[00:53:19]: Ais Connolly:
+
+
+There is a ton of ways. I mean, right now we have released the coCircom tooling. So if you're like someone who builds Circom circuits or, you know, you don't have to program there and you want to play around with MPC, this is one way. I think a few of the other ways that we talked throughout was about the research direction. So if you are someone who likes designing hash functions and knows a bit about STARKs or things like this, and you want to do STARK friendly hash functions, MPC friendly, this and that, so -- basically so that we can do collaborative STARKs in a more MPC friendly way, that would be great. Other things generally, the privacy topic, I mean, I think it's quite important, and I would love to see what apps people are trying to build. What is particularly interesting? I know there's like a few groups now, there's the Web3Privacy Now group who are doing a lot of nice, interesting work and collecting a lot of the applications and use cases and projects, so. But, yeah, I think the main way is to try the tooling and talk to us about STARKs and collusion. They would be my things.
+
+
+[00:54:32]: Anna Rose:
+
+
+STARKs and collusion?
+
+
+[00:54:33]: Ais Connolly:
+
+
+Maybe not in the same breath, but yeah. I think the STARKs and the collusion problems are two of the biggest research directions.
+
+
+[00:54:43]: Anna Rose:
+
+
+So you're saying STARKs. So is it the more -- are you focused now more on the hash based stuff?
+
+
+[00:54:48]: Ais Connolly:
+
+
+We're not, but we think about it a little, and we would love if other people thought about it more.
+
+
+[00:54:54]: Anna Rose:
+
+
+I see. Okay, this is a request. Got it.
+
+
+[00:54:57]: Ais Connolly:
+
+
+Yeah, a community request.
+
+
+[00:55:00]: Anna Rose:
+
+
+Cool. Well, I want to say thank you to both of you for coming on the show and sharing with us the story of Taceo and collaborative SNARKs and the work you're doing on MPC. I mean, we haven't done an episode in a long time on MPC generally, so it's kind of -- it's cool to hear it being used in this way.
+
+
+[00:55:19]: Ais Connolly:
+
+
+Nice. Thanks a lot. I've listened since the start and I always wondered if I would ever come on the show. So it's kind of funny that I end up coming here, now I'm a bit --
+
+
+[00:55:28]: Anna Rose:
+
+
+Not the start start, right, Ais? Not the beginning.
+
+
+[00:55:31]: Ais Connolly:
+
+
+Yeah. No, the actual start is really about -- yeah, I remember listening because I still doing --
+
+
+[00:55:36]: Anna Rose:
+
+
+It's a bad start. No one should listen to the beginning of this show.
+
+
+[00:55:39]: Ais Connolly:
+
+
+It was great. I was still doing my PhD, so I was reading all these papers and I was working on little signature schemes and things and I was like, wow, I can't believe there are cool people talking about zero knowledge. Wow, it was so funny. Yeah, it was great. Well done to you though, really, and it's great that you kept it going. And it was really -- even if it's funny to look back, I think it was so great at the time. I loved it.
+
+
+[00:56:04]: Anna Rose:
+
+
+Even at the very beginning though, I mean, there was truly zero knowledge about Zero Knowledge. We did not know anything about -- I knew very little. My co-host at the time at least, was an engineer working in blockchain. For me, it was really just like stumbling around in the dark. But over time, I figured out certain things, I hope. I got some things going. Anyway, thanks Lukas too, for coming on.
+
+
+[00:56:30]: Lukas Helminger:
+
+
+Yeah, thanks Anna and Nico. It's been a great conversation.
+
+
+[00:56:33]: Nico Mohnblatt:
+
+
+Yeah. Thank you both.
+
+
+[00:56:34]: Anna Rose:
+
+
+I want to say thank you to the podcast team, Rachel, Henrik, and Tanya. And to our listeners, thanks for listening.

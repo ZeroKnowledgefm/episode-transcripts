@@ -1,0 +1,447 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online. This week I chat with Chhi'mÃ¨d KÃ¼nzang and FranÃ§ois Garillot from Lurk Lab. Lurk is a Turing-Complete programming language for recursive zk-SNARKs. We discuss how Lurk could be understood as a dialect of Lisp, what Lisp is, and how developers familiar with that family of languages would be able to interact with Lurk. We discuss how this compares to other zk-DSLs as well as the new innovations that it brings to the table. Now, before we kick off, Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:32):
+Ever feel like developing zero-knowledge proofs is a daunting task? The team at RISC Zero is here to remind you that it doesn't have to be that way. Their out-of-the-box tooling allows developers to access the magic of ZK proofs from any chain without needing to learn custom languages or building custom zk circuits. Bonsai, RISC Zeroâ€™s most anticipated product, is a proving marketplace that enables any protocol or application to leverage fast ZK proofs in languages like Rust, Go, C++. Visit https://r0.link/ZKpodcast to learn more and signup today for the Bonsai waitlist. You can also find the link in our show notes. And now here's our episode.
+
+Anna Rose (00:01:40):
+Today I'm here with Chhi'mÃ¨d KÃ¼nzang, co-founder of Lurk Lab and FranÃ§ois Garillot head of Engineering at Lurk Lab. And we're going to be talking about Lurk. Welcome to the show to both of you.
+
+FranÃ§ois Garillot (00:01:51):
+Hi, it's a pleasure to be here.
+
+Chhi'mÃ¨d KÃ¼nzang (00:01:53):
+Yeah, it's great. Looking forward to it.
+
+Anna Rose (00:01:55):
+Chhi'mÃ¨d, this is the first time we're meeting and I'd like to hear a little bit about the work you were doing maybe before Lurk. What led you to work on this problem?
+
+Chhi'mÃ¨d KÃ¼nzang (00:02:04):
+It really came directly out of the work I did on the Filecoin proofs. I led the team that did the implementation as opposed to the research and protocol development of the Filecoin proofs. So we did a lot of SNARK stuff and kind of pushed the limits of Groth16 and discovered a lot of the limits of it in the process. And so after Filecoin launched, that opened up a little bit of space in my brain to think about other things, and I was able to start answering the question, well, what if we didn't have to use 2016 technology? The next fun thing that I work on and Lurk kind of came out of that.
+
+Anna Rose (00:02:46):
+Wait, I want to hear a little bit about this work at Protocol Labs, though. So like, there's a SNARK under the hood. I don't know that we really ever covered that. What are these SNARKs for? Where is it in that protocol?
+
+Chhi'mÃ¨d KÃ¼nzang (00:02:58):
+As you probably know, Filecoin is a blockchain that gives you power based on files that you store. And in order for that to work, you need to be able to prove that you're actually storing some particular data. And so there's two different major proofs that are used in that one we call proof of replication and this is a big, very heavy proof that you've taken some starting data, either 32 or 64 gigabytes and transformed it into a new random-ish bit of data which we call proof of replication and this is what stops you from just making many copies of the same data and pretending that you're storing many copies when actually only have one copy. So this replication is the unique copy, that's the big proof. And then there's something called proof of space-time, which is on an ongoing basis, you keep making a proof that you still have that data. So the blockchain challenges you says, hey, prove to me that, you know, one little piece of this file that you have replicated before and that's a smaller, cheaper proof.
+
+Anna Rose (00:04:12):
+When you created this, were they kind of created as the same SNARK, but they're running like a smaller portion? Are they two separate ones?
+
+Chhi'mÃ¨d KÃ¼nzang (00:04:20):
+Well, they're quite different. They have some of the same components. Everything is based around Merkle trees but the proof of replication there's complicated process that is, you can almost think of it as a kind of intentionally expensive encryption that involves sequential SHA256 hashing and that's just to show that you've correctly replicated the data. Then at the very end, there's a commitment to the result. So this creates a Merkle root. Then later in post the Merkle proof of that same root is used. So there's some overlap, but none of the part that has to do with the original data being turned into the replica ever needs to be approved.
+
+Anna Rose (00:05:12):
+I think I remember the, the Filecoin trusted setup. I believe you did one, and I remember it being a really long one. Is that true?
+
+Chhi'mÃ¨d KÃ¼nzang (00:05:21):
+Well, so with Groth16, there's kind of two different setups that has to be done. One is the Powers of Tau which is general and could be used for many circuits and then there's circuit specific ones. At the time, I think there wasn't a Powers of Tau large enough. I think others may have made one of the same size or even larger since then. But we did sort of the one that's, you know, a 100+ million constraints will be supported. We could have done larger, but we didn't want the parameters to be too huge. So in order to make the statements as large as possible, we went for the biggest Powers of Tau we could do at the time. And then our large circuits used all of that.
+
+Anna Rose (00:06:06):
+I see. And were you able though, with your trusted setup, could you run one trusted setup for both of those SNARKs, like the large one and the small one, given that the small one, I guess would've been included? Like it would've had enough constraints in there?
+
+Chhi'mÃ¨d KÃ¼nzang (00:06:19):
+Yeah, you can just use part of the Powers of Tau that you need, but we have to still do the circuit specific trusted set up for each of the different proofs that we had.
+
+Anna Rose (00:06:31):
+What were you doing before this, or was this the first time you were doing SNARK stuff or had you done anything like that before?
+
+Chhi'mÃ¨d KÃ¼nzang (00:06:38):
+No, I had absolutely no context for SNARKs. I think maybe that's part of what enabled me to do it because before this I was just doing consulting, working for a dev shop named Carbon Five. We got brought in to help with the Filecoin node.
+
+Anna Rose (00:06:58):
+Okay.
+
+Chhi'mÃ¨d KÃ¼nzang (00:06:58):
+And so I was a generalist programmer, but I read the Filecoin White paper very carefully, and there was sort of these holes in the explanation around how these proofs actually worked, and I was fascinated by it. So I kept asking all these inconvenient questions and it sort of came out that nobody was really actively working on that part and so I managed to insert myself in there, and so I learned on the fly.
+
+Anna Rose (00:07:26):
+Got it.
+
+Chhi'mÃ¨d KÃ¼nzang (00:07:26):
+It was quite an experience.
+
+Anna Rose (00:07:28):
+So this project was your initiation into the SNARK land?
+
+Chhi'mÃ¨d KÃ¼nzang (00:07:31):
+Yes.
+
+Anna Rose (00:07:32):
+So after this kind of Filecoin work was completed, you were sort of looking around for something new. When did the Lurk project start?
+
+Chhi'mÃ¨d KÃ¼nzang (00:07:40):
+It sort of gradually came online. I would say it spun out of the SNARK VDF project. We had been part of the VDF Alliance, by we, I mean Protocol Labs here,
+
+Anna Rose (00:07:53):
+And this is with the Ethereum Foundation. I think we've heard about that.
+
+Chhi'mÃ¨d KÃ¼nzang (00:07:57):
+Exactly. And originally there was a plan to do this RSA based VDF, and they had some issues with the trusted setup around that. But all for the last couple years I've been working closely with Supranational who really helped to optimize our proofs and many other things and we were talking about this idea of doing a SNARK-based proof. And so I kind of took charge of that from the Protocol Lab side and got that spun up with Ethereum Foundation and Supranational as a partnership. And if you followed that work, you know, some research was done and they came up with this kind of sloth based VDF and around that, the question of how are you going to make that work comes up? And there were a couple candidates for the backend proof. It doesn't necessarily need to be one or the other. We looked at Halo2, we looked at Nova, we ended up going with Nova. But this got me really inside the mindset of recursive SNARKs and I'd already been wondering, you know, what can we do with recursive SNARKs? So as that work progressed Lurk sort of co-evolved with that.
+
+Anna Rose (00:09:15):
+Got it. And just because you mentioned Nova, I'm assuming the timeframe for this is like Summer 2022 or Fall 2022. Is that roughly when you were looking at that?
+
+Chhi'mÃ¨d KÃ¼nzang (00:09:26):
+So funnily enough this was in 2021.
+
+Anna Rose (00:09:32):
+Oh yeah.
+
+Chhi'mÃ¨d KÃ¼nzang (00:09:33):
+I'll say something about that. But I looked this up for the show and the initial Lurk commit was actually on July 7th, 2021.
+
+Anna Rose (00:09:41):
+Okay.
+
+Chhi'mÃ¨d KÃ¼nzang (00:09:43):
+And sort of the, the secret information here is that we've been working with Nova before Nova was really exactly a thing.
+
+Anna Rose (00:09:51):
+Were you working with Srinath then?
+
+Chhi'mÃ¨d KÃ¼nzang (00:09:53):
+Yeah, Srinath is the guy. Basically what happened is, at a certain point, Justin Drake from the Ethereum Foundation, and I started talking to Srinath to see will this actually work? And he was very excited, I think that people wanted to use his stuff. So we said, well, can you get this licensed in the right way through your employer, Microsoft? And that did happen, and we started building on it. But at that point the recursion wasn't fully implemented. The paper had been written, but the implementation wasn't there, but we were still able to understand what it was going to be and start building on top of it. So it wasn't for a little while that it actually became fully usable but we knew it would be.
+
+Anna Rose (00:10:38):
+Cool. Cool. FranÃ§ois I want to hear a little bit about your story and where it starts to intersect here. We've known each other from the ZK community for a little longer. I think we might have met like a zkJobs fair or like one of the zkHack events online.
+
+FranÃ§ois Garillot (00:10:53):
+Yes.
+
+Anna Rose (00:10:54):
+Yeah.
+
+FranÃ§ois Garillot (00:10:54):
+Very good. So my story starts a million years ago when I had a past background in formal proof and priming languages research. I gained a PhD in 2011, the domain. And then for about three years until 2015, I worked in the scholar community, in the community of the scholar language doing some developer tooling for the programing language and then I kind of gave that up for a while until in 2018, a friend I had not seen for 10 years, like, bumped me on the shoulder at Facebook by then I was doing deep learning training so nothing to do with languages, and told me, hey, you know what we have this small, teeny, tiny blockchain project, and I've heard that you can do things in formal verification. I'm sure we're going to have bugs are you interested in fixing that?
+
+(00:11:42):
+And I ended up doing a little bit of formal verification as well as building the blockchain for the GM project. And then I worked on Layer 1s, basically for a long while until somewhere in 2022, the end of 2021. At the end of day 2021, I was really tired, like tired of what I was doing, but also mostly tired, period.
+
+Anna Rose (00:12:06):
+Okay.
+
+FranÃ§ois Garillot (00:12:06):
+And so I swore to myself that if I was going to do anything else, if I was going to start working like crazy again, I would basically choose something that had an indesputable proposal to novelty and that has an indistructably FranÃ§ois shaped problem to solve. So and Lurk was a match made in heaven. I had been interested in ZKProofs, basically thanks to you since the zkSummit 4.
+
+Anna Rose (00:12:35):
+What? Whoa
+
+FranÃ§ois Garillot (00:12:35):
+If you are doing, yeah, the zkSummit 4 was an absolutely crazy event to get into because this is just after SNARK-tember. This was a small coworking space in San Francisco.
+
+Anna Rose (00:12:46):
+Exactly.
+
+FranÃ§ois Garillot (00:12:47):
+And basically it's that one day workshop. They invite you to wrap your head around Halo, Marlin and holographic proofs.
+
+Anna Rose (00:12:57):
+PLONK, so many things got introduced.
+
+FranÃ§ois Garillot (00:12:59):
+And Zac giving the no holes barred all technical explanation of PLONK which was quite the shock and other things like the transparent SNARK from dark compilers, like absolutely crazy, crazy work. Kudos for organizing something in like November 2019 which basically that day I blue screened like I just blue screened from the beginning of the day at the top of the, like 9-5PM. I basically spent the entire day in a constant state of, oh my God, what is this? And so after 2-3 years of catching up the, I received an email from somebody at Protocol Labs telling me, the Lurk team is looking for something. And I remember having talked to Chhi'mÃ¨d before, and I thought, you know what? I'm going to humor the guy. I had a nice conversation, you know, push comes to shove, I'm probably not going to get interested, but I'll get a nice conversation out of this stuff. And lo and behold, I got interested. I joined and I've been working on Lurk happily ever since.
+
+Anna Rose (00:14:02):
+Cool. Alright. So let's actually talk about Lurk. I feel like we've done some good sort of storytelling about where the project comes from, but what is it? Is it a language, is it a protocol? What is Lurk?
+
+Chhi'mÃ¨d KÃ¼nzang (00:14:20):
+Lurk is definitely a language
+
+Anna Rose (00:14:22):
+Okay.
+
+Chhi'mÃ¨d KÃ¼nzang (00:14:22):
+As far as I'm concerned but the nature of the language sort of embeds it into the proof context in a way that blurs some of those lines. Because what Lurk is a content addressed language for data, but Lurk is also a Lisp, and Lisp is a language that really blows the line between data and programs.
+
+Anna Rose (00:14:48):
+It might make sense for us to define this a little bit, because you just said Lisp is a language, but then you referred to a Lisp and I actually don't know anything about this. So can you tell us what that is?
+
+Chhi'mÃ¨d KÃ¼nzang (00:15:01):
+Lisp is a large family of languages that have certain characteristics in common. So when I say Lurk is a Lisp, I mean Lurk is a dialect of Lisp.
+
+Anna Rose (00:15:13):
+Okay. What kind of language is it? What, like who uses it? Where does it exist?
+
+Chhi'mÃ¨d KÃ¼nzang (00:15:18):
+So Lisp was very popular during like the previous AI boom when people thought that symbolic AI was going to be the thing.
+
+Anna Rose (00:15:28):
+I see. What era is this? Is this like 2008?
+
+Chhi'mÃ¨d KÃ¼nzang (00:15:32):
+This would've been what, like 80s-90s?
+
+Anna Rose (00:15:34):
+Oh, 80s-90s. Okay. Okay. Yeah, way back. Got it.
+
+FranÃ§ois Garillot (00:15:37):
+So Lisp is the, in many ways, the OG functional programming language. It is a programming language that has large footprints in AI as Chhi'mÃ¨d just mentioned but it is also a programming language that has such large footprint in the academic world. Every functional programming language that you have heard of say the ML family, so the OCamls and so on or the Haskell family, always a moral parenthood to Lisp as this functional programming language that they've tried to improve on, change. Another aspect that Chhi'mÃ¨d mentioned is this ability that Lisp has to introspect on its own programs, which is the foundation of this blurring between data and computation where Lisp creates terms that evaluate other terms of the same language, which ties in deeply into the way it implements regression.
+
+(00:16:39):
+But originally it's a creation from the 1960s. That is now considered a little bit passeÃ©, mostly for reasons of trends and culture, but also because it has a descendant that people like a little bit better these days called JavaScript.
+
+Anna Rose (00:16:56):
+Oh.
+
+FranÃ§ois Garillot (00:16:57):
+Which morally is another functional programming language. Lisp has had many descendants, including, of course, the ones who we mentioned OCaml and Haskell. But JavaScript is at the moment, the language that is such a gigantic attraction to 17 million programmers. That the attraction for the Lisp community has been a little bit dimmed, but the bright light of the JavaScripts, though there is still very much a community of programmers that work in this and like these meta reflective introspective aspects to play with things like macros, for example. That is, as far as regular programming languages, our concerns to my knowledge, none of them, except maybe Gab have such a strong band as Lurk which is really a proof language that makes proofs about its own evaluation.
+
+Anna Rose (00:17:52):
+I see. I want to just ask, one language you didn't mention in that list is Rust. Is there any connection between Rust and Lisp? Because I know there's a connection between Haskell and Rust, isn't there?
+
+FranÃ§ois Garillot (00:18:03):
+So when it comes to connections between functional, between programming languages you have languages that are, if you wish, this hodgepodge of a lot of connections and a very generalist influences that are kind of using everything you could possibly integrate to make the best programming language. And then there are programming languages that have a very strong bend towards one moral fiber, if you will. That are a little bit more specialized in their influences so Rust is in that first category, it's a little bit like the rice bowl of programming languages that uses so yes, it has connections to Lisp. It's very difficult to not have connections to Lisp. It's a little bit like not being in the descendant of Genghis Khan these days. But it has connections with many other concepts, whereas languages like the ones we mentioned have this very strict functional priming language bands that essentially relates to how much they deal with statefulness. So very easy to make stateful statements in Rust a little bit more exotic if you, if you do it in Haskell, OCaml, JavaScript, the difference means yes, there's a prong to it between Rust and Lisp, but it's a little bit more faint.
+
+Chhi'mÃ¨d KÃ¼nzang (00:19:21):
+But let me jump in on one thing that you said there, because I feel like, because people don't follow Lisp very closely, people don't know a lot about Common Lisp. And Common Lisp is really a multi paradigm language where imperative programming and stateful, you know, mutable state are very easy to deal with. Lurk is very influenced by Common Lisp just simply through the accident of my programming history. But in some ways, Lurk backs off of some of the power of Common Lisp because of the realities of SNARKs and of content addressing. So Lurk is in some ways funny because, you know, we don't get mutable content addressing. If you want to, you know, mutate content addressable data, you need some abstraction on top of that. So, Lurk is a bit more of a purist than the Lisp community became.
+
+Anna Rose (00:20:22):
+I want to ask you about how Lurk, because I think this is really interesting to see like, sort of the history of its creation. But you know, we've on the show talked about ZK focused SNARK DSLs quite a few times. I mean, I've done a whole episode with Alex Ozdemir now this is out of date, this is like two years old where he mapped out all the DSLs at the time. And I think there we already had like 12 or something and now there's more. So I am curious, like, is this similar to anything that we've seen? Is it at all like Circom or like Noir or like Arkworks or like anything like that? Or maybe like Leo or SnarkyJS Yeah. I'm just curious if there's any competition, anything you would put in your category
+
+FranÃ§ois Garillot (00:21:05):
+In many ways, no.
+
+Anna Rose (00:21:07):
+Okay. It's different. Why?
+
+FranÃ§ois Garillot (00:21:09):
+The idea is that a lot of the languages you mentioned are languages that aim at performing what we would call direct compilation into circuits. So you take a program that is specified by the user reach and end to end by the user, and at the end you get a circuit. There's nothing wrong with that approach inherently. It's very direct, it's very understandable, but it is what it is. And what it is is a non-uniform model of computation. A non-uniform model of computation is pedantic programming languages for you don't actually quite meet all the terms of chewing completeness. So we aim to classify theoretically programming languages by their ability to be true and complete. That is to express everything that you might want to compute, meaning my programming language. You have an idea of something you want to compute in your head.
+
+(00:21:59):
+You get Turing-completeness. Most languages that are doing direct compilations stop a little bit short of that because the need to model when it comes to circuit this model of computation by which big programs lead to big circuits, small programs lead to small circuits. It is a little bit counterintuitive to what we are able to do with Lurk and with regular programming languages, which is we have a compiler that will get you the result of the execution and the evaluation of your program, irrespective of its size. And our compiler does not need to be proportional to size of your circuit. That's where you get the general Turing-completeness, meaning it might take a while to evaluate your program, but we don't need to represent it through compiling a program that is as gigantic as your input in order to evaluate it.
+
+Anna Rose (00:22:59):
+Does this have anything to do with the Nova factoring? You sort of mentioned Nova at the beginning, the fact that you're using this folding. Is there something in the SNARK that it's built on? I don't actually know how to describe this, but, or is that, is that something else?
+
+FranÃ§ois Garillot (00:23:13):
+Precisely
+
+Anna Rose (00:23:14):
+Okay. Before you explain that, help me say that better. Because is Lurk built on Nova? Is it built for Nova? Is it built with Nova?
+
+Chhi'mÃ¨d KÃ¼nzang (00:23:26):
+Yeah. Let me try to clarify the relationship there.
+
+Anna Rose (00:23:28):
+Sure.
+
+Chhi'mÃ¨d KÃ¼nzang (00:23:29):
+Actually, let me just throw one thing in really quickly before I forget. I think that in the list of comparable technologies before we didn't mention Cairo.
+
+Anna Rose (00:23:38):
+Oh.
+
+Chhi'mÃ¨d KÃ¼nzang (00:23:39):
+And I think that Cairo is probably the thing that Lurk is most comparable to in terms of the kinds of computations it facilitates.
+
+Anna Rose (00:23:47):
+Got it.
+
+Chhi'mÃ¨d KÃ¼nzang (00:23:47):
+We could come back to that later if we want to.
+
+Anna Rose (00:23:50):
+Cool.
+
+Chhi'mÃ¨d KÃ¼nzang (00:23:50):
+So Lurk and Nova, when I first came up with Lurk, my default idea was that Halo2 would probably be the back end. And then later when the VDF project pivoted to Nova I became very aware of Nova and had many, many long conversations with Srinath. And Nova became sort of the platonically ideal backend that we think about. But we actually have a Groth16 backend.
+
+(00:24:20):
+We could, in theory, have a completely data compatible, and I'll explain what I mean by that, Halo2 backend. What I mean by data compatible is because all of our data is content addressed, it depends on the hashing that we use. And Nova actually uses the pasta curves partially because I said Srinath like, can we use the pasta curve so it will be compatible with Halo or Halo2, because we were thinking in terms of this, you know, big picture, big tent view of what we can do with SNARKs and if the data is not compatible, the thing is you're going to have to do all this work of converting data between one universe and another. So we really want to focus on the curves and the hashing representations. So Nova is what we're targeting, and a lot of our plans are based on our knowledge and guesses about where Nova's going to go because I have sort of an irrational, it's not irrational. It's actually a completely rational faith in Srinath's ability to bring out the new hotness month after month.
+
+Anna Rose (00:25:26):
+Interesting. I want to ask you, you just mentioned Nova as a backend. I don't really understand what that means for language. Yeah. Maybe you can even like, help me visualize this a bit
+
+Chhi'mÃ¨d KÃ¼nzang (00:25:37):
+Well, I'll take a cut at it and then I think FranÃ§ois will be able to explain it in better formal terms. But the way to think about it is that Lurk as a language, as a Lisp, it's essentially a language for formatting data like JSON would be that has a defined interpretation. So we say, here's a piece of data, what happens when I evaluate this? So I'll give you some trivial examples so you get the idea, what if the datum is the number 7? Well, that just evaluates to itself. So you can imagine having a command line, you type in 7 and then the response is 7. But we could also have data that represents some kind of an expression like 7+6. I put in 7+6, and then it's evaluated and the result is 13.
+
+(00:26:28):
+Okay. So having some rules of evaluation lets us take a data language and turn it into a programming language. And that's basically the Lisp idea. So Lurk deals at that level of abstraction. It defines some semantics and an evaluation model that lets you take some content addressable data, which is like the kind of data that IPFS uses, for example, and evaluate it and then give you a result. It doesn't really care how you prove that. So this is why we say you can plug in a backend. So we have a Groth16 and SnarkPack backend just saying, if you want to use BLS12-381 to encode your data and you like the properties of Groth16 + SnarkPack, then you can use that. If you want to use the pasta curves and you like the properties that a Nova proof will give you, you can use that. If you want to use the same universe of data and you like the properties that Halo2 gives you, and you want to stop and write a Halo2 backend for Lurk, which we haven't done yet then you can use that, et cetera.
+
+FranÃ§ois Garillot (00:27:38):
+Right. So the idea here is that in all the backends that we've recently mentioned Halo2 and Nova, Groth16, and knowing that the Halo2 one isn't deployed yet what we're talking about is backends that are able to do something with the proof as long as it does the same thing over and over again. And this has a deep connection to how you define programming languages on the one hand, and the fact that we have a single universal circuit for all alert programs. On the other hand, the idea is this, there are some cryptographic backends, namely all the ones into what we've cited that led you to obtain an interesting and small proof as long as that proof is all about doing the same thing over and over again. Now natively, when you define a programming language, you have to define and not even told thinking about a proof programming language, yet you define your programming language with its syntax.
+
+(00:28:30):
+Yes. Something that people will have flame wars over traditionally because it's traditional, but you also need to provide how you are going to evaluate this language. And this defines the language itself. You can't just throw syntax at the wall and hope that people will understand how to compute with this. You have to explain to people how you go from the syntax into evaluating the results that you obtain. How do you compute with this language? Now what you're defining here is an interpreter and the definition of the interpreter for very large class of programming languages, including all the functional programming languages we, we've talked about Haskell and OCaml is defined with an abstract state machine. You really think about it in terms of a graph in your mind. So it tells you, okay, you are in that state. If you are in that state and you are facing this particular program, here is how you make progress with the evolution of that program to move to another state in your graph.
+
+(00:29:26):
+Okay. Now you have a graph depending on how complex your programming language is, it may be big or small. Lisp is rather small. And if you look at advanced and later and modern programming languages, they're getting a little bit bigger. But the idea is there are nodes in between those nodes that are the states, the partial states, the steps, the milestones in the evaluation of your program and edges describe how you go from one milestone to the next. And all of those edges are directed and flow towards the final evaluated form of your program and tell you this is the result which you have computed list 13. That sort of graph has a step function. That step function is the name given to the union of all the edges. How do you maintain your state across the evaluation of your language?
+
+(00:30:15):
+That step function is precisely what you execute over and over and over again. So the definition of your language is in fact equivalent to the definition of the step function of an abstract state machine. Now this is unusual if you have not formally studied programing languages, but if you have, this is literally your textbook. There are professors that will make you work through that model on a regular basis in nearly every university. The list standard traditional abstract state machine is a thing named the CEK machine for Control Environment Kontinuation. Continuation doesn't start with a 'C', but don't ask and that CEK machine which was out of the works of Matthias Felleisen and co-authors a million years ago, is what we've implemented to evaluate our Lisp. Or more exactly, since we have a dialect of Lisp, we have a clever variant of the CEK machine that still has a very strong moral parenthood. Once you put that in a circuit and you express this in a circuit, this machine is universal in that it can take any Lisp program and then through iterated applications of the state machine moving to the graph, evaluate that program. And that is how we have a universal circuit and that is how we've implemented the Lisp.
+
+Anna Rose (00:31:41):
+You just said though, you would take a Lisp program. Would it mean that someone interacting with this would write in Lisp or is it in Lurk? Is it an existing program that it reuses or?
+
+FranÃ§ois Garillot (00:31:53):
+So yes, it is the Lurk program. So you would write in Lurk which happens to be a a dialect of Lisp. And through speaking a little bit fast, I may have mentioned Lisp program. But what I really met is that it would be a Lurk program if you want to call the Lurk right
+
+Chhi'mÃ¨d KÃ¼nzang (00:32:10):
+Yeah. The best way to think about it is just to remember that Lurk is a Lisp, where Lisp is a broad family of languages going back to, you know McCarthy's 1960 paper. It's basically, you know, just the way to turn the Lambda Calculus into a programming language as fast as possible.
+
+Anna Rose (00:32:29):
+Okay. This is definitely more in the deep language land than I, I'm not a developer, so it's hard for me to fully follow this. What I am getting though is that it's a unique construction, and what I want to understand is like, how do people actually interact with this? We had talked about these other DSLs, which like those to me are kind of clear, like they're either trying to create circuits with a language or they're trying to black box the ZKP, and then you can create private applications using these things. But in this case, like what do people use this for?
+
+FranÃ§ois Garillot (00:33:06):
+So you would interact with it in the same way that you do with a zk-DSL, but with a few key advantages that will put your mind at ease in the correct intuitions about your execution. One thing that programmers of any programming languages have as an intuition is that if you have a program that has 10 different branches, meaning you have a case statement or a large IF with many alternatives, then the only thing you should be paying for when you're running to that program where a particular set of inputs is one of those branches, not all 10 at the same time, but in R1CS or in a secretary organization in general, you end up paying for all those branches, including the ones you don't take. It's the same thing when you are looking at a big full loop that runs through one to 500 iterations and has an early stopping case, you know, a break statement that tells you, no, no, I'm actually finished with that fall, you would assume that the only thing you pay for is maybe the two iterations until you break out of the full loop.
+
+(00:34:15):
+And it actually is the case that in R1CS, you end up compiling this to a fall loop that runs toward 500 integrations. The idea is that circuits in general don't have control structures. They are literally a wired out, drawn out structure that has no ability to jump at different points of the execution. This has led to very famous issues such as if you have a division by 0 and one of the alternatives and you open to not be in that branch, you will still error out on the division by 0. But the point is, Lurk by running, modeling, the evaluation of your computation rather than a declarative description of your computation should be, which is what the direct computation circuit DSLs are allows you the ability to recover your intuitions. Your intuitions are that you walk through a program, you jump at particular points of that program when it's written out and Lurk is perfectly able to do that for you.
+
+Anna Rose (00:35:19):
+I still don't understand though, what kind of program would it be used? I think I need something a little even higher level here. Like what kind of application or thing would live in this ecosystem? Are you using this to develop like a rollup, smart contract? Are you using this to develop an application or am I in totally, am I in the wrong category altogether?
+
+FranÃ§ois Garillot (00:35:42):
+This is correct on both counts.
+
+Anna Rose (00:35:44):
+Okay.
+
+FranÃ§ois Garillot (00:35:44):
+And the difficulty in relaying what is going on here is that the model is so general and we are in a world and an ecosystem where a lot of tooling is specializing things a lot.
+
+Anna Rose (00:35:56):
+Yeah.
+
+FranÃ§ois Garillot (00:35:56):
+So yes to the rollup, yes to the generic proofs that happens to be about cryptographic elements and very much yes to a ZK ML use case that potentially would have absolutely nothing to do with blockchain's whatsoever.
+
+Anna Rose (00:36:10):
+Okay.
+
+FranÃ§ois Garillot (00:36:12):
+The idea here is that we don't want to operate under vendor locking assumptions. You can write your proofs and there are difficulties here to adapt to any particular use case. And we have definitely worked on making sure that you have tooling for those use cases. But you can write a proof about things that talk about Merkle tree and maybe talk about the correctness of some cryptographic signatures. You write that in your Lisp dialect and ta da you've written the ZK bridge or you can write something about the processing of a particular picture and turning that picture into gray scale and then maybe cropping it. And that's a very famous use case about the fact that the latest Sony, Alpha 7 generation 4 cameras have the ability to sign stuff and this is work by Dan Boneh and one of his PhD students, primarily Trisha Datta where you can definitely take a picture, prove that it was taken and geostamped at particular locations, and then you want to process it before you display it on the BBC's website. Therefore, the signature that you have on the original picture does not carry over the reduced cropped or gray scaled image that ends up on BBC's website. And that's what you see. You'd like to verify the authenticity and the provenance of that picture, but if you wanted to write this this is what we're building towards, we want Lurk to give you the ability to build this use case that expresses image processing and mix a proof of the result of that image processing.
+
+Anna Rose (00:37:48):
+Interesting. So what would they use right now without it? Would they use a mixture of these DSLs that I just mentioned, or they have to create a lot of their own stuff?
+
+FranÃ§ois Garillot (00:37:57):
+So you have several options. You have the direct compilation DSLs that have the limitation that if you are writing a relatively long program, because you don't have any inherent link to recursion that would allow you to compress the size of your proof you're limited to a certain size. And then there's also the disadvantages we mentioned.
+
+Anna Rose (00:38:21):
+What would an example be that we might know?
+
+FranÃ§ois Garillot (00:38:23):
+There are the traditional descriptions would be ZoKrates, Circom, if you are not plugging, Circom is very much a front end. So if you're not plugging it with an inherently recursive backend, the classical example, and then you have the DSLs that have some, even some of those DSLs that are doing direct computation are kind of shoehorning you into, let's say their major or main blockchain computation. Right. Taking Leo and using it in a context completely separated from Aleo is theoretically possible, but this is not necessarily what the tool is being designed for at the moment. And then you have the VM models, the virtual machines that have disadvantage or having disability of creating succinct proofs independent, when they have recursion they have the ability to of creating small proofs, but they are in many ways relatively heavyweight and bring in a modelization for the ones that are ZK EVMs of the data model of Ethereum that you may or may not care about. We all know that Ethereum is great, don't get me wrong for a certain class of proofs, but if, do you care about Patricia Tries if you're doing image manipulation? Maybe not.
+
+Anna Rose (00:39:41):
+And an example of that, I guess would be something like RISC Zero, right?
+
+FranÃ§ois Garillot (00:39:45):
+Ah, so RISC Zero is one of the very few generic virtual machines.
+
+Anna Rose (00:39:50):
+Oh. So what you mean then is more like the ZK VMs, something like Miden?
+
+FranÃ§ois Garillot (00:39:54):
+So the ZK EVMs
+
+Anna Rose (00:39:54):
+Oh the ZK EVMs specifically
+
+FranÃ§ois Garillot (00:39:57):
+Miden actually has a claim to generality.
+
+Anna Rose (00:40:00):
+Okay.
+
+FranÃ§ois Garillot (00:40:01):
+But Miden and RISC Zero are indeed generic VMs, so they might serve your use case, you might do image processing with them that that might work, but they have a different trade-off and the most fundamental one is the idea that they are those low level PMs. And so you are a little bit further from your proof intent. You don't directly program in RISC-V assembly, you don't directly program in Miden assembly, which is very much part of their value proposition. The idea of selecting the RISC-V intruction set is to say to everyone that wants to hear that, you're going to comply to RISC Zero. But at the same time, that comes with consequences. So the most obvious one is that the proof that you obtain as a cryptographic artifact at the outcome of this is a proof that has been made on the input language of those virtual machines.
+
+(00:40:55):
+So if you're making a proof with RISC Zero, you get a proof on the RISC-V infrastructure set. So it's the proof is about the Risc5 assembly. That may be something that you're willing to audit, and that may be something that includes no errors, but it also may not. That is, if there is a bug in your compiler from your source language, whatever it happens to be and compiling into RISC-V assembly, then that bug may, let's say remove some statements from your original program and there may be something missing in your proof. Of course I'm speculating. I am not saying that this is the case for particular cases, but I want to highlight a more interesting thing, which is that if you are going to write directly in this, in Lurk, you have the advantage of having an auditable program in which you literally write down your proof intent, this is what I want to write proof belt, and you get a diary proof on that and nothing else.
+
+Chhi'mÃ¨d KÃ¼nzang (00:41:59):
+Yeah, I want to jump in there because I think this is an important point. When you think about what the future of zero knowledge proofs and the data they operate might look like, because we're still really early in this, but if you think about the dream of content address data, like we have Filecoin and a universe of data that people want to make proofs on and manipulate, there's going to be more and more zero knowledge proofs at the application level. And it's really important that there'd be a lightweight way of doing this that people can understand. Like with Filecoin, we had kind of the luxury of taking a really long time to write these proofs and they're very heavy and they had to be audited, et cetera. But what we really want is just I, as a regular old programmer get up in the morning and I need to do something and I write a little program and I have the data available to operate on.
+
+(00:42:59):
+I give you the proof, and then that's sort of good forever and the really interesting thing about Lurk is that Lurk is just sort of a content address data language that's very expressive and it's directly interpreted by the Lurk proof circuit. So for example, if I want to prove to you, "hey, I know of some data such that if you perform this mathematical function on it you'll get some other results." I can just write that. I just write that down in the simplest possible way as an expression tree. And that's really all Lisp is, it's just a way of describing an expression tree and I can say, this is the case and here's a proof of it. And the nice thing about that, that artifact is really durable. I can put that on IPFS, I can put that in Filecoin, I can put that on Ethereum. And anybody who can, who can hash that expression and check it can say, "oh, this is a proof that that's true." So there, there's no assembly language involved. Nobody is decompiling this and saying, "you know, is there a bug in, you know, this assembly language" or saying, they're just saying, "you're telling me that you don't know of a number such that that number times 7 is 56." And I'm saying, "yes, I do." And you say, "I can't imagine what that number would be, but I trust you because you have a proof."
+
+Anna Rose (00:44:27):
+You just sort of mentioned the interaction with some of these other blockchains and stuff, but like, would someone create a VM with Lurk that then lives on a blockchain? What you just described about like how you can, you know, you can look into the blockchain, maybe prove something from it, but like how does it connect to an actual blockchain and which one are you focused on? You mentioned Filecoin and stuff like that, but like yeah
+
+FranÃ§ois Garillot (00:44:51):
+So there's two aspects of that and there's the simple verifier and then the content addressing. And I'll let Chhi'mÃ¨d talk to the content addressing, but the simple aspect is there's no need for a VM, and this is really important. You just need a simple verifier contract. We produce proofs that the reasonable assumption of choosing a backend are simply verifiable on-chain for automatic cost. The aspect that is interesting is that we are therefore not assuming that you need a VM and yet, because we are micro VM, we give you those important advantages of recovering a computation model that is intuitive to you. If you're doing a <inaudible> on a number that is not prime, you should just pay the price of a few iterations, not the entire sequence of operations. It's important.
+
+(00:45:47):
+If you look at ZK bridges, for example we are converging towards basically rollup-centric architectures on every other blockchain today. Every other blockchain is at the moment focused on how do we build a rollup SDK, rollup SDKs are fantastic to let everybody develop their own new roll up. But every new roll up, every n+1th rollup that is successful immediately creates a need for at least n bridges, right? Because now everybody wants to bridge to and from their local blockchain or their local rollup into that new rollup. And what are we going to use for that ZK bridge? Either we use the multisigs bridges that are what they are and have led to the amount of hacks that we're well aware and that have a security problem, or we use actual ZK bridges.
+
+Anna Rose (00:46:39):
+Cool.
+
+FranÃ§ois Garillot (00:46:40):
+We can either define those using the direct computation model we've had so far, which means find 6 top cryptographers and close them into a cabin in the woods until they come back with a circuit definition of your light client protocol. Good luck with that. Or we adopt something recursive, a VM model. But if that VM model is something that is that low level, suddenly we're getting into computation modernization of the data model of the chain. And that gets a bit complicated. Whereas if you have a quick skirting language that goes a lot faster, so you can prove off-chain, define a Lisp program, and then put the verifier on-chain on any chain
+
+Anna Rose (00:47:23):
+Where does the prover actually live in this? If it's not, you sort of mentioned it could be off-chain. So where does it actually live?
+
+Chhi'mÃ¨d KÃ¼nzang (00:47:29):
+Right. So the nice thing is it sort of doesn't matter. So this is a practical question. What we would like to see is cheap and efficient proving services that can make these proofs for you and which one you want to use. It likely depends on what kind of contract you need with them, how much privacy you need. Now, we want this to be efficient enough that if your answer is, you know, the only person I trust to make this proof is myself, then you say, "okay, you know, buy yourself a nice computer and make the proof at home." But once you have the proof, that artifact itself can be verified anywhere. But we'd certainly like to see, you know, a centralized or maybe decentralized network of provers that really get down to the basic cost of making these proofs, which is not going to be that expensive because GPUs are cheap. If we have enough success, ASICs will make the proofs even cheaper. The nice thing is that given the way that Nova works and everything else, we will be able to, in a future version of Lurk, separate out the parts of your proof that are truly private, that I want to take advantage of the zero knowledge properties versus the parts where, you know, I don't care anybody could make this proof for me and I'll get it at a very low commodity cost.
+
+FranÃ§ois Garillot (00:48:53):
+And the nice thing with that is that we also aim to use all the efforts that we as a species have all involved into writing very clever circuits. The fact that Lurk has a design that is moving away from circuits is actually not a bad statement about circuits. Circuits are useful for some things in particular, I mentioned that Lurk has a universal circuit and when I said the has a universal circuit, I'm not lying, it's a circuit, right? We've brought one. So we would be ill placed to poo poo circuits. Circuits are very useful when you don't care so much about the developer experience, but you really want to squeeze out that every last bit of performance, you want to describe your operations in a very minimal fashion. And we have integrated that in the language. That means, I told you Lurk has a universal circuit.
+
+(00:49:49):
+It is a dialect of Lisp that is evaluated entirely to one single tiny circuit. By the way, our circuit is 12,000 constraints approximately. We're talking about half the size of the circuit of a SHA-256. It's really, really tiny. But if you want the Lisp dialect that we offer you to have very efficient operations for a few interesting functions that are key to your use case, well, you can write a second for it, making it a bit more performance, squeezing every last piece of performance you can use R1CS today. We have this notion of co-processor that you can program the Lurk circuit for in order that those functions can be interpreted in the language using your circuit you plug in. Of course it requires a little bit of setup in your proof. But basically if you've done a lot of work using at the moment 'al garÃ§on' definitions of your gadgets and very shortly Circom, you have the ability to reuse all that work for a very cleverly designed circuit and have it available as a native primitive of the language. So you have Lurk, the universal Lisp dialect, and then Lurk Prime, Lurk Seconds, Lurk your favorite customized variant of Lurk. That also happens to do, let's say, image transformation or SHA hash functions really, really fast.
+
+Chhi'mÃ¨d KÃ¼nzang (00:51:19):
+There's a model that people are probably familiar with for thinking about this, which is the way that most Python programs work that need to do something non-trivial. You have Python, which is a language people like, it's a high level scripting language, and then you need some performant piece, and you have a library, and that's written in usually C++. And from the Python programmer's perspective, they've never lost Python. They're just still writing a simple, clean, easy to understand program and it can be audited in that way too. And then if you've also audited or for some other reason, trust the backing library, you get the performance of it for free. So we're early in support for this mostly because we don't see it as a very hard problem. Like everybody already knows how to make these performance circuits. We know that it's very time consuming and difficult.
+
+(00:52:18):
+It needs to be audited very carefully, but it works really well for the problems it works for. Lurk just lets you plug those in. You can just, we basically think of it as an FFI of a Python program with the C++ library where you say, just pretend you're writing a Python here, but we'll give you the performance of the C++. So if we wanted, you know, the circuit for SHA-256, we just take one, plug it in and write a little wrapper for it and that's really our model. But the thing that's most interesting about this because of Lurk being a language, is that in the future we're going to be able to compile custom circuits from the Lurk surface language into efficient circuits. And this is going to be the thing that actually cuts down on that development time and gives you both sides of the picture. But that's a little ways off
+
+FranÃ§ois Garillot (00:53:13):
+That comes from my experience with deep planning frameworks where I've met a number of C++ programmers that had this joy in contributing to deep planning frameworks, telling me my specialty is really this difficult backend language. But when I integrate that into one of the numerical backends of the deep planning framework, it makes my work relevant to a much larger class of programmers. We don't want zero knowledge proof to be owned by cryptographers forever. But we do want to give them the joy of making their work in writing a specialized circuit relevant to a much larger class of proof programmers.
+
+Anna Rose (00:53:57):
+Neat. I want to ask about the Lurk ecosystem or the stack. You know, we've talked primarily about a language, but you did sort of talk about it potentially having these other dimensions. So what is, maybe not what it is it is today, but what is your plan for what this looks like? Do you sort of follow some of the other DSL models of getting, I don't know, lots of tooling built around it or how are you, how are you approaching this project and yeah, what's the sort of roadmap vision?
+
+FranÃ§ois Garillot (00:54:30):
+The very nice thing about Lurk is that it has this very small footprint between the proof intent, your program and the actual cryptographic. There are very few things that you need assurance on to make sure that the entire thing is completely secure. So what we're actively working on is formal verification of the entire Lurk stack,
+
+Anna Rose (00:54:49):
+I was about to ask that actually, crazy. Okay.
+
+FranÃ§ois Garillot (00:54:52):
+So basically that means that we have already run through an audit of our Lurk circuit which is relatively small and that we're very confident in. And the Nova web base is a very high quality web base led Srinath, but it would be even nicer if we had a tooling base formal verification of the entire stack. And it's small size makes it amenable to that on a reasonable timeline. When it comes to tooling, one of the nice things is that we can import the existing tooling that exists for Lisp. This is very nice when you want to work with an editor to just have everything set up already. But of course, we can take things a little bit further. Lisp is really the core abstract moral language of what we're developing. But we also have empathy for the 17 million JavaScript programmers that are at the moment working with JavaScript.
+
+(00:55:52):
+And it turns out JavaScript has this such a strong parenthood to Lisp that it is one very small transpilation task away from Lisp. Meaning you take Lisp, you remove all the parethesis replace them with scoping rules and a free bridges, ta da you have JavaScript. What that concretely means is that once we have this transpilation done and ideally verified, suddenly we have this high level language that is entirely verified and that you can have exceptionally strong assurances on that can power all of Web3. We built Web2 with JavaScript not assembly languages. And the idea here is let's try to build Web3 with a JavaScript rather than assembly languages, that might absolve us from levels of complexity we don't necessarily need. This is beautiful. And ideally in the very short future formally verified
+
+Chhi'mÃ¨d KÃ¼nzang (00:56:47):
+Let me try to describe what I think is the most important thing about Lurk. The most important thing about Lurk is that it just happens to create a whole bunch of rhymes that are inherent in how Lisp works, in how content addressing works and in the needs of zero knowledge proofs. And the really important thing is this identity between programs and data, because in Web3, we need to have everything exist as immutable data so we can content address it. And Lisp takes that as a given. And so Lurk lets you take data that's in the format that it needs to be in, in order to work in this world that we have and do nothing else to it and have a well-defined program. And the nice thing about Lurk's actual technical design is that you don't have to follow these content addressable links or pointers anymore than it is needed to evaluate your proof.
+
+(00:57:57):
+This is for the prover and for the verifier whoever is having something proved to them, they don't need to follow them either. So the prover can hide secrets inside their proof. They can say, I know of some data that has these properties. And you can absolutely believe that. And we think that Lurk proofs have some really good properties computationally, but what's more important really is that what we need, if we're going to build up a huge universe of content addressable data that proofs going to be made over, is that data needs to be durable. It needs to last for a long time because producing it is expensive. And you want the proofs that were made in the past to remain valid. We want a corpus of, you know, data that grows forever and that we know things about and so really Lurk is a data language first.
+
+(00:58:53):
+And the fact that you can make proofs over it kind of completes the idea but even if it were to turn out that Lurk proofs were not the best way to make proofs, you would still need a data language like this. So really for us, the tooling and the ecosystem is about trying to get that language expressive enough that we can build the future on it. And if eventually it turns out that there's some better way to compile Lurk programs, you could say, fine. Then the Lurk proving part isn't as mature as it will be, but we want to get that language right and that's why FranÃ§ois was talking about JavaScript. You know, we realize the world has kind of figured out a way that it likes to express these kinds of things. We have JavaScript and then we have JSON right? Like it works for people. And moreover, lots of the world's data is already like that. So we're kind of leaning into that. So we see the tooling building up around that. How do we make it possible for regular people to express their data and write programs over that data in a form that's actually useful? And if they can get proofs out of that, great. So that's kind of the roadmap.
+
+Anna Rose (01:00:11):
+How can people already interact with Lurk and what are you on the lookout for as well from potential contributors or maybe other works that are coming up?
+
+FranÃ§ois Garillot (01:00:21):
+So when it comes to Lurk, we are at the moment making sure that Lurk is the right language. And that means we've talked about JavaScript, we've talked about co-processors that are allow us to reuse circuits. We are extremely welcoming feedback from users that at very specific spots, they care about particular features to be available in the language. But at the same time, we are in the core business of making sure that Lurk is the best programming language to stand up over a recursive proof system. Which means that we consider the recursive proof system to be community good. It's not necessarily ours. We want it to be state of the art for everybody out there. Which means we contribute to the Srinath's Nova project and we will for sure keep contributing and extending that project, but that we also would like to federate and help a bunch of people that are working on the absolute deluge of work in that area from SuperNova and CCS, this new organization from Srinath and Riad Wahby and Justin Thaler. Hyper Nova, which is this new work that is addressing how, how to do Nova based on high degree gates.
+
+(01:01:50):
+But we've also help Nicolas Mohnblatt working on Sangria for adapting it to PLONK until HyperNova made that work obsolete. We've noticed the fantastic work from a specialist system on Protostar and the experimentations of the Privacy Scaling Expressions group in making Nova proving paralysed
+
+Anna Rose (01:02:11):
+ParaNova, I think is what they call that,
+
+FranÃ§ois Garillot (01:02:13):
+Yeah, indeed. And this is super exciting. So here we're just looking to be ourselves, nice collaborators that help make sure that all of this work basically evolves to some sort of engineering focus folding end game by which we have the absolute best software tooling that allows us to make efficient and very generic proofs. If you like Lisp as well, we have a standard library for Lurk that could take a few contributions. We are really thankful for the contributors that have already worked on Lurk, the Glow, MUKN team that has worked on compiling a smart contract DSL into Lurk already. We've had a help from Nada Amin programming languages researcher at Harvard that has helped us figure out the intricacies of reflections and macro systems in Lisp. We've ourselves from Lurk Lab out of a fusion with Yatima, which was initially a team focused on the Lean Theoreum prover. And that is of course extremely valuable for formal a verification effort, but it also means that we have empathy and care for the improving community. That list is bound to get bigger over time, and that is extremely exciting for us.
+
+Anna Rose (01:03:47):
+Cool. Well, thank you to both of you for coming on the show and sharing with us the story of Lurk, explaining a little bit about Lisp, for explaining to me a little bit about the Lisp history and yeah. Thank you so much to both of you.
+
+Chhi'mÃ¨d KÃ¼nzang (01:04:00):
+Thank you. It was a lot of fun.
+
+FranÃ§ois Garillot (01:04:01):
+Thanks for bringing us on. We appreciate it. That was really, really fun.
+
+Anna Rose (01:04:05):
+Cool. I want to say thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.
+

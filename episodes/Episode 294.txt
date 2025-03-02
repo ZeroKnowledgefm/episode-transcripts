@@ -1,0 +1,480 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:28):
+This week, Kobi and I chat with Alex Evans and Guillermo, my sometimes co-host, about their latest research paper called Succinct Proofs in Linear Algebra. This work includes notation and a framework which simplifies succinct proof construction and offers a toolkit of useful techniques. We walk through how these tools can be used to create a proof of security of the FRI protocol, which is also in the paper, and how they may be used to better understand other systems as well. Our conversation covers how ZK is usually taught, how the description for these systems have been evolving and how to make these systems even more understandable. Now, before we kick off, I want to highlight the upcoming zkHack Istanbul event happening next month on November 10th through 12th. Just before DevConnect, once again, we will be hacking on ZK tools using zkDSLs and building new products that showcase what ZK and other advanced cryptography can do. This is a continuation from our spring event zkHack Lisbon. Hackers and builders will get to meet the teams working on ZK, learn new skills, find collaborators and friends, as well as imagine new ways to use ZK in real world applications. This event starts midday on November 10th and runs into the late afternoon on November 12th. Applications can be found at zkistanbul.com. We'll add the link in the show notes and we hope to see there. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:02:11):
+Aleo is a new Layer-1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup.Driven by a mission for a truly secure internet, Aleo has interwoven Zero-Knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer-1 blockchain that's unparalleled in its approach. 'Aleo is zk by design'. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. As Aleo is gearing up for their mainnet launch in Q4. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. So thanks again, Aleo, and now here's our episode.
+
+Anna Rose (00:02:38):
+Today you're here to discuss a new paper by Guillermo and Alex. It's called Succinct Proofs in Linear Algebra. Hey, Guillermo. Hey, Alex.
+
+Guillermo (00:02:47):
+What up?
+
+Alex (00:02:48):
+Hey, good to see you.
+
+Anna Rose (00:02:49):
+So I think our audience is very familiar with both of you. Actually, Guillermo is a sometimes co-host of the show. Alex, you are a returning guest. We also have Kobi on this one as co-host. Hey, Kobi.
+
+Kobi (00:03:00):
+Hello.
+
+Anna Rose (00:03:01):
+So I was thinking you've already introduced yourself a couple times on the show, so instead of doing background, we'll add some links to earlier episodes, Alex, where you were on maybe for the first time. But for right now, for our audience, maybe tell us what do you work on day to day?
+
+Alex (00:03:15):
+So I work on one of two things depending on who will have me on any given day, we have an investment team and a research team, and those teams collaborate a lot, but they don't talk enough for them to realize what I've been pulling on them, which is that on some days I'll be on the investment team and we'll have a whole bunch of very dumb investment ideas. People will realize that and say, hey, why don't you go do some research over with Guillermo? I'll go do that for a couple months, have some terrible ideas for papers and terrible suggestions on existing papers that actually are good. And then they remind me very quickly that I'm an investor and that I should go back to the investing side. So until these groups talk to each other, I'll be employed.
+
+Anna Rose (00:03:58):
+You'll be pinging ponged back and forth between research and investment.
+
+Guillermo (00:04:02):
+He says this yet some of my favorite papers are definitely with Alex. So it's fun to pretend. I like him pretending to be a researcher more than pretending to be an investor, but I don't get to have him a 100% of the time. So it's actually more like he's forced out of my hand, unfortunately.
+
+Anna Rose (00:04:19):
+Yeah, and Guillermo, I mean our audience is quite familiar with you and we're going to be talking about a particular work today, but what kinds of topics do you usually work on?
+
+Guillermo (00:04:28):
+Yeah, so it's kind of funny being my PhD and undergrad and stuff in physics and optimization theory, which is the realm of lovely continuous mathematics. So things that make sense in my world are things like finance where you can say, sure, you have a 1.3692521 amount of Eth. Things that don't make sense is taking moduli of numbers. So saying something mod 5, I could not process that in my head. So the point is most of my work is in DeFi and related applications, things around MEV sure, maybe things around sometimes in privacy and indexes and things like that. But the second that you tell me something about a finite field or a module or rings or something, I just, sorry, just immediately I shut down and throw an error to the reader.
+
+Anna Rose (00:05:24):
+And yet today we're going to be talking about work that definitely crosses over into the ZK space, but maybe not those things. This is what we're here to talk about. It's like this seems like a little bit of a step outside of the usual, which is why you're being brought on as a guest and not a co-host. Let's start talking about this Succinct Proofs and Linear Algebra. What is this work? What is it about?
+
+Guillermo (00:05:49):
+Alex, do you want to give the high level?
+
+Alex (00:05:51):
+I want you to give it.
+
+Guillermo (00:05:53):
+You want me to do the honors? That's unfortunate. So okay, I'll tell the backstory of the paper. I think maybe we'll set up the stage and then I'll get to what the paper actually is. It's very simple. So Alex got nerd sniped into zero knowledge, and when I mean nerd sniped, I mean went down the rabbit hole of reading all of these papers, reading Thaler's textbook, reading all of these very nice sources.
+
+Anna Rose (00:06:19):
+When was that?
+
+Guillermo (00:06:21):
+When was it?
+
+Alex (00:06:22):
+Roughly over the course of the last year and a half. And that's in no small part, your fault, Anna, and your fault Kobi, for making this field more accessible to idiots like me.
+
+Guillermo (00:06:34):
+So luckily there's a beautiful thing about Alex doing all of this work, which is that's the hard work of learning a new field is having someone go read all of these papers. Reading all of these papers is fairly difficult. I have strong opinions about how things should be written, but I think cryptographers have a very different style, for example, than the style that I normally do. And I actually find a lot of the papers fairly difficult to read. So Alex went off and took eight months to go read all of these papers in fine detail and along with sources that you guys have put out and things like that. And then it's got this very nice funnel of, now I have an oracle, namely Alex Evans, that I can query to ask absolutely idiotic questions about zero knowledge. One of the things that kind of popped up over and over and over again is when Alex is explaining these things to me, we kind of started realizing that a lot of it feels so at a high level, a lot of ZK proofs deal with things, objects like polynomials deal with objects like random linear combinations and things like that.
+
+(00:07:49):
+And as we were discussing these papers, there was this kind of taste in the back of our mouths that a lot of the objects were what we might call linear algebraic in origin, weren't the polynomials themselves were merely a tool to kind of understand at a high level like this system, but weren't actually deeply part of the system itself. We can get to what that means in a second. And then the other thing that we realized is that there's kind of a set of different abstractions. I think at some point in actually one of the whiteboard sessions, Dan Bonet points out something rather interesting, which is zero knowledge proofs can be looked at as essentially, if I recall correctly, some sort of reduction in IOP and then afterwards some commitment scheme that gets kind of attached at the end of it.
+
+Anna Rose (00:08:41):
+PCS polynomial commitment scheme.
+
+Alex (00:08:44):
+Yes. So polynomial commitment schemes, although there are of course others that you can get very fancy about, but the point is that reduction is good and it's a step towards one of the possibilities. But in the middle, I think we thought there was a part missing. So in these constructions and these IOPs for example, there seem to be this notion of randomized reduction. So a tool that happens is used over and over again in zero knowledge. This idea that you use randomness and interaction to essentially take a thing that you want to check and reduce it to a smaller thing that is easier to check with this randomness. So this randomness introduces a notion of an error, but that's okay because the error probability of error should be very low. And so the next thing was that's kind of independent of the cryptography itself. So even in IOPs, there's sometimes a little bit of notions of cryptographic kind of ideas that are used throughout.
+
+(00:09:52):
+And so we wanted to separate that cleanly and have just this small piece of randomized reduction studied very carefully, treat it as its own abstraction. And so the natural next question that Alex and I kind of thought of is what is the natural set of objects to look at for these randomized reductions? There were some papers around this, which we kind of, funnily enough discovered a little bit later as we were working on it, which is one of by Abhiram Kothapalli which is Algebraic Reductions of Knowledge. There's one a little bit earlier by Alessandro Chiesa on, I believe it was reduction of certain things to module theoretic ideas, but they focused very specifically on one protocol, which was the sumcheck protocol or a slight generalization thereof. And we were more curious about the general structure of these kind of succinct proofs. And so the natural question is, okay, what is the abstraction we should use?
+
+(00:10:50):
+And it turns out to our knowledge, the most natural thing to use happens to be linear algebra over finite fields. You can look at a lot of the tools that are used in succinct proofs and zero knowledge as kind of reductions that happen over these linear algebraic objects. And this suggests a number of other things. Like for example, there's simple notation you can use to clean up a lot of the proofs, and there's these nice abstractions that you can use to kind of construct these sets of proofs that end up being the things that we know and love. So one example of that being FRI.
+
+Kobi (00:11:27):
+Before we get into all of the deep details, which are super interesting, who should be reading this work? What are they trying to learn?
+
+Alex (00:11:36):
+In some ways, this goes a little bit to a bit of our process in writing this. In some sense, this is a letter to our past selves in getting into the field in that we don't know a lot of cryptography, but we do know a fair bit of linear algebra. We've used it in a lot of different areas of our work. Guillermo in particular, he used it in so many different fields from physics to automated market makers. And so in tracking our own journey through learning the core protocols and approaches in the space, we wanted an introduction that wasn't just, hey, here's the blue ball, red ball, kind of very basic introduction to zero knowledge, nor was it on the other end of the extreme, the type of thing that you might encounter in the Thaler textbook or the great whiteboard sessions that you've done, Anna, but something that could get us pretty quickly from that very basic foundation to starting to reason about the security of these very basic reductions that are ubiquitous in the field. So what is the minimal set of things that we can use as assumed knowledge that somebody with that assumed knowledge can now come in and do damage, can come in and prove things about FRI, can prove things about complicated protocols likely here and the like.
+
+Anna Rose (00:12:58):
+So going back to the who, just to continue on that, it's you, your earlier kind of selves, but is there maybe another part of the audience that you're thinking of when you write this?
+
+Guillermo (00:13:11):
+A common thing that you study in undergrad mathematics, for example, and maybe computer science is linear algebra. So in some sense the paper is aimed at our past selves, which is what do we know about finite fields? Well, it's linear algebra mostly works, right? And linear algebra as we know it mostly works and that kind of place for anybody if you've taken an introductory class in linear algebra and there's a little bit of weirdness about it, but
+
+Anna Rose (00:13:38):
+I have done that.
+
+Guillermo (00:13:39):
+You can also read this paper.
+
+Anna Rose (00:13:39):
+Cool.
+
+Guillermo (00:13:41):
+So yeah, exactly. So you should take a peek at it kind of thing. It's fun. It's weird because it's kind surprising that it turns out to about linear algebraic in origin.
+
+Kobi (00:13:51):
+Do you feel that people that for example, don't know a lot about succinct proofs should read it? Would this give them good introduction to some part of it or should they do something before that?
+
+Alex (00:14:05):
+I think if you come from this field, our objective is, sorry, excuse me. If you don't come from this field and you don't know a lot about cryptography, but you're a smart undergraduate that's taking linear algebra and knows a little bit about probability theory, maybe you've heard about a finite field or we're relatively careful in keeping the characteristics of these things, no pun intended, minimal.
+
+(00:14:29):
+You should be able to come in and understand a basic set of tools and we hope that you take away these tools and as you go and scour more advanced components of the literature, because these randomized reductions are great, they don't get us fully to fully operational SNARKs on their own, but if you get the intuitions and the basic reasons why these things work and take those with you as you go and read more advanced, fully featured, fully fledged protocols in the literature that you can understand why things work without having to start from zero and understand all these cryptographic constructions that are often used in the presentation of these results and protocols.
+
+Anna Rose (00:15:06):
+I was thinking we could walk through a little bit of the structure of the work, because as I was looking through it, it reads very different from a lot of the papers that we see on Eprint and you actually define in quite simple terms a lot of the things you're going to be using later. So yeah, I was wondering, it seemed like you're sharing these foundations. You kind of just mentioned that at the beginning so that people can actually do something with it, but maybe we can share with the audience a little bit of what is your thinking on structure? How are you expecting the reader to sort of participate in this?
+
+Guillermo (00:15:39):
+It's kind of funny because the way that Alex and I and Tarun and Theo are co-authors, right? It is actually this is standard, this is par for the course. It's in some ways very different. It's like a different culture from that of theoretical computer science. Some theoretical computer science are actually more like this, but for the most part, cryptography is not. And so it's kind of funny, the high level idea of papers like this in specific are more like, look, take my hand. We're going to walk through the basics of how things work. We're going to make it as simple as possible. And actually making it simple is actually quite difficult. It took us a long time to get to this framework, and in fact it took us so many iterations to get to this framework. It is hysterical. You can see notes of our early stuff that were a disaster. I mean they were kind of unreadable even by us.
+
+(00:16:37):
+But the point is, what you want to do is a paper like this takes the hand of the reader and says, look, you can trust us. You can read this paper front to back and as you read it, there's nothing that we're going to mention that we're not going to use later. That's guarantee one you make to the reader, and then guarantee two that you make to the reader is if you read this thing front to back, you'll have all of the requirements necessary minus the very basic assumptions that we make about knowing linear algebra to go through the entire work. There will be no hidden surprises that say, haha, actually this thing you can defer. The entire construction is built such that if you start from the beginning and go to the end, you build the tools that you need to prove the later things.
+
+(00:17:22):
+And some people might say, oh, that's similar to how you build Lehmus and then theorem, stuff like that. And it's true in spirit, but the way it behaves, it is kind of funny. The paper starts with here is basic linear algebra, fun and fields, and then section two is something like, here are a bunch of basic tools. Some of the tools, we'll use previous tools to prove their security. Some of them will not. Some of them are just going to introduce, and then section 3 says, okay, we've now built up this fun framework. The natural question for the reader is, of course, great, you've done all this crap, what can we do with it? And that's the thing that's answered is let's actually do something real and that structure you'll see in a number of our papers, but it's not super standard in cryptography personally. I mean some of it is, so there are certainly dilemmas that are proven and then afterwards theorism that are proven based on those and things like that. But as an introductory notion, it's not super common as far as I can tell. No, I don't know if Kobi disagrees with this. He's the real cryptography here...
+
+Kobi (00:18:26):
+No, no. Actually I completely agree on when I was reading, I was live commenting to you on Telegram, right?
+
+Guillermo (00:18:33):
+That was awesome. Thank you, by the way, for all the help. That was great.
+
+Kobi (00:18:37):
+No, no problem. I was really enjoying it, but when I was reading it, I was feeling that it was so methodically structured that you also don't even bother reminding the audience or the reader too much about the dimensions of things because the thing that you defined at the beginning is carried throughout all the paper to have the same dimensions and the same use and it's super methodically structured so the reader cannot get confused. You can have a cheat sheet right next to you and it'll be useful.
+
+Anna Rose (00:19:14):
+Cool.
+
+Alex (00:19:15):
+Yeah, you'll see versions of this in the whiteboard sessions that we would do in the early parts of writing the paper and we would go off and read protocols. There'd be a change in notation somewhere in the middle of the protocol, and we would be filling the whiteboard with question marks trying to figure out, alright, are we referring to this? Are we referring to that? Just the metapoint a little bit on structuring of these papers, I've fallen victim to the same thing you have Kobi, not as a coauthor, but as a reader of Guillermo and Tarun's early papers that have a very similar structure to this. I've noticed that with some other folks from Guillermo's lab, like the Stephen Boyd papers. This is just sort of a meta comment on academic writing, which is you read these papers and they're so innocent, they're so toothless and smiley, and you start out with these really basic things.
+
+(00:20:03):
+Oh, here's a convex function, don't worry about what it is. We'll talk about that later. There's a couple of constraints and then you go 3 sections later of very basic stuff like that and you're proving crazy things and it's like it's the experience of the reader of writing an exponential curve where you're eating your vegetables for the first couple pages and then you're like, all right, let's start doing some real damage. And that's so different as an experience reading this stuff than reading for instance, a lot of papers and mathematics more broadly, but in ZK in particular where you'll have in the presentation of a very important result, here's a lemma. You see the statement of the lemma. You don't know what it means. You understand the theory. Okay, if we could prove this, that'd be pretty interesting. But you see this lemma is sort of oftentimes seemingly unrelated, confusingly phrased, and then you go off, you prove, you spend 4 pages proving it, and that's awesome. You get to the end, it's like, I understand why this thing works. And then the theorem is 3 lines because it's basically a trivial consequence of the lemma, and it just this thing where all these disparate components sort of come to the end and you've almost feel like you've been robbed of something in the process.
+
+(00:21:11):
+And so this is our way of just creating a buildup and attention before, build up a library of tools, build up a library of checks, and then at the end start doing things with them, which as a reader, initially I was just so confused because I'd never seen anything written that way before. Once you get into it as a writer, you almost can't write any other way. And it's my understanding that some people might not like that style. I don't think it's for everyone. We were expecting actually get a fair bit of criticism on this paper that we haven't to date received. Maybe it's been criticized in private. Maybe the airing of this episode will finally bring those people out.
+
+Kobi (00:21:54):
+No, but I do think it's a very inviting style of writing, so I liked it.
+
+Guillermo (00:21:59):
+This makes me so happy
+
+Anna Rose (00:22:01):
+You mentioned this sort of buildup with the components and then the sort of meat of it. You're using these components to prove the security and you choose FRI, but I actually wondered with those foundational elements, could you actually have focused on a different type of PCS or did you build this entire paper to look at FRI? Could you switch that out and then use those same components?
+
+Guillermo (00:22:24):
+So the aim of the paper is indeed to be able to do any number of protocols. So for example, we don't mention this super deeply, although Kobi did point this out, is you could use it to generalize Ligero for example, or breakdown or any of these things. And that does happen, actually, funnily enough, one of our very innocent looking tools is actually just pretty much exactly Ligero, but the reason we chose FRI is almost an accident. The first is I had no idea. I've actually haven't really, I've read a part of the FRI paper and I've read the main parts, but I've never read the proof of how FRI worked. And everyone I asked, or not everyone, but most people I asked didn't actually understand the security proof of FRI. So it was kind of a personal challenge without looking at the security proof of FRI, try to prove its security. Of course, it's a very weak notion in a sense that the consonants are quite bad, but prove the actual security of FRI without having ever looked at the original proof, only knowing how the protocol works. And that was almost accidental, actually. It wasn't even clear to us that this framework had the power to do such a thing until pretty late in the game. I want to say it was added. Maybe we've been working on this paper for how long? Nine months-ish? At least maybe a year?
+
+Alex (00:23:40):
+Something like that.
+
+Anna Rose (00:23:41):
+Every day for nine months. I'm kidding.
+
+Guillermo (00:23:44):
+Yeah, every single day
+
+Anna Rose (00:23:45):
+I know, Guillermo, you have 15 things happening at the same time here.
+
+Guillermo (00:23:50):
+Yeah, no, but this one was one that certainly in the last three months say picked up enormously. I was kind of working on it day and night, especially after we realized that we, for example, you could prove a security of FRI in this framework. It was clear that it was not just a toy, but it was quite, I mean, it's unclear if it is powerful, but it seems powerful enough at least to say interesting things.
+
+Anna Rose (00:24:16):
+Going back to that point though, could you then prove another, and I'm saying PCS here as though that's how you're proving FRI but could you use this to prove something else in the ZK stack?
+
+Guillermo (00:24:27):
+Certainly, yeah. There's a lot of suspicions about this kind of randomized reduction. This idea is used a lot in the literature, so you could imagine applying it very generally to a number of other things and using the same tools and then at the end getting the same bound as you expect. We haven't done that work. I mean, I don't know Alex if he had any specific, he's the one who actually knows ZK stuff. I simply exist as a writing aid GPT.
+
+Alex (00:24:57):
+We don't necessarily link specific checks and randomized reductions to specific protocols in literature, which is also kind of part of the innocence that I described earlier.
+
+Guillermo (00:25:09):
+That's right.
+
+Alex (00:25:09):
+If you look at the literature, a lot of the IOP components, sumcheck protocols involving multilinear polynomials, zero checks, polynomial zero checks in particular, these types of things are examples of these types of randomized reductions. You might do them in repeated ways depending on the protocol, and in fact, many polynomial commitment schemes are as well instantiated in this IOP like structure FRI being a great example of that. FRI lends itself particularly well to this type of analysis because you are talking about linear algebra breakout objects, and we're not the first to point this out. A lot of the early FRI papers and work have talked about this component of it. We have just isolated attempted at least to isolate just those components to create an intuitive exploration of what the thing is, how it works.
+
+(00:25:57):
+I think for some other polynomial commitments, particularly ones that involve heavier duty cryptography, in order for us to reason about them in this framework, we figured we would have to introduce heavier machinery. So especially when we're working over things like groups and care a lot about the structure of those groups, like the discrete logger, the problem being hard in that group, we need to provide additional machinery. There are some examples in the literature which Guillermo talked about earlier that do this through a slight generalization of the linear algebraic framework to modules and modules over rings. We could do that, and you could imagine this approach therefore starting to apply to things like bulletproofs and product arguments, things of that nature.
+
+Anna Rose (00:26:45):
+That's so cool.
+
+Alex (00:26:45):
+We felt in this first work that would introduce just too heavy machinery and getting the reader to a place of, hey, here's a couple protocols that we use very often, sumchecks, FRI. Let's take a look at the types of approaches and randomized reductions that underlie why these things work and how they give us succinctness.
+
+Kobi (00:27:07):
+So cool. I think it also has some kind of increasing importance to look at these kind of things because people that have come from the Groth16 world or even KZG PLONK, they're not used to thinking about these highly iterative processes with randomness inside them. And sumchecks and FRI are increasingly popular and it's important for almost everyone to know them now. So it's something that you really want to nail down well. But I also remember that when I talked to you about FRI in this paper, I felt you were semi insulted when I said that the FRI was the pinnacle of this work. And the fact that you can prove it, and I think maybe rightfully so, is because you felt that the components that you've introduced in the paper are already so powerful to prove a lot of things. So maybe it would be good to talk about the components of it.
+
+Guillermo (00:28:12):
+Sure. So there's two main things that we introduced in the paper specifically that then build up to FRI. The first is a weird notion of something called probabilistic implications. This is not a thing that I knew existed, and apparently it exists somewhere in some weird data analytics literature or something like that. But the point is, what is a common thing that happens in zero knowledge proofs? It's this fact that you can take some statement A and reduce it to a different statement B say, and if you show that B is true, B depends on some randomness, then you show that A is true with high probability. Okay? So in a sense that's like a reasonable notion of logic, right? So A implies B, or sorry, B implies A, I guess in this case is a reasonable notion of logic, but we have kind of a fuzzier version.
+
+(00:29:06):
+The version here is, so there's some probability that if B is true, actually A might not be true. And so to deal with this, we introduced some very simple notation, which essentially lets you account for all of the times that you introduce error in a given proof. So a proof is simply a series of reductions from one statement to another, and a probabilistic proof is a series of reductions from one statement to another with respect to some randomness where there's a probability that one of the implications isn't true. If you take that as your foundation, you actually get a perfectly reasonable logical framework that you can, it's very similar to the way that mathematicians deal with normal implications. A implies B and B implies C means that A implies C is a perfectly reasonable statement. So there's an equivalent version of this in these probabilistic implications.
+
+(00:30:03):
+So A implies B with some error probability P and B implies C with some error probability P prime means that A implies C with some error probability at most P plus P prime. So the same notions that we have in normal implications hold over these fuzzier probabilistic objects. But you have this accounting term, this idea that the probability as you kind of go might increase or might be added to. And it's funny because from there you recover the traditional implications by saying a normal implication is one that errs with probability 0. So one that has 0 probability of failing.
+
+(00:30:48):
+So that's one of the big tools that we introduce in this particular framework. We think it might be useful to clean up some of the proofs that are common in things like succinct proof systems and zero knowledge. The other thing that we introduce is this toolkit that we chatted about with Anna earlier, which is this notion that certain randomized reductions can be used to prove properties about objects. So the interesting part about these is that these are tools that you can kind of combine. You can kind of think of them as Legos. So with this notation and these tools, you can kind of literally take them, put them together, and then just read off the probabilities of errors of the final protocol by just sticking these things together. And so in some sense, what we've done is we've built this hilarious edifice of Legos where the first set of Legos tells you how to clip the Legos together correctly.
+
+(00:31:45):
+And the second set of Legos is like, okay, here are the pieces you actually get. And we say, have fun building an edifice of whatever you would like. And at the end, your reward isn't just, I have some protocol, I need to do some complicated thing. I have a protocol and I can show that the security of this protocol is guaranteed because of the fact that I can take these implications and add up their errors in the way that we expect. And then at the end, I essentially by constructing this protocol out of these Legos, also have a security proof that comes out of it essentially for free. And that's actually at a high level, that's how we end up proving the security of FRI. It's you take 3 of these Legos, stick them all together, and then just recursively apply the same operation and at the end you get a bound on the probability of error based on the size or the number of rounds that you do for FRI. And that's a very powerful tool.
+
+Kobi (00:32:37):
+Yeah, that's cool.
+
+Guillermo (00:32:39):
+It's weird. It's weird that you can do it at all. I mean, it's not obvious.
+
+Kobi (00:32:43):
+No, it's not obvious at all. And actually, you said 3 of these Legos make up FRI. What are these Legos?
+
+Guillermo (00:32:50):
+Right, so the Legos are at a high level we have first is you can check that a vector is sparse. So if you have a vector that has a bunch of entries, you want to check that most of them are 0. That's pretty and there's an intuitive way of doing it. It says, I'm just going to pick a bunch of random entries and I'm going to check if those entries are 0. If all of those entries are 0, if all of the entries have randomly picked and checked our 0 are indeed 0 then the original vector must have been pretty close to 0 in the first place.
+
+(00:33:26):
+If some elements are non-0, then you have some pretty high probability of catching those errors, so to speak. That's tool one. Tool two is a little bit harder to explain, but essentially it says something like if you take two vectors, so you have two long lists of vectors, you want to check if they are close to some vector subspace. You can do that by checking that each individual vector is close to the vector subspace. Sure. But there's a smarter way of doing it, which is you essentially take a random linear combination of those two vectors. This is actually essentially Ligero.
+
+(00:34:02):
+And the point is if you take a random linear combination, you've taken this harder set of questions, which is checking the two vectors or close to a vector subspace and reduce it to a simpler set of questions, which is checking that a single vector is close to a vector subspace, right? So that's part two of the formula. And the third component is essentially this notion of a correlated basis, I believe is what we call it, or something of the like where FRI happens to have this particular property because they choose polynomials, but we suspect holds more broadly. And that's not super important. That's a little bit deep in the weeds, but at a high level it's just you need three major components to prove the security of FRI.
+
+Anna Rose (00:34:39):
+Just in component two, you used a term and actually used it earlier, and I didn't stop you, it was Ligero, something like that. What is that?
+
+Guillermo (00:34:49):
+So have you heard of breakdown?
+
+Anna Rose (00:34:51):
+No.
+
+Guillermo (00:34:52):
+Oh, okay. This is cool. High level fancy knowledge. I don't know Alex or Kobi, do you want to explain that?
+
+Alex (00:34:59):
+Yeah, just at a very high level, there are polynomial commitment schemes that utilize error correcting codes. FRI is one of them, but you can imagine that there's other ones that have different asymptotic characteristics and utilize slightly different techniques. But it turns out these techniques are very much related. This has been an area of ongoing development over the last few years. Ligero, I believe, is a 2017 paper that has been iterated on by people coming up with new types of codes to utilize in the encoding procedure, which is one of the most computationally intensive, if not the most computationally intensive step that the prover needs to conduct during the polynomial commitment scheme. And papers like Breakdown do that in what they claim is linear time. And there's been a number of other iterations on top of this including different randomized tests. So in fact, type of procedure, which is very similar to the one that we have was published by Ben Diamond and Jim Posin, I believe it's something like Ligero with Logarithmic Randomness as the title of the paper. So it's been a very active area of research of are there other types of codes outside of FRI that utilize error correcting codes, which are very much in this type of thing that we can reason about in our paper they involve simple linear algebra, random reductions and the like. And so it turns out that the same frameworks that we use for these components of FRI can be applied to these other polynomial commitment schemes fairly naturally.
+
+Anna Rose (00:36:37):
+Cool. Actually, yeah, I want to do a quick throw back to an episode that Nico and I did with Ron Rothblum about error correcting codes. I can add that to the show notes. We may actually have talked about Ligero and Breakdown and I've forgotten, I'm not sure, but yeah, that might be a good listen as well for folks.
+
+Guillermo (00:36:58):
+Perfect.
+
+Kobi (00:36:59):
+A major part of the paper talks about error correcting codes and linear codes, and this takes a prominent part in the toolkit that you build, so maybe it would be nice to talk about them a bit and introduce how they're useful here.
+
+Guillermo (00:37:18):
+So I guess another topic that we haven't quite discussed yet, but is this paper essentially poses an interesting, so it mostly proves but does not fully prove the following claim, which is in most cases when you have a randomized reduction, you do something like you take a random linear combination of a bunch of vectors and that reduces a claim over a bunch of vectors into a claim over a single vector. And one of the things that we've noticed throughout as we worked on some of this stuff is that actually you can replace this notion of random linear combination. You can replace it with a very structured notion of randomness, which is if you have a big error correcting code matrix that has high distance, you can, instead of picking a uniformly random linear combination, you can pick a uniformly random row of this generator matrix for a code of large distance and use those numbers as the coefficients of a random linear combination.
+
+(00:38:24):
+So that's far more structured. So for example, there's a trade-off between the amount of randomness that you use and the proof size. And so this notion of structured randomness lets you kind of have a slider tuning knob that says, okay, how much randomness do you want in your protocol versus how much soundness error do you want to be able to achieve? And so this particular structured notion of randomness is a second thing that we talk about a lot in the paper, which is almost everything that we know in ZK doesn't need to have either the powers of randomness, so 1R squared, whatever, where ours a randomly chosen number that's a classic notion of randomness that's used throughout, or the second notion where it's you just uniformly randomly sample a bunch of numbers. It's actually give me any error correcting code matrix, right? Pick a random uniformly random row and there's your randomness. What we suspect is a really powerful notion. It allows you to do a number of essentially reductions that are cheaper or simpler or more efficient than otherwise. And it's surprising that it kind of works, but almost everything except one conjecture seems to carry over in exactly the way you expect. I don't know Alex if you want to talk about it, but
+
+Alex (00:39:39):
+Yeah, one thing that it might be worth clarifying here, because I think a lot of folks that will have read things like Ligero and FRI and Breakdown, and there's been a lot of excitement around these things recently, we'll refer to error correcting codes as the code you use. Let me give you an example. In the case of those are familiar with Ligero take a row, or in our case because we're linear algebraics unfortunately, take a column and extend it using an error correcting code and then take a linear combination of the things you extend and test some properties of it at a very high level. So when people talk about error correcting codes, they refer to that sort of procedure that you do. It's like you take up something that's really small, you extend it into something big and you test a couple entries of that bigger thing.
+
+(00:40:27):
+And then through that it's actually quite magical that you can then infer things about the small thing. We utilize a similar thing, but the types of codes that we're referring to here have a slightly different function. They're the same codes roughly. You could use the same codes, but they have a different function. So just as in the latter step of the protocol, you take a uniform, random linear combination of these code words and then test them. You could again encode these again using some random, a sample a random row, a generator matrix, which could represent any code. When we talk about error correcting codes, we're not talking about necessarily we are talking about extending, for instance, the original message and performing the first part of these protocols that I think the many listeners would be familiar with we're referring to the second part, which is the random testing that people do could be done with in many cases arbitrary linear codes.
+
+(00:41:28):
+So we have this conjecture that many of these procedures that are used in protocols like Ligero and like Breakdown would in fact work when using general linear codes. Now we know they work when taking uniform randomness and taking a uniform linear combination of the rows/columns. Whatever your choice of looking at this is the conjecture that we have is that this type of procedure is actually more general.
+
+Kobi (00:41:59):
+Nice.
+
+Alex (00:42:00):
+And so I'm taking us back way back to the first part of the podcast where we asked about who the audience is. There's a secret part of the audience here, which is people that know error correcting codes really, really well that may not know cryptography at all, that we are desperately trying to nerd snipe into giving us their time, attention, and effort into solving conjectures like these. And we think that the resolution of these types of problems have very, very interesting implications for the efficiency of error correcting code-based PCS teams and the efficiency of all our SNARKs if we're able to get them to pay attention to SNARKs. So this is something that you both have accomplished very many times, Anna and Kobi, in creating educational material that allows people from other fields to start figuring out where their particular edge and knowledge base can contribute to the field. We're calling on people from the error correcting code side of academia and practice to say, Hey, we have interesting problems for you all if you want to come check them out.
+
+Guillermo (00:43:08):
+That's right. Yeah, I think that's beautifully put. I think that's exactly the right way is
+
+Anna Rose (00:43:14):
+This is like the nerdiest Easter eggs possible is what it sounds like right now. Is this what this is?
+
+Guillermo (00:43:21):
+Yes.
+
+Anna Rose (00:43:22):
+Okay.
+
+Guillermo (00:43:22):
+Roughly speaking, the answer is yes. The secret to nerd sniping people is to not letting them even know they're being nerd sniped. What's the big brain play?
+
+Alex (00:43:32):
+It's not even that secret because Guillermo has gone to try to find the famous professors in the field of error correcting codes has been knocking on their doors at Stanford and telling them about the gospel of SNARKs and ZK. And at first, I think with many of the existing works, if you were to come in and tell them about our Lord and Savior SNARKs and why their work could be interesting here, we might've got a different response, but in some ways the way we frame this problem intentionally is for people like that to be able to access it and see what damage they can do.
+
+(00:44:09):
+That's right.
+
+Anna Rose (00:44:09):
+I love this. It's such a meta, it's like a conversation you're having in an academic context, which I know nothing about, but I love it. I love that you're operating on these levels through this paper. It's so cool.
+
+Guillermo (00:44:21):
+Yeah. This also all points deeply to a conversation that we had a long time ago, Anna, while we were mostly sloshed about things like one of, I mean recent in an episode, specifically the one where we had sake and how writing happens in mathematics and the cultural factors around it might be a fun one to link
+
+Anna Rose (00:44:46):
+That actually Guillermo you and I, we've had a thread - when we had David Wong on. We kind of continued on that thread of just how you communicate and all these levels that people are trying to communicate on.
+
+Kobi (00:44:56):
+So you use randomness a lot in the paper. Basically everything is about randomized reductions, but a lot of people don't really use randomness in real life. They use Fiat Shamir, and I think that's also something that Anna, you mentioned you discussed recently on an episode with Nethermind.
+
+Anna Rose (00:45:22):
+Yeah, so the episode right before this one was with some of the folks from Nethermind. and they were telling me about some work they had done about proving FRI, but proving the security of FRI in the context with Fiat Shamir. There's something related to that. I had wanted to bring that up almost to understand is their work and your work similar? Is it complimentary? Are they dealing with a different part of the stack? I know what we talked a lot about was FRI is assumed to be secure once you put it through Fiat Shamir, it changes its properties. That was kind of the area that we were talking about primarily. But yeah, maybe we can just talk a little bit about those papers and how they interface.
+
+Guillermo (00:46:04):
+So I guess to start is the interesting part about this framework is that actually we don't touch the security of Fiat Shamir at all. In fact, we go through great pain to avoid ever touching any cryptographic principle that can be otherwise included in a model. So we simply say, look, there's a black box that you can query that has these properties. Of course practical protocols, we'll implement these black boxes as cryptographic protocols. We'll simply take them as given. The work is certainly extremely complimentary in the sense that the security of FRI under Fiat Shamir heuristic transformations is an important question. But it's in a sense from the perspective of this paper, at least an important question about how one implements FRI practically the framework that we put actually attempts as much as possible to all align the question of how do you implement this protocol practically and simply aims to give understanding of why the protocol works at the very highest level and give some sort of security around it. I'm sure Alex has more thoughts on this.
+
+Alex (00:47:18):
+And every paper that tries to do this has a number of dirty secrets, and we're not necessarily super shy about this. We talk about it in the paper in our description of models, which is we sweep under the rug a lot of very, very important things and say, look, you can look under here, but here be dragons. This is the type of thing that can really shoot you in the foot in practice and you should go talk to the cryptographers about that. They know all about it. So when we say we prove the security of FRI, we don't mean it in the sense of, alright, now it's bulletproof and you can just take a randomized reduction of work that's not even close to being true. There's some intuitions about randomized reductions, why they work, how they work, what types of tools you have at your disposal, how you can compose those tools.
+
+(00:48:06):
+And we talk about that. And then there's a separate and incredibly valuable line of work that's important to practitioners and is interesting theoretically, which reasons about how these things are instantiated in practice, because these notions are very mathematical and magical. We talk about randomness. We could have a whole separate podcast about the philosophy of what randomness even is. Does it even exist in practice? That's right. We have these crappy in the real world, when you come back home to implement a real protocol, you have to deal with real objects, hash functions, how those hash functions are implemented, how many times you repeat this protocol in order to get certain properties out of it. And it turns out those things can be pretty counterintuitive. And this is why a lot of practitioners shoot themselves in the foot with things like Fiat Shamir all the time. And I've heard actually Kobi and the folks over at Geometry have been doing a lot of work specifically on this part of how do we reason about the true real world security of protocols like FRI. So while you're the cohost, I'd be curious for your perspective on how these things interact.
+
+Kobi (00:49:14):
+Oh yeah. I definitely think it's an important question and there are many things that can go wrong. Even just on the implementation part. You can forget to do things in a certain order or you can forget to put things inside the hashes, but also it sometimes changes the probabilities that you get from some of these reductions. So it does require good care. But I think you are being very fair in the sense that most of the papers go through this route. Most of the papers don't really go through analyzing how it looks like after you Fiat Shamir it, they stop at the randomness part. So I think it's already pretty good to do it on that level. So another question I had in mind is that a lot of the framing that you have in the paper is that it's kind of about proven verifier, but we also use randomness when we want to speed up things locally, like when we have batches of pairing checks and we want to do this faster as a verifier locally. Do you feel like that this framework could be useful for these kinds of things as well?
+
+Guillermo (00:50:34):
+I mean, I think the answer is yes. I think in that case you probably have to deal with, again, the generalizations to things like modules over rings as opposed to the current linear algebraic notions. But a lot of the stuff that we talk about pretty much here, actually pretty much everything except the specific cases of vector space checks should carry over pretty directly to the case of modules. So I assume that the answer is yes, but we have not, no, I shouldn't claim that without having done all of the legwork of actually going through and making this generalization.
+
+Alex (00:51:08):
+You'll notice just at a higher level that I don't think we discuss the notion of approver and a verifier.
+
+Guillermo (00:51:16):
+That's also right.
+
+Alex (00:51:18):
+So the idea of a local check and a check that you do between approver and a verifier in the conventional says Alice and Bob type of thing doesn't really exist. We sort of merge because we don't have cryptographic tools. This notion of you don't trust the prover and the prover might be giving you malicious. We allied all of that. So this is why our impression when putting this out was there'd be several people fuming on their keyboards or maybe there's a couple people fuming while they're listening to this going about their day is that we don't do that. So the notion of a local check and the notion of something that you need to do by interacting with someone else are sort of abstracted. The difference between these two things is there isn't a distinction. While a finer version of this that's actually useful in the real world would make that distinction very clear because it matters a lot.
+
+(00:52:08):
+So we say, look, there's cryptographic tools around this, and then there's communication protocols that could achieve similar things. So you could say, I can prescribe a specific order to how a communication network should work between approver and a verifier. In other words, the prover sends the first message, the verifier gets another message, the prover sends something back, blah, blah, blah, blah. And if you mess up that order, your proof's no longer work. You need to be very, very prescriptive in order to ensure the prover can't behave adaptively and maliciously in order to mess you up somewhere in your checks. But this notion is abstracted by just imagining this idea of a hard drive that is just giving you answers. And
+
+Guillermo (00:52:46):
+That's right
+
+Alex (00:52:46):
+As a black box, those answers are good. You can secure them using a communication protocol to force non adaptivity. And this is what people use in the traditional proof systems, interactive proofs, and then it could be non-interactive and you could use a lot of cryptographic tools, Fiat Shamir. It's important in this context, a lot of the polynomial commitment schemes and the cryptographic assumptions therein utilize these things. And of course, a full understanding of these protocols is not complete without understanding. We just very intentionally wanted to pull out this idea that's ubiquitous, which is random reductions, why they work and how they work.
+
+Kobi (00:53:25):
+No, that's actually really good framing. And now that you say that, I'm wondering, would you want to see existing papers that do include all of these other parts rewritten to rip out their analysis of that part and replace it with your tools?
+
+Guillermo (00:53:49):
+I mean, if it makes them more legible, that would be great. It's unclear if it will. I mean, we obviously suspect that it might, but in some sense, the way to think about it is that they are separate abstractions. We should be consistently thinking of them as two separate things. One is the high level crazy things that happen in a protocol via these randomized reductions, which are themselves not trivial already. And then there's a second part that comes from, okay, how do we make this real? What are the cryptographic primitives that we need to do it? What are the communication channels that we actually need to ensure happen, whatever causal way or this to ensure non adaptivity or things like that. So the high level structuring of this is very much to kind of take the things that are currently mashed together all in one and separate them out into its constituent parts.
+
+(00:54:46):
+And its constituent parts should be in some sense quite logically independent. And that's one of the other aims that we aim to show in this particular paper is that in many cases it seems like the meat of a paper is not, for example, in some of the deep cryptographic techniques use, but indeed in the randomized reductions. And those two things should be kind of intellectually distinguished as their own categories, and they actually don't seem to overlap. They're important, and there are ways in which their overlap is important, but they don't seem to overlap as much as one would expect given the framework that papers put up for understanding and proving the security of their protocols.
+
+Alex (00:55:28):
+I would say this is a broader trend in the field that we've noticed, especially as good educational material has finally come online with the MOOCs and the Thaler book and the whiteboard sessions and all this awesome stuff. We've gotten better at explaining these protocols. And the way that we do it oftentimes is by breaking up the components.
+
+Anna Rose (00:55:48):
+Totally
+
+Alex (00:55:48):
+Now Groth16 may be a little bit hard to do that, but for most of the things that people use or building new systems on, there's these clean separations of arithmatizations and IOPS and functional commitment schemes, and within that polynomial commitment schemes of different types. And the more we're able to rip out specific abstractions and think about them as their own things, that it sort of accomplishes two things, the easier it is to then take those things and stitch them together in ways that maybe are more interesting than the constituent parts.
+
+(00:56:20):
+But secondly, and this is maybe referring to something, I don't want to be repetitive, but it allows entrance into the field to have very well scoped out problems and have a very clear understanding of how their small contribution and expertise can contribute to the global state of the art. So if you can break out this type of error correcting, code based random reduction, and somebody that has no idea about all the other parts can contribute something meaningful and important to that, everybody else can benefit if they need to understand the entire system end to end in order to figure out where they can make any kind of contribution. I think that stunts the development of the field. And so a lot of what we've seen over the last two years as the field has just gone through this renaissance and all these papers are coming out is in some ways we would think a consequence of the fact that now you can figure out, you don't have to build a whole protocol end to end.
+
+(00:57:17):
+You can figure out where your unique contribution could be valuable, and that opens up the field to many more people to come into it that have varied expertise so they could be, you know, how to optimize the particular hash function on hardware really, really well. Awesome. Here's a very well scoped out problem for you to go off and do that. We'll deal with the cryptography, we'll deal with the random reductions, we'll deal with everybody. Everything else, you go off and do this one thing and we can all benefit from it. The more we can do that as a field, we think the faster the progress will accelerate.
+
+Guillermo (00:57:46):
+That's right.
+
+Kobi (00:57:47):
+That's awesome.
+
+Anna Rose (00:57:48):
+I so agree. Actually, as you're telling me this, I just remember the first time I heard the breakdown of the IOP polynomial commitment scheme, and maybe it had been presented a little bit before this, but it was Dev Oja writing it out. I think Alessandra Chiesa had, I don't know who first came up with it, but it was one of two groups. It's either Dan Bonet's or it's Alessandra Chiesa. But yeah, just seeing that framing was the first time someone could draw something that kind of described a SNARK other than what it had been before is the proving back and forth interactive. It was like, again, proof of verifier here. All of a sudden it was like, here's components, and then you see subsequent breakdowns, and then you see new techniques that are sort of introduced as well, like lookups, like folding. So maybe you can tell me where in that framing is randomized reductions in a different dimension completely, or is it on top of this? Is it throughout?
+
+Guillermo (00:58:47):
+In some ways it's kind of throughout, right? The notion of randomized reductions and these probabilistic implications are kind of embedded in a lot of cases. So for example, the commitment scheme of FRI, as we show in this paper, is particularly endowed with these randomized reductions. In fact, the entire thing is about them. One could imagine there are these other kind of interactive Oracle proofs that also similarly have these randomized reductions. It is in some way kind of an in-between, but they should be separate components, right? It is simply another framework to think about kind of how the individual components play together.
+
+Anna Rose (00:59:26):
+The same thing. Then it almost feels like a different dimension that you're looking at it through, or you've sort of flipped the model sideways and you're just giving a new characteristic that is a through line.
+
+Alex (00:59:38):
+You miss a great opportunity, Guillermo as a linear algebraist to use the word orthogonal. It was an alley and you missed it
+
+Guillermo (00:59:48):
+And I missed it. The problem
+
+Anna Rose (00:59:50):
+Your investment friends have ruined this for us, Alex.
+
+Guillermo (00:59:55):
+Oh, the problem with orthogonal,
+
+Anna Rose (00:59:55):
+Not yours particularly.
+
+Guillermo (00:59:58):
+So Alex, the problem with orthogonal is that if we found in finite fields is that orthogonality doesn't make sense in finite fields, which sucks because things of the orthogonal to themselves, which is really dumb, and I hate that, and that pains me as someone who has done normal linear algebra in normal places and on this finite field crap. But anyways
+
+Kobi (01:00:21):
+If we're touching about weird finite field stuff, does the introduction of all of these popular extension fields like Goldilocks and the extension fields over Goldilocks and M31, does it change anything from in your analysis?
+
+Guillermo (01:00:37):
+Nope. Not one thing gets changed.
+
+Kobi (01:00:40):
+That's perfect.
+
+Guillermo (01:00:41):
+The reason why mostly is because we just deal with the general field. At no point do we ever make any assumptions about how the field interacts with the proofs or anything of it. The only way that the field actually ever accidentally ends up coming into the proofs is via the distance of the code that you are using to produce the randomness. But otherwise it is independent, which is kind of an interesting fact, right? It's not obvious. You would expect the field to have some deep connection to the actual randomized reduction, but the only way we see it go in into any of these tools is actually purely through the distance of the matrix. There's also an interesting fact that I feel like there's something deeper there, but it's not clear to me what it is.
+
+Alex (01:01:24):
+Yeah, there's very basic properties about the size of the field and things like that that you use. The fact that it's an extension field, I mean, it's extremely important in practice, which fields you sample from and what type of branding you can see when you pull something random out from that field, how it should affect your soundness and all this. All that should work pretty clearly out of the box, but the mere fact of it being this extension field that you construct doesn't change the substance of the analysis.
+
+Anna Rose (01:01:54):
+So I think we're close to the end of this interview. It leaves me with two questions. One is, when is the expansion pack coming? So you talked about these building blocks and how they're working. They work on this one case of FRI, but that you could potentially use them towards something else, but you'd have to reformat them a little. Re-skin them maybe? Yeah. What's the expansion? When's the expansion pack coming?
+
+Guillermo (01:02:20):
+I don't know. Alex, do you haven't any? You're the one that actually knows this stuff. I'm just here writing math.
+
+Anna Rose (01:02:25):
+And what's next? What would you do next? Is actually the other part of that question.
+
+Alex (01:02:31):
+This is interesting. There's a lot of different directions that this could go from here. We discussed a couple of the generalizations, actually. Some of them have come up in the discussion today out of your questions on could you generalize this to modules? And the answer is probably you have to be a little bit careful about what you're doing and maybe we'll sit down and do that. Could you then do a mapping from very specific protocols that we talk about these checks and these tools, and they roughly correspond to what you see in these protocols? You can be very, very specific about rewriting them almost as educational material of, okay, here's these tools now here's real protocols and here's how they would work. There's a couple other ones, including the conjecture that we hope that is something that somebody at least identifies either this work or whatever other means you find at figuring out that this question exists out there and that it's something you can solve. We suspect it's true, but would love to see somebody prove it true. There's a couple others like that. Guillermo, I think you undersell the bold ideas you have for subsequent work from us and from others on this particular line.
+
+Guillermo (01:03:42):
+Yeah, one of them is weird, and it's actually, I don't know if this is my idea. I'm pretty sure this is Alex's idea, which is a weird merger, a loving merger between a lot of these lattice style kind of cryptographic questions. And so it turns out if you have certain, for example, hash functions that are very structured, you could say very interesting things specifically under this framework more broadly, and the structure of those hash function is essentially something that it almost looks linear. It doesn't need to be quite linear, it just needs to look linear enough and it seems to be close to possible using some of these kind of lattice cryptographic methods. So that's one of them.
+
+Anna Rose (01:04:30):
+So the second question before we sign off, and actually Kobi, this was actually your question. I was about to steal it. Do you want to ask it? You go ahead.
+
+Kobi (01:04:38):
+No, no, you take it.
+
+Anna Rose (01:04:39):
+Okay. Okay. So it was when zkHack study group about this paper.
+
+Guillermo (01:04:46):
+Oh, I'd say, is that a possibility?
+
+Anna Rose (01:04:49):
+I don't know if you guys know that we do this. So over on the zkHack Discord folks get together and they pick pieces of content and they set up sessions where they'll meet once a week and go through it in detail. I don't know how many weeks your paper would need, but it might be something fun like a miniseries study club for people.
+
+Guillermo (01:05:09):
+If anyone's interested in it, I'm sure we could be happy to do it for the near future. I'll be kind of mostly chilling, so I'm happy to, but I don't want to be like, oh, we should do this paper. I don't know if anyone's actually, I mean Kobi is, I know because he has read it so carefully that I have 150 messages from him just about this paper. And they're great, by the way, because 90% of the comments, we've implemented it, we added in some few little extra proofs and stuff like that. So bless Kobi. So my point is happy to do it, but I don't want to force the paper upon anyone. Cool. But it's like fine. It's kind of interesting, but
+
+Anna Rose (01:05:45):
+Well, if anyone's interested in doing something like this as we release the episode, I'll try to put a poll out on the zkHack discord, and we'll add a link to that in the show notes where we could potentially do a miniseries study group around this paper. I think it would be really fun. But yeah, we need to hear from you if you're into it. If you want to do it with us.
+
+Guillermo (01:06:05):
+Sounds like fun. I don't know. Alex can do it too.
+
+Kobi (01:06:07):
+Love to.
+
+Anna Rose (01:06:08):
+Nice. Yeah, so thank you guys both for being on this episode and for sharing with us the thinking around this work, how you wanted to frame it, why you structured it the way you did, what the intention is, what you found, what people can do with it, what could come next. Yeah. Thank you so much for going over it with us. Thank you.
+
+Alex (01:06:27):
+No, thank you for having us.
+
+Guillermo (01:06:28):
+Thank you. And thanks for the awesome questions.
+
+Anna Rose (01:06:30):
+Cool.
+
+Alex (01:06:30):
+Yeah, those were awesome. It was really fun.
+
+Anna Rose (01:06:32):
+Thanks Kobi for being the co-host on this one. And I want to say a big thank you to the ZK podcast team, Rachel, Henrik, and Tanya. And to our listeners, thanks for listening.
+

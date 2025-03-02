@@ -1,0 +1,612 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+This week I chat with Avery Ching, co-founder and CTO at Aptos Labs. We talk about his time working at Facebook, which became Meta, and specifically his work on blockchain projects there. We then talk about how this group split off to form different companies like Mysten and Aptos, and what Aptos has taken with them in the creation of this new organization. He shares with us the state of Aptos, how the project differentiates itself, and what it's like building in the current landscape. Now, before we kick off, I do want to direct you to the ZK Jobs Board. There you'll find jobs from top teams working in ZK. So if you're looking for your next opportunity, be sure to check it out and if you're team looking to find great talent, be sure to add your job there as well. I've added the link in the show notes now. Tanya will share a little bit about this week's sponsor
+
+Tanya (01:16):
+Anoma's first fractal instance Namada is launching soon. Namada is a proof of steak L1 for interchange asset agnostic privacy, Namada natively interoperates with fast finality chains via IBC and with Ethereum via a trustless two-way bridge. For privacy, Namada deploys an upgraded version of the multi-asset shielded pool circuit, otherwise known as MASP, which allows all assets fungible and non-fungible to share a common shielded set. This removes the size limits of the anonymity set and provides the best privacy guarantees possible for every user in the multi chain. The MASP Circuit's latest update enables shielded set rewards directly in the shielded set, a novel feature that funds privacy as a public good. Follow Namada on Twitter @namada to learn more and join their community on Discord. Discord.gg/namada. So thanks again, Anoma. And now here's our episode.
+
+Anna Rose (02:11):
+So today I'm here with Avery Ching, co-founder and CTO at Aptos Labs. Welcome to the show, Avery.
+
+Avery Ching (02:17):
+Hi, Anna. It's a pleasure to be here.
+
+Anna Rose (02:18):
+So in today's episode, we're going to be exploring Aptos, which is a project that I don't know very much about. I have interviewed folks from the Msyten team, and I know that both the Mysten and Aptos team came out of Meta and had originally been on sort of the Libra Project, so I'm excited to explore that. Before we do it though, Avery, let's hear a little bit about your background. What kind of got you started and on the path towards Aptos?
+
+Avery Ching (02:44):
+I'd love to talk about my background. I was born and raised in Honolulu, Hawaii. I lived there for the better part of my life, and I went off to college at Northwestern and studied computer science and electrical engineering. During that time I also did a PhD under Professor Choudhary, Alok Choudhary in High Performance Computing. So I spent a lot of time in different national laboratories such as Los Alamos, Sandia, and Argonne doing things around supercomputing and parallel file systems specifically, and there's something called MPI or Message Passing Interface, which is a really interesting way that, and super flexible way that people can program super computer software very flexibly across different architectures, different kinds of network interconnects to support the largest scientific applications in the world, such as protein folding, world simulation, matrix factorization, all kinds of cool stuff.
+
+(03:31):
+After my PhD, I went to work at Yahoo for 4 years. In the area of data infrastructure, I was working on what was called the web map at that time. It was after the crawling phase of going through the world's internet sites. There's an analytics phase where we do analysis data derivation around domains and insights. And worked on something called Apache Giraffe, which is a large scale graph processing infrastructure and open source project that allowed us to do things like page rank, matrix factorization and triangle counting. In 2011, I made my way over to Facebook to work on data infrastructure. That was the team that was kind of just kicking off things around Hadoop. At that time it was very exciting space that no one had kind of scaled Hadoop to the size of petabytes and exabytes, and not just Hadoop, but of course any kind of general purpose computing such as Hive, which is kind of SQL language put on top of Hadoop. I worked, I got a good time to work on Spark and batch scheduling and pipeline management and derivation, as well as taking Apache Giraffe and turning it into the full-time product that powered many different graph applications within Facebook, a social media company.
+
+Anna Rose (04:38):
+What is Hadoop? Actually don't know what that is at all.
+
+Avery Ching (04:40):
+Ah, no worries. So Hadoop is a map produce processing infrastructure. If you think about my background, again with parallel computing, we have MPI, which is a very low level customized way you can do message passing between different processes and even things like RDMA remote direct memory access to support, again, getting the best performance out of these machines that can do simulation and run hundreds of thousands or millions of cores for weeks or months at a time before they kind of generate an output. But that's complicated. And in fact, it takes programmers a long time to write these codes. They're super hard to maintain. There's a very small set of developers in the world that can write those type of applications to maintain them. Hadoop is an idea where you take this thing called BSP, which is Bulk Synchronous Parallel processing and apply it in a stricter sense where you can do things the map operation, you can take any kind of input data and transform it and reduce, which takes those input things and kind of consolidates them.
+
+(05:36):
+So it supports some core primitives of parallelism but kind of limits you a little bit to what you can do. But at the same time, by that limitation, it allows a broader set of programmers to be able to access that framework and write different kinds of applications. One of the most key applications in that space was Hive, a SQL implementation on top of map produced as supported querying, you know, billions or trillions rows and producing, you know, petabytes of data at a time. And then this is the kind of infrastructure that powered companies like Meta and Google and you know, LinkedIn and others, all their analytics pipelines in the future. So it's really cool to see the way that program models can actually impact the way the developers have flexibility and expressiveness and ability to write applications in a meaningful way in time to market. That's what we kind of see happening in the blockchain space as well, which I'm sure we'll get into.
+
+Anna Rose (06:24):
+Yeah. Yeah. So that's, when you talk about like message passing in this context, I've done interviews where we talk about message passing in the blockchain context. Is it the same thing? Are we dealing with sort of like a different level?
+
+Avery Ching (06:36):
+It is. I think there's some simulators here, which I find fascinating.
+
+Anna Rose (06:38):
+Okay.
+
+Avery Ching (06:38):
+So in the kind of something like MPI or message passing interface, the idea is that any process can send messages to others at any given time. And I like, as I mentioned, this provides kind of any kind of parallelism you would dream possible. You just need to kind of construct the model you're looking for. One of those I mentioned was PSP, which is super interesting, but you could do synchronous type messaging passing. There's something in MPI called collective operations where processes will collectively get together, decide what to write, and then share that information in a way that optimizes for the writing patterns such as batch writing chunks of data to storage, which is much more efficient than bringing little pieces of data storage.
+
+(07:13):
+And so this is something we see kind of in the blockchain space as well, where you, the APIs available to you could be very different. Some of them are very simple and straightforward like Move, I would argue which allows you to constrains a program which not have to make so many mistakes. Thinking about the way that a coin operates versus an integer representing a coin, as an example, is a constraint on a programmer. But it makes it, you know, it makes it much more accessible and much, much more, less likely you're going to have errors in your contract when you write those. When it comes to message passing, specifically though, there are ideas around what we call asynchronous Move which we're super excited about the idea that Move itself can pass messages between different actors in the system. And that can be an interesting way to think about parallelism in the blockchain context, kind of similar to the way I think about it in the high-performance computing context.
+
+Anna Rose (07:59):
+How long were you at Facebook/Meta?
+
+Avery Ching (08:03):
+I was there for over a decade from 2011 to about 2021. Yeah.
+
+Anna Rose (08:07):
+Oh my God. Like, the timeframe for that at that company must have been very special. Like 2011, Facebook was the pinnacle, and like, I think everyone wanted to work there. So you were working like this highly competitive, like very, I bet, like just amazing people that said, like, the reputation in our space is definitely different. Did you, like, by the time you left, did you feel like this was not, I mean, I'm sure it was a very different company, but tell me a little bit about that change.
+
+Avery Ching (08:37):
+When I joined in 2011, you're right, it was a very small startup and super exciting place where everybody had some very unique talents about them. I was sitting next to someone who was like, very influential in C++ and someone who was like like a semi-professional chess champion. It was very interesting to see the kind of talent that came together at that time to work at Meta/Facebook, It's hard for me to go back and forth still at this, I called it Facebook for the first 9 years of my career there, and then Meta for last year. So it's still a challenge for me to get over that.
+
+Anna Rose (09:07):
+Fair, fair.
+
+Avery Ching (09:08):
+But over time, you definitely saw, like, one thing Facebook did really well was to kind of keep the small team culture going. So teams are still pretty tiny, like 4 or 5 people. Now, they are grouped of, come together as larger teams, but the bottoms of culture and the way that roadmaps came together and people planned, I think was mostly maintained during my time there. Definitely the DL part of it was very large and grown many, many times and multiples over that. But overall, I had a great time there and I really enjoyed the colleagues that I met over those years.
+
+Anna Rose (09:36):
+Did you like, so I've had on the show Bobbin, Kostas and Sam all who were at Meta mostly in the cryptography, like Libra project. You were also working there. So I kind of want to understand, I mean, like 2 of those folks went on to do Mysten
+
+Avery Ching (09:55):
+Yeah.
+
+Anna Rose (09:56):
+With, I know a lot of the folks from that crew. So tell me a little bit about like what was that original group like and how did it split off?
+
+Avery Ching (10:04):
+Yeah. So Facebook was a really forward thing at the time. They invested a ton in terms of bringing together talent across so many different domains. Cryptography, languages, distributed computing, consensus, a lot of talent and the way that was kind of assembled was into different organizations. There was the engineering organization that focused on how do we build the blockchain, how do we scale things? How do we deploy this infrastructure? And then there was also other folks that worked on languages and research. And so I think, you know, the organization was pretty large. I think it was more than a 100 people working on. Also, we had a wallet infrastructure team as well. So my focus was, I started from the team working on consensus protocols, did a bunch of research in the space to understand what direction we wanted to move in.
+
+(10:54):
+We ultimately ended up picking up HotStuff as the first kind of consensus program we would work on.
+
+Anna Rose (10:57):
+Yeah. Yeah.
+
+Avery Ching (10:58):
+And over time, I became the lead of the blockchain space, kind of helping us on how we integrate Move with DM, how do we work on the custody side of solutions with respect to what our wallet infrastructure was doing and the ecosystem projects around it. And we had a great team of 30 plus people that was, that was working on space. A lot of those folks we are fortunate to have come with us work with us Aptos Labs.
+
+Anna Rose (11:21):
+Yeah. Wait, isn't Ittai an author there?
+
+Avery Ching (11:24):
+Yes. Ittai Abraham is also a co-author on the paper.
+
+Anna Rose (11:26):
+Okay.
+
+Avery Ching (11:27):
+We work closely with Maofan, Ittai and Dahlia on the pacemaker improvements for liveness but you know, HotStuff was this interesting theoretical paper, it did not have the practical applications into how you would make it work in the system. We took the kind of core genesis of the 3 phase protocol, the separation of safety and liveness, and then evolved it into something that we think was pretty meaningful to support 2 steps instead of 3 steps with respect to consensus, making it much more faster. And also the idea of an active leader as opposed to a passive pacemaker. So the original paper was designed to wait for timeouts long exponentially increasing timeouts, which would take a very long time before you kind conduct to a system that works.
+
+(12:10):
+and we obviously that's not going to work well in a practical context. We took the approach to make it more an active pacemaker where node synchronized and because of synchronization, they can actually recover much faster from failure. They can make much more progress with respect to liveness and support a more practical running system. And what we saw actually, which really, which was cool, is that others have adopted some of this work. So Flow blockchain, for instance, has adopted both these primitives. I don't think they have leader reputation that we have yet. Leader reputation is a really cool primitive where as you progress in your usage of the blockchain, the validators that that run the software are going to be reporting their reputations on-chain with respect to the votes. The fact that they were able to successfully commit blocks as leaders. And we use this information to then bias towards those nodes that have done well and support that as well with rewards with respect to our Proof-of-stake network.
+
+Anna Rose (13:03):
+That's what you're doing today. That's what we're doing today with like Aptos? Okay. Okay. On the consensus front.
+
+Avery Ching (13:08):
+Yeah. We've also taken that a step further. So we've, you know, I don't know if it's a good time to dive into it now, but we've been also working on the next phase of our consensus protocol. So the way we think about it is very much an iterative process. We started off with the kind of basic HotStuff we iterate to our first deployment that improves the liveness areas quite a bit with respect to responsiveness. And then we add our leader reputation on top of that. And more recently we've done something called Quorum Star, which is the first production grade implementation of the Narwhal and Tusk papers. And so there's a line of research that
+
+Anna Rose (13:41):
+Which is this? Tusk?
+
+Avery Ching (13:43):
+Narwhal and Tusk. So there's a research paper that <inaudible> from Aptos Labs have been working on in collaboration with others which talks about the idea that separating the data dissemination phase from consensus is very important for scalability and so it's great as a research paper. There's a cool prototype implementation out about it, but we wanted to take that prototype again and turn into something that was much more practical and applicable to real life systems and so our first implementation of that called the Quorum Store, actually has been tested right now with our node operators in what we call the preview nets and achieving pretty fantastic results with that. And so our goal is really how do we keep marching this technology forward? We know that technology continue to evolve over time.
+
+(14:27):
+The goal of Aptos is when we think about this space, it's so young, it's so early, it's not in the phase where things are so matured where products are very similar in spirit. Like, you know, think about Postgres or MySQL. They are different products and they have some differentiators, but in by and large, you know, a lot of the features are pretty much interchangeable between those things. Same thing with Cloud. You can think about AWS and Google and Azure as being, you know, they have differentiating services they offer and the support is different, but by and large, they offer a large fleet of machines. They offer some serverless infrastructure that's applicable for building on top of, and you know, blockchain is not anywhere near that maturity phase right now. We're at the early, early phases where technology is being experimented with, play with. And so for us, upgradeability is super important. How do we think about a technology stack that can keep moving forward over time until we get to that maturity point, until users can kind of see less differentiating between the products because they're all pretty high performant and support great user experiences.
+
+Anna Rose (15:25):
+I want to go back a little bit to the sort of the Meta crew.
+
+Avery Ching (15:29):
+Sure.
+
+Anna Rose (15:30):
+So you've shared a little bit about like the consensus side of things, so that's like running with HotStuff and adding these new ideas into it. But yeah, I want to also talk about Move because you've mentioned Move a few times and I had Sam on the show from Mysten who talked about Move, like Move was developed in order to be kind of the script or the, like the language for some new blockchain. It's kind of to replace Solidity, right? Originally?
+
+Avery Ching (15:59):
+I think I don't have it designed to replace, yeah, I don't think we're trying to replace anything at the time.
+
+Anna Rose (16:03):
+Okay.
+
+Avery Ching (16:03):
+I think we were trying to think about, you know, when we think back at the history in 2018, it was more about Meta has billions of people that come into it every day. And thinking towards that scale compared to what industry is and was at 2018, where you have maybe a couple hundred, or at that time probably tens of thousands of users that are excited about blockchain, how do we take that and, you know, add orders magnitude of people to it? And that's not such just developers, but those are users and, and what would need to be done to be that experience, particularly safe and also bring time from development to production down to make the industry move quickly.
+
+(16:41):
+And I think Move is the answer to that, our answer to it, which was a new programming language, which would make it harder for people to make mistakes that would support things like formal verification that would be designed from the ground up to be resilient to denial of service attacks. All those things came together in the move language and maybe most important of all those factors, a language in which we could iterate our move on very quickly. Solidity, you know, has a great community around it. And that's a both an advantage and a disadvantage. It has you know, lots of great developers, but at the same time the language can't evolve as quickly and with Move, it's something that we felt was designed also to be upgradable, also to add some new features. And we've added quite a few in even the recent, you know, months and of course years with respect to it and we continue to expect to do so going in the future.
+
+Anna Rose (17:28):
+The thing is, if Sam is at Mysten and he, I mean, I know that he's still quite active on it. Like is it the two teams are contributing towards the same language or are there others as well?
+
+Avery Ching (17:39):
+There actually been more, this is something that's a little surprising maybe to folks, but there's been more than 300 unique contributors to Move over the years.
+
+Anna Rose (17:46):
+Okay.
+
+Avery Ching (17:47):
+And, you know, while they're definitely, you know, some large contributors in in Aptos and in Mysten and others like Zero-L and Starcoin, we do see community support for this project both, and also in academia. I think academia also regards as a very nice place to play with it. Yeah. And we expect that to change over time. We've also heard expressions of interest from Solana, from Near and from other blockchains that are thinking about moving a different gateway into their blockchain. And that's also something that excites us a lot.
+
+Anna Rose (18:17):
+Have you ever looked around at other, I mean, obviously you're familiar with Solidity and stuff, but like, would there ever be, I guess it would just be compilers, but like would you or would the Move community also want to interact or connect to any of the other languages out there? Like I'm thinking stuff like, I mean, especially right now we're dealing with like the zkDSL land explosion maybe that's too far off, but like yeah, I mean, you have ink over at Polkadot, you have Solidity, which is really well understood. I don't know, what's the, Solanas using Rust? I guess
+
+Avery Ching (18:49):
+That's right.
+
+Anna Rose (18:50):
+So like, yeah. Can you compile from Rust to Move?
+
+Avery Ching (18:53):
+I think there's been a lot of efforts to, to try to make compatibility support from moving to and from. I know our team Wolfgang and <inaudible> and others have worked a lot on that space. And how do you think about compiling or transpiling from Solidity to Move or, you know, just kind of support even the EVM by codes in a Move compatible way and vice versa as well although I think right now, you know, all of our resources are tied up in just, you know, supporting Move in a really good way for Aptos.
+
+Anna Rose (19:24):
+ Okay.
+
+Avery Ching (19:24):
+It's something that we do think about and our team is excited to support in the future and also helping willing to help support others who are wanting to make that happen.
+
+Anna Rose (19:32):
+Cool. Okay. So, so far we've covered consensus and some of the unique points. You're using the language Move, but Move is the language that you would write programs for Aptos in, right?
+
+Avery Ching (19:42):
+That's correct.
+
+Anna Rose (19:43):
+You're not using Move to build the blockchain? Are you?
+
+Avery Ching (19:49):
+Actually, I think you could argue that's the case for us.
+
+Anna Rose (19:51):
+Oh really?
+
+Avery Ching (19:52):
+And I think that's a big part of our upgradable story. So definitely have a lot of our validator code is written in a Rust, that's for sure
+
+Anna Rose (19:56):
+Okay. Okay.
+
+Avery Ching (19:57):
+But one thing that makes us upgradable is the fact that we use Move modules to determine the state of the blockchain as well. So, we have on-chain governance where people can vote for different proposals and a proposal might be, for instance, upgrade our consensus protocol from kind of current HotStuff to HotStuff plus our Quorum store. And it's something that we actually have done in the past. And when that vote happens, there's a trigger on-chain, on-chain configuration that flips. And now all the validators that sync up to the current state of the blockchain are understanding that now this uses Quorum store technology plus op stuff going forward. And this is a way that allows us to do a great ability in a very seamless fashion without any disruption to their users.
+
+Anna Rose (20:39):
+Yeah, that's interesting. So it is kind of on both, both ends. It's like one would use it to write on top if you ever built anything on top, and also you're using it somewhere under the hood.
+
+Avery Ching (20:48):
+That's right. I mean, even our staking contracts over written in using Move, we try our best to use Move because that way it allows us to upgrade these, these different contracts or use your primitives in a very seamless way.
+
+Anna Rose (20:58):
+Interesting.
+
+Avery Ching (20:59):
+It's much more flexible to write anything you want to do in Rust, but when you can use Move to do it, it allows us that upgradability with respect to on-chain governance and with respect to contract upgrades. And that's really fascinating for our developers and for our, our community in general.
+
+Anna Rose (21:15):
+Cool. Cool. What are other kind of dimensions that you would say? Like you're doing experiments or you're creating something somewhat new from what? Like the audience of the show, we've heard in detail how like Ethereum works and we've done episodes on Solana and on Near and on Polkadot and on Cosmos. So yeah. What else? Like when you're kind of going to an engineering community, like a DAP developer community, what are you offering them that really like changes the offerings? I mean obviously there's the language, there's some stuff going on under the hood, but yeah, tell us more.
+
+Avery Ching (21:51):
+So different language is a big component. We think that that'll help you get faster time to production and that's meaningful to developers obviously today, there's a huge amount of challenges with respect to how do you audit the code and get it ready, and if there's fewer things to audit, if you can take the advantage of the Move prover and how it supports formification around certain aspects and semantics of your programs, that's a huge important factor. We think about the user experience as well. So many blockchains today don't have even simple things like key rotation. And Aptos not only supports key rotation, but it supports key rotation that's controlled by smart contracts that allows you to support things like hybrid custom solutions. Imagine a world where as a smart contract platform, you have a way to rotate your key, but only under certain constraints.
+
+(22:36):
+Only when you have not used the blockchain for a period of time, like six months or a year. So most of the time you have full control of your account, you no one can touch it and except for with your private key but when you haven't used it for a while, for instance, you've lost your key, another key that's held by custodian and would be able to rotate it on your behalf, but only with those points and provably on the blockchain at a certain time, audited. So we think that the user experience challenges of key management are things that we can push as far down to the L1 stack and support with what eligibility and with transparency and with kind of help from others. You could be a friend, it could be a custodian of sorts, that's very meaningful.
+
+(23:17):
+The other thing that's very meaningful, of course, is this technology stack needs to scale. And when I say that every single blockchain combined in the world can support what a single MySQL server can do, and what we've done at Aptos is think about how do we design a system that can support scaling up the resources for larger workloads, the same way that cloud infrastructure does for new applications like Netflix or Google. Those are powered by, you know, hundreds of thousands if not millions of MySQL servers when you think about infrastructure like Instagram and Meta, and that kind of gives you an idea of how far away we are in industry from where we need to be and where we are and so when Aptos stack was designed, it has many different phases of transaction execution. It has a dissemination phase, it has an ordering phase, it has a parallel execution phase.
+
+(24:06):
+And then what we, I think we talked a little bit earlier, we have the ability to batch updates, which is much more efficient from a resource perspective, and then finally a proof generation phase. And by creating these different phases of computation that are logical, we can not only allow each of these phases to work independently, we can allow the publicization of these phases. So data dissemination is something done with Quorum Store where we can push data to as many values as we can in the network and get what we call the proof of availability from them. And then those can be then ordered without having to pass that data around and support the parallel execution phase and then so on and so forth and so if you think about today, we have a validator, a single validator with CPUs and memory and SSDs and network bandwidth.
+
+(24:51):
+Those things will grow. We'll have multiple processors, we'll have multiple SSDs, and then over time what we'll have is validators that operate low latency clusters of machines and those will be able to scale up their resources and support, you know, hundreds of thousands or millions of transactions per second and growing to the needs of what web3 needs to support the largest applications in the world. And I think that is something that's pretty unique about the Aptos infrastructure, so supporting it from a program languages perspective, a user experience perspective around and pushing those primitives on-chain. And then finally kind of supporting the fastest, you know, decentralized database and scalable data decentralized database in the world. That's our goals.
+
+Anna Rose (25:32):
+Why is it fastest?
+
+Avery Ching (25:34):
+Everyone can think about fastest in different ways.
+
+Anna Rose (25:36):
+Yeah, yeah.
+
+Avery Ching (25:36):
+What you think about in terms of finality and kind of indisputable finality, not probabilistic. So for that, we started off with a BFT based protocol, a byzantine fault tolerant protocol in HotStuff and HotStuff we took from the 3 round trips of network latency to 2 round trips. That's, you know, given a data center might have about 200 milliseconds of latency from something completely across the world. You can imagine that gets us to 400 to 500 milliseconds of finality time. Now with Quroum store, that increases to slightly because of the time to also get the availabilities on it but that's kind allowed us to get, you know, a sub subsecond around second of latency in real life production scenarios in Mainet. So if you look at the recent Messari Sport on Twitter Aptos had the lowest finality time for any, any production network. And it's something that we, you know, we haven't necessarily even optimized to our fullest yet. We're excited about even driving that time further and making the blockchain accessible to realtime applications which we think would be really important for adoptions technology stack.
+
+Anna Rose (26:36):
+You sort of said though, like fastest can be defined in many different ways. Like are there other blockchains you think are fast in a different way? I'm just trying to understand what, like, if finality is, if it's not the only metric, what are other metrics?
+
+Avery Ching (26:51):
+So some people think about, you know, either use them as intermediate metrics, like, you know, the first time someone throws a receipt of a message, it's not guaranteed to be committed to the network, but there's a good indication that it's likely going to be committed if you use kind of historical data as a measure of future performance. And I think that there's other ways you can provide signals in the system. For instance, even the Aptos blockchain, which will give you similar metrics. So it really depends on what we're talking about. For instance, as once a transaction gets submitted and a validator kind of gets its proof of availability on it, you have a guarantee that no one's going to figure out this transaction and people will keep submitting it until it either gets rejected or it it eventually gets committed. And so there are different kind of metrics in the system you can expose to this pipeline infrastructure, which is really neat, such as when things have been proven to be available on top of any of the validators. There's another proof which you can provide in which the ordering phase happens. Now you're guaranteed at which it's going to be looked at, not necessarily executed in this fashion. And then you also have a phase at the very end which says it's been executed and here's the execution result of it verified by the validators. So there's many different kinds of metrics around finality.
+
+Anna Rose (28:02):
+Okay.
+
+Avery Ching (28:02):
+Which are interesting to provide to the users and to the developers, and they can be used for different types of use cases going forward.
+
+Anna Rose (28:09):
+You had sort of mentioned the key rotation. I just wondered if that was, is that all like a smart contracts are, is the account is basically the question? Like, is it a form of like account abstraction as we've understood it in the Ethereum context?
+
+Avery Ching (28:23):
+So account abstraction is something that we definitely also support in Aptos. It's a little bit of longer discussion, but definitely around keys. You know, there's kind of a way to secure an account through a key and any transaction that modifies this account has to basically be signed by that key. We also support very flexible things here, such as multisig keys for accounts. We support contracts that kind of control the way the keys are managed.
+
+Anna Rose (28:46):
+Okay. Okay.
+
+Avery Ching (28:47):
+There's a lot of flexibility here and I think that flexibility is, is intended so that the user experience can be customized toward particular use cases, whether it's enterprise grade infrastructure, such as something that Momentum Safe is doing, and one of the projects building on top of Aptos or it's going to be more user facing projects that large scale custodians would build that would support kind of more general key rotation purposes.
+
+Anna Rose (29:09):
+When you mentioned sort of, you mentioned like provers obviously, like coming from the ZK land, I always think you're talking about a ZKProof prover, but I'm guessing you're not. What kind of provers are they?
+
+Avery Ching (29:20):
+Yeah, so thinking about the Move provers is a little bit different. The idea behind it was, again, how do you get that time to market for a developer as fast as possible? And that has to do with good quality testing. And so being able to prove certain properties of your contract in all possible kind of permutations and iterations formally is something that gives a lot, develops a lot of confidence in when they write their contracts. And so knowing that for instance a balance is conserved or that even ratios between different types of tokens might be conserved or things that the Move prover can do from an, you know, prior to deployment without the need of an auditor to kind of look at the code and make sure things are working correctly. And the more we can do to enhance that framework just reduces the need for as much auditing as, you know, there's always going to be a need for auditing in the Move, any smart contract space, but the more we can do kind of reduce that need and also reduce the amount of work that happens as a part of that process allows people to move their products to market more quickly.
+
+Anna Rose (30:18):
+So is the prover then like a verification thing?
+
+Avery Ching (30:22):
+Yeah. It's definitely something that's going to formally verifies certain properties of your contract.
+
+Anna Rose (30:28):
+Okay.
+
+Avery Ching (30:29):
+And so it's not, it's not a proof in the sense of like, you know, in ZKProofs, you know, you're kind of verifying
+
+Anna Rose (30:33):
+Yeah, and then there's a prover
+
+Avery Ching (30:34):
+Yeah. You're proving that the calculation was done correctly and all these fun things. It's more about proving the certain semantics about your program.
+
+Anna Rose (30:43):
+Okay.
+
+Avery Ching (30:44):
+You should really think of it as a testing tool.
+
+Anna Rose (30:45):
+Is it like the Rust? Is it called prover in Rust too? Like that? I know in Rust it like forces you to check stuff.
+
+Avery Ching (30:52):
+Rust has this amazing, you know, compiler time checks which also prevents you from as many mistakes as possible. Of course, you can't solve all the bugs in your code and it is targeted towards specifically things that are, you know, around memory management which are very important. The proof is a little bit different inside of Move, it's really about application level semantics and not so much about the core system semantics, which is what the Rust Compiler does on your behalf.
+
+Anna Rose (31:16):
+I see. Okay. Got it. But it is sort of, like it's a checker, it's checking to make sure the thing will work the way you want it to.
+
+Avery Ching (31:25):
+Exactly.
+
+Anna Rose (31:26):
+Okay.
+
+Avery Ching (31:26):
+But just happening more at the application level as opposed to the kind of core languages and system level.
+
+Anna Rose (31:32):
+I do want to ask you, like, do you have any ZKPs in your system? Are you looking into adding them?
+
+Avery Ching (31:38):
+Yeah, I mean, I think we definitely have
+
+Anna Rose (31:41):
+You're on the Zero Knowledge Podcast. I have to ask this question.
+
+Avery Ching (31:43):
+Absolutely, absolutely. We have quite a bit of interesting cryptography in the Aptos platform for sure. A couple things that are interesting is that we have something called veiled tokens. They're kind of based on zero knowledge range proofs specifically based on Bulletproofs, users can veil their balances and keep that hidden from folks but recipients and senators are well known. This is kind of providing an interesting middle ground between full privacy of zero knowledge and also full transparency of a public blockchain. But also intermediaries in terms of the cost. As you know, generating ZKProofs are very expensive, the verification curve very fast. And there's different kinds of trade offs between the different techniques available. But we like the idea also this veiled transaction as a way to find a middle ground and a hybrid between these solutions as another alternative for us.
+
+Anna Rose (32:39):
+So this, it veils, it hides the amount, is that correct?
+
+Avery Ching (32:43):
+That's correct.
+
+Anna Rose (32:43):
+But not the recipients. But then like, is the wallet balance visible?
+
+Avery Ching (32:48):
+The wallet balance is visible to the users
+
+Anna Rose (32:49):
+So then you'd see the change anyway
+
+Avery Ching (32:52):
+The recipient and the sender would know of the changes, but no one else.
+
+Anna Rose (32:55):
+Okay. But like a block explorer would not see the, the value of the account change?
+
+Avery Ching (32:59):
+That's right. A block explorer would not see it. That's right.
+
+Anna Rose (33:01):
+Oh, in general, are the amounts in a wallet always, or like the amounts and accounts veiled, like by default?
+
+Avery Ching (33:10):
+So we, I don't think we've actually integrated into our wallet yet.
+
+Anna Rose (33:12):
+Okay.
+
+Avery Ching (33:13):
+So we are still working on that technology piece, but we've kind of put their core printers out there so people can build this infrastructure. And it's just one of the things that we're doing. We also support a variety of different signature schemes within the, the as move primitives within Aptos. It's things like, of course ED25519 signatures, ECDSA signatures, we support different kinds of cryptography functions. We're also supporting different types of other ZKProof verification such as Groth16 zero knowledge proofs aand that will be kind of the shortest and fastest to verify. And so this kind of builds the core set of primitives that are necessary for interesting ZK applications on top of Aptos, whether it's going to be L2 chains or it's going to be just applications or even verification of these proofs coming from bridges from other networks, which would be interesting as well.
+
+Anna Rose (34:06):
+I want to ask you a question about the validator sets and also the governance. Like, are the validators voting or are the users voting when it comes to governance? Like is this sort of a, you know, validators and their delegates carry a certain weight? How are you making that distinction?
+
+Avery Ching (34:23):
+Validators always implicitly vote by running the software stack.
+
+Anna Rose (34:27):
+Okay.
+
+Avery Ching (34:27):
+So I just want to make the, make sure that's very clear. Right.
+
+Anna Rose (34:29):
+Ooh
+
+Avery Ching (34:29):
+No matter what, like, it's true for all networks. It's not just true for Aptos and the validators decide to do something, you know, they can kind of do it without permission from anyone. And so there's nothing different here from that perspective. But when it comes to the on-chain voting process, that's where it's token holders that are vote. Token holders could be validators, could be users with token balances, could be, you know, other parties. Anyone that has a token is allowed to vote and the voting has certain constraints in which it can happen fast or it can happen kind of more slowly over time.
+
+Anna Rose (35:04):
+Say the tokens are delegated to a validator. Would that then contribute to the, is it sort of like the Cosmos version where it's like the percentage of stake equals the percentage of vote?
+
+Avery Ching (35:16):
+Today token holders vote in the network. There are new staking contracts coming out that support delegation from the community. And these contracts will hopefully over time support a variety of different ways for token holders to continue to vote even in delegated operation. And they can also choose to delegate those votes to other parties, including validators.
+
+Anna Rose (35:35):
+I think that is actually how a lot of the Cosmos chains do still work. Like anyone can over, like, you basically delegate your tokens, but then you can always override the vote of your validator if you want to, like, if you decide to vote, it overrides what they're voting for. But if you don't vote as a token holder who's delegated whatever the validator votes for, and I mean like the, the actual vote, this is like the upgrades and that kind of stuff anyway. Yeah. Sounds sort of similar then. It's also making me realize kind of what state the network is at. So you're like, there will be delegation, but not yet. So yeah. Where are you guys at?
+
+Avery Ching (36:10):
+So, it's a great question. We launched our network in October of last year.
+
+Anna Rose (36:13):
+Okay.
+
+Avery Ching (36:13):
+And it's been a little more than five months, five and a half months or so since network's been live, we're super excited to see the amazing community come behind it. I think on launch day, more than 30 projects launched alongside us. And that was super exciting to see. Today more than a hundred projects are live in network and hundreds of more building.
+
+Anna Rose (36:32):
+But when you say launch, do you mean testnet launch or do you mean launch launch?
+
+Avery Ching (36:36):
+Oh no, I mean mainnet launch.
+
+Anna Rose (36:38):
+Mainnet. Okay.
+
+Avery Ching (36:39):
+There are lots of projects in Testnet today that continue to stress our testnet in interesting and challenging ways. But yeah, more than a hundred today are live in mainnet
+
+Anna Rose (36:48):
+And you are live on mainnet, but you don't have delegation yet. So that's going to be like an upgrade to at some point.
+
+Avery Ching (36:54):
+That's an upgrade coming soon. And so one thing that we've tried to store very early in the process is a notion of community driven input. We have an AIP process, which really closely mirrors the EIP process where different members of the community can propose upgrades and opportunities for improvement on the network. I think we're already on probably AIP17 or 18 since we started and many of these proposals are coming from various factions in the community that we don't know well and we love that. We love to see, I think the delegation proposal actually came from one of the validator operators for the Aptos blockchain. And it's really exciting to see them taking an interest and driving this project forward in a way that, you know, many of us at, at the labs haven't thought of yet. So we're super excited about the community efforts and development in this space.
+
+Anna Rose (37:40):
+I'm kind of curious like who the community is mostly because like right now, there's, I mean if you just look at a timeline, if anything, I think we've seen a lot of ecosystems sort of shrinking more than growing and you have a little bit of a land grab happening where like different, like things like the new L2s or like everyone's sort of trying to get a chunk of an existing pie. Are you competing with Ethereum in a way like your new L1 or Solana or whatever? Like how are you getting these developers basically to build on Aptos?
+
+Avery Ching (38:14):
+I don't think of it as competition. I think the pie is really small right now. I think
+
+Anna Rose (38:18):
+Okay.
+
+Avery Ching (38:18):
+Probably are tens of thousands of developers for all of web3. And
+
+Anna Rose (38:23):
+True
+
+Avery Ching (38:23):
+There are millions of programmers in the world.
+
+Anna Rose (38:26):
+True,
+
+Avery Ching (38:26):
+So our hope and our our thought is that as we start to build out a core technology stack that provides a very scalable experience, a user friendly experience and one that can support the largest internet applications in the world, those developers will naturally start to move over. And start to get excited about web3 and Aptos in general.
+
+Anna Rose (38:47):
+Do you feel though, like, because I'm thinking you're based in the Valley because of some of the teams and people you mentioned and stuff, but like, are you recruiting web2 engineers a lot into a new ecosystem? Like into a whole new kind of industry? Or would you say you are kind of like meeting a lot of the engineers from other blockchain projects coming over?
+
+Avery Ching (39:11):
+We've seen a combination of both. We definitely have saw a lot of projects from other blockchains are really excited about developing with Move. They've had experiences with other languages and they're just looking for more and they're like, wow, this is a really cool new way of thinking about data models and programmability and auditing. And we had a hackathon early on in the project in May where we were trying to understand like, what's the developer experience around move, how ready is it for prime time and could people be productive in it? And developers came from different web2 companies from other blockchains and I think more than 50 people showed up at our office which made it for a very interesting situation. And I think we were meant to have like just 10 or 20 people.
+
+Anna Rose (39:52):
+Okay.
+
+Avery Ching (39:53):
+and then coded for 36 hours.
+
+(39:54):
+And after that they had built some of the most amazing technology with respect to wallets and games and NFT marketplaces. And many of these projects actually con continued to build with us and an accelerated program that spanned, you know, more than eight months now that that kind of showed us that Move was a thing and it was something that people could get excited about and so we've seen and in that space even there, we saw both web2 and kind of web2 communities coming together with respect to Move and Aptos. And I think today we see that same excitement. We see definitely a lot of interesting projects from other blockchains, which as you mentioned, may not be doing so well or looking for something new, come over to Aptos and get excited about technology stack the team and the way that we're advancing things very quickly in a short period of time.
+
+(40:41):
+And we also see that a lot of the large internet companies which have stayed out the space, mainly due to technology not being ready or not, you know, sure about some of the teams there and the organizations getting excited about Aptos and kind of what we bring and knowing that our history around respect to kind of building production grade software, enterprise grade software at the largest internet companies in the world is something that they can trust going forward. So we do see interest from both those communities and we're really excited to, to support all their applications.
+
+Anna Rose (41:11):
+Do you feel like there's a focus in, like, is there a particular type of, I don't know if you'd call it industry segment because I don't know if these things are big enough yet, but like, are you focused on NFTs? Are you focused on games? Are you focused on all? I've heard from thinkers that there might be a specialization in some of the other L1s or in some of the L2s, so I'm curious like if you sort of have a focus for the part of the market you want to tackle?
+
+Avery Ching (41:40):
+We're excited about technology and being kind of this great layer to build on top of, again, if you have amazing user experiences, if you have great finality times, if you have really strong scalability in a great program environment, I think you can support all use cases extremely well. That being said, we do focus on certain use cases that we think are most likely to get adoption quicker, kind of moving from broader internet based applications to supporting web3 utility. And those kind of four areas are going to be gaming, social finance, and media and entertainment more broadly. So those are the ones that we have interesting partnerships with. I'd happy to talk about those as well in the areas that we really spend a lot of our time focusing on building infrastructure for specifically.
+
+Anna Rose (42:26):
+Are you still working with Meta? Like when you talk about partnerships and then you say sort of entertainment and I'm thinking like, is this the VR thing? So like, do you have ties still to the org?
+
+Avery Ching (42:36):
+Having worked at Meta for 10 years, I have lots of great relationships with many different people there. We don't have any formal relationship with Meta at this time.
+
+Anna Rose (42:44):
+Okay.
+
+Avery Ching (42:46):
+Although we continue to keep in contact with many of our colleagues and are excited about some of the initiatives that we could work on in the future.
+
+Anna Rose (42:53):
+Okay. But that's not, when you talk about sort of partnerships, you're not saying like, you're going to be the NFT provider for Meta or something like that?
+
+Avery Ching (43:01):
+We can't comment on that at this time
+
+Anna Rose (43:03):
+I think actually they're working with Polygon, aren't they? Instagram?
+
+Avery Ching (43:06):
+So I think actually recently they did announce they're going to take a pause on the web3 efforts for a bit.
+
+Anna Rose (43:11):
+Oh
+
+Avery Ching (43:12):
+Yeah. So that's, that's something that's, you know, maybe not great for the industry overall, but you know, I think in the future we still have, there's so many things that could happen in the future. I mean, I think they're also working on a new decentralized platform for Twitter. A Twitter-like product as well. So we'll keep an eye on the space. We'll keep in contact with some of our friends there as well.
+
+Anna Rose (43:31):
+This definitely brings up the question about like the state of the market. Like when did, when did Aptos start? You sort of mentioned 2018, but then you were still at Meta or Facebook, but yeah. When did, like the company start?
+
+Avery Ching (43:45):
+So 2018 is when we started building out the technology stack, Move was being built, DM was being built. We had this great team of folks that were all working in tandem and an interesting association of like industry members from some of the largest companies in the world that were excited about this new technology stack. In 2021, it was kind of clear that this was not going to launch within Meta and in end of December, 2021 is when my co-founder, Mo Shaikh and I who, Mo had worked on the wallet side of the world and I had worked on the blockchain side and started off Aptos. And many, as I mentioned of the former coworkers at DM joined us and continue to push the theology stack forward.
+
+Anna Rose (44:28):
+Was there any other companies that came out of that? Actually, so there's Mysten, Aptos, is there another one?
+
+Avery Ching (44:33):
+Linera is another one.
+
+Anna Rose (44:34):
+Okay.
+
+Avery Ching (44:34):
+Also LightSpark, there are quite a few.
+
+Anna Rose (44:39):
+Interesting. Same group?
+
+Avery Ching (44:41):
+All the same group, yeah.
+
+Anna Rose (44:42):
+Okay. Okay. So 2021, late 2021.
+
+Avery Ching (44:45):
+Yeah. For us it was Aptos was started in December of 2021.
+
+Anna Rose (44:50):
+So this is like top. This is like, it is exciting. Everyone is very excited. That continues until end of February when, you know, stability in Europe as we've known it has changed and then it gets progressively worse as 2022 continues, as we all know. So, yeah. How does it, like being a company that sort of emerges at this time, are you feeling that? Like, do you worry about it? Have you had any sort of pushback from maybe like people who were really excited before and now are nervous?
+
+Avery Ching (45:24):
+Definitely 2022 has been an interesting year for our industry.
+
+Anna Rose (45:28):
+Yeah. Yeah.
+
+Avery Ching (45:29):
+But at the same time, I think it's re-energizes so much at Aptos. We're an early startup in this space from that perspective. Obviously our technology's been built for many, many years and evolved over that timeframe. So from a technology perspective, we're pretty, we're not mature, but we're definitely in a good space and continuing to be at a place we can be very iterative and move very quickly. From a company standpoint, it's been very interesting to see in the short period of time, you know, the movements of the industry and, and how that affects us. But it's been really positive. I think for us internally, we just been very focused heads down kind of in trying to ignore much of the noise as possible and saying, look, some of the greatest companies were built during these times of hardship in the past.
+
+(46:14):
+You know, in 2009 when the, you know, previous kind crisis of 2008 when the banking crisis has happened, amazing products and amazing technology was developed. And I think this is a great opportunity for us in our time in our industry to do the same thing where people that are very serious and very focused can generate amazing technology. And when, you know, this thing turns around at some point and people get really interested in the tech we'll be there to support them with you know, something that scales to their use cases and their needs.
+
+Anna Rose (46:46):
+You're a Silicon Valley company, right?
+
+Avery Ching (46:48):
+Well a lot. Yeah. So a lot of us, you know, come from Silicon Valley, are living in Silicon Valley. Definitely. A lot of us, as I mentioned, came from our former project at DM.
+
+Anna Rose (46:57):
+Yeah.
+
+Avery Ching (46:58):
+And so therefore there is a good mass and support of us that are in the Bay Area, but we have folks all over the world in New York and in Florida, in London, in Israel, as well as Canada and even in Asia. So we do think of ourselves as very much a global company.
+
+Anna Rose (47:16):
+Do you feel like the crypto scene, there is sort of this West coast scene and you sort of mentioned a few teams that I would like kind of associate with it. Solana is very, very much from there. I'm curious to, like, what is your perspective on the larger ecosystem? Like do you see sort of still the center of innovation as being from the Valley or do you see it like moving to different parts of the world? I maybe this is like harsh because you're there so you have to say it's there.
+
+Avery Ching (47:45):
+No we definitely see talent all across the world and we are excited about working with our colleagues everywhere. I think for us, we just have a core group of folks that came together in Silicon Valley because of our history with DM and Meta. And you know, it's something that is very special to us as well. We think that, you know, being in person during the pandemic and during our launch, you know, we call it death March sometimes was super was very critical for us to to getting to getting to market quickly. And yeah, I don't think anyone's been able to launch a blockchain, you know, within 10 months of starting a company and also come live with 30 different projects at the same time. So that's something that we're really proud of. And I think a lot of that came from the fact that we had an amazing group of folks you know, in person and many of those folks flew in from across the world to be with us and help us get there. It's one of our, you know, core advantages as a team.
+
+Anna Rose (48:41):
+It's so different because I mean, a lot of teams that I know, my teams are all like remote. But yeah, it's, you kind of have that because you all came from one org, you have a little bit of that chance to still meet up and see each other in offices. I am still wondering like, going forward, I mean, I think from what you've said, I can hear that you have a relatively, like you have a pretty rosy outlook that there will be like, it will rise again. But what must it be to be because you're coming from like more the traditional American tech hub and given the kind of onslaught of regulation, like yeah. How are you managing that? How are you thinking about it?
+
+Avery Ching (49:23):
+Something we're really excited about is when we thought about the network from, from day 1, there was a focus on doing things in as a regulatory compliant way as possible. So no token sales as much as sensitization as possible throughout the technology stack and the processes in which we manage the code commits and helping to invite as many people to participate in the community as possible is something that we really focused on. And we think that that's something that, you know, everyone will also adopt over time when it comes to developing Layer 1. There are two other types of blockchains based solutions. So that's an area that we think is something that, you know, is actually a competitive advantage for us and we expect the industry to also do in the future.
+
+Anna Rose (50:10):
+I think one of the arguments that we're seeing a lot of, like the US companies have, which is that to be compliant is so challenging because the rules have not been declared. How do you navigate that?
+
+Avery Ching (50:23):
+Well, we try to, again, do things that we feel are going to focus on utility of the blockchain specifically as opposed to other aspects. We, you know, tokens are used for paying network fees and transaction fees. They're used for a staking, they're used for governance. Those are the things that are important for operation of a network. The decentralization of the network across many different countries where validators are operating in 22 countries around the world over more than 18 different kind of cloud providers, 73 different unique operators at launch. Those are the things I think that really help a network to start off and, and grow to decentralization over time.
+
+Anna Rose (51:01):
+Do you ever imagine, like, because there is sort of a way that some ecosystems have decentralized by almost like creating secondary companies to build the infrastructure or like, or wind down the original one. Is that sort of, is that a plan or is that something that you're thinking about? Or do you see it more like, this is a technology company that will also exist alongside this network forever?
+
+Avery Ching (51:28):
+The Aptos Foundation was launched as well prior to the mainnet going live and is continued to grow in size and responsibility. The Aptos Foundation focuses on the growth and decentralization of the protocol. Aptos Labs is a contributor to the protocol and also continues to build products over time as well. So developing a wallet and indexer analytics infrastructure and over time potentially products.
+
+Anna Rose (51:54):
+Oh, okay. And do you think you could have a secondary one? Like do you ever imagine like having another org? Maybe it's too weird and strategic, but maybe that's not even something that most teams are thinking about, but yeah, I just wondered like when you talk about decentralization, like if it's, I wonder if you're also thinking like maybe another company completely builds it.
+
+Avery Ching (52:14):
+That's a good question. I think we've seen from the community standpoint so many different projects building in this space. And the more that build externally the outside of Aptos Labs. The Aptos Labs is an influencer and contributor to the overall protocol. And to the growth of network. And we're excited by that. We're excited about taking less responsibility and we're super encouraging and grateful for those that are contributing to AIPs, those that are committing code. The Aptos stack is actually, I think 450 unique contributors and it's not just a small team of folks that work here that do it. It's really people are around the world who are excited about the protocol and what it can do for their particular use cases.
+
+Anna Rose (52:52):
+Nice. Well, Avery, thank you so much for sharing with me this sort of story of Aptos explaining kind of some of the tech stack, how the community is where you're at as a project. What's next? Is there something that folks should look forward to?
+
+Avery Ching (53:06):
+Upgrades, lots of upgrades coming forward. We deployed our 1.2 upgrade in February. 1.3 is probably coming out in April or May. And so our plan and our cadence is really to keep deploying technology out to market as soon as possible. Things like Move objects and resource groups which allow people and programmers to be able to bunch their logical objects together in a way that's going to support high performance throughput is something that's exciting to us. We'll continue to see gas feeds coming down by the way very soon. I think in the 1.3 upgrade, you'll start to see some of that I think a hundred x lower costs in the execution side, which will be very exciting for developers and enable a whole bunch of different use cases. So we keep listening to developer feedback. We see changes coming forward from the community and from our team specifically.
+
+(53:56):
+And we're going to keep pushing forward in that direction.Hhopefully by end of the year you'll start to see amazing, you know, applications being built on top of Aptos. We have a couple that are very exciting that I would like to highlight. So one of them is Chingari, it's a web3 social media app with 45 million monthly active users and over 2 million accounts, they were building on another chain in the past. And now they've really been excited by the Apros technology stack and they're switching and going to bring all the users with them. And we're going to work together to hopefully scale that up even by an order of magnitude in the future, which is really exciting. And so everyone's looking for that use case in web3 where it gets people to, you know, get excited about utility being brought to the space and something that they would use on a daily basis or, you know, even a weekly basis with in hours of millions or tens of millions or hundreds of millions.
+
+(54:48):
+And so we think Chingari is definitely one of those possibilities. Another one is Gran Saga Unlimited, which is a game coming out of NPixel AAA gaming studio out of South Korea. They're going to be launching their game soon. They did an amazing demo at GDC last week with a private beta and they've had millions of players in some of the previous versions of the game that they've built. And again, being able to see what Aptos can do to support their needs and use cases. They want to put everything on-chain and do every, all the game play in design within the network.
+
+Anna Rose (55:19):
+Wow.
+
+Avery Ching (55:19):
+Which is really exciting and offering new experience to users. And these are just a couple that come in flagship projects that we are building and we think they have tremendous potential to take advantage of our technology stack and demonstrate what web3 can do and bring in terms of bring utility towards a mainstream audience.
+
+Anna Rose (55:36):
+How would you put an entire, like if it's a real video game, because I mean, I think there's already like a really good mapping on like how you could do marketplaces for, like, if you do marketplaces for things that kind of don't matter, but add status, like skins, it seems to work. But if you do marketplaces for like in-game items, then you end up with like oligarchs just owning it. It's like not fair, you know? So like how, how would you put a full game on-chain actually?
+
+Avery Ching (56:07):
+So they've been thinking about this problem pretty deeply. There's something called proof of play, which you could take a look at.
+
+Anna Rose (56:13):
+Okay.
+
+Avery Ching (56:13):
+And how items can be distributed to users in a fair fashion and verifiable on-chain but yeah it definitely raises interesting questions around token economies for either gameplay, which is so much more flexible than see a boring blockchain that has utility token.
+
+Anna Rose (56:29):
+Totally. That's cool. Well, yeah, thanks again for sharing all of this with us. I'll do a little bit more research into that. You've got me thinking that I should do an episode actually on blockchain gaming after this. But yeah. Thanks so much, Avery.
+
+Avery Ching (56:46):
+It was my pleasure, Anna.
+
+Anna Rose (56:47):
+All right. And I want to say thank you to the podcast team, Rachel, Henrik, and Tanya. And to our listeners, thanks for listening.
+

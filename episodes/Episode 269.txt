@@ -1,0 +1,660 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week we dive into the topic of auctions with guests, Kshitij Kulkarni, a PhD student at Berkeley in the EECS department, and Matheus V. X. Ferreira a post-doc at Harvard. Tarun is my co-host for this one, but he's also the co-author of most of the work that we cover. We share a history of auctions in the real world, in finance, in advertising, and in blockchain, and then explore how different types of auctions are used in these different scenarios. We then cover their newer work built for more recent blockchain use cases such as MEV and NFT auctions, and then look at the incentives of both auction holders and the participants and how these designs might influence the effectiveness of the auctions themselves. In the last stretch of the episode, we look at how ZKPs are being incorporated into some of these designs and how this might be an interesting new problem space to try out advanced cryptography in.
+
+(00:01:17):
+Now, before we start, one of our sponsors for the upcoming zkSummit9 had a quick message. Jump Crypto is inviting all researchers, academics and protocols to join them for zkWeek happening in Chicago from May 15th to May 20th. Expect six full days of inspiring talks from top researchers, shoulder to 6 collaborations, and plenty of opportunities to build meaningful relationships. Head over to jumpcrypto.com/zkweek to apply. We'll add the link in the show notes, and as mentioned, zkSummit9 is happening next week, as well as zkHack Lisbon and so we won't be releasing an episode next week. We decided as a team to give ourselves a little pause so that we could focus on making those events amazing. If we don't see you there, then you will hear us back here on April 5th with our next episode. And now Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:02:11):
+Aleo is a new Layer-1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated Stablecoin and more. Visit developer.aleo.org to learn more. You can also participate in Aleo's incentivized testnet3 by downloading and running a snarkOS node. No signup is necessary to participate for questions. Join their discord at aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose (00:02:55):
+So today we're gonna be exploring the concept of auctions in all of their forms with our guests. Kshitij Kulkarni, a PhD student at Berkeley in the EECS department, and Matheus Ferreira, post-doc at Harvard in the School of Engineering. Welcome to the show.
+
+Kshitij Kulkarni (00:03:12):
+Thanks a lot for having us
+
+Matheus V. X. Ferreira (00:03:13):
+Yeah, thank you very much and very excited to talk about our work.
+
+Anna Rose (00:03:17):
+The work we're gonna be talking about today is entitled Credibility and Incentives in Gradual Dutch Auctions. This is work that the two of you wrote together with Tarun, who's also here. Hey, Tarun.
+
+Tarun (00:03:27):
+Hey everyone. All I have to say is as both a host and a guest this time in some ways, co-host and a guest, I'm excited to talk about this paper because somehow, you know, we haven't talked too much about like ZK applications and I really feel like this is one of the first things that is in that vein that, you know, I've spent a lot of time thinking about because I've been on this podcast a lot.
+
+Anna Rose (00:03:52):
+Interesting. Okay, so before we jump into this, let's learn a little bit about you Kshitij and Matheus. Do you want to introduce yourselves, Matheus why don't you go first?
+
+Matheus V. X. Ferreira (00:04:01):
+Yes. I'm currently a post-doc at Harvard. So before I did my PhD at Princeton in Computer Science. So generally my research has been looking into aspects of security algorithm economics and cryptography and I think cryptocurrency and blockchain generally is a very exciting area to actually be combining these different aspects of computer science.
+
+Anna Rose (00:04:25):
+So tell me a little bit about the kinds of work and research. Like what is the exact field of study, like what have you been working on?
+
+Matheus V. X. Ferreira (00:04:31):
+Yeah, so auction design has been one of the areas I've been doing a lot of work. So I've been very interested in this aspect of designing credible auctions, which are essentially auctions where you cannot trust the auctioneer. So it's a very different take from traditional economics because often you assume the auctioneer is honest
+
+Anna Rose (00:04:55):
+Honest, yeah
+
+Matheus V. X. Ferreira (00:04:57):
+You're going to commit to follow the auction they're promised to do but in practice auctioneers might actually try to manipulate their auction to increase revenue.
+
+Anna Rose (00:05:11):
+Yeah. Yeah.
+
+Matheus V. X. Ferreira (00:05:11):
+And that has been a problem in, especially in the internet because you don't, you really can't see an auction is manipulating their own auction over the internet because it's just a black box, right? The only thing you see is you're sending your bids and you're getting a quote of how much you need to pay and you really don't know what the auctioneer can be doing there.
+
+Anna Rose (00:05:37):
+So this is interesting. It's almost like you were just studying auctions period, not necessarily like auctions in a blockchain context, but like yeah, I first learned about these kinds of, I mean I'd heard about auctions generally, but I guess the first time I started looking into them was very much when they were being used back in 2017 for some of the like ICO token sales. That was the first time I started to see, and specifically these Dutch auctions,
+
+Tarun (00:06:03):
+Matheus actually also spent a lot of time doing research on Proof-of-stake attacks and attacks against transaction fee mechanisms like EIP-1559. So he's actually done a lot of other crypto-related research in his PhD.
+
+Anna Rose (00:06:19):
+Cool.
+
+Tarun (00:06:20):
+So I feel like we should shortchange some of that because it's actually kind of relevant because we've talked about a lot of that in the show.
+
+Anna Rose (00:06:26):
+Ah
+
+Matheus V. X. Ferreira (00:06:27):
+Yes. So I can say more about it. So yeah, the way I might take on that is I try to understand the different aspects of blockchain. So auctions I see as an application, but also incentives. They take a very important role on the Layer-1 blockchain. So something I've been very interested is to understand when Proof-of-stake blockchains are what we call incentive compatible, which means that when miners have incentive to actually follow the protocol because when a designer basically creates a new protocol, they're basically telling what miners should do, but you really have to incentivize them to actually do that. So I have done some work on how on actually analyzing protocols. One particular was the algorithm protocol where we try to understand the incentives of the protocol and I have some other work where we try to design alternative Proof-of-stake protocols. They are incentive compatible and as Tarun was saying also in the application lab when you start going more in the higher levels of the stack. I have done some work on transaction fees in particular. I got interested on that after the EIP-1559 came around where I was basically trying to understand what would be the equilibrium properties of the protocol and we had a paper on on analyzing the EIP-1559 and actually proposing alternative designs for them.
+
+Anna Rose (00:08:05):
+Cool. So, K, let's hear a little bit about your background. What have you been working on? What led you to this problem?
+
+Kshitij Kulkarni (00:08:11):
+Yeah, so roughly I would sort of frame my PhD work as sort of falling in the area of dynamic incentive design or dynamic mechanism design. So that I'll just split those three words into, you know, what they mean. So dynamic, something that's happening over time so people are interacting with a mechanism or an incentive system over time and then of course incentive design is the problem of sort of a social planner or a central planner trying to get some self-interested people or agents to do something that is good or something that you know, as he wants.
+
+Anna Rose (00:08:48):
+Yeah.
+
+Kshitij Kulkarni (00:08:49):
+and I've been also working with Tarun recently after getting nerd sniped on this MEV problem.
+
+Anna Rose (00:08:54):
+Ah.
+
+Kshitij Kulkarni (00:08:55):
+and so really got interested in these gradual Dutch auctions because they have sort of all of these properties that they're auctions that happen over time and there is this sort of very interesting problem, like how do you incentivize players in these auctions to do well as Matheus was saying to be incentive compatible for the auction to be credible but now over time instead of sort of in this one-shot context. So yeah, so that's what got me interested in this problem. The problem is sort of dynamic and happening over time and thought it was very interesting.
+
+Anna Rose (00:09:29):
+Cool. Tarun, now I'm curious, how did you get to this problem? Where for you, did auctions first pop up? Is it through MEV as well or is this something you've been tracking?
+
+Tarun (00:09:39):
+I think, you know, when I was working in trading I used to trade a lot of the opening auctions and one of the things when I was doing that was, you know, maybe like 2014 or 2015, I spent a lot of time reading kind of books like Tim Roughgarden's Twenty Lectures on Algorithmic Game Theory and Noam Nissan's like random books on like auction complexity and Automated Market Makers actually by Sandholm and a couple others and at that time I was just trying to understand like how well the theory of what people had written in algorithmic games theory actually matched what people really do when they're trading against auctions. So, you know, unlike crypto, most markets in the world have a beginning and end time and the way we, you know, the markets closes or begins is there's sort of an auction for the opening price of the day or for the closing price.
+
+Anna Rose (00:10:37):
+Okay.
+
+Tarun (00:10:38):
+And so people are bidding in the auction for what the opening price should be at like 9.30 before it opens and then the market trades continuously before it opens.
+
+Anna Rose (00:10:46):
+Okay.
+
+Tarun (00:10:46):
+And that's the price it starts at, and then people can fill the order book based on that.
+
+Anna Rose (00:10:50):
+Interesting.
+
+Tarun (00:10:51):
+And one interesting thing was like, I had noticed like different exchanges I was trading on had like very different designs and I was just trying to understand like how, I mean this is one of the reasons I I like didn't like working in trading. A lot of times the people around me would just be like, oh yeah, that's just the way, that's just what the spec was that we got for like why it works and I would always just be like, why did they choose that auction? Like what's the history that we went into like Eurex using some weird Dutch auction, but like the CME having just like an ascending auction whose clearing price was like some random reserve price was like some initial price earlier in the morning.
+
+(00:11:28):
+They have some sort of like notion of overnight trading, but it's like a, it's a different instrument technically.
+
+Anna Rose (00:11:33):
+Okay.
+
+Tarun (00:11:35):
+And so I just like never really understood how those were chosen and whether they're manipulable or not and how to raise them up their property. So my journey had started then and then I think once I had been in crypto I had just observed that, you know, yeah, transaction fees are basically a certain type of auction and MEV was a certain type of auction and it did feel like it was much more reasonably designed than the ones that people were sort of using in finance or even maybe Spectrum.
+
+Anna Rose (00:12:08):
+These like legacy systems?
+
+Tarun (00:12:09):
+Yeah. I think the ones in finance, like, because they work well enough, people are just like, yeah, whatever they're fine and also there's a centralized entity running it, so you don't even have a choice, it's just like this is the auction that you use. Whereas I do feel like in crypto there's this idea that like, hey, you could always make it better. I don't know if that nerd sniped me. That's maybe the long story short or the short story long
+
+Anna Rose (00:12:31):
+Going back to that kind of time though, or like just that system in traditional markets, the fact that it's built this way, do you think like have the actors working in those systems developed all of their strategies around it so it's not only the centralized entity that would need to change, but like everything built around it would need to change? Is that also what's potentially holding it back?
+
+Tarun (00:12:52):
+I think it, yeah, certainly the participants who've become good at it obviously are entrenched with into not changing the auction format but I also think there's there's some legal requirements for different types of assets for like how things should clear. So for instance indices like if I trade the S&P 500 or I trade the FDAX in Europe or you know, something like that, indices trade overnight but the overnight products are actually sort of like futures on the opening auction price. So you're kind of guessing what the opening auction price is and if you hold it to the opening auction, you can convert that future into real asset at the opening auction price. They're sort of the sellers of the opening auction, the futures holders, but like single name stocks don't have that.
+
+(00:13:46):
+Right. So it's like if I, you know, go and buy Tesla or something, there's not an auction for Tesla stock individually oftentimes, but there might be for, you know, options depending on how the date, how much liquid either is. So there's some regulation on the index options versus like single name things. And that part is very complicated and encumbered by history, not due to like mechanism design that was just like, this is just the way these markets evolved and that's it. And so I think like crypto gives you a new way of actually kind of getting to outcomes for solving the same problems but maybe using more well designed techniques.
+
+Anna Rose (00:14:31):
+Do you think there was even an intermediate step between the kind of traditional ones and crypto? And the reason I say this, I know before, just earlier in this episode, I just said that I first kind of understood auctions with the ICO stuff, but actually I just remembered once upon a time worked around like marketing and ad tech. I didn't do ad tech, but I was like aware of what it did and over there there's a ton of auctions, right? That's like, it's digital so it's not dealing with like stocks and opening, you know, it's not that much legacy. I think this is, I mean I'm guessing this is like 15-20 years old, a lot of that stuff. So would you call that sort of the intermediate step? Like does that, does that make sense that it would be like that that was sort of a place where some sort of the experimentation that might get used in crypto today might have started
+
+Tarun (00:15:19):
+Sort of you know
+
+Anna Rose (00:15:21):
+Or is it such a different product?
+
+Tarun (00:15:24):
+No, no, no. So, so like at a very high level, and I think hopefully we talk a little bit about the Google antitrust case because it's related to this at a very high level, the auctions for online ads are extremely high dimensional, but very sparse. And what I mean by that is when you bid on Facebook, you're bidding on a category, a category meaning like female London buys lots of clothes, drinks green smoothies.
+
+Anna Rose (00:15:52):
+Who is this person?
+
+Tarun (00:15:53):
+I don't know, I'm just making up, I'm making up attributes. Right?
+
+Anna Rose (00:15:56):
+Yeah yeah
+
+Tarun (00:15:56):
+But there's categories, right? And there's sort of like a set of these kind of tags that's, and there's a huge number of them right? For different cohorts of users and each cohort is its own auction. Right? So like you can bid on that cohort and send
+
+Anna Rose (00:16:13):
+Yeah.
+
+Tarun (00:16:13):
+And send that and so you have this huge number of options, possibly like exponential in the number of users there might be even more tags than users.
+
+Anna Rose (00:16:22):
+Oh wow.
+
+Tarun (00:16:23):
+But there are very few auctions that are active at any particular time because there's only like certain cohorts that are using the product. Right. So that's what I mean by sparse. That's very different than the finance auctions, which are extremely continuous and dense. Like there's many people concentrated on just bidding on like what the S&P 500 should be when it opens.
+
+Anna Rose (00:16:42):
+Yeah.
+
+Tarun (00:16:42):
+Right. And MEV is sort of a mix of the two of those.
+
+Anna Rose (00:16:47):
+Interesting.
+
+Tarun (00:16:48):
+But the interesting thing is like people really invented a lot of the automated market making literature in the late 2000's. I mean I guess it sort of existed early 2000 but you know, I'd say there was like a big fervor for it around the 2010-ish. And a lot of that was done at tech companies because people had thought maybe over optimistically that people would be doing these like high-dimensional ad auctions in automated market makers. But then people proved all these really like sad impossibility results and then people kind of gave up on automated market makers and then crypto people accidentally figured out
+
+Anna Rose (00:17:27):
+Yes.
+
+Tarun (00:17:27):
+A different way of doing it. Right. So I'd say there's definitely a very interesting connection where the online ad world is the middle ground, but then the online ad world as sort of some of the Google case shows, it is a bit gerrymandered because people aren't even making their own bids. Right. You can't even control your strategy like Google execute your strategy for you. So
+
+Anna Rose (00:17:49):
+Yeah. Yeah.
+
+Tarun (00:17:49):
+So it wasn't really like a fair market unlike say the MEV market.
+
+Anna Rose (00:17:55):
+Interesting. So now let's start on the history. I mean, we kind of touched a little bit about it, but like, let's cover the history of auctions in the blockchain context. Do you know kind of where this starts? Like I said, where I first saw it was in 2017 for these kind of ICO token sale type things, but yeah, I don't know if either of you or if any of you are actually aware of earlier cases what those look like?
+
+Matheus V. X. Ferreira (00:18:18):
+Yeah, so it's actually auctions start very early in the Bitcoin paper, right? So Nakamoto, when he's is already thinking that he's gonna have way more interest for actually sending transactions in the Bitcoin network than actually would have spacing blocks. So he proposed the use of a first price auction to actually sell that space in the market. So auctions have been around since the beginning of blockchain.
+
+Anna Rose (00:18:49):
+Are the fee, like the Bitcoin mining fees built like auctions actually then?
+
+Matheus V. X. Ferreira (00:18:54):
+Yeah, so the transaction fees are exactly bids on a auction in Bitcoin. The transaction fees were in fact a bid on a first price auction is basically the same concept where in the blockchain space we just call transaction fees. But in mechanism design we call them bids.
+
+Anna Rose (00:19:15):
+Okay. Actually continue that story then where do we next see kind of examples of auctions?
+
+Matheus V. X. Ferreira (00:19:21):
+Yeah. So then I would say with the rise of the initial coin offering, so auctions have been used to, as far as I know, that was the second use case for auctions, was actually how you start a new market around a new coin. Even more recently we have seen NFTs, which are another example of a resource that's scarce and an auctions an ideal case on how you can actually allocate something that's scarce and you don't know how much you should price it. So that's, I would say that's the second use deferred good case after. So the first one would be Bitcoin transaction fees and then the initial coin offerings. And now we have NFTs where options are very important actually to how we allocate and sell NFTs.
+
+Anna Rose (00:20:14):
+And I guess MEV?
+
+Matheus V. X. Ferreira (00:20:16):
+Yes
+
+Tarun (00:20:18):
+In the early days of Bitcoin, there were definitely also a lot of like off-chain auctions that were settled on-chain. So like there were auctions denominated in Bitcoin off-chain, effectively centralized, but then they were settled in Bitcoin. And I think that was one of those times people were like, I wish we could actually write the auction in Bitcoin script, but like people then like, could never quite do it. I do sort of remember there being an auction, an NFT auction on Bitcoin for one of those like Rare Pepe type of like very early proto-NFTs, but it was like a weird auction and I don't think it was like first price or Dutch, it was like sort of some weird thing where like you would post your bids to the blockchain and then like there were a couple instructions that would like pick which bid to, to take, but it had a maximum size of the number of bids and people were DDoS-ing it or DoS-ing it.
+
+(00:21:13):
+I just remember reading about this, but I can't remember where, whether it was like Rare Pepe's, which is like this like early Bitcoin NFT type of thing.
+
+Anna Rose (00:21:21):
+Yeah.
+
+Tarun (00:21:22):
+Or something else. But this was like 2014 people where people tried to implement auctions and it like didn't really work on Bitcoin very well.
+
+Kshitij Kulkarni (00:21:31):
+I'll just say one more thing about the history of these auctions which is that in all three of these examples of sort of the block space on the Bitcoin network or ICOs or NFTs, the kind of item that you're selling in all three of these contexts are very different. So in the context of the Bitcoin network, you're selling something like, what should one unit of space on the Bitcoin network be worth? And that's the scarce resource that you're trying to price. In the ICOs you're trying to price something like what should these, you know, I have this batch of sort of fungible tokens and I'm trying to understand what should, what should those be valued? I don't know what their value is. I'm trying to discover their value over time. In the context of an NFT, you have one single item whose value you're trying to figure out, or like a batch of, you know, replicas of single individual items that you're trying to figure out and these are sort of very different kinds of of say, products that you're trying to price and it's sort of, it's you know, I I find it remarkable that sort of the same auction theory helps you price all three of these different very different kinds of products. So like,
+
+Anna Rose (00:22:34):
+Oh, interesting.
+
+Kshitij Kulkarni (00:22:35):
+The scarce block space, these fungible tokens and these, you know, non-fungible sort of very unique products that that you can sell for, you know, different prices. Yeah. That's just a little bit more on the history of these auctions.
+
+Anna Rose (00:22:49):
+Cool. So I want to go back to something that Tarun just said this first price and Dutch, I want to understand each of these and how they relate. So let's start with this first price. What is a first price auction?
+
+Kshitij Kulkarni (00:23:03):
+Yeah, so, so roughly auctions can be sort of split up. Is there one way of splitting up the space of auctions is, are they something called open outcry or are they are sort of public auctions or are they private auctions? So
+
+Anna Rose (00:23:18):
+Okay.
+
+Kshitij Kulkarni (00:23:19):
+In public auctions, you know, there's going to be some kind of a open outcry process. Either the auctioneer's going to be saying what the price is at any given moment or the bidders are going to be saying what their bids are at any given moment.
+
+Anna Rose (00:23:33):
+And this is sort of the classic one where people have signs and they put up like, right, I bid this, and then they're like, stamping. Okay.
+
+Kshitij Kulkarni (00:23:39):
+Exactly. Or it's private, in which case the bidders are going to submit some kind of bid to the auctioneer in a sealed kind of format.
+
+Anna Rose (00:23:47):
+Okay.
+
+Kshitij Kulkarni (00:23:48):
+And those bids may or may not get revealed afterwards. The price may or may not get revealed afterwards and so English auctions are sort of they fall in this kind of, in this open outcry kind of format they've been going on for hundreds of years and roughly they're a format in which the seller is going to ask every buyer at every time, hey, do you want to remain in this auction? If you want to remain in this auction, you have to raise your bid by at least some amount and so he goes around asking everyone this, and, you know, this is a defined process that people have been doing for a long time.
+
+Anna Rose (00:24:23):
+It's like poker, I just realized
+
+Kshitij Kulkarni (00:24:25):
+Right? Yeah
+
+Anna Rose (00:24:27):
+Is poker a form of auction?
+
+Kshitij Kulkarni (00:24:28):
+Oh, yeah. Do you want to raise or fold? Right? Yeah. Yeah,
+
+Anna Rose (00:24:31):
+Okay.
+
+Kshitij Kulkarni (00:24:32):
+And, and, and so this is in contrast to these first price, sort of usually first price sealed bid auctions in which the bidders are now going to. So there's going to be like sort of a one round process for getting the bids to the auctioneer. So everyone submits sort of these sealed bids via some kind of, you know, they have some phone call with the auctioneer. This is how they still do these auctions at, I don't know when they do these art auctions at Christie's or whatever and they're going to submit their bids and the auctioneer is going to decide who the winner should be and in a first price auction, the auctioner decides who the winner is, and he says, the highest bidder, the highest bid that I got, that person wins and they have to pay that same price and they have to pay the highest price. This is in sort of contrast to other kinds of auctions in which that's not the rule in which the rule is something like the highest bidder still wins, but he has to pay the price that the second highest bidder bid
+
+Anna Rose (00:25:31):
+Interesting.
+
+Kshitij Kulkarni (00:25:31):
+In the auction and these are called second price auctions.
+
+Anna Rose (00:25:34):
+Okay.
+
+Kshitij Kulkarni (00:25:34):
+Yeah auction theorists are not, their naming was very like it was very simple. But
+
+Anna Rose (00:25:41):
+Did they ever do the average somehow the top person gets to pay the average? I guess that would just cause the weirdest incentives. People would just go higher they'd never have to actually pay it.
+
+Kshitij Kulkarni (00:25:53):
+So, so there are these things called all pay options in which whoever wins the item pays, but then the losers also pay, like everyone pays.
+
+Anna Rose (00:26:03):
+Oh they just don't get anything?
+
+Kshitij Kulkarni (00:26:06):
+Right and they don't get the item. So yeah. So there's all sorts of variations on, you know, what kind of pricing rules you can have, what kind of allocation rules you can have. But roughly the space of auctions can be served in, at least in my head, gets divided up into these either private or open outcry, either first price or second price, if they're private and then either English or, and coming to the sort of title of this work, Dutch.
+
+Anna Rose (00:26:35):
+Dutch. Okay.
+
+Tarun (00:26:36):
+But one other thing, and I think maybe Matheus might be a good person to discuss this, is the notion of revelation of like how participants in an auction reveal their preferences. Because like we have all these different mechanisms, but it, they all kind of are meant to capture different forms of revelation, like direct versus indirect revelation and I think like explaining what that is is probably also worthwhile. Because that's sort of, you know, what's the point of an auction that's supposed to elicit people's preferences and then, you know, allocate to the people with the highest preferences. But you know, there's not a unique way to determine highest preference.
+
+Matheus V. X. Ferreira (00:27:17):
+Yeah. There's a concept, an auction theory called the Revelation Principle, which basically says that any option that you could, like, if you have a complicated option where it involves a very complicated communication between bids with the auctioneer, the Revelation Principles says that if you want to maximize revenue, then you can actually just consider the options that request bids from bidders. So it's basically saying you don't really need to have a lot of complexity on the option because if you want, if you going to maximize revenue, you could just have a mechanism that request for bids. What's very interesting for me though, is that if you look on the proof of the Revelation Principle, it actually assumes that you need to trust the auctioneer. Right? So the Revelation Principle doesn't hold that the auctioneer could manipulate the auction because you could have an auction that's credible and the Revelation Principle transforms it in an auction that simply requests bids. But that result auction might not be credible, although the initial auction was credible, the resulting auction after you apply the Revelation Principle might not be credible because it in the proof really requires this assumption that you trust the auctioneer and that, I would say that's one reason why even though you have the Revelation Principle, you might still be interested on, on trying to understand all the types of auctions in practice.
+
+Anna Rose (00:28:44):
+Interesting. Is first price English? Is that because it was from England? I guess
+
+Kshitij Kulkarni (00:28:49):
+There's sort of this strategic equivalence between these dynamic ascending, like the English auction and actually the second price auction.
+
+Anna Rose (00:28:59):
+Okay.
+
+Kshitij Kulkarni (00:29:00):
+And the Dutch, so I'll say a little bit about this Dutch auction because the format's kind of interesting. It's basically the, the flipped version of the English auction. So in English auction, the auctioneer is going to query everyone and ask like, do you want to raise your bid? If so, raise it by this amount. If not, you're out of the auction.
+
+Anna Rose (00:29:20):
+Yeah.
+
+Kshitij Kulkarni (00:29:21):
+The Dutch auction is actually the auctioneers saying, hey, I have this price that I'm willing to sell this item at, at this moment, and in the next time step, I'm going to decrease the price by some amount. Right, and he asks, he basically gives the the buyers sort of an option, which is, do you want to buy at this price or not?
+
+(00:29:42):
+Right? Like, do you want to buy at this price if you want to take the item, if not, I'm gonna decrease the price and you'll see sort of there's sort of a difference in just I think Matheus was talking about the communication complexity or the kinds of communication that the auctioneer needs to have with the buyers. And in the English auction, the seller needs to actually go around and query everyone. Right? He needs to like, ask everyone, do you want to raise your bid? Do you want to raise your bid? And this, and as you can see, this can be very expensive if there's a large number of buyers. If there's like too many buyers in the system, then you have to ask everyone what their new bid should be if they want to stay the auction as opposed to these Dutch auctions where you can simply, it's like you're, I'm just like posting a price that I'm saying like, hey, do, does anyone want to buy it at this price? And for that reason, these Dutch auctions are sort of even though there is this equivalence between English auctions and second price auctions strategically at Dutch and first price auctions from an implementation perspective, these Dutch auctions can be much more, you know, they can be much more efficient.
+
+Anna Rose (00:30:43):
+And I've always understood them also that like, they might be better suited if you have, if you want a lot of winners, right? Like, it doesn't seem like it's as much this you know, highest bid wins, but rather that there's like a lot of people bidding at the same time and they're all going to get something. Maybe this is just the implementation that I'm thinking about but
+
+Kshitij Kulkarni (00:31:03):
+Yeah, so I think these Polkadot auctions, like these ICO auctions in the early in like 2017 they kind of had this feature that like many early bidders could get these tokens and they could get them at different prices that were sort of going down over time but certainly you can have Dutch auctions in which you're only selling one item, in which case one person is going to end up getting the item at some price but that price is going to be decided by this sort of descending auctioneer posting this price at every time and asking everyone you didn't want to buy it.
+
+Anna Rose (00:31:38):
+I want to talk about a few of those early ones that I did see. So one I think you just mentioned was the Polkadot one, I think they did something called a reverse Dutch auction where it was like high and then it went, the price actually dropped over time as more people bid on it. And then I remember seeing, I think Flow did something like that and also, Gnosis, I remember them making tools for this, or they were like building the toolkit to be able to run your own. Do you feel like was that just perfect for selling fungible tokens and it doesn't really kind of, you'd have to rethink it for things like NFTs or do you ever have an NFT case where you're trying to sell, I don't know, 10k of them? And you're also trying to find this like medium price?
+
+Kshitij Kulkarni (00:32:18):
+Yeah, so there's this famous use case of these like these paradigm art gobbler NFT collections that they were trying to sell. And they were like, you know, I don't know what the right price for these things is. I have 10,000 of them. Each of them is like roughly like the other, but I don't know. I don't know what the price, I don't know what to price each one and so yeah, one solution is, is you dump them all on the market at the same time and you ask, who wants to buy these 10,000 NFTs. You could try doing that, that will probably end up with your NFTs getting sold for, you know, pennies, you know, for like a fraction of the price that they should get or you should, you could do this kind of, as you said, this kind of process where you either batch them or you sort of sell them slowly.
+
+(00:33:01):
+You sort of release them slowly into the market at sort of these decaying prices over time, right? Like, so roughly you need to say, hey, I want to find an equilibrium price. I want to find some kind of, you know, average price for this, for this collection. I don't know what that is. Let me slowly like, release these NFTs into the world at different sets of prices. And by seeing who buys, I'll be able to get a sense of what the equilibrium price of this thing should be.
+
+Anna Rose (00:33:28):
+Hmm. Would you call this concept of gradual Dutch auctions? This is what you mean by that.
+
+Kshitij Kulkarni (00:33:35):
+Right. So the, the formally it's a sequence of auctions. So I start an auction. So gradual Dutch auction is like a sequence of auctions that I start one at every time. And the price of each auction is going to decay like that of a Dutch auction.
+
+Anna Rose (00:33:49):
+Okay.
+
+Kshitij Kulkarni (00:33:50):
+So I'm like, at every discrete time, at every time a clock ticks, I start a new auction.
+
+Anna Rose (00:33:55):
+I see.
+
+Kshitij Kulkarni (00:33:56):
+And the price of each one of those auctions is decaying over time. So roughly you can think of at any given time in the future, I have this portfolio, I have this sequence, I have this like collection of prices of things, of auctions that were started in the past. Right? So like, I'm at time 50, I have 49 auctions that were started before me in the past, all at different prices and now depending on who bought those 49 auctions or who buys in the 50th auction, I can get a sense of what the, what the price or what the value of this item is.
+
+Matheus V. X. Ferreira (00:34:26):
+I also wanted to say one benefit of a Dutch auction over, say selling the item over a posted like a fixed price, is that if you sell the item at the very low price, you might create a secondary market. And we have seen cases of NFT projects using fixed pricing to sell items that clear at a price that's very low. And then the blockchain gets very congested because the buyers, they start selling these items in a secondary market in the blockchain. It just creates this very congested environment because now the market doesn't know what the price of that item is. So the benefit of that auction is that you might sell the item at a higher, a closer to the clearing price, which can avoid a secondary market.
+
+Tarun (00:35:17):
+One other thing I guess that I would kind of add to what Matheus said is Dutch auctions, even though there's a sense in which theoretically they don't often achieve sort of like the minimum possible amount of communication between the bidder and the auctioneer, they oftentimes have much lower communication and in a blockchain environment, communication is extremely expensive. If I needed to, you know, if you think about user interactions, if a user has to repeatedly participate and submit many transactions over many blocks, it's not gonna work
+
+Anna Rose (00:35:51):
+Expensive.
+
+Tarun (00:35:52):
+But the problem is, if you think about a descending auction, if you try to do that on a blockchain, you would, let's say I post a bid of 3 Ethereum for something, then I see someone else in the mempool posted 4 Ethereum. Now I have to go post something at 4.2 Ethereum.
+
+(00:36:06):
+And that's very communication inefficient. Whereas in the Dutch auction, you have this idea that, okay, at block 1, the price is 10 ETH, block 2 the price goes to 9 ETH, block 3 it goes to 8 ETH. Okay, there's like 3 people who want to buy 8 ETH. Block 4, if you go to 7 ETH, there's 10 people who want to buy it at 7 ETH. And you minimize the amount of communication. Now, again, it's not a totally formal statement. There exists worst case auctions where Dutch auctions still have a ton of communication, but they are on average a lot better and, and yeah, that's sort of one of the reasons I think people like using them outside of sort of the strategic reason that Matheus mentioned.
+
+Anna Rose (00:36:48):
+Cool. So I guess we've now introduced the concept of Dutch auctions and gradual Dutch auctions. I wanted to talk about this work that I mentioned at the top of the show, this Credibility and Incentives in Gradual Dutch Auctions. Tell me a little bit about what kind of area you were focused on for this and what were you doing with this work?
+
+Kshitij Kulkarni (00:37:07):
+The core question at hand here is like, what? So we've defined these class of auctions where, you know, these gradual Dutch auctions where sellers going to sell, say some NFT collection over time at these different prices. And the question is like, what are the incentives of the seller in this process and what are the incentives of the buyer? Or it could also be fungible tokens, by the way. It doesn't have to be NFTs. Yeah. So the question was to sort of just to try to understand what the incentive of both parties here look like and in particular, do these parties have an incentive to deviate from either the auctioneer running the gradual Dutch auction as he had promised, for example could he participate in the auction? Does he have an incentive to like lie in the auction?
+
+(00:37:51):
+Does he have an incentive to do something in the auction that is, you know, he didn't, he didn't explicitly say earlier? And then do the buyers have an incentive to report their truthful valuation? And what we mean by report their truthful valuation here is do they have an incentive to buy at their true values for the items? Or do they because these auctions are dynamic and happening over time, do they have an incentive to do stuff like holding out buying now for a chance of buying at lower prices in the future? Or do they do stuff like buying now at the hopes of selling in a secondary resale market if there's going to be some high value buyer that comes later in the auction? So there's a sort of space of incentives for the buyers and space of, you know, these deviations for the seller and that's roughly what we, what we try to understand.
+
+Anna Rose (00:38:41):
+Is there also a chance in this case where like the buyers would potentially collaborate with one another? Is this ever a fear that they're like, yeah making decisions in another forum in order to sort of corrupt this?
+
+Kshitij Kulkarni (00:38:53):
+There is this sort of notion that's been sort of generically defined in these a anytime you're running a mechanism on chain, there's this sort of general, very general notion of something called off-chain agreements, right? Like this idea that you could, like, there's some mechanism that you're running on the chain, and these off-chain agreements could be happening between generically people and people are interested in, are they happening between the person that's running the mechanism and one of the buyers? So like, is the seller colluding with the buyer? But it could also be buyers colluding with each other, right? They could be colluding to, you know, raise the price of this, you know, it's sort of difficult. So the kind of strategies that you have available in these gradual Dutch auctions, you can't actually raise the price of any given NFT, but what you can do is you can artificially make the supply scarce by buying as a group or like by buying as a group and then waiting to sell in a resale in a secondary market and yeah, that's something that you definitely have to be worried about when you design these things.
+
+Anna Rose (00:39:51):
+Maybe let's dig in. What are the, you know, let's maybe talk first about this auctioneer. What kind of incentives, how are you supposed to balance this? What are you looking for?
+
+Kshitij Kulkarni (00:40:02):
+So the main thing the auctioneer can do even here in this auction, is set these prices, right? Set this price curve over time for every, for selling every item. So that's a strategy. You can like decide what the DK rate of say each item is and how many, what initial price am I going to sell each item at over time and that's what he can do in the context of setting like the actual mechanism up. But then there's a couple of other things that he can do. The first thing is he can participate in this auction, right? He can, like, he can be one of the bidders in this auction and in this case you sort of have this problem where the auctioneer could say something like, let me make the initial supply scarce by say, buying up some of the initial NFTs in expectation that I'm going to get some high value buyers later who are now going to have to pay a higher equilibrium price than they would have otherwise had he not, you know, made these initial items in a some sense disappear from the auction at some cost.
+
+(00:41:08):
+And so this is sort of the main like deviation that the auctioneer has available. Or you can think of it as the auctioneer has some cost for making each item disappear and by doing so, he can extract additional amount of value from the buyers that are remaining in the auction in the future. And because these buyers are sort of considering what is happening over time, because they have these values that depend on what other people are buying at because they can see the history of the auction. This turns out to be a profitable attack on these, on these classic auctions if you don't set these price scripts properly.
+
+Anna Rose (00:41:38):
+Did you also look at the buyer side of this?
+
+Kshitij Kulkarni (00:41:42):
+So from the buyer's perspective it really sort of matters what your model of the buyer is here. So, as an example, if your buyer is a person who can simply come into the auction at any given time and he has a take it or leave it offer to buy the items that are currently up for sale, and then he leaves and never comes back, it's actually very clear what the buyer should do here. The buyer should just buy the items that match his value or, you know, are less than his value. So that's what you should, but if your model of the buyer, and this is sort of where the dynamics of this process are very interesting, if your model of the buyer is something more complicated like a buyer can come into the auction, see the history of the auction, of course you can see the history of the auction, but then also reason about sort of future buyers that might come into the auction.
+
+(00:42:32):
+He has this valuation that's dependent on sort of the entire history of the auction, then something sort of much more complicated can arise where you need to reason about sort of the expected utility of the buyer at any given time over this entire sequence of all of potential buyers that could arrive both that have arrived in the past and that could arrive in the future and that turns out to be sort of the more complicated case to handle and of course there's even more complicated models of buyers that we don't consider, which are like buyers that can arrive now, buyer not, see what happens in the auction for a little bit, and then come back later and then, you know, like, you know, all of this sort of dynamic arrival, you know, these process models, but as a sort to get a rough handle of things you just consider these buyers like can reason about, you know, future arrivals of higher low value buyers.
+
+Anna Rose (00:43:25):
+Okay. I have two more questions on this one. I don't know that you covered this, but are there other actors other than the buyers in the auctioneers that you ever take into account for this? Like influence from outside third party actors that are like causing some sort of misperception? Like does that ever factor into these analyses?
+
+Kshitij Kulkarni (00:43:44):
+So I think this is actually one of the benefits of these, what what are effectively acting is posted price mechanisms, like at every time, I'm just posting like a sequence of prices is that the prices themselves are harder to manipulate here. Right? Or if you're not the auctioneer, if you're not the person that's setting up the mechanism, there's no real way in which I can like, give you a different price. But the, I think the interesting place where this all, you know, comes up, and this is something that we don't consider in this, in this paper, is what happens in these secondary markets, which is really where if you have some understanding of what could happen outside of, so the place that's outside of this mechanism is the secondary market where these NFTs are going to be sold and resold and, you know, people are going to pump and dump and they're going to do all their stuff.
+
+Anna Rose (00:44:32):
+And it's almost like, is it, if they know that that's a possibility, does that alter their behavior in a way?
+
+Kshitij Kulkarni (00:44:38):
+Right? Right.
+
+Anna Rose (00:44:39):
+Okay.
+
+Kshitij Kulkarni (00:44:39):
+And it should, right? It should if you, and so effectively what would happen there is that you would have to sort of construct this like expanded game, like this expanded strategy space of things that people can do in the auction itself and also in this sort of external attached game. And then you would study sort of the joint equilibrium, as we say of this game. but I think that's much harder because there, the strategy space or like what the external actors can do can be much larger than what they can do in these auctions. And this is something that I learned from Matheus about auctions because I'm not an auction theorist by any means, but auctions have this very, there are typically ways of expressing very simple desire about what you want to happen in a mechanism like these rules of like, okay, I'm gonna post this sequence of prices, you can take it or leave it are just very simple.
+
+(00:45:34):
+Whereas what can happen outside of these mechanisms in like a general resale market, the strategies there can be very different. For example, strategies, there could be collusion so you could like collude with other buyers. It could be signaling so like there's some privileged actor who can signal to everyone, hey, I'm buying this. So imagine you have like a really popular Twitter account
+
+Anna Rose (00:45:58):
+Yes.
+
+Kshitij Kulkarni (00:45:58):
+Where you can like pump and dump your NFTs and now you can signal to your followers that like, hey, this thing is valuable so signaling is an option. Like direct payments, like bribing people is an option and so there's just a lot of stuff that can happen outside of this auction that cannot really happen in the auction as defined itself that I think makes these auctions like relatively simple to follow and analyze.
+
+Anna Rose (00:46:26):
+Interesting. This particular work and actually kind of what you even described with like a secondary market, just in terms of the kinds of things that would follow this, it sounds like you're talking really about NFTs. Is there ever a case where this is also something more fungible?
+
+Kshitij Kulkarni (00:46:44):
+Right. So versions of these gradual Dutch auctions that work for fungible tokens in which you, what you basically do is instead of setting an item up for sale at every time, you set some fraction of your token supply up for sale at every time.
+
+Anna Rose (00:47:01):
+Okay.
+
+Kshitij Kulkarni (00:47:01):
+And then you try to get a price for that batch. Basically. You try to do these batches and try to get a price for that. The issue I think with these fungible tokens, I think is, I think there's secondary markets. I mean, it's, sure you can have an initial coin offering or like some kind of, you know, token offering, but then they might trade like really in a liquid fashion back and forth in the daily markets. I think typically people are like more interested in finding like these daily prices for things as opposed to just the initial price. I don't know if ICOs are like as popular as they used to be but yeah, certainly if you're trying to find sort of you have fungible tokens that you don't know what they're, what the starting price for these things should be. You can do the sort of batching and selling over, you know, sequence of times.
+
+Anna Rose (00:47:46):
+Cool.
+
+Tarun (00:47:47):
+You know, let's say I'm a person who wants to sell a bunch of NFTs, there's two ways to do it. One is I just say like, here's 500 things you can mint them and go wild. And that's basically a first price auction in the mempool. For who can be the first one to call the function, or at least the first 500 and then there's a gas war over that and that gas war is a first price auction. And this gets to the fact that like selling many items, especially multi-dimensional like items of different qualities all at once is really, really hard. The complexity of it is potentially exponential in the number of items, possibly worse if you care about the sequencing of the, how the items are sold. Another way to do it is to be like, hey, I'm gonna sell items one by one, one at a time.
+
+(00:48:35):
+And you lose some information when you do that because people can't buy arbitrary sequences. They can't go backwards and buy the fourth auction in time, but there's a sense in which it's easier to reason about for the seller. The seller knows like, okay, I sold something, someone bought it for a price higher than I thought, okay, I can sell the next one at a higher price and this type of sequentiality is like something I think people in auction theory have studied but have not studied when it was used in sort of these like low communication complexity auctions, like you have to have it in blockchains and I think as we talk about other types of auctions in crypto, like MEV auctions. In MEV auctions, communication complexity is super, super important like you can't, in a way that is almost much more important than in NFTs and that changes the design and I think that that's probably the nice stepping off point for talking about MEV options.
+
+Anna Rose (00:49:31):
+Cool. Let's do this. Let's explore a little bit more. Where are auctions and MEV intersecting? How does that work?
+
+Tarun (00:49:38):
+Yeah, so maybe I'll give a tiny bit of a background on how it actually looks at practice and then then kind of set the stage for Matheus to talk about what it could look like in the future. Because if we're being completely honest, the current MEV auctions are kind of shitty and there's not really any way of getting around that and understanding why they're not good and how that can change is quite important and obviously there's a very big economic fight going on for who will be in charge to some extent of that and I think this is where auction design is very important and taking advantage of ZK to make the auctions fair is even more important. So currently, you know, the way MEV works is first Flashbots sort of came around to kind of reduce spam on Ethereum by basically having people bid in an auction off-chain instead of spamming the validators to insert transactions on-chain.
+
+(00:50:38):
+And the idea was that like, by moving some of the people sniping each other's bids, like someone saying, I'm willing to pay 3, someone saying I'm moving pay 4, someone's saying I'm willing to pay 5. Instead of all 3 of those transactions going in the blockchain and 2 of 3 failing, you instead only post the one that's completed, the one that said 5 ETH and you sort of run an auction off-chain and then the validators agree to the outcome of that auction and use that for the ordering of the block and what people are really bidding on is 2 things. One is inclusion of a particular transaction and ordering of a particular transaction. So I want my transaction to be included in the block, and I always want it to be before or after a particular transaction, or I want this group of transactions to be executed in order.
+
+(00:51:29):
+So for instance, if I'm front running a sequence of transactions, I might say, hey, put my trade first, then put this sequence of trades after and you bid on that sequence of transactions. Now the interesting thing about the space of MEV auctions is that there are combinatorial auctions and the sense that you're bidding on sequences of transactions, you're not just bidding on like, hey, I want my transaction in, right? Like, when I'm bidding in EIP-1559, I'm just saying, hey, I'm willing to pay a gas price. I don't really care where I'm going. Instead, you're bidding on sequences and the set of all sequences is way, way larger. Yeah. It changes the candor of the auction.
+
+Anna Rose (00:52:07):
+Are you bidding on the sequence or your position in a sequence? Do you still have any sort of selfishness here? Like yeah, I'm kind of confused on what that looks like.
+
+Tarun (00:52:18):
+So you construct these things called bundles, which are ordered sequences of transaction. So let's say I'm going to front run someone and it's a particular transaction. I submit a bundle that has my transaction first and then their transaction. And you can think of it as almost like an order type that says, I'm willing to submit this transaction and pay you this fee, this excess fee that I'm bidding on only if you execute these two transactions in this sequence together.
+
+Anna Rose (00:52:47):
+I see.
+
+Tarun (00:52:48):
+So that even no matter where it is in the block, I will always be before the other person.
+
+Anna Rose (00:52:52):
+Okay. Are there, like, in reality though, can these be quite complicated where it's not just two transactions that you're trying to like match, but actually like
+
+Tarun (00:53:00):
+They can be arbitrary size.
+
+Anna Rose (00:53:02):
+Okay.
+
+Tarun (00:53:02):
+And in fact, they can be the whole block.
+
+Anna Rose (00:53:04):
+Okay. Wow.
+
+Tarun (00:53:05):
+In the current version of Ethereum, the block builders who are people who propose blocks or people who build blocks, that the proposer, who is the person, the proof of state protocol chooses to make the next block the builders say, hey, here's a whole block, it's valid and here's how much I'm bidding for this particular block. And you know, Ethereum moved post merged to this model, but prior to the merge Flashbots basically was running something, whereas like you bid on the sequences. So now it's sort of people send their orders as bundles to the builders and the builders guarantee them that some execution guarantees. But the long story short is these are actually auctions that look a little more like the ad auctions. Remember how I said they're
+
+Anna Rose (00:53:48):
+Oh yeah.
+
+Tarun (00:53:48):
+In the ad auctions you have these like many, many possible auctions, but actually only a small number of them are active at any time.
+
+Anna Rose (00:53:55):
+Interesting.
+
+Tarun (00:53:56):
+And so there's a huge relation, but the difference is the ad auctions are run by centralized auctioneers and they're trusted parties and some sense you're making this assumption, and we are still sort of making this assumption with Flashbots, although in the current Ethereum case, block builders are competitive, so anyone can be a block builder. So the goal of decentralizing this auction is actually quite important. But one thing that's, you know, I think in the traditional auction world, whether it's in normal finance or whether it's in ad auctions that people never cared about, was this idea of credibility, which is you know, you could think of a seller incentive compatibility, which means that the seller is not trying to add fake bids or maliciously reorder transactions or, you know, things like that. Because in those worlds, you just assume that the auctioneer is the auctioneer and they can do whatever they want. There's no real recourse. Of course, this Google antitrust cases, the US government trying to give Google some recourse for manipulating their auction. But I think, yeah, the stage is sort of set with this idea of how do we make these auctions resistant to sellers, you know, the seller of block space in the case of MEV manipulating it to either sensor transactions or change the profit, you know, payoff function of a user. And so I think maybe Matheus might be good to talk about credibility at this point
+
+Matheus V. X. Ferreira (00:55:24):
+Yeah. Bring me to my work on credible auctions where I've been working on that for quite a while now. I think 4 years. So I had this work with Tarun and Kshitij we are basically studying how could blockchains help us design these auctions that are robust from manipulations by auctioneer. So I had some prior work where we actually showed that cryptography can avoid some possibility results from economic theory. So there was this very influential paper for an economist around 2018 where they showed that if you want to design an auction, that's strategy proof, where bidders have incentive to reveal their bids or reveal their valuations and if you want the option to be revenue optimal and credible, so if you want all three properties at the same time, they showed that the ascending price auction is the only auction that that could do that.
+
+Anna Rose (00:56:28):
+Okay.
+
+Matheus V. X. Ferreira (00:56:28):
+So we talked a little bit about the ascending price auction. So the problem there is that the communication is very expensive. So in the blockchain context, that would just not be practical to implement an ascending price auction. So then I had the paper around 2020 where I show where you could actually avoid their impossibility results. You can actually design auctions. They are communication efficient if you can, if you have access to like basic cryptography. So the way you should take is that their impossibility result is, is what we cover information theoretical impossibility result where cryptography introduce assumptions that can allow you to avoid that. And we show that you can actually avoid the impossibility result and design auctions there satisfy how those free properties,
+
+Anna Rose (00:57:19):
+What kind of cryptography are you talking about?
+
+Matheus V. X. Ferreira (00:57:21):
+Is what we call our non-malleable commitment schemes.
+
+Anna Rose (00:57:25):
+Okay.
+
+Matheus V. X. Ferreira (00:57:26):
+So it's actually a very interesting connection with zero knowledge because zero knowledge provers are very important tool to actually design those, those type of technique of those design those that type of tools from cryptography,
+
+Anna Rose (00:57:42):
+These constructions, are they influenced by anything else in like the Proof-of-stake or anything like in that, in sort of consensus? Anything else? Or is it, is it really just kind of being created for this particular use case?
+
+Matheus V. X. Ferreira (00:57:56):
+Yes. So there is this particular use case in the blockchain. So when I start thinking about it was more general. So it would be for any context, in general. So in this work with Tarun and Kshitij recently we actually showed that you can even relax our, some of the examples in the paper I wrote before by using a blockchain. So in that context the blockchain here is actually a tool to expand the design space because ig you basically show that the blockchain allow us to reduce the space of manipulations that the seller could try to do.
+
+Anna Rose (00:58:32):
+Okay.
+
+Matheus V. X. Ferreira (00:58:33):
+So that was quite interesting because I guess there's like a two step here, right? So my work in 2020, we are showing that just by having cryptography we could reduce the manipulations of the seller whereby now also introducing a blockchain, we can even reduce the manipulation space even more so I think that's really interesting here is that there is actually seeing the separation of the design space, right? By introducing this additional of those that they're really expand what can we actually do and how we can actually build these options.
+
+Tarun (00:59:11):
+Yeah and another way of thinking about it is by adding in particular cryptographic primitives and then making assumptions about the users, like the users are computationally bounded in that they can't break particular cryptographic primitives. You can get around a lot of impossibility results in auction theory. And one of the more surprising things about this paper to me was that, you know, you already got this thing where you got around this impossibility result, by using non-malleable commitments. But the idea that posting the non-malleable commitments publicly on a blockchain reduces the set of possible bad actions the auctioneer can take is quite surprising. It says that like the auctioneer, you reduce it so much that the bidders can have wilder bidding strategies. So it's like sort of a trade-off between the strategies space by forcing people to post commitments publicly, not just privately, one between each other. You change the strategy space so that the auctioneer can't deviate as much and the bidders can do more complex stuff and there's this trade-off between the two and the cryptography mediate and public posting mediates, you know, how much power is on each side in some way.
+
+Anna Rose (01:00:24):
+Cool. The work you're describing there, it's entitled, I'm just gonna say it for the listener Credible Optimal Auctions via Blockchains, but in that it also references this other kind of auction, the deferred revelation auction. Is that significantly different from what we've talked about? Like should we define that?
+
+Matheus V. X. Ferreira (01:00:44):
+Yeah, so that is essentially, that's actually the auction in my paper in 2020. So that was when I created that and in fact, the auction is very similar to a second price
+
+Anna Rose (01:00:55):
+Okay.
+
+Matheus V. X. Ferreira (01:00:56):
+Where the highest bid of winners the item and they pay the second highest bid. But there is a twist here that we use the commitments to actually try to hide your bid from the auctioneer. So you're trying to tie the hands of the auctioneer. So he's should not be able to create fake bids without knowing what your bidding is. So that the goal should limit how much he could manipulate the auction and your payment. So one example of how the seller could manipulate the second price auction is that, say you come to the auction, you bid $10, Alice comes to bids $5, what should happen is that you should win and pay only $5. But if you can't see what Alice is bidding the auctioneer could come and lie and say, oh, actually Alice bid $9, so now you should pay 9 instead of being 5 and there's really no way for you to know if that's happening
+
+Tarun (01:01:59):
+Unless you force the auctioneer to post a commitment, whether it's a ZKProof or you know, a non-mallable commitment of sort of their bids.
+
+Matheus V. X. Ferreira (01:02:08):
+Yeah. So by introducing a cryptographic commitment of your bid, say now your cryptographic commitment to $10, now the auctioneer actually doesn't see you're bidding 10. So now if he's trying to create fake bids, he's going to do that without actually knowing what you're bidding and that might be very risky for the auctioneer because later on he has actually to prove that you are really the winner of the auction. So he might risk sending a fake bid of 11 when your bid is actually 10 and he can't convince you that you are the highest bider if you're bidding 10 and he had the fake bid of 11.
+
+Anna Rose (01:02:51):
+And I guess like in the past, the way that this auctioneer would often also be kind of like kept in line was this idea of like the reputation of the auction house or the reputation of the company. Is there a reason that you would say, like in the blockchain space, you need kind of more strict cryptographic ways to keep them in-line, I guess is reputation sort of not as clear,
+
+Matheus V. X. Ferreira (01:03:16):
+Even if you have a reputation as you're saying like if you're go to a second price auction, like in eBay, let's say eBay has a reputation, but so they're not willing to harm their reputation. Right. But if they're, if they're manipulating the second highest bid in the auction, you can't, you can't even tell.
+
+Anna Rose (01:03:34):
+Oh, you couldn't tell anyway, yeah.
+
+Matheus V. X. Ferreira (01:03:35):
+So they, even if they care about the reputation, you're not gonna be able to prove they're manipulating it with the blockchain, at least you can weaken this assumption of the seller having a reputation because you have a a contract.
+
+Anna Rose (01:03:50):
+Tell me, so the non-malleable commitments, are they ZKPs? Like, are they something else? I'm kind of curious, you've sort of mentioned there's a connection point between these two things, but yeah.
+
+Matheus V. X. Ferreira (01:04:01):
+Yeah. So a traditional commitment scheme, it's very simple. The idea is that it's similar to a hash function where you are hashing your bid and you're sending it to this seller and the idea is that if the hash function is collusion resistant, later on, if you say you hash say $10, and later on you have to prove, you have to convince the seller that whatever you had committed to was really $10. So what you do, you reveal 10, and now the seller can compute the hash function at 10 and he sees if the hash is send in the first round is equals to the hash is computing after you review your bid. The problem with that though is that even though commitment can hide a bid and can be binding, there is this concept of malleability where I might the option, you might be able to create a commitment to $9 by knowing your commitment to $10 without actually knowing that you have committed to $10.
+
+(01:05:08):
+And in fact, there is very simple constructs of commitment schemes. There are malleable, like if you bid $10 is very easy to generate a commitment to 9, even without knowing that you had committed to 10. And then there's this goal of design commitments, they are non-malleable in the sense that you should not be able to, no one should be able to generate a commitment to a value that's related to what you committed to and one direction to actually do that is to use a zero knowledge proof. So what you do is the following, I want to commit to $10, but if I commit to $10, I have to prove that I know what I have committed to. Why would that be non-malleable? Right? Because if someone tries to see my commitment to 10 and generate a commitment to 9 without actually knowing someone else has committed to 10, they have to prove with zero knowledge that they know that they had committed to 9. But if they don't know that I had committed to 10 that they cannot generate a proof to that. So that's one direction to build a non-malleable commitment by requiring the person who's committing to proving zero knowledge that they know what they're really committing to.
+
+Tarun (01:06:27):
+I think like the NFT auction world has a lot of stuff where users' preferences could be expressed in a way that users can kind of buy collections that they want automatically without revealing all of their preferences and getting front run by the sellers or MEV bots and in some sense, like if crypto gaming is ever to become a thing, I think you need some form of this so that it doesn't just become like MEV bot versus MEV bot.
+
+Anna Rose (01:06:56):
+Yeah.
+
+Tarun (01:06:57):
+Which is like almost all crypto games. Like, you know, like if you, if you think about like Dark Forest versus all these other crypto games, the ZK aspect of Dark Forest actually is what kind of makes it harder to make these kind of thoughts in general strategy wise and I think that's gonna also be true for these preferences, expressing preferences in a game.
+
+(01:07:17):
+Like being like, oh, I like this type of item in the game and like, this is the strategy I want to execute, but I don't want everyone else to know it versus some something like Axie where it's like you're publicly showing your strategy in hand at all times, always. I basically think that like the blockchain gaming world only works if you can somehow allow people to participate in auctions without revealing everything about themselves aand it's a very weird, maybe like too far in the future view, but I just don't think humans are going to like playing games that are always just gonna be like bot versus bot, right?
+
+Anna Rose (01:07:52):
+Yeah.
+
+Tarun (01:07:52):
+No one wants to just be like, you know, unless it's just like, at that point it's just trading, right. It's not really like playing a game and I sort of think like having these kind of mechanisms for revealing preferences without revealing your whole strategy, is it gonna be key to kind of like preserving humanity on the blockchain.
+
+Anna Rose (01:08:15):
+Whoa, that was bigger than I expected. I was just thinking, oh wow, it's really cool. It might be in gaming, but like, damn so the fate of humanity is at stake.
+
+Tarun (01:08:24):
+Yeah. I guess like in a world where everyone is talking about AGI, I sometimes we also have to think about the other side.
+
+Anna Rose (01:08:31):
+Yeah.
+
+Matheus V. X. Ferreira (01:08:32):
+I was curious about Tarun like what do you mean by like bots? Like in blockchain games? What do you mean? Like by people using bots to play?
+
+Tarun (01:08:43):
+So there've been like a ton of games, right? That have these NFTs that, you know, have some either some value in a game that's off chain or have a resale market and what ends up happening is people just write bots that play the games to harvest particular items and then sell them immediately. It's not so different to people having bots in like StarCraft or something. Right? But there you have this team of people who are dedicated to trying to remove the bots because otherwise the human players will leave and then like the game, you know, they can't sell real items to real people anymore. But in blockchain games there's kind of this perverse incentive where the game developers get to pad their metrics by having more bots play the game, right? They get to say like, oh, like our total usage was X or we transferred this many dollars of items and it sort of also ruins the ability for like humans to play. It just becomes this kind of like, only the people writing automated strategies are playing and it's sort, you know, I don't think video games in general, you know, I don't really play video games, but I will say one thing which I think is true is I don't think there's ever been a video game that, you know, once computers are a lot better at it than humans that people were like, oh yeah, I still like playing it a lot.
+
+(01:10:00):
+And I think that in some ways blockchain games went the opposite way. They're very bot friendly right now
+
+Anna Rose (01:10:05):
+And maybe this could bring some humanity back to them, I guess.
+
+Tarun (01:10:09):
+Yes. And the bots are always just front running the human players and like copying their transactions and then just ba basically getting the item before them.
+
+Matheus V. X. Ferreira (01:10:18):
+Yeah. I mean, I feel it is very interesting aspect of like, humans don't like to be manipulated and feel like someone, there's something taking advantage of them. I think that's like very important as, as you design these applications, like to make sure that users feel like they have a chance and they're not like just being played by the person who is designing the protocol
+
+Anna Rose (01:10:47):
+Or being outmatched by the bots that are just like, far too sophisticated.
+
+Tarun (01:10:54):
+Yeah. I mean, in a lot of ways this is definitely the reason I think like this economics idea of revealing preferences without revealing strategy is somehow key to fairness in these systems. And I don't know how else to do it without cryptography. It doesn't seem possible.
+
+Anna Rose (01:11:14):
+I like that. Well, I want to say thank you to both of you for coming on the show. Actually all three of you. Thank you Tarun for also being kind of the co-host and guest for this one. Yeah and thanks for sharing with us all of your insights about auctions and the work you've been doing around it.
+
+Matheus V. X. Ferreira (01:11:28):
+Thanks a lot for having us.
+
+Kshitij Kulkarni (01:11:29):
+Thank you very much for having us.
+
+Tarun (01:11:31):
+I'm happy we finally dived into the world of auctions because they're a lot more complicated and everywhere in crypto, no matter how much you want to avoid interacting with them.
+
+Anna Rose (01:11:41):
+Cool. All right, thanks again. And I want to say thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners, thanks for listening.
+

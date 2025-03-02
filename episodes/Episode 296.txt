@@ -1,0 +1,1181 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:27:
+
+
+This week, Nico and I chat with Brian and Jeremy from RISC Zero. We catch up on the state of the project and map out the pieces of the stack, from the RISC Zero zkVM, which utilizes the RISC-V instruction set architecture, the Bonsai proving service, and the Type 0 zkEVM, Zeth. We chat about how they made some of their design choices, how all these pieces work together, and what we can expect in the future. Now, before we kick off, I wanna share a message from one of our top sponsors of the recent zkSummit10, Aleo.
+
+
+00:58:
+
+
+Aleo is a new layer one blockchain based on zero knowledge technology. They are offering more than a million dollars in grants that you can apply for over at aleo.org/grants. Before we start, I also want to highlight our upcoming ZK Hack Istanbul event. This IRL hackathon is happening from November 10th through 12th. Be sure to get your application in. And if you were accepted, please RSVP. Only those who RSVP will be admitted. I've added a link to this and the Aleo grants in our show notes. Now Tanya will share a little bit about this week's sponsor.
+
+
+ 01:32: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain, asset-agnostic privacy via a unified set. Namada is natively interoperable with fast finality chains via IBC and with Ethereum using a trust-minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia, that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada for more information, and join the community on Discord, discord.gg/namada. And now, here's our episode.
+
+
+02:33: Anna Rose:
+
+
+Today, Nico and I are here with Brian and Jeremy from RISC Zero. Welcome back.
+
+
+02:38: Brian:
+Thanks. Excited to be here.
+
+
+02:39: Jeremy:
+
+
+Very nice to be here again.
+
+
+02:41: Anna Rose:
+
+
+Cool. Hey, Nico.
+
+
+02:42: Nico:
+
+
+Hey, Anna. Hey, Brian. Hey, Jeremy.
+
+
+02:44: Brian: 
+
+
+Hey.
+
+
+02:45: Anna Rose:
+
+
+So one quick disclosure before we start in on this one. ZKValidator and I personally are investors in RISC Zero. And Nico's team over at Geometry is also an investor. And we are really excited to jump in and get an update. You were on the show almost exactly one year ago. So if anyone is curious sort of about your backstories, we're going to add a link to that in the show notes. And last time we had you on, to me, you were just going public with what you were building at the time. In that episode, we discussed kind of how you were constructing your architecture. I'm going to try to paraphrase what RISC Zero is, and then I want to hear if this is still how you explain it. But in that episode, we talked about how what you're doing is you're basically taking RISC-V, a processor architecture, and sticking that into a ZK circuit. And that would mean that you could write programs in C++ or Rust and then compile it down into something that understands already in a circuit. Is that still how you explain RISC Zero to people?
+
+
+03:47: Brian:
+
+
+Definitely. Yeah. I mean, the core technology hasn't changed at all. I would say it's gotten more mature and the set of packages and libraries and programs that you can run without modification has increased a lot. We support 1,300 of the top 1,500 Rust creates or something like that.
+
+
+04:04: Anna Rose:
+
+
+Oh, wow. Did you still focus though on like C++ and Rust or have you expanded to any other languages?
+
+
+04:11: Jeremy:
+
+
+I think we've mostly focused on Rust at this point because it seems to be a very good language for writing things in that is familiar to the sort of crypto space. Although we've definitely discussed expanding our support to other languages. One of our sort of goals is to have really excellent support for anything we support. So before we take on something, we wanna make sure that we have the resources to do a really good job of it, so.
+
+
+04:38: Brian:
+
+
+Yeah, we could get more into that as well in terms of like which use cases, which different languages are more suited for, I think. And inside crypto, certainly when you're thinking about applications with a lot of TVL behind them, people seem to be gravitating towards Rust for really good reasons. But then if you start to think outside of Web3, you start to see increasing interest in a variety of languages.
+
+
+05:00: Nico:
+
+
+What do we mean by support here? Is it that there are some things in the ISA that are missing to support other languages?
+
+
+05:07: Jeremy:
+
+
+No, but it's more like, for example, on Rust, some packages have assembly code in them, and the assembly code only runs on x86, for example. Or certain things expect certain kinds of hardware accelerators to exist that don't actually exist or things like that. So by and large, most things just compile and work automatically. But there are some special cases that still do require additional work.
+
+
+05:32: Brian:
+
+
+Right. But then on a per-language basis, you also have to think about designing memory allocators that are most well-suited for the zkEVM. But most importantly, it's just trying to get the toolchain into a situation where it's really accessible by your sort of average C++ dev, which Cargo's amazing in a lot of ways, and C++ and the sort of programmer build ecosystem there is not so great. So it's like a support challenge.
+
+
+06:01: Anna Rose:
+
+
+You just mentioned that you would like, you've brought in a lot of the crates. Is this something you have to do?
+
+
+06:08: Jeremy:
+
+
+No, but we do test them all. 
+
+
+06:09:  Anna Rose:
+
+
+Okay.
+
+
+06:11 : Jeremy:
+
+
+So basically, we don't need to do anything on a per-crate basis but we do run big sweeps of crates to see which crates tests pass inside the zkVM and which ones do not. And the ones that don't, we look into why. And usually it's some kind of like thing that assumes it's on a certain type of platform or something particular about some low level detail.
+
+
+06:32: Brian:
+
+
+Yeah, it happens to use random numbers or things like this, which are obviously complex to get right in a ZK context. But some packages you do need to modify a little bit here and there.
+
+
+06:43: Anna Rose:
+
+
+I used the term just in that definition before, processor architecture as describing RISC-V. Is that correct? Or is it a VM? This is what I'm trying to figure out.
+
+
+06:55: Jeremy:
+
+
+So the RISC-V spec lays out the rules that have to be followed between the RISC-V software and what is the hardware, like basically the way the software talks to hardware. And that's called an ISA typically. But we actually implement a VM, but the VM follows that set of rules. And so it looks like a RISC-V processor to all the software is basically the short version.
+
+
+07:18: Anna Rose:
+
+
+So it's kind of both.
+
+
+07:20: Brian:
+
+
+It's kind of both. When you think of actual hardware architecture, you're probably talking about a very specific revision, like an 84, 86, like Rev7 or something like that. That's the actual where all the gates are, whereas this is just the instruction set architecture, which defines the opcodes in Ethereum parlance that you need to actually interact with the machine. So we look from an application perspective exactly like a RISC-V chip. But obviously, there's no hardware there.
+
+
+07:48: Anna Rose
+
+
+Cool.
+
+
+07:49: Nico:
+
+
+So listening back to your episode a year ago, I noticed that you guys mentioned numbers of the speed of this virtual processor. How many cycles can you prove and how many seconds of real time? And the numbers back then were like 30 kilohertz on an M1 CPU and like 10 megahertz on a GPU cluster. Is this still relevant today? Have things evolved? Can you tell us a bit more?
+
+
+08:13: Jeremy:
+
+
+Yeah, we've actually made some performance improvements since that point. And in terms of the sort of GPU cluster kind of use case, Bonsai actually, we can sort of get that to go quite fast. You know, I think... So we're probably at the 30 megahertz sort of level for some use cases. And we're continuing to work on performance improvements and we expect a number of additional performance improvements over the course of the next couple of months. But I think one thing that's interesting is, is I think in terms of the one big, huge performance delta, I think between now and then, is the fact that at the time, you could only run smallish programs.
+
+
+08:58:
+
+
+And I think that with the creation of Continuations, one of the huge things now is that you can run any program no matter how large, and you can prove entire ETH blocks or run very complex logic. And I think that that has opened up the door to a lot of use cases. And what's interesting is that we find that most of the times, a lot of the things that people are working on, the performance doesn't really make that much difference because the ability to run these use cases is so transformative that the exact... People are not that concerned with the exact number of clock cycles because it makes something go from not doable to doable. And one of the cool things about the way Continuations works is that we don't require some massive machine with a huge amount of memory and ever increasing sort of computing power as you run larger programs, we simply distribute the work wider across more GPU nodes or whatever, right? So it's a lot more tunable in that regard.
+
+
+10:01: Nico: 
+
+
+What is it that you call Continuations? Like I start a proof... I start my program in one proof, and then I resume it in the next proof?
+
+
+10:10: Jeremy: 
+
+
+Yeah, so it's basically a way to take a very long serial execution and to break the process of proving it into multiple small segments. And then each segment is proven, and then we combine the proofs of each segment with recursion. So yes, in some sense, you're proving the program over multiple smaller pieces, but that's all transparent to the user. So the user just says, run this huge program, and then we sort of take care of that.
+
+
+10:37: Brian:
+
+
+Yeah, there is a mechanism in place for users to be able to explicitly choose when they want to pause, if they do, and then to resume from that later. So if you do want to pursue more complex parallelization strategies and things like this, there are some mechanisms to allow that. But, yeah.
+
+
+10:53: Anna Rose:
+
+
+Is it a little bit similar to like batching proofs though? Or is this a different paradigm? Like actually, I don't think we've ever heard that continuation.
+
+
+11:02: Jeremy:
+
+
+Yeah, it's sort of a unique thing as far as we know. But I think, so it's similar to batching in the sense that batching allows you to run lots of small proofs. But in this case, you're running one large... It's sort of the opposite in some sense, right? In batching, you're taking a number of small proofs and running them inside of a larger proof to improve performance. And in this case, you're taking a very large proof and breaking it down into smaller proofs in order to allow you to run larger operations basically.
+
+
+11:30: Brian:
+
+
+Yeah, this sort of process is the thing that really let this sort of Zeth project actually succeed and that we announced recently and have let people start to experiment with running full ETH blocks based on code that we didn't write. It just utilizes revm and reth and a couple other crates to prove full ETH blocks. So we had to make some very minor modifications, but that proof is about 4 billion cycles. And we sort of use Continuations to split it up into 4,000, 1 million cycle chunks and then prove those all in parallel and use recursion to join them together.
+
+
+12:06: Anna Rose:
+
+
+Is the Continuations in any way specific to RISC-V? Or have other teams in the space used this kind of technique?
+
+
+12:14: Jeremy:
+
+
+I mean, I think anything that has sort of a VM-based structure should, in theory, be able to do this same type of thing. And I think some of the people looking at folding are doing similar ideas.
+
+
+12:27: Nico:
+
+
+Exactly. So from a theory perspective, Continuations is very close to IVC, if anyone remembers like the Nova episode. So incrementally verifiable computation. And this is something we've seen the Lurk people do for their VM as well. But I think there are obviously some differences. And from what I understand, yours is very parallelizable.
+
+
+12:47: Jeremy:
+
+
+Yes. So one of the things is, and I think that some of the folding schemes could be modified to support this. But most of them currently sort of prove one segment at a time. And so you add up all the time for doing all the proofs. Whereas our mechanism is to basically do a very fast, normal emulation. So not doing proving, just emulating a RISC-V like you would run in a normal emulator. Determine all of the events that occur during the course of the whole program's execution, and then split out those pieces to a wide number of machines that all can run simultaneously. And then we use a binary tree to do recursion so that the amount of time, the wall clock time required for the recursion is small because we can also do those recursive combinations also in parallel.
+
+
+13:34:
+
+
+So it's very focused from a design perspective on trying to reduce the wall clock time and increase parallelism. And also I think one of the other goals is to be able to utilize consumer-grade hardware. So you know none of the proving processes involved in like the even the sort of Zeth, prove an entire ETH block really used more than 18 gigabytes of GPU RAM or what have you. I think we could actually have brought that down. That just was a nice number for the machines that run AWS. So by doing that, we basically reduce the cost of the computation by being able to run on lower performance machines.
+
+
+14:18: Brian:
+
+
+As well as making it more appealing and useful for future decentralization use cases and or you can imagine running parts of proofs on the client side and then having other parts that don't involve private information running on servers and so forth.
+
+
+14:32: Anna Rose:
+
+
+It's funny, just going back to the folding idea, I actually, I didn't even bring it up because I just assumed it was different. And actually I wanna do a quick check because like in folding doesn't each chunk need to be the same?
+
+
+14:45: Jeremy:
+
+
+No.
+
+
+14:45: Anna Rose:
+
+
+Okay.
+
+
+14:46: Jeremy:
+
+
+So because we're using general recursion, we could actually verify proofs from different circuits. So, currently, we pretty much only use the RISC-V circuit for the majority of things. And the RISC-V circuit includes a couple of accelerators in it. But in terms of some of the cryptographic accelerators, we're considering building separate circuits for some of the accelerators, running the accelerator operations in a different circuit and then using recursion to combine that with the RISC-V circuit. So that will actually allow some very interesting use cases in the future.
+
+
+15:22: Anna Rose:
+
+
+Cool. So one of the questions is like, it's been a year. What have you focused on? What have you explored? And maybe we should say, what have you released? Because there's actually products and things that people have been able to play with. So let's start with the, what have you explored over the last year?
+
+
+15:39: Brian:
+
+
+Yeah, so over the last year, I mean, we explored specifically APIs and trying to get the Continuations right, and just really the overall developer experience, as well as sort of the very early versions of Bonsai, which basically influence sort of a coprocessor architecture based on this relayer contract. We talked about this at ETH Denver even. We had built a sort of CLOB internally that if you place orders on-chain, you can then do the order matching off-chain and then settle the orders on-chain. And you're seeing actually some other people start to adapt or adopt these approaches with the zkUniswap that Diego put out.
+
+
+16:19: Anna Rose:
+
+
+This is the zkAMM?
+
+
+16:21: Brian:
+
+
+Yes, exactly.
+
+
+16:22: Anna Rose:
+
+
+Okay, that's on Bonsai then. That was built on Bonsai.
+
+
+16:25: Brian:
+
+
+I think they just built it locally using zkVM, but if you wanted to actually productionize something like that, you'd probably want to use Bonsai.
+
+
+16:33: Anna Rose:
+
+
+Okay. But is it a full-fledged coprocessor on mainnet today? I always thought of it more like a test environment somehow. Sorry if that's not true.
+
+
+16:43: Brian:
+
+
+It's been a test environment for the past while. But yeah, people use it right now through a REST API. So it looks a lot like a cloud SaaS service right now, but it will be on-chain coming up pretty soon. So yeah, we're basically gonna launch a very simple testnet that actually dials back some of the coprocessor sort of features that we had put into it and really just makes it a simple request of proof on-chain.
+
+
+17:08: Nico:
+
+
+And is this sort of a permission service that RISC Zero is operating, or is this meant to be decentralized and have people contribute?
+
+
+17:16: Brian:
+
+
+Yeah, so the very first version will be permissionless in the sense that it runs on-chain. However, the people fulfilling the proofs initially will just be us, but it's very much our intention to start expanding that set as soon as we can, yeah.
+
+
+17:31: Jeremy:
+
+
+Yeah, so I think this last year, a lot of our goals have been to get... I think Continuation was a huge feature. And I think also just trying to get to sort of a 1.0 with the zkVM. We've been developing really rapidly in terms of improving the APIs and making changes, but we really want to get to the place where we can present a very consistent, reliable thing going forward that people can start to build on and know that it's not going to change up from under them. So trying to get all the necessary work to get to that 1.0. I think we're very close to that. And then yes, I think that obviously this sort of Bonsai sort of service, which allows you to run large proofs on-chain, and will eventually be decentralized as sort of the next big step forward. We hope to get something out rather soon in terms of being able to let people use that.
+
+
+18:24: Brian:
+
+
+I think going... participating in various hackathons, you know, the delta between we went to ETH Denver, participated in ETH Global, and somebody won using RISC Zero for the proof of exploit.
+
+
+18:34: Anna Rose:
+
+
+Nice.
+
+
+18:34: Brian:
+
+
+But something we learned from there is that the developer experience was really an obstacle for a ton of teams. And I think we saw between there and ZK Hack, we made a ton of changes and really noticed some really positive upticks in the kinds of applications people were able to make. And so we continue to invest in all that as well.
+
+
+18:53: Anna Rose:
+
+
+That was ZK Hack Lisbon where we... I think your bounties, you had a lot of bounties and you actually had a lot of submissions. People talked about how it was kind of easier than other tools to use RISC Zero.
+
+
+19:06: Nico:
+
+
+I think that was one of our key takeaways when we did the retrospective on ZK Hack was like wow man, RISC Zero, like people are really latching onto it because it's so easy to write stuff.
+
+
+19:15: Jeremy:
+
+
+In some ways, our goal as a company has always been to democratize the ZK development, to make it possible for ordinary developers to be able to write ZK systems. 
+
+
+19:28: Anna Rose:
+
+
+That's cool. You mentioned you were dialing back some of the coprocessor features. I kind of want to just talk about the coprocessor space. There's a lot of teams that are kind of offering a nuanced version of a coprocessor. They don't all call it that. And actually, there was this period of time where I was also kind of bringing RISC Zero into that field when I'd list them. But it sounds like, yeah, I'm just really curious, how are you dialing it back? Why are you dialing it back? Yeah, what was your findings doing that?
+
+
+19:58: Brian:
+
+
+I think that our findings are mostly it's sort of one of focus. We're trying to build an infrastructure that's as useful as possible for as many use cases. And what we found after we released this CLOB demo and the relayer associated with that is that people actually do want to do things that look like coprocessing, like a zkAMM case. We've actually done some governance examples where the voting powers computed off-chain in a coprocessor model. But effectively, the way in which we were relaying the state between Bonsai and the on-chain application, everybody wanted to do it differently. So I think we're really trying to focus on this base, very simple. You want to proof, we'll get it on-chain for you in a way you can reason about it. And we want to kind of let the market help explore and discover what the right interaction modalities are, rather than trying to come up with a highly opinionated solution now. So I see Bonsai more as a way to build coprocessors and libraries and things that can reason about on-chain state. And yeah, we might come up with a more opinionated take in the future. So I wouldn't say that we won't, almost certainly will, but there's a lot of exploration left to do.
+
+
+21:12: Nico:
+
+
+I mean, is that not what a coprocessor is anyway, just off-chain execution being proven on-chain?
+
+
+21:17: Jeremy:
+
+
+Yeah, sort of. But I think different people, like there's an interesting question of where the state lives, which state is attested to, is it a roll-up, is all of the state necessary on-chain, who has to agree that the state is valid? So I think in regard to a lot of those questions, I think that we want to allow people to be fairly flexible in what the answers to those are. We want to be able to support roll-up kinds of use cases or things where all the state really is on-chain and it's purely just doing processing. And so I think that our sort of goal is to figure out what is the minimum API that, by which someone can generate a proof and get it on-chain. 
+
+
+21:58:
+
+
+And I think there's really sort of two use cases where the proof is initially requested on-chain and then run and then returns. And then there's sort of more of the coprocessor kind of use case. And then there's actually, we also want to be able to support, for example, people requesting proofs off-chain and having those land on-chain as well. So if someone just wants to talk to the Web2 API and kind of ask for a proof to be generated, right? So I think our goal is.. It's also sort of a minimal viable product kind of a mechanism. We would like to get something that is usable for real applications on mainnet as soon as we can. And I think in terms of, we've been also spending a fair amount of time on security. We've engaged like three different auditing firms. We're hoping to be through a lot of that soon. We're sort of dotting our I's, crossing our T's, sort of getting ready to have something that we feel we can stand behind in terms of being used for real applications with actual locked value behind them.
+
+
+23:04:
+
+
+So I think that that's... we're trying to get to that place as rapidly as possible. And I think to some extent we're trying to keep the feature set minimal so that people who have different ways that they want to interact with it can all make use of it and sort of see what the market actually wants.
+
+
+23:22: Anna Rose: 
+
+
+Was Bonsai then a little bit like a showcase of what's possible?
+
+
+23:26: Brian:
+
+
+To some extent, but really the intention is that it's going to be this decentralized network that's useful for proving things at scale. That's the long-term vision for it.
+
+
+23:36: Anna Rose:
+
+
+Okay.
+
+
+23:38: Brian:
+
+
+Initially, when we... In the ETH Denver timeframe, the intention was to like get it out into the market, I think much quicker, but I think reality intervened and there's a lot more work we had to do on user friendliness and all of this. So Bonsai Testnet Zero will be on-chain this year and people will be able to write production apps if they decide that the risk tolerance is in line with their application, I guess.
+
+
+24:06: Anna Rose:
+
+
+Let's move on to another kind of announcement release more recently. Zeth or Z-eth? I don't know how do I say it. Zeth?
+
+
+24:15:  Brian:
+
+
+Yeah, I mean, we say it Zeth, like, yes, because in our mind, it's basically it's like an ETH client, but lots of people say it Zeth as well.
+
+
+24:21: Anna Rose:
+
+
+Zeth?
+
+
+24:22: Brian:
+
+
+But I think you can say it however you want.
+
+
+24:24: Anna Rose:
+
+
+Can I do the Canadian Z-eth?
+
+
+24:26: Nico:
+
+
+Yeah.
+
+
+24:27: Anna Rose:
+
+
+Did you just say that, Nico?
+
+
+24:29: Nico:
+
+
+Yeah, same.
+
+
+24:30: Brian:
+
+
+We'll allow it.
+
+
+24:32: Anna Rose:
+
+
+Z-eth. That's cool. 
+
+
+24:33: Brian:
+
+
+Yeah. So an interesting thing about how Zeth came about is that maybe listeners know this, maybe they don't, but Optimism Foundation actually released an RFP for helping ZK FI the Optimism stack. Us and O(1) Labs were both selected for that. And...
+
+
+24:48: Anna Rose:
+
+
+The Mina team.
+
+
+24:50: Brian:
+
+
+Yeah. The approach that the OP Foundation sort of asked for, and it's pretty similar to the one that Mina team's exploring, is basically ZK FI-ing the sort of existing fraud proof system. We proposed a different architecture where we actually take the sort of Rust clients for Optimism and then go about producing validity proofs and potentially then using that to build a fraud proof system or even just use that to build pure validity proofs. So as part of this, the first step was really to be able to prove ETH blocks.
+
+
+25:26: Jeremy:
+
+
+We'd actually started some of that work in advance because the idea of proving an ETH block is just an obvious interesting thing to do once you have a general purpose ZK proving system. But then with the Optimism RFP that sort of accelerated our work on that. But it turned out it was actually a significantly less complex project than we had anticipated and we had some amazing work by our team on that. But it was not a huge engineering project inside of our company. And so there was sort of we decided... In some ways I personally think of it a little bit as a showcase for the power of general purpose ZK and how you can take some very complicated thing that would take a very long time to write a full circuit for a type one EVM and we could just mostly just recompile code. There were some slight changes to the way we had to get Merkel proofs in and things like that for efficiency but largely it was the vast majority of that project is existing code.
+
+
+26:35: Brian:
+
+
+Yes, I think it took two engineers three weeks or something like that to get Zeth done. It's a slightly different scale of effort relative to other zkVMs.
+
+
+26:47: Anna Rose:
+
+
+I know that when we last spoke you didn't have Go support, but I know I'm curious, how did you get the.. Like it sounds like a Geth fork with ZK?
+
+
+26:56: Brian: 
+
+
+In this case it's reth and revm. So we actually Go still doesn't work. And that's largely due to the fact that we use RISC-32. It's a subset of the RISC-V or a different flavor of RISC-V. RISC-V has many flavors and Go only supports some of them.
+
+
+27:15: Jeremy:
+
+
+I think one thing that is notable is that with regard to the sort of the next version of the circuit, one of the things that we intend to do is support a wider sort of set of SKUs, if you will, of RISC-V processors, including a SKU that will run Go, which will, I think, be an interesting and unlocking feature. Although I think there's also still some amount of work that's going to be required from a language support perspective to make that as easy of a process as it is currently with the existing Rust versions of things. But yep.
+
+
+27:52: Brian:
+
+
+Yeah, Go is particularly hard to support. You've seen a couple other projects, who sort of tried to do general purpose with like zkLLVM and so forth. And it turns out like Go doesn't really use LLVM. So that's actually not even a viable path there. But I think there has recently been some progress towards getting Geth to work inside Wasm, which is actually also a potentially viable route that that one could run on top of RISC Zero.
+
+
+28:17: Anna Rose:
+
+
+Yeah, my bad. I just I kind of missed reth. I didn't think about it. But it's like, this is gonna sound so naive. It's a full operational client being used. But do we know the percentage? Like it took over, I guess, from like what Parity Ethereum used to be long, long ago, and then Open Ethereum?
+
+
+28:34: Brian:
+
+
+I think they still consider it like you shouldn't be running. I think it's still considered like in beta, but it doesn't stop people from... Brave people from running nodes anyway.
+
+
+28:43: Anna Rose:
+
+
+Huh. So then you had an already Rust, like already written in Rust client. You could fork that, add this validity. But I guess like if someone wanted to run Zeth, like can they already run it and get the ZK property?
+
+
+29:00: Jeremy:
+
+
+Yes.
+
+
+29:01: Anna Rose:
+
+
+Okay, but it's just validity. It's not privacy.
+
+
+29:03: Brian:
+
+
+I mean, you could get privacy out of it if you wanted to build a... If you wanted to create a private EVM proof off-chain, you could totally do that. Yeah.
+
+
+29:11: Jeremy:
+
+
+Yeah. No, no, no. Of course, EVM isn't really, doesn't have specific considerations for privacy since it's meant to be all run in the public. So I think there's like... But in terms of the actual, it does have the full ZK support. So I could prove to you, for example, actually there are privacy use cases, particularly for block builders. I could, for example, prove to you that I can build a block that has such and such number of transactions with this much MEV or whatever the thing you're interested in is. No, I don't think that that's likely to be economically reasonable in the near term, just given the latency requirements for block building as an industry, but it is an interesting conceptual idea.
+
+
+29:59: Brian:
+
+
+Some teams out there are using actually Ethereum blockchains for various internal sort of corporate supply chain management, but you could imagine using something like Zeth to prove something about the state of a private Ethereum chain. So if somebody did want to invest in building some form of private infrastructure on top of ETH and ZK attest to state about it, you can absolutely use this kind of Zeth architecture and crates to do that.
+
+
+30:28: Nico:
+
+
+How long does it take to prove like one block?
+
+
+30:31: Brian: 
+
+
+Yeah, well, that depends on how many GPUs you use.
+
+
+30:33: Nico:
+
+
+Okay, yeah.
+
+
+30:35: Brian:
+
+
+But yeah, I think 15 minutes is the fastest we've seen.
+
+
+30:38: Nico:
+
+
+Well, okay.
+
+
+30:39: Brian:
+
+
+Expect to make that quite a bit faster here in the future.
+
+
+30:43: Jeremy:
+
+
+I think the other thing that's interesting about the feasibility of using Zeth in the real world is also that right now the cost to produce a block is about $10 of compute. I think in terms of speed, wall clock time, we do want to bring that down. But I think that a lot of the things, these systems, the economic viability of doing this, for example, on let's say all of Ethereum, all the time is really determined by the sort of cost of doing this sort of ZK validity proof, right? So I think that we're also very much focusing on bringing that cost down as well as the sort of performance in the wall clock sense.
+
+
+31:23: Anna Rose:
+
+
+Both of these products, Bonsai and Zeth, Z-eth, I'm just sort of curious how these interface with the RISC-V base. Like I don't.. like to me, they sound like separate.
+
+
+31:37: Brian:
+
+
+They're really not. So this is like you take... If you look at the Zeth code base, it's really just a fork of revm and reth, I think with a couple other packages. And you really just basically take the EVM block, pass it in and say, produce a proof that this is correct. And, and also what's the new state after this. So it actually computes all the state transitions, tells you what the new state is and provides a ZK proof that it was done correctly.
+
+
+32:03: Anna Rose:
+
+
+On RISC-V?
+
+
+32:04: Jeremy:
+
+
+That's right.
+
+
+32:04: Anna Rose:
+
+
+Ah, see, this is the part I'm missing...
+
+
+32:08: Brian:
+
+
+Like the Rust compiler takes the Zeth code, compiles it to RISC-V, and then we have this sort of host-guest abstraction. The host loads this guest binary in RISC-V, passes it to the state and says, hey, run this program, which is the EVM, on this state, which is the state of the last block and all of the transactions that people want to put into the next block. Okay, go run this, and then that runs on the RISC Zero zkVM in RISC-V simulated and produces this proof that it says, okay, here's the new state of your next block. But the amount of glue you have to do there is like 10 lines of code.
+
+
+32:44: Jeremy: 
+
+
+And what's also in terms of the way that Bonsai relates, Bonsai is simply a service for running things in RISC Zero. It's simply a service for running these emulated RISC-V machines, but much faster via parallelism basically.
+
+
+33:00: Anna Rose:
+
+
+Okay.
+
+
+33:02: Brian:
+
+
+Yeah. And then I think Bonsai also has some additional features in terms of... Well, it has this sort of recursion element to roll things up, and then it has this STARK to SNARK mechanism. So you can actually verify the proofs on-chain because normally our proofs are STARKs, they're quite large. You could verify them on-chain, but it's very expensive. So we have this other separate mechanism. And these are things that we'll be opening up as well as soon as we're done with security audits. We didn't want people to get too carried away there with the ability to prove arbitrarily large things on-chain.
+
+
+33:33: Jeremy:
+
+
+Actually, that's when you talk about what happened in the last year. One of the important things that happened in this last year is this sort of proof wrapping mechanism that allows it to be economically feasible to verify our proofs on Ethereum. And I think that that was also a pretty large engineering task that was a big enabler going forward.
+
+
+33:56: Anna Rose:
+
+
+Is that where you were using the FRI-based with the Groth16 wrapper? Is that what you're talking about?
+
+
+34:01: Jeremy:
+
+
+Yes.
+
+
+34:02: Anna Rose:
+
+
+Okay, so one of your colleagues, Paul, gave a talk at zkSummit10. We'll add the link to that in the show notes. That was actually a topic I thought we could chat a little bit about. This is a new creation since we spoke last, I guess.
+
+
+34:16: Jeremy:
+
+
+That's right. So basically, if you look at it, one of the wonderful things about STARKs and FRI is that they're very efficient, especially for VM-like systems. You could produce them quite quickly. They're GPU-acceleratable. There's a lot of good things about them. However, the proof sizes are significantly larger, and verifying a STARK or a FRI-based system at all on Ethereum is very expensive, and in fact almost not feasible. You can in fact do it like in, for example, StarkWare managed to make it work, but the engineering required was pretty extensive. And also there was a lot of decisions about how many bits of security and sort of things like that, that were actually with their proof system that were driven by this, like how hard it is to engineer this verifier for FRI-based systems on-chain. 
+
+
+35:11:
+
+
+So what we ended up doing is taking another proof system that we knew to be quite efficient on-chain, which is Groth16. And we basically built a verifier for our STARK proofs that ran inside of Groth16. And so rather than directly verify the STARK proof on-chain, instead we verify it in another proof system and then verify that proof on-chain. So it adds one extra layer of wrapping, but it basically massively reduces both the size of the proof and the cost of verifying it on-chain.
+
+
+35:51: Brian:
+
+
+On the other hand, like FRIs and STARKs were completely untrusted in terms of setup, and now we've introduced this potential sort of trusted setup component with Groth16. I will say that it's... we didn't actually, it's not like we wrote it to use Groth16. Jeremy could talk more about this, but we actually take our verifier circuit and our compiler produces Circom as an output, which we then use the Circom itself to produce the Groth16 circuit.
+
+
+So we actually tried Fflonk and would prefer to sort of move in that direction, but there were some engineering challenges there. We expect to see the sort of on-chain verification mechanism support many different kinds of SNARKs in the future. It's just like Groth16 was the most mature and so it kind of worked faster. And at this point, we're just trying to get our proofs on-chain as quickly as we can so people can start learning how to use these things in an interesting on-chain context like we're starting to see.
+
+
+36:47: Nico:
+
+
+I know that other teams are using the same technique. Are people rewriting the same STARK verification circuit? Or is there some kind of general effort to get things together?
+
+
+ 36:58: Jeremy:
+
+
+As far as I know, everyone's doing their own version of things. In our particular case, we were lucky in some sense because we have a lot of internal compiler technology, which we also hope to open source at some point. But one of the key things is that because we use recursion, we had to describe our verifier in a somewhat circuit friendly way for the use in recursion. And we had a bunch of compiler work that actually translated our verifier into something that we could verify inside of one of these systems already. And so we were able to retarget that to Circom without a huge amount of... Well, I mean, it was a fair amount of effort, but not an insane amount of effort. So in that sense, from our perspective, that was a technically easier route. And I think that different people are taking different mechanisms for this.
+
+
+37:55: 
+
+
+One thing that we're also interested in doing is we're starting to look into running other verifiers inside of the RISC-V VM so that we can actually be a place to compose a lot of different kinds of other proof systems. Like for example, one of the things that just in terms of a funny application, there's some people interested in using a ZKML, which is like a basically zero knowledge proof system for ML. But one of the problems is if I want to prove, for example, that some JPEG that has a certain hash is a picture of a cat. Well, the process of converting the raw pixel values into the ‘is a cat’, is pretty well handled by the existing ML, the ZKML systems.
+
+
+38:39:
+
+
+But the process of turning the JPEG into pixels is actually rather difficult to encode in a circuit. But it's very easy to… write to just import some Rust library and then do it. And so sort of there's this idea that, okay, well, we can use the existing ZKML thing to prove the second half, then we can verify that as well as do the JPEG decoding in a program in our system, and then we can do the STARK to SNARK on it and then get a very small single proof that's verifiable on-chain that this JPEG is in fact a cat, right? You know, so lots of fun applications.
+
+
+39:12: Brian:
+
+
+You know, people use TensorFlow or PyTorch to interact with ML systems, and you have to build a lot of the sort of ancillary logic around your ML pipeline. And people prefer to do that in higher level languages and utilize libraries. But then obviously, when you go to actually run the nuts and bolts of the ML algorithm, you obviously are using a very specialized execution environment. Although we will have some really fun ML stuff coming out on top of RISC Zero that's more like decision trees and things people use to build risk models, which I think are very fascinating in the ZK context.
+
+
+39:45: Nico:
+
+
+So I guess this RISC Zero plus ZKML thing is kind of like a CPU plus another chip specifically for ML, right?
+
+
+39:51: Jeremy:
+
+
+Yes, exactly. Exactly. And we actually anticipate with this general recursion based mechanism that we're using, we actually are... We'll likely start to see not only different SKUs of processors, since we're going to probably somewhat generalize like our RISC-V support, but we'll also see other kinds of interesting specialized circuits or accelerators, that will all be sort of able to be part of a single ecosystem via the use of recursion. So I think that that's actually a super exciting direction over the next period of time.
+
+
+40:30: Anna Rose:
+
+
+You sort of you're talking about having the FRI-based recursion wrapped in the Groth16 wrapper. Do you actually envision sticking with that? You sort of said like you do it because of Circom, because that's what Circom produces or that's what it's built on. But like, is that the final version that you go live with?
+
+
+40:49: Brian:
+
+
+It's more like, like Circom supports a number of proof backends, so you can take a Circom circuit and you can have that be verified in Groth16 or Fflonk or I don't even know all the different modalities that it supports. But effectively, a ton of work was done on the Groth16 backend by other people to make it support these giant circuits, because it's a quite large circuit. So Fflonk just broke. So I think our intention is very much to get to a trustless verification. It's just a matter of time and backlog. Do you think this is like a...I'm curious, Jeremy can go ahead, but then I'm also curious to get your take on how important this is to the ecosystem. I've seen a lot of people talking about trusted set up woes recently, but I don't really know the context.
+
+
+41:32: Jeremy: 
+
+
+I was just going to add one small thing, which was that our goal... The reason for doing this is to make something that is Ethereum friendly. And I think aside from a new precompile in Ethereum, FRI-based systems will never be friendly to verify directly. So there'll always be a wrapping between a FRI-based system and something that's verified on Ethereum in particular. For other chains, not necessarily. Wasm-based chains, it's actually very straightforward to verify FRI-based things, for example. Which exact proof system, and whether it's Groth16, indefinitely, I think that's probably unlikely. It'll probably be something different. But, yeah.
+
+
+42:08: Anna Rose:
+
+
+And on the trusted setup point that you were just asking, I mean, I think it's always been the thing that teams have to do but don't really want to do, but they have to do it. And then they, there's been crazy developments... Kobi, my sometimes co-host, Nico's colleague, has developed all these really cool techniques to do trusted setups better. But even when I ask him, is this going to end up in textbooks? He's like, no, we want to make this obsolete, actually. I'm creating it, but hopefully we don't have to use it too long.
+
+
+42:43: Nico:
+
+
+So my take is it depends who your adversary is. If you're fine with this one out of many participants' assumptions, then you're okay. If you start being extremely paranoid and thinking like, oh, I can't even trust a single person, if you move to something like a Pedersen commitment, you still need to trust that the curve you're using is not backdoored. If you're using FRI, you need to assume that your hash function is collision resistant. So if you're going as far as saying I don't trust one of these participants, like trust no one, why do you then trust the curve? Why do you then trust the hash function? Like this is, maybe I'm being a bit paranoid about this, but if you're really trying to say in the grand scheme of things like there is a ground truth and I don't need to trust anyone about it, none of these schemes give you that. None of cryptography is going to give you that.
+
+
+43:31: Brian:
+
+
+Just cash underneath your mattress at that point, really.
+
+
+43:32: Nico:
+
+
+Yeah. 
+
+
+43:34: Anna Rose:
+
+
+Could you use an existing trusted setup, SRS, that's already been created, like maybe the Ethereum one? Or do you have to manually run a trusted setup yourself?
+
+
+43:44: Jeremy:
+
+
+So some of the systems have a multi-circuit trusted setup, so a trusted setup that could be used for different circuits. Groth16, at least the way we're using it right now, does have some circuit-specific components, and so while we could use, for example, the Powers of Tau part of it, we don't need to run our own trusted setup because that's already been done. And there's ones that are well established. There are some parts that are, unfortunately, circuit-specific. But luckily, I think we'll eventually get to a proof system where that is not the case.
+
+
+44:20: Anna Rose:
+
+
+Okay. Do you think you'll launch with this, though?
+
+
+44:23: Jeremy:
+
+
+Yes.
+
+
+44:23: Anna Rose:
+
+
+Like mainnet?
+
+
+44:25: Brian:
+
+
+Testnet Zero will be the Groth16 version. And if people don't want to use it because of that, I guess that will be interesting market data. But yeah, the intention is to get somewhere else before then.
+
+
+44:37: Anna Rose:
+
+
+I see.
+
+
+44:38: Jeremy:
+
+
+We might get lucky. I mean, I think at this point, it is still possible that the difference between what we have and what we need for some alternative proof system is small because there's still a lot of investigation work to be done. But my, the sort of plan of record, if you will, is to go forward with Groth16 for now.
+
+
+44:59: Nico:
+
+
+Since we're on the topic of proof systems, this is no longer about recursion, but I want to bring up the new claims about VMs and look up singularity, right? These Lasso and Jolt papers. So this new approach, or this approach that has been theorized and now is supposedly practical, which is, I just have one big lookup table, and that's going to be my processor. Is this something that you've looked at? Is this something that is the next evolution for VMs?
+
+
+45:26: Jeremy:
+
+
+So we've looked at it quite a bit. I read the paper, and we've done a fair amount of analysis. And the truth is, it's not exactly clear what the performance delta will be at a practical level because some of the components are still unimplemented and I have tried on a number of occasions to do good back of the envelope numbers but the reality is that performance in the real world is actually quite complicated and even getting the back of the envelopes I just never got to the bottom of that. So the short version is that our interest as a company is we are fundamentally most concerned with bringing ZK to people in a very usable form. And we really strongly believe that the sort of using an existing ISA is a good way to do that.
+
+
+46:17:
+
+
+And if it turns out that, when these things start to get built, that it looks like it's a better way to go than our current proof system, we will very likely adopt them. And we are going to continue to experiment with those things internally and be in a place where we're prepared to make those changes if need be. But as it sits right now, we have a very carefully engineered, very functional works today sort of system. And so if you ask me what will it look like three years out? It's very possible that the proof system will change dramatically over that timeframe. I mean, there's still new mathematics to be developed and new ideas to be had. So I am definitely interested and at least somewhat bullish on these new techniques, but I think there's still a little bit of time and real benchmark data will tell.
+
+
+47:15: Anna Rose:
+
+
+You had sort of mentioned Wasm as interesting. How would that interface with what you have?
+
+
+47:23: Brian:
+
+
+There are a couple ways. We've actually, the most naive way, and we've actually done this, is just to take a Wasm interpreter, like the Wasmi crate, and then you can just take a Wasm binary. It's pretty convoluted, if you're taking a Wasm binary, running it through an interpreter, which is compiled through RISC-V, which is then a VM, which is then creating a proof of the... It's basically creating a proof of the interpretation of a Wasm binary.
+
+
+47:45: Nico:
+
+
+It's like, you know, the inception meme of like, we must go deeper.
+
+
+47:48: Brian:
+
+
+We must go deeper. Yeah, exactly. So you've got to run an interpreter. It's find something... Like run Geth on top of Wasm on top of RISC Zero, and then you will have completed the thing and your proof will never complete, but the abstraction loop will have completed. Anyway, Jeremy can talk about some other approaches running Wasm.
+
+
+48:06: Jeremy:
+
+
+Yeah, so we're actually one of our sort of with the new circuit work, we are sort of separating out a lot of the sort of core like, oh, here's a 32-bit multiplier unit and it was sort of dividing up the circuit, so it's less monolithic with the intent that one could put, for example, a different sort of instruction decoder front-end onto what is roughly similar reusable components for the sort of circuit and thus get different kinds of VMs. I think initially we're largely focusing on going a little bit wider in terms of the types of RISC-V variations we support. That said though, I do think that that same mechanism will probably eventually get to things like some Wasm support. There's also some sort of trans-compilation techniques we've looked at on some of that as well.
+
+
+48:59:
+
+
+The one thing that's slightly trickier on Wasm is it does have a sort of a higher bar in terms of the minimum sort of operations that are required, like for example, floating-point support or things like that. Whereas right now all that in RISC-V is done through software emulation. So that's a very nice feature for us.
+
+
+49:16: Anna Rose:
+
+
+So we've already mentioned a couple use cases, and sort of categories of use cases. So like ZKML, the zkAMM experiment. But yeah, I just was wondering if there's any other experiments or use cases that you're already seeing emerging. And also, I think, Brian, you had mentioned that something in the architecture was sort of use case dependent. So maybe we can bring that back.
+
+
+49:43: Brian:
+
+
+Okay. I don't know how much in the architecture is use case dependent. I think I was talking about moving... Sort of moving away from this relayer contract we had built in the sort of ZK coprocessor model and basically letting teams design that to be what they want. So we've seen people experiment with sort of on-chain with governance coprocessors and they had very specific mechanisms they wanted for their particular use case. And then if you look at the sort of zkAMM with its like pool-locking and all this, like it's quite a sophisticated mechanism there. And it's like not really what we had. I mean, if you think about this, you start to realize, yes, obviously, you need some way to lock a pool if you're going to be using asynchronous transactions over a formerly single-threaded, completely in lockstep kind of blockchain.
+
+
+50:37:
+
+
+So yeah, the goal with Bonsai and what we're doing now is to minimize what we're offering to let people kind of design these mechanisms on their own because they do seem to vary based on the kinds of actual computation going on. In the Uniswap case, if you looked at the debate that happened sort of after that on the coprocessors' Telegram, people were asking specifically what's the sort of lockup interval for these when you lock a pool and then you have to wonder how that interacts with MEV and all kinds of other considerations. Whereas in a voting example, you might not care about that at all. You might care more about maintaining privacy or not knowing the totals until some later date or something like this.
+
+
+51:22: Jeremy:
+
+
+And of course, there's also uses for fraud proofs or roll-ups, which are also sort of applications. I think there's a lot of interest in adding ZK to existing fraud proof systems or moving toward validity proofs for different optimistic chains, which we're also looking into in terms of use cases. And we actually also have a couple of additional showcase sort of use cases that we're working on internally, sort of similar to Zeth that we will intend to put out over the next couple of weeks. I think Zeth has really made people aware of the power of sort of what you can do with a general purpose ZK system. And I think one of our goals in terms of use case is to try to continue to build sort of not necessarily products but sort of like starting points or one might say reference applications for people that make use of the different power of ZK and so.
+
+
+52:17: Brian:
+
+
+Right, like we are seeing a lot of people try to build these kind of hybrid ZK/fraud proof systems and engineering that in a way where the fraud proving engine is actually capable of forming the sort of fraud proofs that you wanted to be able to. There's a lot of thought that needs to sort of go into that to get it right. So we'll be building some reference applications and helping teams get these kind of architectures correct. The other thing I guess I did mention earlier is that the Polybase team put out some really cool benchmarks that we've been working on. You can see them at zkbench.dev. And a sort of interesting aspect there, if you look at the RISC Zero benchmarks, you'll realize that pretty much every benchmark takes six seconds plus a tiny bit of additional time in almost every case.
+
+
+53:04:
+
+
+And it's basically the Continuations mechanism and the way it currently is designed has to do this sort of build up like a Merkle tree of various memory page tables and stuff. So verifying all this adds a certain amount of overhead. So we basically can't do small proofs faster than six seconds right now. It's like the smallest proof takes six seconds no matter what. So it's kind of funny you can get anything you want proven in six seconds. So we've sort of biased the current architecture towards... There's lots of stuff we could do to improve that kind of runtime. But right now we're very focused on how do you prove things the size of Zeth, which are like 4,000, 1 million cycle blocks. So it's just like a completely different scale. But there is some overhead that you incur when you start to build a system with the sort of Continuations feature in mind. That optimizing that out for smaller spot proofs and stuff will take quite a while, I think.
+
+
+54:00: Jeremy:
+
+
+And I suspect with the next revision of the circuit, we'll have this sort of optional features like, well, this is the with continuations or without continuations version. So we can remove a lot of that overhead. But I think our focus has very much been on the very large applications where I think it's just almost impossible to do with any other system for those kinds of use cases.
+
+
+54:23: Anna Rose:
+
+
+Cool. Is there any other use cases that are sort of on your mind? Maybe more like tangible end user use cases that you've seen at hackathons?
+
+
+54:32: Brian:
+
+
+Yes, but I don't know that I can necessarily talk about some of them yet. I will say that there are some really interesting, maybe more consumer use cases where an interesting kind of dynamic that we're seeing is that, so when we finally got Bonsai done, and people were able to use it, the sort of effective throughput of the system did go up by... For an end user by about like 20x or so. So that in and of itself sort of brought a whole new set of potential computations into sort of a feasibility realm where two minutes is too slow, but about 20 seconds is okay, or 10 seconds is okay. So I do think every time you see a new leap in proof system kind of speed and capability, new sets of use cases do start to open up. And hopefully, we'll be able to talk more about some of those in the future.
+
+
+55:25: Anna Rose:
+
+
+Or we see some of them built at ZK Hack Istanbul, which is coming up.
+
+
+55:30: Brian:
+
+
+Yeah, hopefully. Yeah, exactly.
+
+
+55:32: Anna Rose:
+
+
+I guess now we can talk a little bit about what's next and what's coming down the line. I do have one question though before we jump into that, which is, is RISC Zero going to be an L1 or is RISC Zero going to be an L2? Is this decided?
+
+
+55:47: Brian:
+
+
+I mean, LTs don't exist anymore, if that's what you expected.
+
+
+55:51: Nico:
+
+
+Or a coprocessor, I guess.
+
+
+55:53: Anna Rose:
+
+
+Or coprocessor.
+
+
+55:55: Brian:
+
+
+Or a utility chain. Sometimes I think of it as more of like a utility chain. Maybe it will have state of its own, which makes it start to look like an L1. But the primary purpose of it is to augment other ecosystems and help make them more capable, which is sort of like a coprocessor narrative, then in that context it's a coprocessor. But then if you did build an application just on top of it, then I guess it would be an L1. So I don't think it's going to be an L2. That said, we expect it ideally to be useful for all these L2s and on Ethereum itself. 
+
+
+56:26: Nico:
+
+
+So the answer essentially is all of the above. Right.
+
+
+56:29: Jeremy:
+
+
+We have a very modular way of looking at things. I think in the sense that what we would like to do is find a way to make it possible for people to generate proofs in a decentralized manner and for the economics of that to make sense for people. That is the entire goal. And I think that there are lots of ways that that ends up happening in the existing systems, but I think that we're not really married to a particular sort of existing sort of designed for that decentralization process.
+
+
+57:07: Brian:
+
+
+Some of the features we'd like to bring to market that we can talk about in the next year sometime might rely on some amount of state being stored somewhere, which could be in other DA layers. It could be directly on a chain that we control, and we'll see how all that evolves. So there's still a lot of exploration to figure out what the right final form is. But for now, it's going to be more the thing we're going to launch is basically going to be this sort of stateless coprocessor type model.
+
+
+57:37: Anna Rose:
+
+
+Cool. All right. So what's next? What's coming up? What can people look out for?
+
+
+57:42: Jeremy:
+
+
+zkVM 1.0, not too long after that, a new version of some of the circuits. Most importantly, though, I think, is going to be being able to get proofs and proving using RISC Zero onto mainnet.
+
+
+57:57: Anna Rose:
+
+
+Is zkVM different from Zeth, then? It's not a zkEVM?
+
+
+58:02: Brian:
+
+
+So zkVM is the RISC-V ZK proving engine.
+
+
+58:06: Anna Rose:
+
+
+Got it.
+
+
+58:06: Brian:
+
+
+So if you run reth on top of the zkVM, you now have a zkEVM.
+
+
+58:10: Anna Rose:
+
+
+Got it, okay.
+
+
+58:12: Brian:
+
+
+So the work to sort of get to 1.0 has been basically exploring a bunch of different API options, getting the sort of continuations figured out, figuring out what the actual abstractions and everything we want to exist there are, and then actually orienting the system so it's maintainable in the long-term, so it's auditable, so people can understand the audits. All of this has basically been the bulk of the sort of fit and finish work that's required in our minds to actually call something 1.0, whereby once that's out, we intend to support that sort of API for a long time going forward. So people should be able to build their systems with confidence on top of this.
+
+
+58:49: Anna Rose: 
+
+
+That's mainnet.
+
+
+58:50: Brian: 
+
+
+Well, so that's basically the predecessor to mainnet. So by building the zkVM sort of 1.0, that gives the sort of foundational stability that you can then use to have that we're then comfortable with sort of launching Bonsai onto mainnet on top of that. Along with the release of the sort of STARK to SNARK system and the recursive system to open source, people will be able to, if they want to run RISC Zero proofs at home on their own machines, whatever, basically post those completely permissionlessly to chains. So there's the 1.0 maturity is basically getting to the point where everybody can use the system and can put it on-chain permissionlessly if they want to.
+
+
+59:33:
+
+
+Simultaneously, we'll be launching this Bonsai Testnet Zero, which will be an actual supported, still kind of test-ish red... like, doneness, but based on a really confident sort of foundation. So if people want to deploy real apps on it, we expect people to be able to do that. But we're not necessarily promising that. We figured out the pricing model or the right mechanisms or anything. It's basically the simplest thing we can get so we can get feedback from people and figure out what the right long-term solution is. Because when you start thinking about how do you bring a proving system that's really this kind of coprocessor, utility chain, or proving market, or any of these things, it's really easy to just spend way too much time thinking about what the right thing to do is without, in absentia of real data.
+
+
+1:00:24: Anna Rose:
+
+
+Do you expect other Bonsais to emerge not from your team living on the VM?
+
+
+1:00:30: Brian:
+
+
+Probably at some point, people will certainly be able to do that in the future. Ideally, people would just participate in a sort of Bonsai itself, and there'll be ways for other people to do that coming up in the future. So Bonsai will get more and more open in terms of the sets of people that can participate in it in a meaningful way. That said, I think anytime there's anything of value, it'll probably be forked, you know.
+
+
+1:00:50: Nico:
+
+
+Maybe you don't want this comparison, but essentially, like Bonsai is sort of also what Starknet is doing with their like shared prover starting with their own sort of proving infrastructure and slowly opening it up. So I don't know if it's a useful model for people to think about or if you don't want to be boxed into that.
+
+
+1:01:08: Brian:
+
+
+Yeah, I don't think we really want to be boxed into that because I think we're going to move from where we're at to other people being able to contribute much more quickly.
+
+
+1:01:15: Nico:
+
+
+Okay, Okay. So I'll stay away from it.
+
+
+1:01:18: Brian:
+
+
+But it is a reasonable... Yes, people have done similar things before. And yes, Starknet is one of them.
+
+
+1:01:24: Anna Rose:
+
+
+All right, well. I want to say a big thank you, Brian and Jeremy, for coming back on the show and sharing with us this update and also letting me and Nico ask all the questions we always wanted to know and were too afraid to ask. So yeah, I really appreciate it. 
+
+
+1:01:38: Brian:
+
+
+Anytime.
+
+
+1:01:39: Nico:
+
+
+And looking forward to the secret client-side use cases that you can't mention yet.
+
+
+1:01:44: Anna Rose:
+
+
+Thanks Nico for co-hosting this one too.
+
+
+1:01:47: Nico:
+
+
+Thanks for having me on, Anna.
+
+
+1:01:48: Anna Rose:
+
+
+I want to say a big thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.

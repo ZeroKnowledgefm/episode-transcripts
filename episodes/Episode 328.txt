@@ -1,0 +1,880 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online. 
+
+
+This week, Tarun and I chat with Sims Gautam and Liam Eagen from Alpen Labs. We dive into the wild world of Bitcoin L2s and specifically how ZK could be used to incorporate strong connections between Bitcoin and new execution environments. We cover the general Bitcoin L2 landscape, the emergence of BitVM, the controversial concept of covenants, the distinction between bridge operators and sequencer in this model, and how this differs from how these actors work in Ethereum L2s. We then dive into SNARKnado, the bridge that they have designed at Alpen that would move BTC to and from a rollup. We cover what is happening under the hood in SNARKnado, the ways in which the system offers round-based fraud games mixed with ZK, where the DA is stored, the reasoning behind the security of such models, and much more.
+
+
+Now, before we kick off, I want to let you know about ZK Hack Montréal, an event happening August 9th to 11th, 2024 in, you guessed it, Montréal, my hometown. In case you don't know, ZK Hack is another project that I'm involved in. It's a hub for ZK learning and as part of that we produce IRL ZK-focused hackathons. Our next hackathon is ZK Hack Montréal and it promises to be a very special one, being our fourth edition of the series, but the first that we host in North America. Applications are open. We have some amazing judges and partners lined up. Keep an eye on ZKmontreal.com for more info about it. It promises to be the ZK event of the summer. It's happening just after SBC, so you are able to do both if you want to. So yeah, hope to see you there.
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:02:15]: Tanya:
+
+
+Gevulot is the first decentralized proving layer. With Gevulot, users can generate and verify proofs using any proof system for any use case. You can use one of the default provers from projects like Aztec, Starknet and Polygon, or you can deploy your own. Gevulot is on a mission to dramatically decrease the cost of proving by aggregating proving workloads from across the industry to better utilize underlying hardware while not compromising on performance. Gevulot is offering priority access to ZK podcast listeners. So if you would like to start using high performance proving infrastructure for free, go register on gevulot.com and write ZKpodcasts in the note field of the registration form. So thanks again Gevulot.
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. 
+
+
+And now, here's our episode.
+
+
+[00:03:45]: Anna Rose:
+
+
+Today, Tarun and I are here with Sims Gautam and Liam Eagen from Alpen Labs. Welcome to both of you.
+
+
+[00:03:51]: Sims Gautam: 
+
+
+Thanks so much.
+
+
+[00:03:52]: Liam Eagen: 
+
+
+Yeah, thanks for having us.
+
+
+[00:03:54]: Anna Rose:
+
+
+Hello, Tarun.
+
+
+[00:03:55]: Tarun Chitra:
+
+
+Hey, excited to be back and to be talking about the intersection of Bitcoin and ZK, which I think has been somewhat underappreciated on this show. So hopefully we kind of give it some love.
+
+
+[00:04:09]: Anna Rose:
+
+
+Yeah. I think the first time you mentioned this topic, I asked you should we have someone on? And you were like, it's weird right now. And I think this was like, maybe...
+
+
+[00:04:20]: Tarun Chitra:
+
+
+Two years ago.  Right?
+
+
+[00:04:21]: 
+
+
+Was it two years ago?
+
+
+[00:04:22]: Tarun Chitra:
+
+
+It was whenever there was the first people who were like, we're doing the Starkware, we're going to do STARKs on Bitcoin.
+
+
+[00:04:30]: Anna Rose:
+
+
+Okay.
+
+
+[00:04:31]: Tarun Chitra:
+
+
+I'm trying to forget... I remember the name of that project. I haven't seen anything in their GitHub in a long time, so I'm not sure if it's still alive.
+
+
+[00:04:39]: Anna Rose:
+
+
+I see, I see. But now it seems like there are a few projects working on it who are also coming from the ZK space. So this is going to be really exciting to dig in with you folks. But let's kick off with a few intros. Sim, I'd like to hear a little bit about you and where the idea for the ZK-Bitcoin intersection even comes from, maybe the foundation of Alpen. Yeah, share a little bit about what you've been up to.
+
+
+[00:05:06]: Sims Gautam:
+
+
+Yeah, thanks, Anna. And it's great to be on here. I've been listening and a fan of the pod for several years now. So...
+
+
+[00:05:12]: Anna Rose:
+
+
+Nice.
+
+
+[00:05:13]: Sims Gautam:
+
+
+It's great to talk about Bitcoin here as well, because I think it is an underexplored topic as it relates to ZK, and we think it's quite, quite relevant, particularly on Bitcoin. So a little bit about my background. I actually don't come directly from a cryptography background, but I feel like so much of what I've done over the last maybe decade or so has kind of led up to working on Alpen, and I'll share a little bit about that. Early on, I even got into computer science out of my interests in math and number theory in particular. So doing a lot of that, even kind of tracking back to high school. I found out about Bitcoin actually around then as well, in 2011, and really went down the rabbit hole at that time. Since then, I ended up going to MIT, did math, computer science, but really got much more sucked into AI and in particular sort of operating at this intersection between research and actually delivering a product. And I think so much of that background actually translates really well into what we're doing.
+
+
+So, as an example, after college I started a company called Synapse Technology. There, we were building computer vision systems to detect fentanyl, guns, knives at x-ray checkpoints. And that was actually a lot of that work, was taking cutting-edge neural network architectures around object detection, adapting it for our use case. So we were innovating on these multi-perspective, deep learning methods, but ultimately like actually building products that went out and we were securing checkpoints in several continents, processing tens of millions of packages. And so that was an amazing experience from 2016 to 2020, working on that and doing a zero to one on that startup and getting it off the ground. But kind of going back now, after 2020, we sold that company to Palantir, spent a few years there, and I was in that period of time really following along with everything that was going on in the blockchain space and in Bitcoin in particular as well, with the scaling wars happening in 2016 and even the DeFi whitepapers kind of coming out and turning into protocols.
+
+
+So it really felt like in 2022, we ended up, me and three other co-founders that we'd met at MIT were sort of in this position of like what is the really interesting 10-year+ roadmap project here to work on that we think is a fantastic business opportunity, but also can create impact, particularly in a global setting. And the blockchain frenzy was all over the place at that time, and there's all sorts of applications we were seeing, but there was still some kernel of how do we get really interesting scalable value add from blockchains, particularly around monetary aspects like payments, censorship-resisted payments, private payments, these kinds of applications that really connected to us. We just kind of weren't sure exactly what the opportunity was until we started exploring a bit more. But ultimately we landed on Bitcoin as a way to really scale privacy, expressivity and just overall kind of throughput scalability of the system. And we saw sort of this convergence of ZK research that advanced so much over the last several years where things were very real and modular, where you can take very generic ZKVMs that had very good kind of prover-side performance and really kind of leverage these tools that were going from theory into very much practice to be able to solve what seemed like a really important problem in Bitcoin that was totally underappreciated at that time. And so we sort of went down that rabbit hole until we realized that this kind of intersection and this kind of timing makes a lot of sense to build really interesting technologies on Bitcoin. So that's a little bit about the start of Alpen.
+
+
+[00:09:17]: Anna Rose:
+
+
+I kind of am curious. So you mentioned your startup had been sold to Palantir. Were you kind of starting on this research out of Palantir? Like, do they have a blockchain department?
+
+
+[00:09:27]: Sims Gautam:
+
+
+They don't
+
+
+[00:09:27]: Anna Rose:
+
+
+Okay.
+
+
+[00:09:28]: Sims Gautam:
+
+
+Not as far as I am aware. Yeah, they don't. Yeah, I mean, it was really... It was out of... We were talking a lot about payments and financial technology. Actually, that was like... Even before Blockchain, I was exploring that quite a bit because I'm originally from Nepal and over a quarter of our GDP is remittances. And I actually have experience and see how clunky that experience is today. With capital controls like there, it's also very hard to access basic kind of things like Netflix. And so I really saw the vision for payment technology in this way, then also realized like there's... As we saw with all the usage in Ethereum in the last cycle, there are real limits into peer-to-peer consensus systems. And the way to build this, while preserving the decentralization and security is through modular execution layers and Layer 2s. And that, it felt like Bitcoin is just like the right place to build that and has been sort of designed for that kind of multi-staged modular development.
+
+
+[00:10:39]: Anna Rose:
+
+
+Liam, I want to hear a little bit about your background. I actually know you through a number of collaborations that you've done with other folks in the ecosystem, folks who've been on the show. For example, you worked with Ariel, you worked with the folks at Geometry. Tell us a little bit about yourself and what led you to work on Alpen.
+
+
+[00:10:56]: Liam Eagen:
+
+
+Yeah, I've been interested in sort of cryptocurrency, I guess, for a long time, and started working on SNARKs kind of independently a few years ago. Wrote this paper, Bulletproofs++, and started working at Blockstream, which is like a Bitcoin company for, I guess, audience members that may not know. I think you guys sort of mentioned this already, but there's a strange separation between Bitcoin and the ZK community.
+
+
+[00:11:29]: Anna Rose:
+
+
+Although originally there was a connection with Zcash, like the first ZK project actually was very Bitcoin oriented. But it seems like everything since has been more kind of from the Ethereum or other L1 ecosystems.
+
+
+[00:11:43]: Liam Eagen:
+
+
+The first mention, I guess, would be CoinWitness from Greg Maxwell talking about, I guess... I don't remember exactly what the details were, but the kind of ideas that have since been developed and put into production of compressing blockchains into a single proof of validity and privacy and yes, yeah, Zcash for sure, fork of Bitcoin. And I guess that's actually kind of how I got into SNARKs, was privacy stuff. I was really inspired by Zcash and the ethos of privacy and how it really worked in some sense. And so yeah, I've done a few papers with Ariel, worked on lookup arguments and folding schemes and lots of cool stuff, but I was always interested in bridging the gap between ZK and Bitcoin, and now that seems more feasible than it has in the past. So, I guess that's kind of how I ended up here.
+
+
+[00:12:43]: Tarun Chitra:
+
+
+Actually, yeah, I guess to your point, I feel like there is the early 2013 or '14 Bitcoin talk posts that you're kind of referring to. What has sort of been in your mind, the kind of like if you could give a stylized timeline of the intersection of Bitcoin and ZK from over the last decade, because I think it's a very non-linear story, and maybe having the timeline just would give people some grounding as to the stuff we're going to talk about.
+
+
+[00:13:15]: Liam Eagen:
+
+
+Sure, I won't claim... I may not remember everything, and my recollection might not be perfectly accurate, but yeah, there was the CoinWitness stuff from Greg and I think also maybe at the same time, or around then, there was also discussion of using ring signatures for privacy with Bitcoin. I think Satoshi may have even participated in some of these discussions. I don't remember, but so Zerocoin came out in 2013, and then the Zerocash paper, which I think basically had the bones of modern kind of Zcash and other privacy payment systems, came out in 2014 and just won the IEEE Test of Time Award. In parallel with the sort of work that became Zcash, there was also Monero, or what would become Monero, using ring signatures. And these were, I guess, two applications of ZK to cryptocurrency really early on. Yeah, so I guess there was the beginning of a really virtuous feedback loop of ZK research and ZK applications that up until all of this, hadn't, as far as I know, really existed. It was cool to see it really be applied in the real world. I guess, in parallel with a lot of that, there was also work at Blockstream with Greg and Andrew and Pieter Wuille, who I think the story goes that they approached Dan Boneh with this problem of improving range proofs, and they took this work of Bootle on inner product arguments and came up with Bulletproofs. And so I think that's an interesting example of practical applications, driving research and...
+
+
+[00:15:16]: Anna Rose:
+
+
+And a Bitcoin to ZK connection a little bit.
+
+
+[00:15:19]: Liam Eagen:
+
+
+Yeah, definitely. Yeah. So the motivation from Blockstream was for Liquid, I think, which is a Bitcoin sidechain.
+
+
+[00:15:28]: Anna Rose:
+
+
+After this point, I feel like a lot of the ZK research and then projects that emerge tended to be more on that Ethereum side. Like sometimes they were just L1s, but they were definitely like they'd have something like programmable privacy or this idea of smart contracts interfacing with them under the hood, and what eventually evolved into the ZKRollups. They all were very Ethereum-focused, or these alternative L1s. You were coming maybe more from the Bitcoin side, but were you disappointed that there wasn't more of a Bitcoin overlap during that time? And why it wasn't there? Was it from the Bitcoin side or was it from the ZK side that there was a lack of interest?
+
+
+[00:16:06]: Liam Eagen:
+
+
+I think part of it was a perception for a long time that zero-knowledge proofs and SNARKs always had trusted setups, which is, of course, not accurate. But...
+
+
+[00:16:20]: Anna Rose:
+
+
+Anymore, yeah.
+
+
+[00:16:21]: Liam Eagen:
+
+
+Yeah. I don't remember when the STARK paper came out. That was also in all of this, maybe like 2018. So the SNARKs that people used for Zcash did have trusted setups, and there was a strong resistance from the Bitcoin side to using trusted setups, certainly against ingraining trusted setups in the L1.
+
+
+[00:16:47]: Sims Gautam:
+
+
+Yeah. I mean, to add to that, I think one of the reasons that we didn't see that innovation really progress quite as much on Bitcoin is because Bitcoin script is limited. And there is no... At that time especially, there's not even sort of a good route to think about how does Bitcoin reason about a zero-knowledge proof? And I think that's some of the interesting innovations that we're seeing recently that's getting us excited and a lot of folks in the space excited about ZK and Bitcoin happening. And one thing that's also worth pointing out in that kind of intersection between ZK and Bitcoin is that Bitcoin as a blockchain is sort of, it's always been designed in a way that the scripting is very, very limited. So we have very limited kind of smart contracts that are available on Bitcoin because the core value there in the core design thesis is blockchain should be verifying computation, they shouldn't be executing arbitrary computation.
+
+
+And that really comes from how Bitcoin treats the trilemma or the kind of the security, decentralization, scaling trade-offs, where part of what makes Bitcoin a really interesting digital asset, a really interesting money, is that it's just designed for maximizing the decentralization and security of that trade-off. And so we have much more limited script. But this is where I think SNARKs actually fit really well into that whole thesis, because you can do arbitrary computation off-chain. And if you have some way for Bitcoin to reason and verify these SNARKs, then there you go, you can do kind of arbitrary ways to basically take BTC, the asset, export it into off-chain systems in a really secure way. So bridge it into private execution environments or just very expressive environments. You could put it into an EVM chain and be able to use it as a collateral for smart contracts, et cetera. Right? So the key sort of thing there is like, can Bitcoin reason about zero-knowledge proof?
+
+
+[00:18:55]: Anna Rose:
+
+
+Yeah, and it wouldn't have been able to reason, for example, about a fraud proof, I'm assuming. I feel like you needed to get to the ZK being performant enough, because what I hear is like there was the Bitcoin-ZK intersection, but then there's also just Bitcoin and L2s. L2s were not... I mean, I guess you had sidechains, you had Liquid, you had Lightning, you had these sort of attempts to put sidechains or something connected to it. But with Ethereum, you had the fraud proofs, and then you had the zkRollups that kind of defined what that could look like, and then it's brought back to Bitcoin. Although there's two other things about Bitcoin. And again, I'm not in the Bitcoin world, so I'm kind of looking in from the outside, but it seems like just generally Bitcoin and L2s, and that narrative started to pick up recently. And then at the same time there was like Ordinals or like NFTs on Bitcoin which also picked up. And maybe can you talk a little bit about those two things and maybe where those start as well.
+
+
+[00:19:59]: Sims Gautam:
+
+
+Yeah maybe it starts with Taproot, which is this upgrade that came to Bitcoin a few years ago. Essentially, Ordinals, part of the growth there is they figured out a way essentially to put data on Bitcoin block space that was much larger than what was possible before in a cleaner kind of way, leveraging this Taproot upgrade, which relaxed some of the constraints around putting data in. And so this of course, seeing Bitcoin as this kind of more pristine premium block space that not to the same extent after the last kind of NFT hype wasn't used. I think this really opened up the design space for people to put all sorts of things. And then also Ordinal Theory, which is invented by Casey Rodarmor, essentially laid out a way to track these UTXOs on Bitcoin, these NFTs that get created, content data that's created on the block space to be able to track ownership and essentially index them. And that was innovation that really took off, and it brought several hundred million dollars in transaction fees to the miners, which is really interesting. It also made block space quite expensive, given the kind of usage. I don't think it was quite as sustainable and there's definitely spikes in usage and so on.
+
+
+But it had a lot of interesting secondary effects into accelerating this conversation around scaling Bitcoin and kind of even alternatives to Lightning network. What are other kind of Layer 2 solutions? And then this is also times really well with this other innovation that's worth talking about here called BitVM, that Robin Linus published a paper for last year, I think it was like October. And so this is to your point earlier, Anna, about fraud proofs and kind of reasoning about that. Robin... Essentially the core idea that Robin was able to outline in this whitepaper was it's a paradigm for someone to make a claim on Bitcoin and have... Like a claim about sort of arbitrary computation, it's a claim about some correctness of a circuit. Someone makes a claim, another party can challenge that claim and Bitcoin can actually adjudicate who's correct in this case. And so it's a fraud proof primitive that is sort of available to Bitcoin using earlier ideas that Jeremy Rubin had with Lamport signatures and how to do that on Bitcoin. This was a really interesting step forward in terms of how do we start designing Layer 2 systems or bridges that can be more secure than the honest majority assumption? And there's a lot of work after that whitepaper came out that the BitVM community got together and kind of propelled and I think where it sits today is really interesting.
+
+
+[00:22:55]: Anna Rose:
+
+
+As you describe all of this, I can't help but wonder, like Bitcoin, it's not a smart contract platform. There's no VM to Bitcoin, or maybe there is, but I guess it's very, very simple. It's like it can do one thing. This has been always kind of my question of how does Bitcoin verify anything? Isn't it sort of there's a multisig that makes a decision based on logic that happens elsewhere maybe, but not that like anything's actually happening on Bitcoin. The only part that's on Bitcoin is using that memo field. This is what I've always understood, and it's always kind of seemed like a bit of a hack around because there is no smart contract to create the same impact.
+
+
+[00:23:36]: Liam Eagen:
+
+
+Bitcoin does have a scripting language. Yeah, it is very simple. It used to actually be more featureful than it is now, but it only currently supports, I guess like Sim was sort of saying, it's kind of a fourth-based stack language with very limited functionality. You can add numbers, subtract numbers, do like a simple boolean logic signature verification hashes. Notably, it does not support concatenating values or multiplying numbers, although it used to. As a result, you can implement very simple smart contracts. And with BitVM and the Optimistic kind of protocol, you can reduce much more complicated claims to things that Bitcoin script can check. But yes, it's intentionally limited pretty severely. The stack can't contain more than 1000 elements. You can't, for example, decompose a hash into smaller values. Or I guess another way of related problem is you can't take two things and put them together and hash them. So you can't really do like Merkle proofs. So lots of the things you would sort of naturally want to do in a smart contract are not possible, or at least not possible efficiently.
+
+
+[00:25:03]: Anna Rose:
+
+
+You mentioned though, BitVM kind of opened the door to more of an Optimistic rollup model. But what opens the door to ZK? Like, you still have to verify proofs if you're writing them to this. So that's the part that I've found really challenging to get my head around. How do you actually do verification on Bitcoin?
+
+
+[00:25:22]: Sims Gautam:
+
+
+I think it'd be great to talk a bit more about SNARKnado which is this protocol that we released recently. But essentially we think about it as you have arbitrary computation that's off-chain, EVM rollup, for example, take a bunch of Ethereum transactions. You have now all these kind of modular tools available, which is awesome. Use Reth, use zkVMs and wrap that STARK with maybe a SNARK, and then ultimately get to a proof, a really succinct proof about this state transition on a rollup. For Bitcoin, it's how do we maybe bisect over that verification of that proof? So the approach that BitVM in the kind of latest RISC-V abstraction kind of takes is, well, you can kind of run that computation for verifying the proof, the SNARK proof, over a RISC-V trace, and then you can kind of do a bisection game over that trace on Bitcoin, going to a specific place... Specific place in the trace, where you can adjudicate fraud. Similar in style to optimistic kind of things. Where we sort of innovated with SNARKnado as even more optimized version of that is to remove the RISC-V abstraction altogether. For us it was how do we bisect over a SNARK directly? And if we can do that, maybe we can get it down to much fewer rounds played out on Bitcoin to be able to actually adjudicate the claim. And maybe, Liam, if you want to go into the details around kind of the bisection, I think that could be interesting.
+
+
+[00:27:04]: Liam Eagen:
+
+
+Sure, sure. Just to reiterate, because I think many people are confused by this. What we're proposing doing, and many people are doing with BitVM is you are optimistically verifying a SNARK. So you have a SNARK that is a proof of a rollup transition, and then you use BitVM to optimistically run the SNARK verifier on Bitcoin.
+
+
+[00:27:29]: Anna Rose:
+
+
+So it's actually both things. It's like a zkRollup and a Optimistic rollup. Because that last bit of the ZK can't be automatically proven on-chain.
+
+
+[00:27:39]: Liam Eagen:
+
+
+Exactly. Yeah, whereas in Ethereum you could just write a SNARK verifier and check it directly.
+
+
+[00:27:47]: Anna Rose:
+
+
+Yeah.
+
+
+[00:27:47]: Liam Eagen:
+
+
+Yeah. So for SNARKnado, right, because we're only really interested in using BitVM to verify a SNARK, we decided, I guess, that removing the RISC-V abstraction and working more directly with, I guess, what you might think of as like a circuit for verifying the SNARK is more efficient. And I guess maybe this is also confusing, but the model that we have for using BitVM to verify a SNARK is itself also based on SNARKs. So we kind of encode the...
+
+
+[00:28:24]: Anna Rose:
+
+
+Wait, your implementation, or the implementation is based on SNARKs.
+
+
+[00:28:27]: Liam Eagen:
+
+
+The strategy we use for using BitVM to verify a SNARK is based on polynomial IOPs, kind of how SNARKs represent problems that they're verifying.
+
+
+[00:28:42]: Anna Rose:
+
+
+Maybe, can you define what BitVM really is? Because you sort of mentioned that it exists, and you said that it has RIS-V something, but is it a library? Like, is it a piece? I don't even know what it actually is.
+
+
+[00:28:55]: Liam Eagen:
+
+
+So it's many things to many people. Now, people use the term in..
+
+
+[00:29:00]: Tarun Chitra:
+
+
+Intersubjective virtual machine.
+
+
+[00:29:04]: Liam Eagen:
+
+
+People use the term BitVM in different ways. So there's the BitVM paper which Robin wrote, and it includes a lot of what I would describe as the BitVM primitives. So BitVM uses Lamport signatures to measure equivocation, and that talks about bisection, but it also talks about like NAND gates, for example, which is, I think, more of an existence argument rather than a concrete thing that was ever meant to exist. Then there was also BitVM, the project from ZeroSync, which other people have also sort of forked off of, and that is the RISC-V BitVM.
+
+
+[00:29:44]: Anna Rose:
+
+
+I see. This is an open source project.
+
+
+[00:29:47]: Liam Eagen:
+
+
+Yeah. Yeah, everything ZeroSync does is open source. They're a nonprofit. And I don't believe they're working on the RISC-V BitVM anymore. There's another protocol that they released called BitVM 2, which uses some of the BitVM primitives, but not bisection. And for people who are interested, it's a little bit like BitVM if instead of bisecting, you just had a single round. And the reason why this is interesting is because BitVM 1 has a permissioned set of challengers. And BitVM 2, by having only a single round, is able to weaken that and to allow anyone to challenge.
+
+
+[00:30:36]: Tarun Chitra:
+
+
+Why is there this trade-off between number of rounds and number of participants? It seems like you're kind of saying something akin to like, given the stack size, there's a fixed amount of storage that you can use. So because of that, you can't do multiple rounds. Is it like a pure storage constraint, or is this like a more theoretical reason?
+
+
+[00:30:58]: Liam Eagen:
+
+
+There's a discrete thing that happens when you go to one round. Essentially, BitVM requires us to do some complicated hacks to emulate what are called covenants. And maybe it's worth defining what a covenant is. It's a way to encumber a UTXO with some kinds of future restrictions on how people can use the money going forward. Bitcoin currently does not support covenants and they're very controversial in the Bitcoin community. But BitVM requires them. Right? Like you kind of need a covenant in order to implement what you would sort of think of as a smart contract. The smart contract is kind of like a... Or one model of it in Bitcoin would be a UTXO that can only be spent to a new valid smart contract state, for example. Anyway, all that to say BitVM requires a trusted setup to emulate a covenant.
+
+
+[00:32:01]: Anna Rose:
+
+
+And we're back to the trusted setup.
+
+
+[00:32:05]: Liam Eagen:
+
+
+Yeah, it's funny. It's an interesting full circle.
+
+
+[00:32:10]: Anna Rose:
+
+
+How did Bitcoiners all of a sudden allow that if they were so anti in the first place?
+
+
+[00:32:15]: Liam Eagen:
+
+
+Well, I mean, part of what makes BitVM interesting is that it's not allowed per se. It just sort of is possible right now.
+
+
+[00:32:23]: Anna Rose:
+
+
+Okay.
+
+
+[00:32:25]: Sims Gautam:
+
+
+Yeah, it works today without requiring soft forks.
+
+
+[00:32:28]: Tarun Chitra:
+
+
+It feels like in your description, somehow the threat model changed, like the model of the adversary between the multi.. Because when I think about the proof of bisection games in Optimistic rollups, the more number of rounds you have, the more secure your proof is usually. Right? So it's like, I can do more challenges, I can do more fine-grained challenges. So it's kind of weird to me, you can actually compress to one round without changing the adversarial model, like either weakening the adversary or something like that. So why is this possible? I'm just kind of curious formally, when you try to prove consistency properties of this.
+
+
+[00:33:08]: Liam Eagen:
+
+
+I think it has to do... Again, I don't want to say anything wrong, but it sort of has to do with the way the covenant emulation works. So if you never need the... Like classically in BitVM 1, it's two parties. Right? There's the challenger and the prover, and they sort of go back and forth. If they never have to go back and forth, then the challenger doesn't need to be known in advance. That's kind of the innovation of BitVM 2.
+
+
+[00:33:37]: Tarun Chitra:
+
+
+Oh, I see.
+
+
+[00:33:38]: Sims Gautam:
+
+
+Yeah, it's around kind of the interactivity and pre-signing related to BitVM setup.
+
+
+[00:33:43]: Tarun Chitra:
+
+
+So I should think of the one round thing as sort of like a Fiat-Shamir like type of thing, even though it's for this other purpose, because it does feel like then the non-interactivity comes from some other assumption. Right? Like in the case of Fiat-Shamir, it's like effectively assuming random oracle like ...
+
+
+[00:34:00]: Liam Eagen:
+
+
+I'm not sure if I will...
+
+
+[00:34:01]: Tarun Chitra:
+
+
+I guess that's what I meant by weakened adversary, so.
+
+
+[00:34:04]: Sims Gautam:
+
+
+I guess, to summarize, the innovation with BitVM and the direction there is essentially to bring forward a primitive that enables sort of these Optimistic-ZK bridges, if you will, on Bitcoin. There's definitely other complexity associated with that bridge construction as well, which is how do you work within the other constraints of Bitcoin? Some of the mentions Liam brought up were around covenant. So how do you actually emulate some kind of covenant using pre-signs, and how do you kind of manage all of that complexity is one. There's certainly an economic consideration here as well, and that's been discussed quite a bit with these bridges, which is how do you actually manage to handle large amounts of withdrawals at the same time? Like what's the capacity of those bridges? The bridge construction itself is slightly different, even though it's sort of Optimistic-ZK bridge, the contracts on Bitcoin and how the mechanism for this canonical bridge works is different because... Than Ethereum contracts, say for Arbitrum, because of how we're able to adapt to the limitations of Bitcoin.
+
+
+And so one key difference is this idea where there's a set of, in at least kind of the SNARKnado or BitVM 1 design, there's a set of bridge operators, we'll call them, and let's say there are n of these bridge operators and the deposits essentially go into this n of n. The underlying assumption in the trust model here is trusting one of the n, to be honest and to be able to withdraw the BTC that you have on the rollup back into Bitcoin. This is where sort of the mechanism is a bit different, where one of the operators is essentially assigned to front that withdrawal to the user. So with user would make a withdrawal request, one of the operators fronts that withdrawal and the operator then gets a reimbursement from this n of n that's holding all the deposits by presenting a SNARK proof that's aggregated. The claim that they're making is like, hey, I've fronted this withdrawal to the user and I was assigned and I have... And this maps to the latest state of the rollup. And so this proof, if it's not challenged and it's correct, then that operator is actually able to withdraw back out from the deposits. So this fronting reimbursement scheme is a bit different.
+
+
+[00:36:37]: Anna Rose:
+
+
+Yeah, this sounds so much like the early conversations we were having around bridging off Optimistic rollups. Like to avoid the seven day, you'd have schemes that sound somewhat similar to that, so that you'd basically be kind of like lending on one side and then like somebody's taking the risk, and then a proof comes in later. Yeah, this is interesting, but there's a few strings I want to pull here, because you talked about the BitVM where I think we got through like, it was a paper, it's an implementation, there's two versions. But then you've stripped out RISC-V, from what I understand, and almost just taken the parts of this that are really, really needed for the zkRollup model and just focused on that with SNARKnado. Is that correct?
+
+
+[00:37:23]: Liam Eagen:
+
+
+Yeah, I think so. We use the BitVM primitives of Lamport signatures and bisection. Our goal in designing it was to do a BitVM type protocol in as few rounds as possible, while also keeping the amount of data on-chain as small as possible. So, BitVM 2, I think it's worth probably mentioning. If you think about the way these kind of optimistic things work, as forcing the prover to provide enough evidence to prove that they're lying, BitVM 2 works in one round, right? By forcing the prover to put the whole trace on-chain in one shot. And then anyone can look at this and extract an error from the committed trace. That has kind of unfortunate scaling properties, unlike bisection. So, in bisection, you would imagine, say, having the one big linear trace, and the challenger asks the prover to sort of pick out a very small piece of the trace by bisecting over it. So you split it in half and the errors in the first half, and you split it in half again and so on. So there's sort of this open research question of how big of a trace do you need to put on-chain to make BitVM 2 work for SNARK verification. However, introducing even a relatively small number of rounds reduces the amount of data on-chain exponentially.  So if you have two rounds, it's like having a binary tree with two levels, right? So the amount of data you have to put on-chain is now square root. The trace size, or three rounds, is cubed root.
+
+
+So being able to freely get the number of rounds really, really small allows us to be a little bit less sensitive to the exact size of the trace. It very well might be the case that it's possible, through lots of tricks and hard work, to make the trace small enough for BitVM 2 to be practical. And in that case, it's interesting that SNARKnado, if you do it with one round, ends up sort of converging towards BitVM 2. And you could then relax the permission to challenge or set, but there are lots of really tricky technical issues. So for example, with all of these things, with BitVM 2 especially, you have to split your computation that you're checking into Bitcoin scripts. And like we said earlier, Bitcoin script is extremely limited and difficult to work with. And even if, as ZeroSync and collaborators have, they write like a giant Bitcoin script to check something, transferring that into chunks is itself a complicated and non-trivial task because the stack can't be more than 1000 elements and you have to share the stack between the chunks. So you have to Lamport sign the state going from one chunk to the next chunk, and you have to put all of the signature data on-chain. And I mean, I'm not trying to make it sound like it's impossible just to give people a sense of the technical engineering challenges that go into making it work.
+
+
+[00:40:42]: Anna Rose:
+
+
+Wow.
+
+
+[00:40:43]: Sims Gautam:
+
+
+Yeah. I mean, this is one of the motivations for SNARKnado as a sort of doesn't go to a single round kind of following the BitVM 2 approach, which that would be awesome. And we know we'd love to contribute research ideas and we are to that project, but SNARKnado is something that's practical and we're building today and it's targeted for this public testnet version that we're launching this year. Right? And so one quick point, I think it's worth clarifying is we talked about number of rounds a bunch, and why that's even important, is I described that withdrawal flow back. So essentially if a operator is challenged about their withdrawal proof, then we go into the bisection game played out on Bitcoin, where each round is approximately in most designs, including ours today, one week period, where the challenger, kind of the verifier, has a... Prover has time to respond. And so, with BitVM 1, we were looking at something like over 30, 32 kind of rounds played out on Bitcoin, translating to well over six months, basically to adjudicate some kind of fraud. And so that being the worst case was concerning for us in trying to design this kind of practical bridge. And so bringing that down to up to four rounds.
+
+
+[00:42:02]: Liam Eagen:
+
+
+Iit's even worse than that, actually. Because if you have multiple bridge operators and we want to be robust, if most of them are dishonest, they could, if you have 100 and 90 of them are dishonest, you'd have to wait for like 96 month periods potentially if they were just trying to do a liveness attack.
+
+
+[00:42:24]: Sims Gautam:
+
+
+So bringing down the number of rounds is very critical in terms of thinking about what's practical. In the worst case, of course, this isn't the case that there's a challenge, and then that whole thing gets played out on Bitcoin.
+
+
+[00:42:36]: Tarun Chitra:
+
+
+Yeah, I guess the reason I'm asking this is generally when I think about safety and liveness proofs, formally, they sort of assume that you can kind of show like, hey, some process for converging on either finality or some approximate property happens relatively quickly in some system parameter, whether it's like key size or number of latency, upper bound on latency... But usually, whenever you lower that, you're kind of changing your threat model. If I lower my partial synchrony constant, the maximum latency for a vote to be considered true, or for people to give a valid input, then I've sort of changed my threat model. So I guess my question is, what is changing in the threat models for, say, BitVM versus SNARKnado? Because it does feel like there has to be sort of a no-free-lunch type of thing. Right? There is something that has to give.
+
+
+[00:43:36]: Anna Rose:
+
+
+And maybe clarify which BitVM. Is it BitVM 1 or BitVM 2?
+
+
+[00:43:40]: Tarun Chitra:
+
+
+Yeah, Sorry. Apologies. I should have...
+
+
+[00:43:41]: Sims Gautam:
+
+
+Yeah, well, for BitVM 1, the design is basically to bisect over some fixed-sized RISC-V trace. And because of the trace length, that's how we arrive at the number of rounds, essentially, that we have to go through to be able to pick out a particular row. Right? For SNARKnado, it's fundamentally different. Like we're not actually... We don't support arbitrary Rust code executed and compiled into this RISC-V trace. We specifically support pairing-based SNARK, and we're going with Groth16. And that's the abstraction that we're working with, hence like the fewer rounds. So I guess that's kind of where the trade-off lies. I don't know, Liam, if you have more thoughts on that.
+
+
+[00:44:28]: Liam Eagen:
+
+
+I don't think the threat model fundamentally changes. I mean, it's sort of just like playing with the arity of tree, right? With bisection, you split it in half, you can split it in thirds, and I think everything from, I don't know, formal perspective is basically the same.
+
+
+[00:44:46]: Tarun Chitra:
+
+
+But the depth matters more than the width, Right? For things like that, where the depth is sort of the real measure of complexity than the ... Just from a computational hardness standpoint. Like if I give you a random boolean function, the depth controls the complexity more than the width. Like that's how you define complexity. I guess my main question is just more like, what are the threat models for these things. Have people actually done kind of the research of writing out exactly sort of the adversarial model? Where is the state of research maybe? That might be like a more high level question than kind of getting in the weeds.
+
+
+[00:45:25]: Sims Gautam:
+
+
+I know. I think it's definitely early. Like systems like this SNARKnado-based optimistic bridge, these are just kind of... They're just coming out now. And so I think that the state of this research is quite early. What's interesting though is we do have a lot of even on designing the rollups, we have several years to look at for Ethereum, and that lag is actually kind of interesting because we're taking some of the most interesting ideas there, or most interesting kind of threat models there, and applying it into kind of similar systems. But I'd say quite early, Tarun.
+
+
+[00:46:00]: Tarun Chitra:
+
+
+Yeah. I think that there's actually a lot of... It feels like there's a lot of interesting research problems here that probably haven't been formalized, at least just from hearing your description. That is kind of interesting.
+
+
+[00:46:14]: Liam Eagen:
+
+
+Yeah, definitely. I don't think that there's been any, at least to the best of my knowledge, formal research specifically on BitVM.
+
+
+[00:46:23]: Tarun Chitra:
+
+
+Slight tangent, if you don't mind. We were talking about some of the data limitations within Bitcoin rollups. And when you think about Ethereum rollups, there's a huge focus on where the call data is stored and data availability type of issues. How do you deal with that in Bitcoin rollups? How do you think about that? From what I heard, it sounds like the bridge operators effectively need to be providing DA, but I'm not 100% sure if that's true or whether there's a third party that could be used. How does that whole sequencing work?
+
+
+[00:46:58]: Sims Gautam:
+
+
+Sure. Essentially, I mean, yeah, DA on Bitcoin is more limited definitely than on Ethereum. We don't have Proto-Danksharding et cetera, but there is space on Bitcoin directly, like inscription-style, to be putting state diffs of the rollup. And we will be using Bitcoin as the DA layer for our public testnet going out. Over time, I think it does make sense to explore volition type model where we can have some accounts essentially, or most accounts use DA external to Bitcoin, like use some kind of DA layer. And there's some collaborations we're doing there as well to figure out how do we get inclusion proofs and data availability proofs basically verified as part of the bridge program to be able to essentially like... What is the Blobstream X version of that for Bitcoin in regards to Celestia. But over time, essentially we'd have alternative DA layer as an option for really high throughput, low cost kind of transactions on the rollup and accounts also available directly on Bitcoin for the different trade-off of higher cost and more security.
+
+
+[00:48:12]: Anna Rose:
+
+
+So you just mentioned inscriptions, which I know kind of are the foundation of the Ordinal project. Ordinals. But are inscriptions also the basis of BitVM or are they not related?
+
+
+[00:48:23]: Liam Eagen:
+
+
+They're definitely related. I mean, inscriptions are really just putting data into Bitcoin. It's a more efficient way to just put data on Bitcoin.
+
+
+[00:48:35]: Anna Rose:
+
+
+BitVM uses inscriptions as well.
+
+
+[00:48:37]: Liam Eagen:
+
+
+Yeah, definitely.
+
+
+[00:48:38]: Anna Rose:
+
+
+And you're saying it's through the inscriptions that you get the DA.
+
+
+[00:48:41]: Liam Eagen:
+
+
+Yeah. So we would use inscriptions both as part of BitVM, but for the rollup itself, you would inscribe like state diff or something.
+
+
+[00:48:51]: Anna Rose:
+
+
+Got it.
+
+
+[00:48:51]: Liam Eagen:
+
+
+And then you can introspect the Bitcoin chain from the Layer 2, and it's complicated, but yeah, basically.
+
+
+[00:49:00]: Tarun Chitra:
+
+
+I guess my question is just more like, when I think about rollups, I think about the sequencer provides you a particular set of services. The base layer provides you another set of services, mainly the exit hatch, the DA. But it feels like the bridge operators here actually provide more. There's some kind of different security model. So, you mentioned they're one out of n honest, but is that for both directions and sort of, yeah. How should I think about the security model of a centralized sequencer versus the security model of your operators, if that makes sense?
+
+
+[00:49:35]: Sims Gautam:
+
+
+Yeah, the sequencer part, I think it's quite similar to what we already see on Ethereum, which is essentially batching transactions, generating a proof and posting that. So we inscribe that proof along with the compressed version of the transactions on Bitcoin. For that part, the settlement actually is done client side in our architecture. So nodes of the L2 will be running Bitcoin and see the proof of state transition posted and verify that directly. So they're like clients and they can get to the latest state this way. And these proofs are also recursive, so you can verify the latest proof, you can verify kind of the latest state since genesis of rollup. For the bridge operator, I think there are differences there because now we have this fixed set of these bridge operators that are responsible. Essentially, the difference is more on the withdrawal back. I think deposits are standard, like you have a way to deposit in and of course the rollup can introspect on Bitcoin. So they'll see deposits and be able to mint there. But in withdrawing BTC from the rollup back to Bitcoin, this is where you have to trust that one out of the n bridge operators that are there is functional, meaning they are honest and live. 
+
+
+Withdrawal requests will go to the sequencer and essentially theres... A Bunch of withdrawal requests can be aggregated and then the protocol can select one of the bridge operators to handle a reimbursement within some period of time on Bitcoin. And that's when the operator goes and actually does that. If they don't, then that assignment can go to another operator and that withdrawal is a little bit delayed. But you trust that one of the operators will actually process that withdrawal by fronting that liquidity, that withdrawal request to the user. And then immediately after, there are different kinds of tiers to this. If all the operators are live, then immediately after the reimbursement can be processed right away, like in that block, next block. Or essentially over a challenge period when the operator submits a proof to get a reimbursement, if that's not challenged, then kind of the reimbursement is processed back to the operator. And we can have multiple operators be processing at the same time, which is a kind of key difference in our bridge model. The bridge models around BitVM and these fraud proof mechanisms are still very nascent, and I think that's evolving quite a bit. We're about to release our specs quite pretty soon, but in our sort of approach you can have multiple operators handle multiple deposits, and there's operator assignment. And there is some collateral requirement here because there's this fronting reimbursement.
+
+
+[00:52:24]: Anna Rose:
+
+
+Something you keep talking about are like the bridge and the rollup, and they sound like two different models. And that there's the bridge operators and then there's the rollups and the sequencers. But can we just very clearly define what those two things are? And if they are not the same thing, like why? Do you know what I mean? This is something where I think we've sort of been flipping back and forth. We've said the sequencer, oh no, but the bridge operator. So in the models that you're working on, are you creating two unique ones and are they... Do they have different actors in them?
+
+
+[00:52:57]: Sims Gautam:
+
+
+Yes, this is quite different. Thanks, Anna, for pointing it out, between what exists on Ethereum and what exists on Bitcoin, or what we're building on Bitcoin. The sequencer is a separate entity here from the bridge operators. And the sequencer is responsible for that state transition, I mean, similar kind of responsibilities as we're typically used to, and essentially posting a proof of that state transition along with the transactions on Bitcoin. In a kind of world where you just want to inherit the security of Bitcoin on your rollup, you can build something like a sovereign rollup. Even if Bitcoin can't reason about zero-knowledge proofs or can't do fraud proofs at all, it just means you have a limited bridge. You can still build a sovereign rollup where you can inherit the double spend security of Bitcoin by posting proofs, having nodes run Bitcoin and arrive at the latest state that way. So the key difference is we also want to be able to take BTC, the asset, and be able to bring it to our rollup in a way that is really, really secure relative to options available today.
+
+
+[00:54:15]: Anna Rose:
+
+
+I see.
+
+
+[00:54:16]: Sims Gautam:
+
+
+Like that gets better than an honest majority assumption. And so that's where the separate bridge system comes in.
+
+
+[00:54:23]: Anna Rose:
+
+
+But you're using SNARKnado for both of these things, is that what you're saying?
+
+
+[00:54:27]: Sims Gautam:
+
+
+We're using SNARKnado specifically for the bridging.
+
+
+[00:54:29]: Anna Rose:
+
+
+Okay. Not for building a rollup. Okay.
+
+
+[00:54:32]: Sims Gautam:
+
+
+Yeah. The requirement for Bitcoin to be able to reason about these proofs comes from wanting to create a two-way peg, a bridge to bring BTC to and back from a rollup. Right? And so we're using the SNARKnado primitive for the bridge design that we have, and that's where the bridge operators also come in, which is separate entity from the sequencer.
+
+
+[00:54:59]: Anna Rose:
+
+
+Cool.
+
+
+[00:55:00]: Tarun Chitra:
+
+
+One question that I've kind of been always wondering about is like, this is obviously a debate in Ethereum of whether the sequencer should be posting collateral and be able to be slashed. Let's say they don't process something in time, or when the valid fraud proof is executed, they need to have some kind of skin in the game outside of like, trust me. I guess the question to me is, you mentioned that there's some collateral that has to be placed to some extent. Like Anna said earlier, this is like sort of a loan. You put up collateral on one side, which you're sort of fronting capital on the other side, and then eventually they settle. How do you think about these kind of slashing conditions? And then also kind of the Lightning style problem of the free option of, hey, I can request something but then kind of cancel or not fulfill one side, but I got the value of it for that small duration type of thing, if there is such a thing. I don't totally know the entire design to know how complex it is to actually execute such a type of thing. But yeah, how do you think about that design, that part of the design stack?
+
+
+[00:56:12]: Liam Eagen:
+
+
+The question was like slashing sequencers if they misbehave or they don't behave appropriately in time. And then also the free option problem with Lightning.
+
+
+[00:56:26]: Tarun Chitra:
+
+
+Sorry, the free option problem here is just more like, I want to go across the bridge. I like say, hey, bridge operator, take me across. And there's a sense in which the bridge operators now have they can basically... Assuming there's no honest bridge operator, they effectively can delay my transaction or maybe delay it multiple blocks. So like let's say I'm sending a capital to do a trade on the rollup. The bridge operators delay my trade. By the time I get there, I sort of get a worse price and the difference between the price I would have got if they acted promptly versus the real prices. This kind of free option thing, which people in Lightning always talk about is people kind of blocking you from doing a certain route. So you have to take a longer route and then you end up paying more in fees. So how do you think about these types of griefing kind of attacks? It seems like the bridge operators could do a lot of those types of things, even if one of them is honest. How do you kind of reason through that?
+
+
+[00:57:26]: Liam Eagen:
+
+
+The bridge, at least in I think all of the BitVM constructions is really heavy and slow and difficult to use. And so, I mean, one version of an answer is that normal people will probably either use swaps to move between the Layer 1 and the rollup, or some kind of credit-based thing. I don't know if that solves the problem. But at least the way I think about BitVM stuff working is like normal people don't really use the bridge. There's big liquidity providers that move very large amounts of money across the bridge to settle very infrequently. So I don't know if that's like a satisfactory answer, but that's kind of how I think about it.
+
+
+[00:58:16]: Sims Gautam:
+
+
+I definitely agree there. Most users we're expecting actually probably will use some kind of atomic swap-based bridge system, which essentially you don't have to go through the functional requirements of that canonical bridge, which is a delayed withdrawal period due to settlement period, et cetera. You can do instant withdrawals, instant deposits through this atomic bridge, but it requires on the other end having some kind of service that is swapping with you. So like if you have BTC there, you want the BTC on the rollup also to be available. And so we expect actually several different swapping services to be placed there and then there being different trustless, permissionless ways to bridge in and out between the two BTCs on base layer and rollup.
+
+
+[00:59:08]: Anna Rose:
+
+
+Is that what it's going to be also? Like will the rollups be BTC emulations often in this case, or they're not trying to add more functionality? I mean, I think in the BitVM it does because it has the RISC-V but what you're creating, it's actually Bitcoin to Bitcoin.
+
+
+[00:59:26]: Sims Gautam:
+
+
+No. So I think we didn't talk about this as much, but where the BTC is going and what we're building is a EVM...
+
+
+[00:59:34]: Anna Rose:
+
+
+Oh, it is. Okay.
+
+
+[00:59:35]: Sims Gautam:
+
+
+...Rollup. So, once your BTC is there, you can do whatever you want. And then we expect to bring in native stablecoins there. We expect to bring in all sorts of other things there. Where we're excited is that it's not just around scaling Bitcoin, but really expanding the functionality in terms of what can be done around privacy with BTC, what can be done with programmability. You can do lending protocols, lend, borrow. You can have all sorts of interesting uses of BTC as a collateral, which a lot of teams in the DeFi space across various ecosystems have actually reached out around. How do we access BTC in a more native way and use it as a collateral for our applications?
+
+
+[01:00:24]: Anna Rose:
+
+
+Can I ask a really dumb question, which is, is it ever possible that a rollup be a rollup both on Bitcoin and Ethereum at the same time? I realize that's really dumb, because often they're branching off of one of these to exist. But could you have like two sequencers pointing in different directions?
+
+
+[01:00:44]: Sims Gautam:
+
+
+It's funny you mentioned that, actually, because I think Starkware had an announcement yesterday.
+
+
+[01:00:48]: Anna Rose:
+
+
+Really?
+
+
+[01:00:49]: Sims Gautam:
+
+
+Around Starknet, yeah, essentially being a rollup both on Bitcoin and Ethereum. There are plan to do that.
+
+
+[01:00:57]: Anna Rose:
+
+
+Okay.
+
+
+[01:00:57]: Liam Eagen:
+
+
+There are fundamental problems with it, because if the two L1s like if one of them rolls back or forks or something, you don't have a single canonical source of truth for the rollup. I can't say for sure that this is insurmountable, but I don't know, I think we can't really avoid this.
+
+
+[01:01:18]: Sims Gautam:
+
+
+I think what's interesting is having... For an Ethereum rollup, having also like a bridge that is like a ZK bridge, Optimistic-ZK bridge from Bitcoin as well, because BTC, as an asset, is incredibly valuable. And the state of that today bridged into the Ethereum ecosystem is still very centralized. It's something that we can definitely do better.
+
+
+[01:01:44]: Anna Rose:
+
+
+So like what it is today, it's often, what is it? A multisig or a single address on Bitcoin, locking Bitcoin and then minting wrapped Bitcoin on Ethereum. Right?
+
+
+[01:01:53]: Sims Gautam:
+
+
+Essentially, yeah. Right. And the best designs would be like trusting a majority of that multisig, to be honest and live.
+
+
+[01:02:01]: Anna Rose:
+
+
+But in what you've created with SNARKnado would be like, you're basically, you're creating a much more authentic synthetic. Like there's no single account or multisig that needs to lock it. Right? Like it's written more onto the chain. Or is there still that entity in your build?
+
+
+[01:02:20]: Sims Gautam:
+
+
+Yeah. So there is still like a federation where the deposits are locked into, except the trust model around the BTC. And how the federation can spend all the deposits is a lot better with this approach, given it's trusting one of those n-members to actually be functional. What's really interesting, and maybe it's worth pointing out here, is if we can directly verify a zero-knowledge proof on Bitcoin in a single transaction, then we have architectures and models for how to build a fully trustless, like no federation way to be able to withdraw BTC back from the rollup. So do the bridge without requiring any kind of federation whatsoever. Of course, this is...
+
+
+[01:03:08]: Anna Rose:
+
+
+That's the dream.
+
+
+[01:03:09]: Sims Gautam:
+
+
+...not possible today, as far as we know. But CAT is really interesting proposal that's been really popular and getting a lot of momentum in the Bitcoin space. It's literally to concatenate two elements in the stack for Bitcoin. But the implications would be to be able to verify Merkel proofs, which might be enough to be able to verify STARKs. There's been some really interesting research that a bunch of groups are doing, including ourselves. We've been collaborating with Benedikt on (Benedikt Bünz) on understanding how can we get towards direct verification of code-based SNARKs if OP_CAT was actually available. So if that ends up being soft forked in, and the Bitcoin community is accepting of that change, we may see that threat model kind of even improve, the bridging model improve even further.
+
+
+[01:04:00]: Anna Rose:
+
+
+Wow. Although that sounds like a big IF... Like if the Bitcoin community accepts this thing, that they're kind of legendarily not into accepting new things, so.
+
+
+[01:04:09]: Sims Gautam:
+
+
+There's definitely some momentum around it.
+
+
+[01:04:11]: Anna Rose:
+
+
+Okay.
+
+
+[01:04:12]: Liam Eagen:
+
+
+Yeah, the attitudes have warmed quite a bit. I mean, it's definitely not by any means, maybe even likely to happen, but there's been definitely a vibe shift, and there's even talk of activating more of the old, old op_codes that used to be active on Bitcoin but were disabled.
+
+
+[01:04:32]: Anna Rose:
+
+
+When you say CAT, the CAT proposal, what is that? Is it like... Is it just C-A-T?
+
+
+[01:04:36]: Liam Eagen:
+
+
+Yeah, there's an OP operation in Bitcoin script called OP_CAT, that takes two elements from the stack and puts them together and puts, what's the concatenation of the two elements.
+
+
+[01:04:48]: Anna Rose:
+
+
+Concatenate. This is what it stands for. Okay, got it.
+
+
+[01:04:51]: Liam Eagen:
+
+
+Yeah, exactly. And the basic way you'd use this to do something interesting is if we wanted to check, say that a hash is a hash of some particular values, you put your things on the stack, you concatenate them, you hash it, check the hashes are equal, and now you can like do stuff with the hash preimage. Without CAT, you can't do that. You can't like decompose things, interestingly. Or like Sim was saying, right, you can also do Merkle proofs, right? You have the two paths and you concatenate them in hash, say.
+
+
+[01:05:27]: Anna Rose:
+
+
+Sounds good.
+
+
+[01:05:29]: Sims Gautam:
+
+
+I think what like is interesting, Anna, of it being very difficult to make changes into Bitcoin consensus protocol. Why I think that's really interesting as a rollup Layer 2 company is this gives us great guarantees that the base layer will be secure. It provides us like really good consensus guarantees. And we also using BTC as an asset. I think this is actually, don't mess with the consensus protocol attitude is the right sort of approach we think for a base layer. A lot of that innovation is going to happen in the modular world. In the L2, a lot of that execution, like things happening, should be off-chain in this Layer 2, and the base layer should literally interact with zero-knowledge proofs and be able to just verify these kinds of proofs. And like that abstraction keeps also the base layer kind of more secure while still being really valuable long term.
+
+
+[01:06:28]: Anna Rose:
+
+
+Nice. All right, well, thank you to both of you for coming on the show, and, yeah, for sharing with us everything about Alpen Labs, what you've been working on, helping us to explore the ZK/Bitcoin world, which is something we haven't really covered on the show. Yeah. Thanks so much.
+
+
+[01:06:43]: Liam Eagen:
+
+
+Thank you.
+
+
+[01:06:44]: Sims Gautam:
+
+
+Thanks, Anna.
+
+
+[01:06:45]: Anna Rose:
+
+
+Thanks, Tarun. I want to say thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners. Thanks for listening.

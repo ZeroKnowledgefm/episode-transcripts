@@ -1,0 +1,3027 @@
+Anna Rose:
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+This week, guest Nigel Smart and I revisit the topic of MPC, that is Multiparty Computation, and catch up on the progress that has been made in the field in the last few years. He describes some of the components that go into an MPC system, such as garbled circuits, secret sharing, and FHE. We discuss some of the use cases for MPC, both on the system level, like DKGs and threshold signature schemes, as well as real-world use cases already deployed in the wild. Throughout the interview, we also discussed the combination of MPC and ZK, and how each can offer useful benefits to the other.
+
+Now before we kick off, I just want to once again highlight the upcoming ZK Hack Istanbul event, happening next month, November 10th to 12th, just before DevConnect. This is our second IRL hackathon, and we invite you to come along and build with us, meet the teams working on ZK, learn new skills, find collaborators and friends, and imagine new ways to use ZK in real-world applications. We hope to see you there. The link to apply and more info can be found at zkistanbul.com. I've added the link in the show notes. Now, Tanya will share a little bit about this week's sponsor.
+
+
+
+Tanya:
+
+
+
+Ever feel like developing zero-knowledge proofs is a daunting task? The team at RISC Zero is here to remind you that it doesn't have to be that way. Their out-of-the-box tooling allows developers to access the magic of ZK proofs from any chain without needing to learn custom languages or build custom ZK circuits. Bonsai, RISCZero's most anticipated product, allows developers to prove huge programs off-chain, roll them into one succinct proof, and verify anywhere with low amounts of gas. Visit rzero.link/zkpodcast to learn more and sign up for the Bonsai waitlist today. So thanks again, RISC Zero. And now here's our episode.
+
+
+
+Anna Rose:
+
+
+
+Today I'm here with Nigel Smart, an expert cryptographer and someone who has been on the show before. We're going to be talking once again about the topic of MPC. Welcome to the show, Nigel.
+
+
+
+Nigel Smart:
+
+
+
+Hi, it's great to be back. It's been a long time.
+
+
+
+Anna Rose:
+
+
+
+Been a long time. So I did go back and listen to our previous episode before this one. It was episode 90 recorded in August 2019. Something people may not know is behind the scenes since then, you've actually been sending me amazing guest ideas. So we've been in touch. I know you sent me some great FHE guests as well as some cryptographers doing work I hadn't... I didn't know about. But yeah, what we were thinking about with this episode was like, we had you on those years ago. And at the time, we did sort of a check in on MPC. That's Multiparty Computation. But we haven't... As a like, I don't think I've done any proper episodes on MPC since then. I think I don't think, I don't know. We've done a bunch on trusted setups, but not the general topic of MPC. And so I just feel like it's a really good time to check back in with you, to get a lay of the land, to... Yeah, and to also hear what you've been up to.
+
+
+
+Nigel Smart:
+
+
+
+Cool. Okay. Where'd you want to start?
+
+
+
+Anna Rose:
+
+
+
+Let's start on you. So last time we spoke, I think you were a hundred percent at Leuven.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+And you told me all about that school. Actually, I think I've been keeping my eye out of work coming out of there ever since. But yeah, maybe you can share a little bit about what you're doing now and yeah, how you've evolved in the last four years on the career side. 
+
+
+
+Nigel Smart:
+
+
+
+Okay. So in those days, I was 100% Leuven and I had founded this company called Unbound Security, which was doing MPC for general, like threshold signatures, threshold, all sorts of other stuff. And that got sold to Coinbase in 2020 sometime.
+
+
+
+Anna Rose:
+
+
+
+Oh, cool.
+
+
+
+Nigel Smart:
+
+
+
+The year 2020, 2021. End of the year 2020, beginning of the year 2021. So since then, I've been kind of doing other things. I've been helping a number of other startups in the space, just not only the blockchain space, but the wider cryptography space. And I think we're going to kind of like touch on some of those things as we go through the episode.
+
+
+
+Anna Rose:
+
+
+
+So some of those companies that you're interfacing with, would you say they're primarily in the MPC side of things or are they kind of across the board cryptography, cryptology?
+
+
+
+Nigel Smart:
+
+
+
+I think they're across the board. There's a lot of stuff. So cryptography is used everywhere. So it is used whether it's in your bank or whether it's in your mobile phone, it's used on the blockchain, everyone... Cryptographers have this kind of saying crypto means cryptography, not cryptocurrency. So we're really very... Yeah, so it's everywhere. So there's a kind of like there's lots of stuff going on but obviously a lot of the kind of really exciting stuff is happening in the crypto equals cryptocurrency space. So yeah. Whether that's zero knowledge, whether that's threshold stuff, whether that's FHE, there's all sorts of stuff going on there.
+
+
+
+Anna Rose:
+
+
+
+But yeah, I think what we wanted to do today was revisit MPC.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+And we're gonna be spending some time looking at what's out there? How it's changed? What state is MPC at? Let's start off with a definition. We've talked about it usually in the context of trusted setups, but actually, I want us to go back to basics, define what MPC is, Multiparty Computation generally.
+
+
+
+Nigel Smart:
+
+
+
+Okay. So it's really... So the definition has actually always been the same.
+
+
+
+Anna Rose:
+
+
+
+Yeah.
+
+
+
+Nigel Smart:
+
+
+
+In that MPC means what it says on the tin, multi-party computation. Right? So you have multiple parties come together and they can compute an arbitrary function of their private data only revealing the outcome of the computation. Now, what it turns out is that the word MPC then, so that's actually what it does, that's kind of like a functional description at a very, very high level. And the confusion arises is because people use MPC also for the technology which allows you to do that functional thing. And so that's one problem and then people focus on very, very specific applications.
+
+
+
+Anna Rose:
+
+
+
+Yes.
+
+
+
+Nigel Smart:
+
+
+
+Okay. And actually, it's really, and I think over the last few years, I've kind of tried to kind of let separate those things out in people's minds when I'm talking to people. So what we have is we have the functional description is it allows you to compute an arbitrary function, private input without revealing the private values. Okay, so we can compute an election, say, is the classic example, is everyone understands, do an auction, okay, between many, many people can bid, sealed bid auction, you can work out who won the auction without having to  trust a person. Okay, now let's kind of then... So that's the application. Now let's look at the technologies. So there's three kind of key technologies that allow you to build an MPC application.
+
+
+
+So one is called garbled circuits, which is kind of very old and kind of interesting application. One is called secret sharing, where we share a secret amongst a group of people and we proceed. And the other technology which allows you to do MPC is fully homomorphic encryption. So it's kind of like there's kind of there's technologies. And then if we look at applications where sometimes people use the word MPC, is distributed key generation, DKGs is an MPC application because we have a group of people, the distributed people, each put in some randomness and out pops a key at the end. And we don't learn what the randomness was to go into the distributed key generation. So we don't know what the overall key is. So distributed key generation is an application of MPC.
+
+
+
+Anna Rose:
+
+
+
+So it's a use case.
+
+
+
+Nigel Smart:
+
+
+
+It's a use case.
+
+
+
+Anna Rose:
+
+
+
+Okay. Got it.
+
+
+
+Nigel Smart:
+
+
+
+It's a use case. So the other one is threshold signatures. So if you want to do... If you want a threshold wallet like you would have from Coinbase or from other threshold wallets that are out there, Fireblocks, Dfns, all sorts. That is, you have a secret shared secret and you use that to compute a signature where the secret doesn't come back together and the secret is kind of kept secret because secrets are meant to be kept secret. So that is another application of MPC. We've already mentioned like auctions, etc. Now, the kind of other thing, which is kind of confusing, is that it's about privacy. And so people confuse it with zero knowledge.
+
+
+
+Anna Rose:
+
+
+
+Yeah.
+
+
+
+Nigel Smart:
+
+
+
+Okay, here is so, this goes back to the... You know, like your Zero Knowledge podcast is the name of the podcast. So here's the interesting thing. Zero knowledge doesn't really give you privacy, because the prover has to know the secret. 
+
+
+
+Anna Rose:
+
+
+
+And...
+
+
+
+Nigel Smart:
+
+
+
+The prover proves that he knows something. So he knows the secret.
+
+
+
+Anna Rose:
+
+
+
+Someone knows something.
+
+
+
+Nigel Smart:
+
+
+
+Someone knows the thing.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Right. So for example, suppose you're doing an auction on the blockchain and what you have is you have everybody encrypts their things to the auctioneer, the auctioneer opens the encryptions, works out who had won the auction and then posts a zero-knowledge proof that the auction was done correctly. Now that's not a private auction.
+
+
+
+Anna Rose:
+
+
+
+Well, it's private to one personâ€™s?
+
+
+
+Nigel Smart:
+
+
+
+It's private, yeah, because one person learns from. And that actually is a real problem because if you have that single person, the trusted auctioneer, it actually changes the game theory and the dynamics of the auction because the auctioneer can now front run, they can cheat.
+
+
+
+Anna Rose:
+
+
+
+Totally.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, so there's this... so, zero knowledge is kind of like a funny thing. One, it kind of seems to say you've got privacy, but you don't have privacy for everything. And the other thing is that actually zero knowledge when you do roll-ups and stuff like that, often you don't care about the privacy anyway. So no one really cares about privacy.
+
+
+
+Anna Rose:
+
+
+
+True. That's proving. They're trying to prove the validity of what's under the hood. Now, what I want to... Because later on in this episode, I want to talk about the sort of combination of these technologies, because I know that there's been work in that direction. But I wanna talk about another way that ZK and MPC kind of come together, which is where MPC is used for the trusted setup. I kind of wanna talk about this because it's just... I'm just realizing that the way that the trusted setup is formed, it's like the goal of it is to create something random and indecipherable. But in that context, I've always heard the following.
+
+
+
+In MPC, if one single participant is acting honestly, then the output will be correct. But I don't think that actually is the case if you're trying to combine a lot of data from different parties and it should be accurate, right? This is the distinction I wanna draw on.
+
+
+
+Nigel Smart:
+
+
+
+Okay. There's various things you can say. Is the output correct? Is the output private? Is it subject to an adversarial problem? Okay. So there's kind of different things. Okay, so let's look at the trusted setup. So if we did a trusted... There's only two of us here. Alas. Okay. If we just tried to do a trusted setup between us, we can execute a protocol whereby if my private input is definitely private, the output of the computation will be, we can guarantee is kind of random. So....
+
+
+
+Anna Rose:
+
+
+
+Private random, not you wouldn't be able to compute it from just yours.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+Yeah.
+
+
+
+Nigel Smart:
+
+
+
+But the problem is that you could stop the protocol running. Because we've only got two of us, if you decided not to play ball or decided to do something wrong, we would then abort the protocol and we would fail. So, there's kind of... So the thing is that you have... It's easier when you have more people, right? So imagine we've got four people doing things.
+
+
+
+Anna Rose:
+
+
+
+Yeah.
+
+
+
+Nigel Smart:
+
+
+
+You can build a protocol which tolerates one person being bad. If two people are bad, then they learn all the secrets.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+But if one person is bad, they don't learn anything. And also if one person is bad, it doesn't stop the good people proceeding. So you have this security, what's called robustness that we can... The bad guy can't stop the good guys going on. But you also have a number of bad guys that can get together to learn the secrets. You have a threshold for the bad guys and a threshold for the bad guys to break privacy. Also a threshold for the bad guys to stop the computation proceeding correctly. 
+
+
+
+Anna Rose:
+
+
+
+I see.
+
+
+
+Nigel Smart:
+
+
+
+And so you have this balance that you have to bear in mind.
+
+
+
+Anna Rose:
+
+
+
+I wanna talk a bit about that second part, the privacy part. Because when that statement, like as long as one participant acts correctly, the outcome is usable for a ZKP. Often what you're trying to make sure is that there is like an output that is never going to be able to be discovered or tracked down, right? The toxic waste, like you don't want that to be recognizable, you don't want one person to be able to recreate it and use it maliciously. And so that argument of like, if one person acts correctly, then the MPC, the output of the MPC, the output of the trusted setup is usable. This is only to do with the privacy part, isn't it?
+
+
+
+Nigel Smart:
+
+
+
+Well, it's kind of different. It's kind of... so if you think of how... This is kind of interesting because what you have is that the trusted setup is kind of slightly strange in that what you want is you want everyone to be able to put some random stuff in, you want a bad guy not to be able to stop the computation, and you want the output to be random as long as one person is random.
+
+
+
+Anna Rose:
+
+
+
+Exactly. Yeah. As long as one person put something random, it will make the whole output...
+
+
+
+Nigel Smart:
+
+
+
+The outcome is random. Okay, so In some sense, the MPC in this is the first two. It's the creating the program that you run in MPC, does the second one. So the last one. So for example, if I take some values, this is a stupid example, this is not a proper trusted setup, right? So if we come up with... If I come up with a value x, you come up with a value y. If you come up with the value, if you choose the value y to be 0 or 1, because you're horrible. You're the bad person, okay?
+
+
+
+Anna Rose:
+
+
+
+Malicious actor.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, you're the malicious actor. If I pick a number between 0 and 2 to the 128, that's really random. So if you just add 0 or 1 to it, it doesn't make it less random. The fact that when we just add our two numbers together, the fact that I pick something really random means that the sum is truly random. So that's basically the program. I'm actually executing z equals x plus y. Now, you could wait until if the protocol's developed, designed badly, you could wait until you see my x and then you output minus x and you can force the output to be x plus minus x equals zero, which would be wrong. So what we have to do is we have, this is why it's called a ceremony. We have to go in a specific order such that your input can't depend on my input. Usually the way you do that depends on the ceremony, but actually the way you'd normally do that is actually you would actually impose do a zero-knowledge proof that you know your input, which would then prove that your input was not dependent on my input. And then yeah, so we would actually use zero-knowledge proofs in the MPC protocol to build the CRS for zero-knowledge proof.
+
+
+
+Anna Rose:
+
+
+
+Or you do kind of these like the sort of OG ones where it's orchestrated with people in different geographic locations where they could not possibly be sharing that information.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, but even there you would still have zero-knowledge proofs to make sure that they aren't actually just duplicating results and stuff and they actually know their inputs.
+
+
+
+Anna Rose:
+
+
+
+Oh, cool.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+Nice. Yeah. So I mean, this is how I think I and a lot of folks in the audience will have really come face to face with an MPC. But this is like, I'm also realizing that that is such a unique use case, the fact that all you want the output to be is this random number and you want it to be perfectly random so that like no one could guess it. That is one way to use MPC. But MPC, multi-party computation, obviously the use cases are so much more broad than just that. 
+
+
+
+Nigel Smart:
+
+
+
+Yeah. So... Yeah.
+
+
+
+Anna Rose:
+
+
+
+And this is what I want to talk about in today's episode because I don't feel we focused in on how it's being used today.
+
+
+
+Nigel Smart:
+
+
+
+So I think the next, well, not the best, the probably the biggest application of MPC by a long way is threshold wallets. So where if you want to sign something on a blockchain, you basically split your key into different components. These key goes to different people, or you actually have a distributed key generation, which is a bit like a MPC ceremony for zero knowledge. And you then have one of these MPC wallets, which allows you to digitally sign stuff on a blockchain. You've got... So Coinbase have MPC wallet, which comes out of the company that I founded, co-founded, and then there's Fireblocks and  stuff, there's a company called Dfns in France, D-F-N-S, which has that. There's CapSum in other countries that... There's lots and lots of MPC wallets out there. And they're all based on what's called threshold signatures.
+
+
+
+So what you see is that MPC is also the same thing in people's minds as what's called threshold cryptography. So threshold cryptography is a very old thing, goes back almost as long as MPC, and that's now like really, really big. So we're recording this in the first week of October. And in the last week of September, there was, this is 2023, for those who are catching up, listening to podcast years in the past. Right? So last week there was the first of these NIST workshops on threshold cryptography, because NIST, the National Institute of Standards and Technology for the US government, is going to put a call out for contributions and technologies to do threshold cryptography. How you do threshold ECDSA, how you do threshold EdDSA, how you do threshold RSA, how you do threshold this, threshold that, threshold the other. They're also interested in zero-knowledge proofs. You know, the whole gamut of crypto stuff was last week. And so there's kind of like there's a really big impetus now to try to standardize this and push forward.
+
+
+
+Anna Rose:
+
+
+
+I want to ask you about that, because in our episode back in 2019, you did mention that you're waiting for NIST to do something like set... Is it this that you're waiting for?
+
+
+
+Nigel Smart:
+
+
+
+This is what we're waiting for. 
+
+
+
+Anna Rose:
+
+
+
+Whoa, four years later?
+
+
+
+Nigel Smart:
+
+
+
+So NIST...
+
+
+
+Anna Rose:
+
+
+
+But it's not even the... It's not the conclusion, this is the call to start it.
+
+
+
+Nigel Smart:
+
+
+
+It's the call to start it. So everybody's now on the starting block. So it's a bit like the Olympics. You know, Paris Olympics are next year, they were given the Olympics, I don't know, four or five years ago, it takes a lot of preparation. And then eventually the guns will fire and the hundred meters will start.
+
+
+
+Anna Rose:
+
+
+
+So we are at the... Are people currently bidding to host the Olympics? Or are they in the Olympics?
+
+
+
+Nigel Smart:
+
+
+
+Okay, so what people are doing is they're going to be on the starting blocks. Maybe it's more like a marathon, 100 meters is probably the wrong... Marathon.
+
+
+
+Anna Rose:
+
+
+
+It's a marathon. Triathlon? Is it a triathlon?
+
+
+
+Nigel Smart:
+
+
+
+It could be, maybe.
+
+
+
+Anna Rose:
+
+
+
+Is there the hash functions need to be or like, yeah, is there any like other types of cryptography?
+
+
+
+Nigel Smart:
+
+
+
+Well, the hash functions has already been done, you see. So we've already had hash functions. So hash functions have been done. We'll come back to what's been done in a minute, actually, if that's cool. So, we haveâ€¦ So, there's going to be a process. Actually, probably it's worth to actually go back. Actually, what has been doneâ€¦
+
+
+
+Anna Rose:
+
+
+
+Yeah, yeah. 
+
+
+
+Nigel Smart:
+
+
+
+And explain what's going on. Okay, so what has been doneâ€¦
+
+
+
+Anna Rose:
+
+
+
+Okay, let's do that.
+
+
+
+Nigel Smart:
+
+
+
+Okay. So, what has been done is in the early 2000s, well, late 1990s, there was something called the Advanced Encryption Standard. Okay? So, this was the AES algorithm, which you use all the time everywhere. We encrypt stuff with AES everywhere on our phones, on our browsers, everything. So this was actually created in Leuven, which is where I'm sitting now. So that's just kind of in Leuven, two researchers came up with the AES algorithm, and then the US government standardized this by one of these processes that they're currently defining. So this was the AES process. Then they wanted to do hash functions. So the SHA-1 hash function is considered rubbish. So they wanted a new hash function, so they called it SHA-3, because SHA-2 was also kind of considered a bit dodgy. So SHA-3, and so they had a SHA-3 process, and that finished maybe about 10 years ago, I forget the right date. Now, what finished also this year was the post-quantum process.
+
+
+
+So if you're using a blockchain, or if you're using your zero-knowledge proofs based on STARKs. No, not based on STARKs, based on SNARKs. Yeah, I forget this right. You're based on SNARKs, your cryptography is based on pairings.
+
+
+
+Anna Rose:
+
+
+
+Pairings, exactly.
+
+
+
+Nigel Smart:
+
+
+
+Based on elliptic curves. If you're using ECDSA to do your signing or EdDSA to your signing, you're using elliptic curves. Now, if someone comes up with a quantum computer, you're toast. Because all of those things are broken. Okay? So your zero-knowledge proofs go out the window, your curve signatures go out the window. So what the post-quantum competition was doing, the post-quantum process was coming up with what should be the signature algorithm once the quantum computer comes along. So this has now been essentially decided. Okay, so that's been finished.
+
+
+
+So the next thing this NIST are doing is a kind of a process, it's not a competition, it's a process to solicit ideas and cryptographic primitives for more complex cryptographic primitives and by more complex they basically mean threshold stuff. They're looking at old stuff like threshold pre-quantum stuff like threshold ECDSA, but they're also looking at thresholding the post-quantum stuff, so for example, the other signature schemes or FHE and other stuff, plus the ancillary tech that goes around that. One of those pieces of ancillary tech that goes around that is zero-knowledge proofs.
+
+
+
+Anna Rose:
+
+
+
+You're talking about this process to sort of get threshold cryptography something, but like what... Are they looking for a number of people to suggest methods to do it and one is chosen?
+
+
+
+Nigel Smart:
+
+
+
+Yeah, well, not one is chosen. Okay, so this is very... So in the past, they've run a competition, which was people would submit suggestions. For example, for AES there was loads of suggestions and then one was chosen as the winner. For this, this is just so complex. They're not even thinking there's going to be a winner. They basically saying people submit ideas, protocols, example stuff, and they will look at it and say, this is a good thing. This one we don't think is so good, but they will create... It's almost like, I think they kind of wanted to create almost like an encyclopedia of complex cryptographic stuff.
+
+
+
+Anna Rose:
+
+
+
+Do they want to try to break it too at the same time?
+
+
+
+Nigel Smart:
+
+
+
+Well, I think that's well.
+
+
+
+Anna Rose:
+
+
+
+Like it seems weird to just be like, this looks nice. Yes, you're get to be included instead of it being battle tested or something.
+
+
+
+Nigel Smart:
+
+
+
+I hope it'll be battle tested. So but there'll be like, but crypto these days is not so much broken. It's much more you have proofs of security. You have like a why... You have this kind of mathematical reasoning why this thing is secure. Or in this domain, everything becomes so complex that it's actually that in this specific use case, you would use this technology, and if you change the number of parties, or if you change your assumption on the network, or if you change your requirements, then you would use this thing over here. So there's like, I think someone last week, they just they said, here's all the things that NIST have said are important. We're just going to highlight all the options, for which they thought they could come up with a business case why someone would care about those options. You multiply all those different options together and you have 3,000 different options.
+
+
+
+Anna Rose:
+
+
+
+Damn.
+
+
+
+Nigel Smart:
+
+
+
+Before you've even got to the point of... And that was just like considering, okay, we're going to do threshold signatures. If we do threshold signatures, there's 3000 different options for how you would want to do threshold signatures. So clearly there's not what going to be one winner, it's going to be a smorgasbord of different approaches you could have.
+
+
+
+Anna Rose:
+
+
+
+And best practices on...
+
+
+
+Nigel Smart:
+
+
+
+And best practices too, yeah.
+
+
+
+Anna Rose:
+
+
+
+What's the duration of this competition or this process?
+
+
+
+Nigel Smart:
+
+
+
+Well, it's not a competition, it's a process.
+
+
+
+Anna Rose:
+
+
+
+Okay, sorry. It's a process.
+
+
+
+Nigel Smart:
+
+
+
+It's going to take about four... Three or four years would be my expectation, but it could go... The AES process was about four years, the SHA-3 process was about the same length of time. So it'd be kind of similar where these things will be public, people could comment on them, people could try to break them, people could try to make them more secure, more fast or different, just analyze them in different ways, see what works, what doesn't work, what's more applicable, what isn't more applicable. So that's kind of a yeah. 
+
+
+
+Anna Rose:
+
+
+
+So you had sort of mentioned DKG and like the connection between DKG and MPC. I sort of want to break it down again. I know you said it really briefly at the beginning of the episode, but I want to actually understand like which falls into under which umbrella or is the DKG used to allow for an MPC?
+
+
+
+Nigel Smart:
+
+
+
+Yeah, it depends. So for example, if you take the zero knowledge application of where I want the ceremony to set things up, you can think of that as a distributed key generation where I throw the key away afterwards.
+
+
+
+Anna Rose:
+
+
+
+Yes.
+
+
+
+Nigel Smart:
+
+
+
+Okay.
+
+
+
+Anna Rose:
+
+
+
+Yeah.
+
+
+
+Nigel Smart:
+
+
+
+It's like, I create a key, I create G to the X, say, where someone is not meant to know X and I throw it away. Okay, so that's a DKG where you just throw away the secret key at the output at the end. So that's an example of an MPC protocol that I'm going to use in a zero-knowledge protocol.
+
+
+
+Anna Rose:
+
+
+
+All right, so DKG is MPC. It's not that it's used...
+
+
+
+Nigel Smart:
+
+
+
+Yeah, the DKG is in some sense an application that I'm running on top of MPC.
+
+
+
+Anna Rose:
+
+
+
+Oh, it's running on top of MPC. This is the part where I'm confused about.
+
+
+
+Nigel Smart:
+
+
+
+So, we have MPC as this application layer, is the definition of what we mean to do. It's I can compute something where everyone puts something in and then I get an output, right? That's that, right? So at the top of that, I have an application, which is DKG, which is everyone puts some random shit in, I produce something and then throw the shit away and I got the CRS at the end of the zero knowledge. And then that... So that's kind of in some sense running on top of this idea of MPC.
+
+
+
+Anna Rose:
+
+
+
+Interesting.
+
+
+
+Nigel Smart:
+
+
+
+Underneath that, you have the technologies that make MPC. But let's get onto that later, right? So we have this layer, which is MPC allows you to compute something. The thing I'm trying to compute in a DKG is the key generation. I'm doing it in a distributed manner, therefore, I'm using MPC.
+
+
+
+Anna Rose:
+
+
+
+Cool.
+
+
+
+So the DK... the KG bit is the application, the DKG is 'cause I'm running the application on top of MPC in some sense.
+
+
+
+Anna Rose:
+
+
+
+Got it.
+
+
+
+Nigel Smart:
+
+
+
+Okay.
+
+
+
+Anna Rose:
+
+
+
+The threshold signatures. You also just mentioned that one.Threshold signatures, it's funny, because like the example you used was wallets. The example I've always known is like the proposal to use threshold. I wonder if this is the same thing, threshold encryption. I hope it's the same thing, for... No, it's not. Oh, God. Really?
+
+
+
+Nigel Smart:
+
+
+
+No, encryption is different. Okay, we'll come to encryption in a minute. Okay, but the wallet... 
+
+
+
+Anna Rose:
+
+
+
+Oh, true, true. Signature is encryption. You're right.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+Okay. The thing that I was thinking about was this is being proposed for like proof of stake validation where to prevent MEV, to prevent people front-running or being able to like place orders before they see an order coming through in the mempool, there's this proposal for threshold decryption, encryption.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, yeah, yeah.
+
+
+
+Anna Rose:
+
+
+
+And it sounds a little bit similar though, where it's like creating a private space shared by many parties, but you, this is not MPC.
+
+
+
+Nigel Smart:
+
+
+
+No, it is.
+
+
+
+Anna Rose:
+
+
+
+It is.
+
+
+
+Nigel Smart:
+
+
+
+Right, because...
+
+
+
+Anna Rose:
+
+
+
+But it's not threshold signatures.
+
+
+
+Nigel Smart:
+
+
+
+It's not threshold signatures. Okay.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Right, so let's go. So we think about... So let's think of threshold signatures, then we'll do threshold encryption.
+
+
+
+Anna Rose:
+
+
+
+Got it.
+
+
+
+Nigel Smart:
+
+
+
+In threshold signatures, it's a signature where I've got many people hold the private key and together they're going to come together to sign the document.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Okay. 
+
+
+
+Anna Rose:
+
+
+
+They hold unique private keys or parts of the private key?
+
+
+
+Nigel Smart:
+
+
+
+They hold parts of the private key and they're kept apart and it enables... The MPC allows you to do the signature without bringing those parts back together. So you have to break into many parties to be able to do the signature. So this is how an MPC wallet works. Okay.
+
+
+
+Anna Rose:
+
+
+
+I see. 
+
+Nigel Smart:
+
+Ah, so that's threshold signature. I'm doing a signature in a threshold manner. So let's go back to my thing. I have this MPC layer, which is my... I can compute anything, da da da da. But on top of that, I'm running a signature algorithm. Signature is running on top of MPC. Okay, now we can look at threshold decryption. Threshold decryption is I've got a decryption key, but I don't. I've distributed this in a threshold manner and I'm running a decryption algorithm on top of MPC which allows  people to obtain the decryption of something by putting everything to... by putting their parts together without actually bringing them together by running the protocol. And then that you could use to prevent MEV because you could basically, everyone can encrypt stuff and then they commit to it and then you decommit by running the threshold decryption and then so on.
+
+
+
+Anna Rose:
+
+
+
+Wow.
+
+
+
+Nigel Smart:
+
+
+
+Okay. Just to make it slightly more cool. How do you get the threshold secret key in the signature scheme and the threshold secret key in the decryption scheme? Well, that is exactly running the distributed key generation.
+
+
+
+Anna Rose:
+
+
+
+Key generation. I was going to ask. Yeah. Okay.
+
+
+
+Nigel Smart:
+
+
+
+Unlike in a zero knowledge case, you don't throw the key away at the end because you need it to be able to do the signing or the decryption later on.
+
+
+
+Anna Rose:
+
+
+
+When you say distributed key generation, I always picture sort of like there's a key and it's broken up into lots of keys and you get a piece of the key. But I'm wrong, right? Okay. 
+
+
+
+Nigel Smart:
+
+
+
+The key never, ever, ever exists.
+
+
+
+Anna Rose:
+
+
+
+It never exists. Okay.
+
+
+
+Nigel Smart:
+
+
+
+So what happens is everyone comes up with some random shit, and then from that random shit, we managed to create a key plus shares of the key that we can then use an MPC protocol later on through the signatures.
+
+
+
+Anna Rose:
+
+
+
+And this is why you say that, like comparing it again to ZK, where ZK there is a truth, you make it secret through a proof through a ZKP. Whereas here, there is like, nothing and then you create a secret, and you do stuff with the secret.
+
+
+
+Nigel Smart:
+
+
+
+And the secret is kind of is never actually exists. So in a MPC wallet, there is a secret behind an MPC wallet because you can do signatures but that secret never actually exists in one place.
+
+
+
+Anna Rose:
+
+
+
+In one place together. Yeah, okay.
+
+
+
+Nigel Smart:
+
+
+
+So it can't be attacked, yeah.
+
+
+
+Anna Rose:
+
+
+
+I get it. That's cool. So the threshold decryption story is, it's an MPC itself. And the way you create it is to use a DKG. Which is itself an MPC. Which is also an MPC. Where's the ZK in that? But there is ZK potentially, right?
+
+
+
+Nigel Smart:
+
+
+
+There's Zk, yeah.
+
+
+
+Anna Rose:
+
+
+
+Yeah, okay. 
+
+
+
+Nigel Smart:
+
+
+
+Okay right. So here what we go in is, so now we have two issues with, let me screw the MEV example, or just arbitrary encrypting data on a blockchain. Okay. So what you have is that when you run an MPC protocol, remember what we have to do is we have to maintain privacy, but we also have to make sure that the bad guy doesn't screw us over because the bad guy can screw us over by stopping us execute the protocol. So we might be using inside the MPC protocol, zero knowledge to enforce correct behavior.
+
+
+
+Anna Rose:
+
+
+
+And that was that example that you gave for the trusted setup where a ZKP itself was in the MPC in order to guarantee or in the DKG.
+
+
+
+Nigel Smart:
+
+
+
+So that's one example you can use. Okay, so that's... Okay. So one of the other companies I'm kind of working with at the moment is Zama, which is doing FHE on the blockchain to do, so you can encrypt data and you can create encrypted smart contracts, so you can imagine this could be used for protecting against MEV. Okay, so now so what we can do is we can encrypt data, put it on the blockchain encrypted under an FHE scheme, we can do operations on the FHE, and then we can do a threshold decryption to get the value back. But when we post stuff to the blockchain, how do we know that I've posted correct encryptions? Because all you see on the blockchain is a ciphertext. This ciphertext could just be crap, could just be a load of garbage. So how do we prove that we've encrypted the correct value?
+
+
+
+Anna Rose:
+
+
+
+ZK.
+
+
+
+Nigel Smart:
+
+
+
+ZK.
+
+
+
+Anna Rose:
+
+
+
+Great!
+
+
+
+Nigel Smart:
+
+
+
+That did help. So this idea that you have many, many technologies. So we have this MPC application layer, which is this way of thinking. We could compute any function on secret data without revealing any of the secret data people input. Okay. That's MPC. We have technologies like FHE, which allow us to do MPC calculations. You can imagine that the MEV stuff or executing an auction using fully homomorphic encryption is an application of MPC, but it's using FHE as a way to do that, and during that thing, we have to prove that the... Suppose I'm doing an election, right, I can vote for, I don't know, what's your favorite candidates? Trump and Biden, yeah.
+
+
+
+Anna Rose:
+
+
+
+I'm not American. Thank God.
+
+
+
+Nigel Smart:
+
+
+
+I don't know, I can't... who is, you're Canadian, I can't remember who's in Canada, yeah, so there we... 
+
+
+
+Anna Rose:
+
+
+
+Trudeau and someone else.
+
+
+
+Nigel Smart:
+
+
+
+Trudeau and someone else, okay, so we're going to vote for Trudeau and whoever it is that we don't...
+
+
+
+Anna Rose:
+
+
+
+There's actually usually like five, though. It's like, anyway.
+
+
+
+Nigel Smart:
+
+
+
+Right. There's Trudeau and Alice, Bob, Charlie and Eve, right? We got five, sounds like. And then when we do an encryption, we're encrypting someone we're voting for, but someone could screw over the election by voting for someone who's not on the ballot. So I have to prove, but how do we know?
+
+
+
+Anna Rose:
+
+
+
+To prove that the person who voted, voted correctly for one of them.
+
+
+
+Nigel Smart:
+
+
+
+Yeah. Yeah. Because they know you have a valid vote, especially if it could be like one of these weird elections where you vote for A or B and something else and then you've like this exclusion thing. So there might be some complex logic behind. So you would then do a zero-knowledge proof to prove that what you've encrypted is actually well-formed and correct.
+
+
+
+Anna Rose:
+
+
+
+That's cool. I mean, now we're getting into some crossover territory here, which I'm very excited for. I do want to come back to it. But before we actually do that, I want to move, I want to go into what's actually happening under the hood. I think we now have a sense for what the input is to the output, who can participate, what sort of other types of cryptography you might need to create something. But actually, in MPC, you had mentioned garbled circuits, secret sharing, and FHE. Can we go through those a little bit? Like what is actually MPC? What's happening?
+
+
+
+Nigel Smart:
+
+
+
+They're all magic, right?
+
+
+
+Anna Rose:
+
+
+
+Okay, they're all magic.
+
+
+
+Nigel Smart:
+
+
+
+They're all magic. It's kind of really, and actually the thing is they're kind of been interesting that you can see they're separate, but it turns out when you get to really complex protocols, they actually all interact as well. So it gets really... Yeah. So there's meta interactions later on, but let's not worry about that.
+
+
+
+Anna Rose:
+
+
+
+I see,
+
+
+
+Nigel Smart:
+
+
+
+Okay, let's just do simple stuff, okay?
+
+
+
+Anna Rose:
+
+
+
+Good. Garbled circuits.
+
+
+
+Nigel Smart:
+
+
+
+Garbled circuits.
+
+
+
+Anna Rose:
+
+
+
+Are they just like injecting randomness into existing data?
+
+
+
+Nigel Smart:
+
+
+
+No.
+
+
+
+Anna Rose:
+
+
+
+Okay. Right.
+
+
+
+Nigel Smart:
+
+
+
+A garbled circuit is kind of really weird. It's a very simple idea. So you take a binary circuit. So everyone does a binary circuit in electronics, okay? Now what I'm going to do is every wire on the circuit is going to have a 0 or 1 on it, okay? So instead of putting a 0 or 1, I choose a completely random string for the 1 and a completely random string for the 0 for every single wire in the circuit. So every 1 on a wire, so if I have two wires, suppose I have a gate, I have an AND gate, I have 2 inputs to the AND gate and 1 output to the AND gate. The ones got there's three wires in that circuit. There's going to be three different completely random values corresponding to 1 and three different completely random values corresponding to 0. So that's called the garbling the wires. And now what I have to do is garble the gate.
+
+
+
+And the garbled gate is basically a lookup table, which basically uses the wires as keys to an encryption scheme and the lookup table has four entries in it, one corresponding to each possible entry of the AND gate. And so I basically have this huge bunch of random values, which are keys on the wires, and a bunch of random encrypted tables. And now if I give you the random label corresponding to the 1 going into the first input of the AND gate and a 1 on the second input of the AND gate, they're random keys. You don't know whether that corresponds to a 0 or 1, but you use that to evaluate the gate by using the lookup table, which will give you the random value corresponding to 0 or 1 as output. And that allows you to evaluate the circuit.
+
+
+
+Anna Rose:
+
+
+
+But do I see the lookup table like?
+
+
+
+Nigel Smart:
+
+
+
+You see the lookup table, but the lookup table is just a bunch of encryptions.
+
+
+
+Anna Rose:
+
+
+
+Okay, you don't actually see the lookup table. You don't see what is one to one.
+
+
+
+Nigel Smart:
+
+
+
+You don't see what's one to one. What you basically see is you see four encryptions, and when you evaluate the circuit, you only see two keys. And those two keys only allow you to decrypt one of those encryptions.
+
+
+
+Anna Rose:
+
+
+
+Wow.
+
+
+
+Nigel Smart:
+
+
+
+And so to try to decrypt all four, only one works. So that's the output. And you still don't know what the output is. It's still just a random piece of shit. And then... 
+
+
+
+Anna Rose:
+
+
+
+Yeah, yeah.
+
+
+
+Nigel Smart:
+
+
+
+And that's what a garbled circuit is. And it's really complicated, but it's actually really fast that the modern computers. So they are really, really... So originally, these were introduced in the 80s and were thought this was just theory nonsense. And then, like, I know we started doing this in like mid-2000s. People started implementing this and we got faster and faster and now really, really, really super fast.
+
+
+
+Anna Rose:
+
+
+
+Interesting. Is this... This garbled circuit part, is that like, is that a part of MPC? Is that the first part, but then you have to do other things afterwards.
+
+
+
+Nigel Smart:
+
+
+
+It's MPC technology. So what happens in a garbled circuit protocol is usually a two party protocol. I create the function by doing all the garbling. I send the encrypted circuit over to you. And now I also send over to you these keys corresponding to my inputs. Now you need to get the keys corresponding to your inputs. So what you do is you then execute a little protocol with me so you get the keys corresponding to your inputs, you can now evaluate the circuit. Like I said, you just take these keys...
+
+
+
+Anna Rose:
+
+
+
+The lookup table.
+
+
+
+Nigel Smart:
+
+
+
+To go through the table. Then you get the output and then your output, you just have to map back to the actual output where I've got.. I know what that is anyway. So I know, I can tell you, oh, your random string corresponds to 0 or your random string corresponds to 1. So it's a little protocol, but the main guts is this garbled circuit.
+
+
+
+Anna Rose:
+
+
+
+And it was a two party...
+
+
+
+Nigel Smart:
+
+
+
+It's basically a two party protocol. There are generalizations, but mostly speaking, it's a two party protocol.
+
+
+
+Anna Rose:
+
+
+
+So how do you take that then and turn it into the multi-party?
+
+
+
+Nigel Smart:
+
+
+
+Now that requires secret sharing.
+
+
+
+Anna Rose:
+
+
+
+Perfect. That was our next point.
+
+
+
+Nigel Smart:
+
+
+
+That's incredibly a good question. Right. So secret sharing is something that allows multiple parties. And so what we have with secret sharing is that we take a secret and we split it up. Okay? So there might be three parties, they might be four parties. In some sense, secret sharing is essentially what is behind MPC wallets. So we can... There's kind of very similar idea. So you have a threshold. If you have a certain number of parties and if a certain number of them are honest, then all works fine, otherwise there's a problem. Okay? And the thing is with secret sharing is it's linear. It's like a lovely mathematical process which allows us to add stuff easily. So we can execute additions really quickly, the only problem is when we want to do a multiply. A multiplication now requires us to do interaction and that's when we need to send messages to each other.
+
+
+
+Anna Rose:
+
+
+
+And can secret sharing do that?
+
+
+
+Nigel Smart:
+
+
+
+Secret sharing can do that because it's magic. So you have this magic protocol, which allows you to execute, a protocol which allows you to do the multiplications very, very efficiently.
+
+
+
+Anna Rose:
+
+
+
+Cool.
+
+
+
+Nigel Smart:
+
+
+
+So the problem with secret sharing is that I have to communicate every time I do a multiplication.
+
+
+
+Anna Rose:
+
+
+
+Interactive.
+
+
+
+Nigel Smart:
+
+
+
+Which you can think about when I talked about my AND gate, every time I execute an AND gate, an AND is like a multiplication. AND is multiplication mod 2. Yeah? So if I have to communicate every time I do an AND multiplication, that's a problem. But in garbled circuit land, I don't have to communicate. So what... There's these protocols which allow you to do someâ€¦ They allow you to do the secret sharing to create a garbled circuit, which allows you then to do the interaction without actually having so many messages sent backwards and forwards.
+
+
+
+Anna Rose:
+
+
+
+I see.
+
+
+
+Nigel Smart:
+
+
+
+So you have this trade off between amount of data sent versus the number of interactions you have to do.
+
+
+
+Anna Rose:
+
+
+
+I just said interactive, but then I realized as I said that maybe that's not what you're saying. When you're saying messages going back and forth, it's not interactive in the way we've known it, is it?
+
+
+
+Nigel Smart:
+
+
+
+Yeah, it's really interactive. So it's like...
+
+
+
+Anna Rose:
+
+
+
+It is interactive, okay.
+
+
+
+Nigel Smart:
+
+
+
+So the thing is, is that if I use garbled circuits, I just go blah, blah, blah, blah, blah at you, and then you know what to do.
+
+
+
+Anna Rose:
+
+
+
+So it's non-interactive.
+
+
+
+Nigel Smart:
+
+
+
+No, it's interactive. I tell you, once.
+
+
+
+Anna Rose:
+
+
+
+Once.
+
+
+
+Nigel Smart:
+
+
+
+Once.
+
+
+
+Anna Rose:
+
+
+
+One time interactive.
+
+
+
+Nigel Smart:
+
+
+
+One time.
+
+
+
+Anna Rose:
+
+
+
+Okay. Secret sharing is multi-time interactive.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+So we've covered garbled circuits, secret sharing. We've talked a little bit about how they each have their own kind of properties. And by combining them, you get, I guess, whichever properties you want. Actually, which properties you want in this case, like, I guess you don't want a lot of interaction, right? You want less interaction. You want less back and forth.
+
+
+
+Nigel Smart:
+
+
+
+Yes.
+
+
+
+Anna Rose:
+
+
+
+So that's the property that the garbled circuit gives you. But garbled circuits would only allow for two participants. Secret sharing offers the multi.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, exactly. And also sometimes you actually, the secret sharing is good enough for multiple parties, because it depends on what you're trying to do. So just kind of there's a... Okay, so then the other technology is FHE.
+
+
+
+Anna Rose:
+
+
+
+And actually, right before you go into that garbled circuits and secret sharing, like secret sharing, I think is just the multi but is garbled circuits any sort of computation?
+
+
+
+Nigel Smart:
+
+
+
+Yeah, actually, you basically got encryptions that look up table is an is a table of encryptions. So you...
+
+
+
+Anna Rose:
+
+
+
+But can you compute over garbled circuit?
+
+
+
+Nigel Smart:
+
+
+
+Yep. You basically evaluate the garbled circuit by evaluating this table, by taking the inputs, decrypting, getting value and then repeating.
+
+
+
+Anna Rose:
+
+
+
+Okay. Is that limited or can you do everything?
+
+
+
+Nigel Smart:
+
+
+
+You can do it for everything. You could... Everything you can do whatever you want, whether it's sufficient or not is another question, but you can theoretically do everything.
+
+
+
+Anna Rose:
+
+
+
+Got it. Because now my question is why FHE?
+
+
+
+Nigel Smart:
+
+
+
+Okay.
+
+
+
+Anna Rose:
+
+
+
+So, yeah.
+
+
+
+Nigel Smart:
+
+
+
+FHE. So the point is with FHE, is you can think of FHE as an MPC protocol because different people can encrypt stuff. And then you have, they encrypt it to one person, that person does all of the calculation and then you just need to do the decryption at the end to get the result. So if you have many parties, n parties wanting input in an MPC protocol, imagine we're doing an election. If we did an election with pure MPC in a really complex election, not like a simple first-past-the-post, but a really complex election, we'd actually have to have every voter engaging in the MPC protocol. Okay? There's ways around that, but generally speaking, that would be the traditional way of doing it. With FHE, everybody can encrypt because it's a public key encryption scheme. And then we only need a few number of servers doing the computation. So there's very small amount of communication, and then you have a heavy lift of computation and then at the end, to get the result out, you do an MPC, which is like a threshold decryption.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+And then the threshold decryption is using secret sharing.
+
+
+
+Anna Rose:
+
+
+
+Oh my God. Oh, wait.
+
+
+
+Nigel Smart:
+
+
+
+So the FHE is you have this FHE computation, which is doing the computation. But then to actually get the output out, you use a threshold secret sharing based decryption operation. And so you're actually combining all of these protocols you combine together.
+
+
+
+Anna Rose:
+
+
+
+I want to go into this. So when you first kind of define this, you had to mention that under the hood, there's garbled circuits, secret sharing, FHE. But here it almost sounds like a single, wait, you can...
+
+
+
+Nigel Smart:
+
+
+
+A single technology doesn't work. You need all of them.
+
+
+
+Anna Rose:
+
+
+
+You do need all, but from what you said, it almost sounded like FHE could exist on its own in there.
+
+
+
+Nigel Smart:
+
+
+
+It can.
+
+
+
+Anna Rose:
+
+
+
+Without garbled circuits, without secret sharing. 
+
+
+
+Nigel Smart:
+
+
+
+But so can the... So okay, right. So let's go through them again.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Garbled circuits can live on their own if it's just a two party thing.
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Okay? You can have a two party protocols just with garbled circuits. You can have secret sharing schemes just on their own and they can do stuff and you can have FHE on its own, but that would be you encrypt something to me, I apply the computation, send the result back to you, you decrypt. So it's almost like it's a two-party thing still. It's a very special use case. It's like you're outsourcing data or getting the result back. Okay? Now what I'm going to now do is put them all together.
+
+
+
+Anna Rose:
+
+
+
+So MPC, I mean, FHE in MPC just means you can do that kind of thing with multiple parties, I guess.
+
+
+
+Nigel Smart:
+
+
+
+Okay. So the point is you can do it with... FHE can compute the MPC computation, and then at the end you use a threshold decryption which uses secret sharing to get the result out. However, you can put all three together because suppose you wanted a garbled circuit application because it has less backwards and forwards, but you wanted multiple parties. So what you would build that on top of a secret sharing scheme application, okay? which allows you to do the garbling efficiently with very few numbers of rounds. But then to start the secret sharing application, you might start with a special protocol called SPDZ that I helped developed about 10 years ago, which is FHE, the initial process to build the secret sharing MPC, which then allows you to do the go... So you could have an MPC application which uses all of them.
+
+
+
+Anna Rose:
+
+
+
+Interesting. So I remember in our last episode I think we did talk about that quite a lot and that combination of FHE and MPC like in that exact case. But I still want to understand if like, would you say that all MPC protocols have FHE in them?
+
+
+
+Nigel Smart:
+
+
+
+No.
+
+
+
+Anna Rose:
+
+
+
+Or is it really optional?
+
+
+
+Nigel Smart:
+
+
+
+It's optional. And it's also all of them are optional. Garbled circuits are optional, secret sharing is optional, FHE is optional.
+
+
+
+Anna Rose:
+
+
+
+So this helps me understand also then like MPC is almost like the umbrella term for the action of multi-party computation, but it can be done. There's so many like what multi means could be two or more. Right? And that will that will determine what kind of underlying crypto cryptographic techniques you're using.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+I've for some reason... Yeah, this connection between MPC and FHE. What I still am left questioning is almost like, why do you need FHE?  If you just think of MPC, garbled circuits, secret sharing, it can do any sort of computation, maybe not that efficiently, as you sort of mentioned, but like, yeah, why do you even need it? I still don't understand what it adds or what it changes.
+
+
+
+Nigel Smart:
+
+
+
+Let's go back. Right? So remember for secret sharing, every time I have to do a multiplication, I have to communicate. So my amount... The number of times I have to talk to you corresponds to what's called the depth of the multiplications, how deep the circuit is. With garbled circuits, I don't have to... It doesn't depend on the depth, but it depends on the total size of the circuit. So I can send you one piece of bla bla bla bla, but it's a lot of bla bla bla bla for you...
+
+
+
+Anna Rose:
+
+
+
+It will take a while for you to decipher.
+
+
+
+Nigel Smart:
+
+
+
+It will take a while for you to get there.
+
+
+
+Anna Rose:
+
+
+
+Got it.
+
+
+
+Nigel Smart:
+
+
+
+With FHE, the amount of communication only depends on the size of the input, not the size of the function. So for example, suppose we're... So if we're computing a very wide function, like an auction, say, yeah, actually, an auction is a pretty shallow circuit. It's just like, which one's the biggest, right? So but there could be a lot of input. It might not make sense, maybe to use FHE in application. But if I had a very deep thing, suppose I was encrypting data to you and you were applying the deep neural network to it, it's going to be much more efficient in the long run because I'm only giving you the inputs encrypted and then you can evaluate the function without any communication whatsoever. And in the real world we're limited on how much data we can send. We might think we're not, but there is a limit to the speed because there's apparently there's a speed of light, maximum speed limit that you can't exceed. And the pipes are, oh yeah, who knew? Yeah. And there's pipes that are of a certain size where on the other hand, when it comes to processing power, there seems no limit on processing power. Moore's law stopped working and we can still increase the amount of processing power. Yes?
+
+
+
+Processing power seems to be unlimited in effect whereas bandwidths and ping times actually do have physical limits. So that's why FHE kind of makes sense in applications.
+
+
+
+Anna Rose:
+
+
+
+For some.
+
+
+
+Nigel Smart:
+
+
+
+Yeah.
+
+
+
+Anna Rose:
+
+
+
+Does FHE and garbled circuits replace each other then? Usually?
+
+
+
+Nigel Smart:
+
+
+
+No, I'm saying you can not... Garbled circuits are very... yeah, in terms of deployed applications, there's less garbled circuit deployed applications, I would say. It's kind of like... 
+
+
+
+Anna Rose:
+
+
+
+Okay. So like, but I'm just wondering if they're interchangeable, like depending on the use case.
+
+
+
+Nigel Smart:
+
+
+
+No. Well, they can't... Yeah, in some sense, but no. Yes and no.
+
+
+
+Anna Rose:
+
+
+
+I'm sure to implement it's way more complicated, but I just mean like, architecturally, you have these three boxes, would you?
+
+
+
+Nigel Smart:
+
+
+
+No, I think I would treat them as different architectural boxes that you can combine in different ways.
+
+
+
+Anna Rose:
+
+
+
+Okay, you would not be like...
+
+
+
+Nigel Smart:
+
+
+
+They're different pieces of... Imagine they are different Lego bricks. There are different sizes, there are different shapes of Lego bricks. Okay, I could take this stupid piece of Lego brick and use it as my basis of my car, but this one might better, but I could if I was a five-year-old kid get away with this other one and just use a bit of imagination.
+
+
+
+Anna Rose:
+
+
+
+Well, it's so wild as so many of the use cases that have been proposed for ZK. I feel like either are also solved by MPC or sometimes like actually are only solved by MPC. That ZK had been proposed as some way to make something private but when you look at like, I mean, I think you said this on the last episode, but it was like the hospital data example. That's been brought up so often in the ZK context of like, there's data in every place and we want SNARKs to somehow prove that it has some characteristics and we then use that to do better statistics shared over hospitals. But in this case, it's like the computation would actually be done in a private setting from all of these...
+
+
+
+Nigel Smart:
+
+
+
+Yeah, exactly.
+
+
+
+Anna Rose:
+
+
+
+Individual sources.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, exactly. So it's...
+
+
+
+Anna Rose:
+
+
+
+Or actually FHE2.
+
+
+
+Nigel Smart:
+
+
+
+FHE2. So basically it's MPC as the application, I bring the data together to compute something. Yeah, but you would use garbled circuit, secret sharing or FHE to do that, depending on the function...
+
+
+
+Anna Rose:
+
+
+
+Under the hood. Yeah. But actually even that example, would FHE be the right one there? As I think through it, it's like you encrypt from all, you're getting encrypted data and then you want to do some computational to encrypt data. 
+
+
+
+Nigel Smart:
+
+
+
+Yeah, we could use FHE for that. That would be...
+
+
+
+Anna Rose: 
+
+
+
+You would just straight up use FHE, because like can FHE though take more than two inputs?
+
+
+
+Nigel Smart:
+
+
+
+Yes. So the whole point is...
+
+
+
+Anna Rose:
+
+
+
+Alone, just FHE?
+
+
+
+Nigel Smart:
+
+
+
+Just FHE, except how do you get the output at the end?
+
+
+
+Anna Rose:
+
+
+
+Oh.
+
+
+
+Nigel Smart:
+
+
+
+So the point is, is you compute... So all the hospitals could encrypt their data to FHE. FHE does the calculation and then to get the output out, you need someone to have the decryption key, but you don't want someone to have the decryption key. So at that point, you use threshold decryption.
+
+
+
+Anna Rose:
+
+
+
+I see. Okay. So it's like the second half of it. Like it's the... Although in some ways, if you are just trying to get like a data, like say you're just trying to find statistics, the output of the computation could be visible. Like it's okay if someone sees that, right? 
+
+
+
+Nigel Smart:
+
+
+
+Yeah. But the point is you have to get it out of the engine. If you're encrypting and computing on encrypted data, the encryption of the... Say you're computing the average, you take, put in, you encrypt the average, you've got an encrypted average, you want to get that out. So how do you get that out? You don't want to give someone the secret key. So you do it in a threshold better.
+
+
+
+Anna Rose:
+
+
+
+I see. I see. And because if you gave them the key it would actually reveal everything in the encrypted space, not just the computation, not just in the FHE. 
+
+
+
+Nigel Smart:
+
+
+
+Yeah exactly.
+
+
+
+Anna Rose:
+
+
+
+Okay. I see. Okay. Interesting. So it sounds like FHE and MPC are very, very closely tied.
+
+
+
+Nigel Smart:
+
+
+
+Yes, I mean, so this is my... what I said is that they're kind of like maybe like in 2019, I was kind of making a bit of a distinction. But now my kind of thing is that MPC is name of what you're doing, and then underneath you're using garbled circuits, linear secret sharing or FHE. And FHE is the one which you have less communication. It costs you in computation, but it's less communication.
+
+
+
+Anna Rose:
+
+
+
+Yeah, and it's funny because I think from your work, like MPC is the umbrella term. It's funny because like in my world, ZK is the umbrella term. Because everything is ZK, even MPC, even though I know it's not. But yeah, I actually want to ask you a quick, this is a bit of an aside. But I don't know if you saw Justin Thaler's 17 misconceptions about zero knowledge SNARKs. I don't know if you saw this paper.
+
+
+
+Nigel Smart:
+
+
+
+Okay. I don't know. Probably not.
+
+
+
+Anna Rose:
+
+
+
+One of them, one of the misconceptions, was sort of using ZK. Or I think in his particular thing, it was ZK SNARKs and the ZK of ZK SNARKs in a lot of the cases doesn't actually exist. So people are using SNARKs, but no ZK. I do wonder though, there's also been some debate about the umbrella term of zero knowledge to define advanced cryptography, at least for VC purposes. I wonder what you make of that. Do you think that's bad or good?
+
+
+
+Nigel Smart:
+
+
+
+It's very lazy. It's really lazy and it's kind of silly really because actually using the snarkiness, not the ZK snarkiness, is a really, really important thing because it has applications way outside of blockchain. If I'm sending stuff just to normal Web 2 application to Amazon and I want to know that Amazon has done the right thing, that I've paid the money to do the right thing, they can send me proof that they've done the right thing. Yeah. So this snarky bit is, yeah, I think it's actually, that should be... That's actually probably the most applicable bit of the whole tech. And the zero knowledge, it's like, oh, well, yeah, well, we could also do zero knowledge.
+
+
+
+Anna Rose:
+
+
+
+Yeah. Are there any concepts from the SNARK part of ZK that's been used in MPC? Like, is it such different cryptography that it doesn't share anything or, yeah, has there been any overlap?
+
+
+
+Nigel Smart:
+
+
+
+Not really. Well, apart from MPC has been used to help SNARKs out, but SNARKs don't really help MPC out because they're also... I mean, they're still using elliptic curves. They're so old fashioned. Yeah. So in the MPC...
+
+
+
+Anna Rose:
+
+
+
+Okay, that's what I was going to ask. It's just like...
+
+
+
+Nigel Smart:
+
+
+
+This is like Oh my God, that's just so old. In terms of it's not actually old, using old crypto and I think the MPC community is... We don't want to use old crypto. We want to use stuff that is going to be secure when someone comes up with a quantum computer and I think that's the real... The really killer application. Well, so not the killer application, the killer issue. But if anyone listening to this podcast wants to have a startup that is going to conquer the world, actually replace... have a post quantum version of SNARKs.
+
+
+
+Anna Rose:
+
+
+
+Yeah. But also aren't there more and more like post quantum parts of SNARKs in a weird way. Like, there's been the... I mean, using FRI.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, there are bits, but actually having it, it's like, so you have this kind of like, there's different performance tradeoffs if you use SNARKs versus STARKs , but actually, if you could have the SNARKs and everything that... It's not just that the SNARKs, the classic SNARKs aren't post quantum. It's just that all of the components they use are post quantum. And if you can get their components to be post quantum, it has also loads of applications elsewhere. It has all sorts of... So, for example, we can't do... So we want to replace ECDSA as the signing algorithm on Bitcoin or whatever, EdDSA on whatever change using EdDSA. We can't do that yet with one of the post quantum signing algorithms, because we don't know how to do the post quantum signing algorithms in a threshold manner. So we couldn't have MPC wallets with a post quantum MPC wallets, or we could, but they wouldn't be very efficient. And so that's something that this threshold thing that we talked about earlier is going to be looking at is can we have post quantum threshold signatures.
+
+
+
+Anna Rose:
+
+
+
+Wow.
+
+
+
+Nigel Smart:
+
+
+
+And that's like an open question. So there's lots of this little bits of tech here and there that's used in the blockchain world, which is old.
+
+
+
+Anna Rose:
+
+
+
+Is NIST also looking... Like, are there components of ZK that they're also trying to check for standardized?
+
+
+
+Nigel Smart:
+
+
+
+They do mention ZK in their thing, but they're kind of using... They're interested in ZK specifically for the threshold application.
+
+
+
+Anna Rose:
+
+
+
+I see.
+
+
+
+Nigel Smart:
+
+
+
+Not general ZK.
+
+
+
+Anna Rose:
+
+
+
+Okay, okay.
+
+
+
+Nigel Smart:
+
+
+
+Because that's a whole new kettle of fish. That's like a huge amount.
+
+
+
+Anna Rose:
+
+
+
+That post quantum question, like, actually, this is a bit of an aside, but I know that there is some work towards lattice-based zero-knowledge proofs. Is lattice-based cryptography post quantum?
+
+
+
+Nigel Smart:
+
+
+
+Lattice-based cryptography is post quantum. So there's some problem... There is the real... The thing is, with lattices, it's about stuff being small. So you have stuff that is or is not small. And the question is, is how small is small? So, yeah, so it's very easy to explain the issue. So what I do is I encrypt, I have some cryptographic blob, that inside contains something hidden, which is small. So now what I want to do is I want to prove that that blob is correct. So I want to prove that the small thing is actually small, because that's what being correct means, the small thing is small. I can't quite prove that it's really small. I can prove it's kind of small, but not really small. And this is what causes the problems with zero knowledge in lattices. And that's why it's really difficult. Because I can prove in zero knowledge, it's kind of small, but not as small as I really need. And so there's this sort of... We call it, this is the soundless gap is between, the gap between what you want to prove and the gap with what you can prove is there's this little bit there that you can't quite get.
+
+
+
+Anna Rose:
+
+
+
+And when you say small or very small, are you talking about probabilistically? Is this probabilities?
+
+
+
+Nigel Smart:
+
+
+
+No, I just mean really really small. So imagine I've got like, I don't know, 128 bits of stuff. Inside this 128 bits of stuff is hidden 10 bits of stuff, which is must be 10 bits of stuff. But I might be only able to prove that it's 12 bits of stuff.
+
+
+
+Anna Rose:
+
+
+
+Oh, I see.
+
+
+
+Nigel Smart:
+
+
+
+12 bit's still small, it's just not as small as 10. And then so I kind of... Then I can't, so that's why the problem is that when I prove something, the thing I'm able to prove is slightly bigger than the thing that I'm really after. So I have this kind of mix that I really want to fix.
+
+
+
+Anna Rose:
+
+
+
+I want to make sure that we, in today's interview, cover a little bit of what state are we at in MPC and what companies and projects are you thinking about in terms of doing this kind of work. Because yeah, we really wanted to use this as a little bit of a check in point on MPC, but also potentially, giving us and the audience a bit of direction on where we can look next. And maybe other guests... But let's start with the state of the tech. A lot of times when, yeah, a lot of times when we talk about this cryptography, we might be like, this is what it can do. But it doesn't mean that it's been implemented, that it's been optimized. It's sort of like theoretically, this is what it can do or will do. Where are we at with MPC? Like, does it live out in the world? I mean, I think it does.
+
+
+
+Nigel Smart:
+
+
+
+So there are real applications in the real world, okay. So if we took a general MPC, which allows you to do the hospital application. Yeah? So there are companies doing this. In the Switzerland, there's a company called Inpher, which does stuff with hospitals. There's a company, Tune Insight also in Switzerland, does this. There's a company called Cybernetica in Estonia, which has a really big application, done this for lots. There's a few companies in Holland, I've gone up, remember, at the end of the show, I'll probably remember what their name are.
+
+
+
+Anna Rose:
+
+
+
+We can add those in the show notes.
+
+
+
+Nigel Smart:
+
+
+
+So there are a number of MPC companies doing the kind of the big data type applications. And there's a whole alliance called the  MPC Alliance, which represents all these companies. And if you go there, there's like about 50 or 60 logos of different companies there.
+
+
+
+Anna Rose:
+
+
+
+What about I heard that the big kind of ad marketplaces like Yahoo, Google, like is there some MPC in there?
+
+
+
+Nigel Smart:
+
+
+
+So because of third party cookies being banned, the ad infrastructure really relies on third party cookies. Okay? This is like legacy tech from the 90s. So to replace the legacy tech from the 90s, Google and Meta and others are creating MPC systems to do ad tech. So to get around third party cookies. So you might have seen some people in their Chrome browsers have now got configuration for Google privacy stuff to do with ads. This kind of enables some sort of MPCFI protocols there. Meta are doing the same and others. So big companies are doing this. The hospital example, so that's really deployed in the real world. Okay. So that's..
+
+
+
+Anna Rose:
+
+
+
+Traffic? Is traffic a real thing or is that just theoretical? Using MPC for traffic because I've heard this a few times. I think you even mentioned it. Whether it's...
+
+
+
+Nigel Smart:
+
+
+
+Car traffic.
+
+
+
+Anna Rose:
+
+
+
+I think you had mentioned satellite data like where satellites are, but I've also heard a car example. 
+
+
+
+Nigel Smart:
+
+
+
+Yeah, there are car examples, but I'm not sure if they're commercially deployed. That's the kind of thing.
+
+
+
+Anna Rose:
+
+
+
+I see.
+
+
+
+Nigel Smart:
+
+
+
+There's lots of, or app or PLC level stuff, but actual commercially deployed with real customers in the real world is I think that you've got... There's a few with medicine and then there's or big data which like Cybernetica are probably the biggest company doing that and then there's Meta and Google doing stuff on the ad infrastructure. 
+
+
+
+Anna Rose:
+
+
+
+In that ad example, is that auction? Is that like for the ad auction?
+
+
+
+Nigel Smart:
+
+
+
+It's kind of like auctions or it's also your preferences. So it's making sure... So there's really annoying ads you get when you look at Facebook.
+
+
+
+Anna Rose:
+
+
+
+Yeah, well, I don't go there anymore. But yeah.
+
+
+
+Nigel Smart:
+
+
+
+Apparently that's something to do with, they might look random, but apparently, this is why I don't believe AI is going to take over the world. If AI can't actually give me an ad I'm interested in, it's not going to do anything, is it? Right? I mean, it's useless. I mean, this is the biggest amount of money spent on AI is to give me ads that I care about and it doesn't. So clearly it doesn't work. Right? But they think it does, so they kind of sell it. So they kind of got to do this in a way where the ad company doesn't learn the customer's preferences beyond the fact that they're just they're interested in the ad, well, they're interested "in the ad." Okay. So there's a kind of... And also, you don't want to influence the auction so that Meta can't front run the auction or things like that. 
+
+
+
+Anna Rose:
+
+
+
+Got it.
+
+
+
+Nigel Smart:
+
+
+
+That's MPC. If we look at MPC for privacy, if we look at MPC for threshold, there's loads of applications, loads of people, especially in the blockchain space. So MPC for threshold signing. I was in a company in the 1990s that had this for its CA. So when you had a distributed RSA signature to do the certificate authority signing in the 90s. This is not modern, this is really old.
+
+
+
+Anna Rose:
+
+
+
+Was there FHE in that type of MPC? No, no, no. Okay.
+
+
+
+Nigel Smart:
+
+
+
+No, no. That was like 90s. Then we have companies like Coinbase, which we mentioned their MPC wallet, Fireblocks are quite similar. There's a really cool company I advise in France called Defense, Dfns which you might want to get them on. There's Jonathan Katz works for them and Chelsea Komlo. Chelsea's the one thatâ€™s come up with this FROST Protocol, which is really popular in the community.
+
+
+
+Anna Rose:
+
+
+
+With Mary.
+
+
+
+Nigel Smart:
+
+
+
+So they're really cool, interesting. There's loads of others, and I think there's about 20 in that space. They're also in the MPC Alliance doing stuff. So that's kind of deployed and used by millions of people or, and loads of trillions of transactions that they probably go through, their networks. You have the ZK in Zero Cash that's deployed for all these ceremonies that people deploy. So we have MPC for that. And then if you kind of look at FHE, so FHE, there's a number of companies doing FHE, there's Envale in the US, Duality in the US, and I'm involved in the company called Zama, which we've already mentioned. And they've...
+
+
+
+Anna Rose:
+
+
+
+They've also been on the show. That was one of your recommendation actually.
+
+
+
+Nigel Smart:
+
+
+
+They've been on the show, there's no point in having them in the future because they were on like two months ago. So Zama do... You had Brad on the show. And Zama do... Since he was on the show Zama has launched this encrypted version of the Ethereum. So you could do Ethereum smart contracts on encrypted data. It's kind of using the kind of tech we've been talking about for the last one hour or so.
+
+
+
+Anna Rose:
+
+
+
+So this is on the FHE front. So I want to understand what are the open problems? What state are we at? Is it all of these libraries are so perfect, they're post quantum, they work together perfectly? Or is there still work to do?
+
+
+
+Nigel Smart:
+
+
+
+There's loads of work to do. So for example, let's just kind of, and actually let's look at the interfaces because the interface is where there's really cool work to do. So I send data encrypted to somewhere, the cloud or a blockchain, and they then compute on this in an FHE. So I want to know that they've actually computed the right thing. They've... They might... They don't know what they've computed on, it's not a privacy issue, this is an issue of have they actually computed the right operations? So that's a zero... That's not zero-knowledge proof.
+
+
+
+Anna Rose:
+
+
+
+That's a ZK.
+
+
+
+Nigel Smart:
+
+
+
+That's a SNARK application because there is no secrets.
+
+
+
+Anna Rose:
+
+
+
+It's actually not zero knowledge.
+
+
+
+Nigel Smart:
+
+
+
+There is no zero knowledge. If it's public stuff, just can you verify... Can you prove to me quickly that you've done the right thing? That's a really big open problem. That's really, really interesting.
+
+
+
+Anna Rose:
+
+
+
+And the reason it doesn't work right now is this due to the type of cryptography underlying ZK still.
+
+
+
+Nigel Smart:
+
+
+
+Right. ZK is so slow.
+
+
+
+Anna Rose:
+
+
+
+It's because it's too slow.
+
+
+
+Nigel Smart:
+
+
+
+SNARKs are slow. SNARKs are super slow. So, SNARKs  are more good.
+
+
+
+Anna Rose:
+
+
+
+That's right, they're SNARKs.
+
+
+
+Nigel Smart:
+
+
+
+These SNARKs are really slow if you've got a really small... So what do we use SNARKs for to prove that someone executed a smart contract correctly? How long is a smart contract? It's not really that long. It's not a big program at all, really, is it? They're really tiny. They're really, really tiny programs. And so actually SNARKs are... Most ZK technology is for very, very small programs. And we want to do it on mega, mega, mega programs. So if you could solve that, you could solve all sorts of other things. You could solve... I could outsource how do I know that Amazon has actually processed all the stuff in the cloud as I asked it to? It could just give me a quick thing back going, yes, you did the right thing, but that'd be kind of cool. So that's one application.
+
+
+
+Two, we just need stuff to go faster. We need stuff to use less bandwidth. So if you talk about the secret sharing applications, or you talk about the garbled circuit stuff, I want to send the best data because communication is expensive. I want to store less data. How do I store less data? How do I... Yeah, if I store stuff in secret shared form or encrypted form, I want that to be smaller amount of data. So how do I do that? So there's loads of open questions. There's loads of things, especially on interfaces.
+
+
+
+Anna Rose:
+
+
+
+What about on the FHE side? Because I'm still hearing that like, it's kind of not fully usable, not fully there.
+
+
+
+Nigel Smart:
+
+
+
+Okay, so for example, so with... It depends what you mean by fully there. 
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+Nigel Smart:
+
+
+
+Right.
+
+
+
+Anna Rose:
+
+
+
+Yeah, let's go into that though. What isn't there for FHE?
+
+
+
+Nigel Smart:
+
+
+
+Okay, but first let's say what's there.
+
+
+
+Anna Rose:
+
+
+
+What is there?
+
+
+
+Nigel Smart:
+
+
+
+Right. Okay, so if you think about the time it takes to do executions on a blockchain in a smart contract, that's relatively slow anyway. FHE can do that, can work at the speed of a blockchain. So the FHE can work at the speed of a blockchain. So that's still that's fast, right? So we have that. Now we go, we want to go faster, we want to have more throughput. Now, today, there are a large number of companies around that Intel is kind of one of the bigger companies, there's Ingonyama, Optalysys, others Niobium, actually producing hardware, or in the process of producing hardware.
+
+
+
+Now we already have.... Can do a speed up of a hundredfold speed up with FPGAs. You could just buy an FPGA, implement the FHE algorithm and you get a hundredfold speed up. So if something's plausible now, we can go a hundred times faster with no expense whatsoever today, just having to deploy it. If we then go to ASIC and we put that in ASIC, we can go a thousandfold faster. And those are meant to come online 2024, 2025. So the math is going to go faster, but just the fact that you've got hardware coming on board, that's going to be coming on board in the marketplace in '24, '25, there's startups working in that space now. There's a really cool company.
+
+
+
+Anna Rose:
+
+
+
+Is there actually ASICs coming for it or is it still wow?
+
+
+
+Nigel Smart:
+
+
+
+Actually ASIC is being produced. 
+
+
+
+Anna Rose:
+
+
+
+Wow.
+
+
+
+Nigel Smart:
+
+
+
+That are going to be coming on to this. There's a really cool company called Optalysys in the UK which is going to be using optical computing. Because the thing that you need to do, and actually this is the same technology that you would use to accelerate STARKs, because basically what you need to do is you... 
+
+
+
+Anna Rose:
+
+
+
+MSMs, is this what we're talking about?
+
+
+
+Nigel Smart:
+
+
+
+Yea, we're talking about MSMs, you want FFTs.
+
+
+
+Anna Rose:
+
+
+
+FFTs, okay. We did an episode on hardware, a couple episodes.
+
+
+
+Nigel Smart:
+
+
+
+MSMs and FFTs. MSMs are elliptic curves there, old tech, so we don't want those.
+
+
+
+Anna Rose:
+
+
+
+For ZK.
+
+
+
+Nigel Smart:
+
+
+
+But FFT, NFTs, they're the things that are post quantum, they work. And if you accelerate FFTs and NFTs, you can apply it to zero knowledge, and you can apply it to FHE. And what's interesting about this company, Optalysys, because it's optical, an FFT is an optical operation. So it's for free. 
+
+
+
+Anna Rose:
+
+
+
+Okay.
+
+
+
+Nigel Smart:
+
+
+
+Yeah, it's kind of weird. I don't know. It's weird. 
+
+
+
+Anna Rose:
+
+
+
+What do you mean optical? I don't know if I follow that.
+
+
+
+Nigel Smart:
+
+
+
+Optical computing is like instead of working with binary signals, 0, 1, you work with light. And then FFT is actually basically an operational light, which is for free. So it's powerless. It's just you just do it. And so Optalysys is this kind of cool company that's got optical computers and they're going to try to accelerate FFTs using optical processing, which should be, which would be like even better because it would be less environmental costs, less power, and they should be super fast.
+
+
+
+Anna Rose:
+
+
+
+Nice.
+
+
+
+Nigel Smart:
+
+
+
+But again, yeah, so there's loads of stuff coming on, this FPGA is coming along in the next year. ASIC is coming along in two years. Optical computing is coming along, and each one of those things should also benefit the zero knowledge space.
+
+
+
+Anna Rose:
+
+
+
+And quantum computers will not destroy it all.
+
+
+
+Nigel Smart:
+
+
+
+So quantum computers will destroy the blockchain because you're still using elliptic curves and STARKs, but everybody else will be fine.
+
+
+
+Anna Rose:
+
+
+
+Okay. Got it. Nigel, thank you so much for coming back on and sharing with us sort of the state of the art on the MPC front and also allowing me to kind of go deeper on what's underneath the hood. I really appreciate that. So yeah, thanks for being on.
+
+
+
+Nigel Smart:
+
+
+
+Nice to be on. Thank you very much.
+
+
+
+Anna Rose:
+
+
+
+Cool. I want to say thank you to the podcast team. Henrik, Rachel and Tanya and to our listeners, thanks for listening.
+

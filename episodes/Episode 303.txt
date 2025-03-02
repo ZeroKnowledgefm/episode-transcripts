@@ -1,0 +1,742 @@
+00:05: Anna Rose 
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:26:
+
+
+This week we chat with Jim and Radi from Ulvetanna. My co-host for this one is Brendan from Polygon Zero. We discuss Ulvetanna's work on the ZK/hardware intersection, and then dive in to the new proving system, Binius. Binius is a hardware optimized SNARK based on towers of binary fields. This work brings together a number of breakthroughs in ZK that have happened in the last few years. Specifically, it continues the trend towards the use of smaller fields. It's inspired by the development of new lookup arguments, the work on multi-linear provers and sum check, as well as the use of recursive composition in SNARKs. The ZK community has been very excited about this work, so it was great to get a chance to dive in.
+
+
+01:09:
+
+
+Now, before we kick off, I want to let you know about our upcoming multi-week virtual event, ZK Hack 4. Starting on January 16th and running until February 6th, 2024, we will be hosting weekly workshops with top teams in ZK, showcasing the state of the art in tooling for ZK builders. Every week, we also host a ZK puzzle hacking competition. In it, we share a ZK system that has something wrong with it. You are meant to find the bug and hack the protocol. The fastest hacker will make their way to the top of the ZK Hack leaderboard. There, you can find prizes and glory. Now, this is our fourth time running this event series. The ZK Hack Online series is not a hackathon but rather it's a chance to learn the latest in ZK tools with members of the ZK Hack community, as well as learn the intricacies of ZK security through the puzzle hacking competition. And because it runs over a few weeks, participants often make friends, find future colleagues or co-founders, and we really get a chance to dive into the ZK world together. The event is free and open to all. I've added the link on our website. Please join the mailing list so that we can let you know when we have more info to share about the event. Also, be sure to join our Discord. That's where all communication around this event will be happening. So yeah, hope to see you there. Now, Tanya will share a little bit about this week's sponsor.
+
+
+02:31: Tanya:
+
+
+Aleo is a new layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. As Aleo is gearing up for their mainnet launch in Q1, this is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. And now, here's our episode.
+
+
+03:19: Anna Rose  
+
+
+Today I'm here with Jim and Radi from Ulvetanna. Welcome to the show, Jim. Welcome, Radi.
+
+
+03:24: Jim Posen:
+
+
+Thanks, Anna. It's great to be here.
+
+
+03:26: Radi Cojbasic:
+
+
+Hey, everybody. Greetings.
+
+
+03:27: Anna Rose 
+
+
+We also have Brendan Farmer of Polygon Zero with us today as a co-host. Hi, Brendan.
+
+
+03:35: Branden Farmer: 
+
+
+Hi, Anna. It's an honor.
+
+
+03:38: Anna Rose 
+
+
+You may also know Brendan as one of the hosts of the ZK Whiteboard Sessions, which we created last year. So it's really fun to have you on this one. So this interview came about because there was some recently released research, the Binius work that the ZK community has been really excited about. Now for me, it was a bit funny when I saw it because I thought of Ulvetanna as a purely hardware-focused company. And now I was seeing that it was almost like a SNARK system or some sort of more on the cryptography side type of work had come out of the group. So yeah, I was a bit confused, why you're doing this kind of work. I'm really excited to dive into that work. But I think as a starting point, it would be great to get to know the two of you. Radi, do you want to introduce yourself?
+
+
+04:25: Radi Cojbasic:
+
+
+Yeah, I'd be glad to introduce myself. Hi, everybody. My name is Radi, and I'm co-founder and CEO of Ulvetanna. At Ulvetanna, I manage technology team, and I spent past 15 years doing hardware design across different industries. It's probably worth noting that I spent last 7 or 8 years in quantitative finance, an industry which is also known as high frequency trading or algorithmic trading where I use hardware acceleration to improve efficiency or market making. I will let Jim introduce himself, thanks.
+
+
+04:59: Anna Rose 
+
+
+Yeah, Jim, what about you?
+
+
+05:00: Jim Posen:
+
+
+I'm Jim, I have been working in the blockchain space in some capacity or another for most of the past 10 years. I was at Coinbase doing some combination of backend engineering and crypto integrations and protocol engineering. And then in around 2018, I got really excited about all the innovation in the production of cryptographic protocols, spent a couple years in school studying cryptography and ZK and proof systems and stuff. Also have always loved systems engineering and embedded systems, and when I heard about the notion of hardware acceleration for zero-knowledge compute that, both resonated immediately as a necessary thing and probably something that would be really fun to work on. So got in touch and it's been a journey ever since.
+
+
+05:52: Anna Rose 
+
+
+Cool. Did you actually study ZK at university? Was there programs teaching this?
+
+
+05:59: Jim Posen:
+
+
+I did a master's in computer science. The concentration was some combination of computer science theory. There's only so many cryptography classes you can take. I took exactly one, but there's a whole lot of adjacent things that you need to learn. So especially pertinent to what we're going to talk about today, I took a class in coding theory, which I thought was one of the coolest things that I studied, and was really necessary to be able to do some of the work that we're doing now. But I also like distributed systems, and operating systems, and classical algorithms.
+
+
+06:35: Anna Rose 
+
+
+Well, actually, I mean, the question was the zero knowledge side of it, like zero knowledge cryptography. Is that being taught in schools? That's what I'm curious about.
+
+
+06:43: Jim Posen:
+
+
+Oh, yeah. There was one advanced cryptography class which spent maybe a week or two, maybe a couple lectures talking about zero knowledge and proof systems. I mean, this was at Stanford, so the cryptography department there is clearly very up to date on everything and they do a great job. But yeah, I guess that's a good point. Even the advanced cryptography class, it's only a small fraction of what's happening in the theoretical academic community.
+
+
+07:13: Anna Rose 
+
+
+Got it. Let's talk about Ulvetanna. I want to know where the project comes from. You've sort of mentioned hardware, Radi, and I can kind of see where the initial thought for this or like some of your background maybe would have led to having more of a hardware focus. What is Ulvetanna?
+
+
+07:31: Radi Cojbasic:
+
+
+It's a good presumption here. So Ulvetanna is a company which aims to accelerate zero-knowledge proof by applying hardware-software co-design. And for the sake of wider understanding, especially your audience, I just spent a moment talking about hardware-software co-design. So essentially we are looking at accelerating hardware proofs in both software and hardware components of it. We believe that each proof can be decomposed in sort of sequential part of it, which is more CPU friendly and more parallelizable part of it, which is more hardware friendly and inherently native to hardware execution. We really believe that zero knowledge proof requires dedicated custom compute, for its full adoption and for the full achievement of this industry.
+
+
+08:23:
+
+
+The reason we think this has roots in history, I would probably just mention a few of other compute problems which are very interesting for us, such as computer networks, computer graphics, computer storage, which then led to cloud computing. So all of these verticals literally arise from ability to have dedicated compute, which then mapped algorithms better to it, which in consequence allowed for scaling and mass adoption. So we are just trying to bring this into zero-knowledge space, and we believe that the best way to do it when there is software and hardware co-design.
+
+
+09:04 :Anna Rose 
+
+
+I wonder, like, so I did an episode series, actually, on ZPrize and the winners of that competition. It was kind of a look at hardware. And even before that, I had done an episode with Supranational, who was also a hardware-focused company. I'll add the links to those two episodes in the show notes, but I remember there, we were introduced to the concepts of ASICs, FPGAs, GPUs, CPUs. What kind of area is Ulvetanna focused on in the hardware context? Is it all of it or is it one of these?
+
+
+09:39: Radi Cojbasic:
+
+
+Further, we are probably looking in just a few of these and I will explain motivation. Motivation is really to learn a little bit more by accelerating proofs end-to-end. And we chose technology for our Gen1 server, which is something that we are very familiar with and which is something which is highly reconfigurable, and these are the FPGAs. One of the primary reasons we chose FPGAs is due to their reconfigurability. And currently research in zero-knowledge space is moving really fast. So we wanted to have a platform that we want to alter algorithms pretty quickly, stay on top of all the innovations, but also be able to integrate proofs end-to-end. So it was in a sense, a learning platform for us.
+
+
+10:22:
+
+
+This already has changed with our second generation server where we are looking more into heterogeneous compute. Again, to just bring discussion a little bit back to what I said before, we don't think that there will be a single type of compute which is gonna be the solution for entire proof system. So we are gonna be looking for keeping sequential parts of the compute in some sort of CPU and moving parallelizable portions of compute into hardware. I would also mention, all the names that you mentioned before and ZPrize effort, these are great contributors to our ecosystem and big shout out to everybody there who is really trying to accelerate zero-knowledge proofs using hardware. But we are looking really the full stack of this and you will pretty quickly connect the dots why a project like Binius was possible to happen within Ulvetanna.
+
+
+11:13: Anna Rose 
+
+
+I see.
+
+
+11:14: Radi Cojbasic:
+
+
+We never looked at zero knowledge proof as just compute-centric world. We really looked end-to-end. And we approached this from pretty much five aspects of different efforts happening within the company, which are all yielding the overall acceleration of the proof. Top down, we have in-house cryptographic research. And if you look, even our blog posts or Twitter activity, you will see that Binius wasn't the first purely cryptographic contribution from our team. So essentially we do have in-house cryptographic research. We believe that we will only be efficient and successful at proof acceleration if we are able to understand these things inside out. And this is the effort that Jim leads, so I will let him talk about this a little bit later.
+
+
+12:05: 
+
+
+Then on top of that, we have a ZK sort of software development team, which is accelerating proofs in the software space and connecting them with our hardware or API or whatever you want to call this acceleration layer. Then we have a little bit lower layer software development team, which is system software and it has to do with the API design, all the sort of low level software which is generally required in high performance compute and which directly talks to hardware. Very important obviously for our work is hardware team and at Ulvetanna we probably do the same thing like our competitors or other hardware teams that you mentioned above. So we are working on accelerating cryptographic primitives in hardware. Additional to us, we also have infrastructure team, which deals with data center rollouts and scalability, cybersecurity and everything else, which is required when you run a private cloud. So now if I can just get back, at Ulvetannna we look things from the top level of cryptography all the way to the hardware acceleration to the bare metal.
+
+
+13:15: Anna Rose 
+
+
+Got it. It sounds... I mean, another team that we didn't mention, but I want to just throw out there is Ingonyama. So, ZK Validator is an investor in Ingonyama, just full disclosure. I sort of know their proposal quite a bit better. Are you guys in the same category or would you put yourselves as different from Ingonyama?
+
+
+13:34: Radi Cojbasic:
+
+
+Right. For the full fairness here in ecosystem, I would also like to bring up competitors such as Cysic and Fabric and PONOS and a few other teams which are participating in these ecosystems. I'm not honestly very much aware how much of the cryptographic efforts this team are doing. That also goes for ZPrize. Should I say ZPrize, but in Australia you say ZPrize, so I'm going to continue with that.
+
+
+13:57: Anna Rose 
+
+
+Yeah, actually in Canada you say ZPrize too, but oops.
+
+
+14:01: Radi Cojbasic:
+
+
+Yeah. The ZPrice, we are going to continue... Teams such as Jump Trading or Jane Street, they were focusing also on the acceleration. I think at Ulvetanna, we put definitely bigger stress on the cryptographic research. So I think that is one differentiator instance right now. And there is also this difference if hardware teams are considering public cloud and public cloud resources or private cloud. There are definitely reasons why we decided pretty early on in the process to go with a private cloud. I think one of very obvious reasons, again, going back to the speed at which zero-knowledge proof algorithms are changing, we have to have better control over hardware and better flexibility to really utilize hardware until its maximum performance so that we can achieve maximum efficiency.
+
+
+14:54: Jim Posen:
+
+
+Yeah, with respect to the ZPrize competition, it was a really awesome effort that yielded great results, especially, I think, on the GPU side and got more people involved. But when we looked at the submissions and looked at the structure of the competition, there are some notable design decisions about the competition that I think validated our approach of doing end-to-end analysis of the systems for acceleration. So, the ZPrize competition focused on primarily two computational bottlenecks, the multi-scalar multiplication problem for elliptic curve SNARKs and the NTTs, both for elliptic curve SNARKs and what I'm going to call STARK-ish protocols. So, roughly we have SNARKs from elliptic curve assumptions and SNARKs that are sort of FRI-based or from linear codes and hash functions. So, for full generality, I'll call those STARK-ish protocols.
+
+
+15:51: 
+
+
+And those are computational bottlenecks, but when you actually go and when we kind of from first principles profile the provers that are out there, there are several other computational bottlenecks, and depending on the system, they could be even larger problems. So, for many of the STARK-ish protocols that are recursion-friendly like Plonky2, you end up using expensive hash functions like Poseidon, and actually the Merkleization was the number one bottleneck that we found when we go and profile these systems from the source code. There's also another layer of computation which is this quotient polynomial computation which is sort of, you take a bunch of polynomials and you evaluate it on a number of points, and both of these actually turn out to be significant bottlenecks. So, my point is that the ZPrize was a really good first attempt to introduce hardware acceleration into the space, but it's sort of far from what needs to be done to produce an overall efficient system.
+
+
+16:53: Branden Farmer:
+
+
+That makes sense. Maybe you could talk about, sort of take a step back. I think that there's this misconception about hardware that the hard part is just writing the things that we do in software on CPUs right now for FPGAs. And that's like the real challenge, and if we could just do that, then we would have these maximally efficient provers. And I actually don't think that that's the case because we have world-class hardware people that work at all these companies and actually writing provers for FPGAs is not that difficult relative to overcoming things like bandwidth limitations of moving things between CPU and FPGA. You know, changing SNARK primitives that require huge changes or throwing out huge amounts of hardware code that's sensitive to those components. And so maybe we could just talk a little bit about the landscape and the challenges that sort of come up when building for hardware.
+
+
+17:49: Radi Cojbasic:
+
+
+Yeah, I think this is excellent observation, Brendan. This is all absolutely correct. So first of all, when we started accelerating protocols such as Plonky2, I bet you are familiar with that one, we identified issues associated with hashing, with Poseidon hasher to use more precise terms, but also another aspect that you mentioned is the data movement. So I really want to explain this a little bit to the level of the detail that people understand when we talk about hardware acceleration. Currently, most of provers operate under general purpose compute, which are CPUs, and the whole data of the proof system is contained within the system memory and the CPU of the system.
+
+
+18:31: 
+
+
+As soon as you are introducing an accelerator, again, historically could have been graphic accelerator or network accelerator, you do need to move data outside of CPU, most likely using PCI protocol. So now you are in this trade-off space where you need to look in the data it takes to hit the accelerator, time to compute and the result to come back. This is fundamental problem of hardware software co-design simply because there is huge memory bottleneck of today's provers. This total memory layout comes from the size of the trace that we identified pretty early on in the process. And this was actually one of the initiator of our research that eventually ended up with Binius. Another point I want to make is that ZKP space, STARK-ish one to refer to Jim's term, shifted a little bit to usage of non-traditional hashers. So we have Poseidon, which is not a typical hash function that was used in symmetric cryptography before. It was primarily designed for prime fields to be recursion friendly.
+
+
+19:35:
+
+
+Such hashers are not really hardware friendly, not very compute friendly. So we have a problem of how many of these we can instantiate in state-of-the-art hardware and how much we are able to parallelize the proof system. So you are hitting the nail here, essentially, data movement is a massive problem, and once we finished accelerating basic primitives, we started integrating the whole proof together, that is where real learning happened, and this is where we started to redraw the software hardware boundaries.
+
+
+20:04: Branden Farmer:
+
+
+It's interesting because when we think about generating a proof, we perform some computation, and then we... Like you said, we generate the trace. We're basically filling out this huge matrix full of finite field values, and that actually ends up being huge. And so if we send that to an NTT or a hashing module and it's really, really fast on the chip, but it takes forever to get back to the CPU, that's obviously a real challenge when you think about latency. So yeah, I think that just sort of sets the stage for Binius and why it's important.
+
+
+20:37: Anna Rose 
+
+
+Maybe actually now might be a good chance to define Binius and what it is, because I had this thought that it was almost like a new proving system, but actually, what is Binius?
+
+
+20:50: Jim Posen:
+
+
+Yeah, you are right. Binius is a new proving system. Binius uses fundamentally different underlying mathematical primitives, which are called binary fields. Mathematically, to be more precise, these are finite fields of characteristic 2. And this is not new to cryptography as a space at all. In fact, it sort of predates probably the use of prime fields in a lot of symmetric primitives. And it's also not necessarily new to the ZK space, the original FRI protocol and the original STARK protocol were actually both defined for binary fields, and I'll get to why that essentially got dropped as a threat of sort of research and production effort.
+
+
+21:35:
+
+
+But we began from the point of view of, okay, we're running into all these bottlenecks that we just mentioned with the FPGAs. We're running into the issue that the hash functions that are used for Merkleization, which is Poseidon, is not compute friendly, and we're running into this issue of huge memory requirements and bandwidth limitations and moving data between the accelerator and the host. From the research side, what is on the horizon that could solve these problems and what could we maybe create here that can solve these issues? And so we started to wonder why binary fields weren't adopted. That was the beginning of this research effort.
+
+
+22:16: Anna Rose 
+
+
+Now, why weren't they, actually? Now I'm so curious. You're sort of saying early FRI had sort of gone in that direction and then dropped it. I wanna know now what stopped people from using it.
+
+
+22:27: Jim Posen:
+
+
+Yeah, that's a great question. That took us certainly some time to figure out. So FRI is a really elegant protocol and it works very nicely over binary fields. What doesn't work so well is STARKs. So we read the original STARK paper, which is the scalable transparent arguments of knowledge and there's a few things that make prime fields really nice here and especially made prime fields nice in 2019. And I think to jump ahead in the story, essentially that actually, in my mind, made sense to use prime fields in 2018 or 2019 whenever these teams were trying to build this stuff. But a few years later, we have developed a lot more techniques that make Binius possible.
+
+
+23:16: 
+
+
+So, the first issue is that the STARK protocol uses... Okay, this is where we need to get into the math. You have a trace of, let's say, your virtual machine execution cycles. So, if you're emulating a zkEVM, then maybe each row of this matrix is a zkEVM execution step. Mathematically, each row of the trace for a prime field STARK is mapped to a cyclic subgroup or a cyclic group. And there is a really nice way to relate the adjacent rows of a trace in this model of having a cyclic group. In the STARK protocol, the rows of the trace were laid out on what's known as a F2 affine subspace. And there's just not a nice way of relating adjacent rows of the trace. They developed some techniques. To be honest, I don't fully understand what the STARK paper was proposing, but we looked at this and decided that that wasn't the way to go.
+
+
+24:18:
+
+
+Now, there's been a lot of research recently into multi-linear provers like HyperPlonk and Breakdown, and these sort of what we call sum-check-based protocols where the trace is laid out on another mathematical structure, which is the Boolean hypercube. This ultimately provided the solution to that challenge. So, if we can marry the idea of binary fields with multi-linear provers, that was the first way to overcome one of the challenges of STARKs.
+
+
+24:51: Anna Rose 
+
+
+So you just said the work on sum-checks and those multi-linear provers, is this the change that had needed to happen for the new work to make sense? Or is there any other developments? Yeah, I'm just wondering if anything we're familiar with, like lookup tables or folding schemes or anything like that.
+
+
+25:09: Branden Farmer:
+
+
+Lookup tables is one, right?
+
+
+25:11: Jim Posen:
+
+
+Yeah, so I would say the big unlocks here are sum-check-based protocols and multilinear protocols, lookups, and the idea here being that if you don't have lookups having native integer addition and multiplication, "native", it is really powerful and in binary fields what you get is native XOR, exclusive OR operation, but the multiplication isn't really that useful to most computations. So lookups are really powerful here. Also, the new paradigm of using a lot of recursive composition. Another issue is that if you were trying to verify a binary field STARK on the EVM, that wouldn't be that efficient because the gas cost to do binary field operations are not amortized or subsidized in any way, unlike both modular arithmetic and elliptic curve operations.
+
+
+26:09: 
+
+
+But we now live in a world where people extensively use recursive composition. So you would take a STARK and compress it to a point where it can then be verified within elliptic curve SNARK, and that's what ends up on-chain. So that's another unlock for us. And the last one is this trend towards small fields, which I think a lot of people who aren't intimately familiar, misunderstand maybe what one of the key innovations here is. So, if you have a proof system like Plonky2 or what RISC Zero is doing that are using 32 or 64-bit fields, you think, okay, great, you went from 256 to 64, and that's sort of right, but actually for security, you're still using large fields of 128 or 192 bits, but they're using what's mathematically known as a field extension.
+
+
+27:03:
+
+
+So, you take a small field and then you construct a bigger field that's two or three or four times the size out of that. And really, this construction of doing STARK-ish protocols with small fields for your trace and extension fields for cryptographic security is exactly what we need. And this was not introduced in the original STARK paper. They... Actually Starkware did introduce it. My view is the first time I saw this appear was in the ETH STARK documentation but if we can construct Binius, we construct Binius from binary fields and their extensions, their field extensions. So you take the smallest field which is F2, meaning the field with 0 and 1 as the only elements, and you can construct an extension field which is 2 bits. And then you construct an extension of that which is 4 bits. You construct an extension of that which is 8 and another 16, 32, 64, 128. And when you get up to 128, that provides enough cryptographic security to instantiate the protocol.
+
+
+28:13: Branden Farmer:
+
+
+Well, not only that, right? Like to me, the big innovation is that we can sort of get around embedding overhead, right? Because like with Plonky2, we move to a 64-bit field, but actually a lot of the values that we care about don't take up 64 bits. We do a bit decomposition for certain things, but we're still, from the perspective of the commitment, we're still paying to commit the full 64 bits. And so, I think a really interesting part of Binius is that we have this flexibility where if you're working with bits, you only pay in some sense for F2 and same with a byte or whatever variable size value that you're committing to, which I think is really cool.
+
+
+28:57: Jim Posen:
+
+
+Yeah, absolutely. That's one of, if not, the key contribution from the research side here, is what we term embedding overhead, which is as Brendan said, when you take a small value that you need in your circuit representation and you have to pad it with a lot of zeros to fit the field that you're working in. And this is another one of the reasons that STARKs over binary fields didn't make as much sense a few years ago, which is if you have to pay for embedding overhead, there's a less pronounced difference if you're using a 32-bit binary field or a 32-bit prime field. You're still padding with a lot of zeros. However, because binary fields have this tower construction which gives you this sort of sequence of field extensions, and the fact that F2 is literally the smallest finite field, what we felt was important to capture was to design a proof system where you can do F2 operations, but not have to pay the embedding overhead, at least in the commitment phase, which is the most computationally expensive phase of producing the proof.
+
+
+30:09:
+
+
+And the original STARK protocol, it's very difficult without sum-check techniques to eliminate this embedding overhead, and this is a subtle point, but mathematically when you're producing a STARK, you do a lot of NTTs, Number Theoretic Transforms. And this actually serves two distinct purposes in the STARK protocol. One is that it's an error correcting code, formerly a Reed-Solomon code to do these NTTs, and to perform a low degree extension operation with them. But it serves another purpose, which is actually this is what's known as the Vanishing Argument. This is how you prove that some constraints hold over the entire trace, and you actually need to view the values as the evaluations of some polynomial over a large domain.
+
+
+30:57:
+
+
+And when you have a sum-check-based protocol like Binius, this decouples the purpose of the NTT from the Vanishing Argument in a way that you no longer need to pay this embedding overhead. And this was basically the big unlock that lets us reduce the bandwidth to and from the accelerator, reduce the overall system memory usage, and also do more efficient arithmetic. It's much more efficient to do arithmetic from elements of these small fields like the 8-bit binary field than a 32-bit binary field. So if you can use the absolute smallest field you need for any given part of your proof system, there's just a lot of efficiency advantages.
+
+
+31:40: Anna Rose 
+
+
+Would you call Binius now a STARK then or is it a SNARK still? Like I know that those definitions are kind of melding but, yeah, what kind of proving system is it?
+
+
+31:51: Jim Posen:
+
+
+It is a SNARK. The way I find it more useful to talk about elliptic curve SNARKs and SNARKs from linear codes and hash functions. This is what I'm referring to as STARK-ish protocols.
+
+
+32:07: Anna Rose 
+
+
+Okay.
+
+
+32:08: Jim Posen:
+
+
+So people think that the things that define STARKs is this transparency property, and the fact that they use FRI, which was a differentiator when the STARK paper was released, but now we have other transparent SNARKs. Technically, what I see is the differentiator, I mean STARK refers to a very specific construction, but it's actually the S in SNARK versus STARK, which is, for SNARK, it's succinctness, for STARK, it's scalability. And formally, what this means is that the entire circuit description of the virtual machine that your STARK is proving execution of, can be made public to the verifier, and there's no preprocessing step, whereas a SNARK has a pre-processing step. But in the systems that everyone uses, they're all SNARKs, there's a pre-processing step. So, I think it's more valuable to talk about elliptic curve SNARKs and STARK-ish protocols.
+
+
+33:03: Anna Rose 
+
+
+Okay, in this case though, does Binius have the pre-processing step then?
+
+
+33:07: Jim Posen:
+
+
+Yes.
+
+
+33:08: Anna Rose 
+
+
+Still? Okay.
+
+
+33:09: Jim Posen:
+
+
+If you didn't want to, you could make a version of Binius that's scalable and doesn't have pre-processing that would do sort of the same thing as STARK. So Binius supports an arithmetization that is similar to Plonk, and this is called a Plonkish arithmetization, where you have a trace matrix and you have global copy constraints, but Binius also supports the error arithmetization, which is what STARKs use. And there's trade-offs between them. The permutation argument that Plonk uses to enforce global copy constraints is expensive. So in some cases, if you are designing a virtual machine and you can avoid that, you might want to use the error arithmetization. So Binius supports both of them. If you use error arithmetization, you could produce something that's very similar to a STARK in its properties. I still think it's more useful to call it a STARK-ish protocol though.
+
+
+34:00: Anna Rose 
+
+
+Do we have to create like this sstnark? Like is there just a combo word? Or we just, I know that the S means something, it's two S's, so it's S-S-N-T-A-R-K, something like that.
+
+
+34:15: Jim Posen:
+
+
+It's more complicated than that too because according to certain academics succinct only means formally polylogarithmic verification time, and to other academics, it means sub-linear verification time. So, there's, I think, I just call everything a SNARK now, and you can get into the details of the particular properties that they have.
+
+
+34:40: Radi Cojbasic:
+
+
+We also hope that this discussion will be relevant one day. This will be known as binary proof and that's it.
+
+
+34:46: Anna Rose 
+
+
+Oh.
+
+
+34:48: Branden Farmer:
+
+
+That's cool.
+
+
+34:50: Anna Rose 
+
+
+So far we've talked about Binius and the fact that it uses all of these breakthroughs and incorporates it to create like a SNARK over binary fields. But why does this have anything to do with hardware? Like I know it earlier on you kind of laid the groundwork for why you need something different in hardware, but you created this system, I'm assuming it's efficient, it's fast... but, yeah, why does that make it easier to work with hardware?
+
+
+35:16: Jim Posen:
+
+
+So the reason is that binary field operations are far more efficient in hardware and this is something that we knew ahead of time. This is known within the cryptographic community. There's a long line of work in efficient elliptic curves over binary fields. The AES symmetric encryption scheme, which is a standard, uses binary fields and there's computational efficiency benefits. Throughout the process of developing Binius, which was on the research side, an effort with myself and our brilliant researcher, Ben Diamond, who did a lot of the theoretical work and is on the paper. But we also collaborated closely with the hardware team to prototype these underlying primitives throughout the process so that we knew we were on the right track. And that was really valuable because binary fields actually have many different ways of representing and computing with them. And so we had to both find the right form of binary fields to use. And that was very much informed by the hardware prototypes that Radi and his team were able to produce. So I'll let Radi talk about some of that process.
+
+
+36:28: Radi Cojbasic:
+
+
+Maybe just before I enter deeply into this, I will offer a little bit of retrospective from the tech team. This was retrospective for cryptography team. And essentially, on the hardware side, we are complaining, oh, it takes just too much time to ship this whole compute trace to the accelerator. What if we could go below, essentially, Goldilocks 64, which was Plonky2 and Plonky3 which is Mersenne31, and RISC Zero which is Baby Bear 31. What if we can go all the way to the minimum quantum of information, which is 1 bit? And the guys are like, yeah, they're binary fields. They're like, Okay, let's investigate binary fields.
+
+
+37:09:
+
+
+Now the guys go like, well, there's a very cool trick with binary fields, which is this packing which reduces the embedded overhead. Meaning if I have 1-bit CPU flag, such as overflow flag, I'm still embedding it into 64-bits in Plonky2 or 31-bit in Plonky3. And they're like, great. This is reducing overall memory out of box. But guess what? Binary fields are hardware arithmetic friendly, which is one of the reasons that SHA's AES are essentially implemented in this logic, if we can call this logic cryptography or symmetric cryptography. And then on the hardware side, all the alarms lights and we say, well, we can now use the hashers, which are essentially the hashers of the symmetric cryptography, which is a very more hardware friendly and very better in terms of throughput, performance and everything else.
+
+
+38:02: 
+
+
+So fundamental limitation comes from the fact that prime field arithmetics rely upon wide integer multiplication defined by the size of the field. And it's the wide multiplier that you simply have to do. And multipliers are being bottlenecks in a bunch of different compute clusters, hence in the prime field as well. Binary fields operate on vectors of it, and there is no so-called carry propagation. So binary fields operate on trivial logic gates and XOR. What this really means for us in terms of low-level silicon implementations, is that these modules can achieve much better efficiency, amount of compute for the same silicon area, but can also achieve much higher clock frequency, which is ability to run the pipeline or the speed of a certain module. So effectively for us, technologically, binary fields enable bunch of known innovations that we can pull back from 80s and 90s, which are originally running in different industries.
+
+
+39:05: Anna Rose 
+
+
+Interesting. Brendan, now I'm curious because they mentioned Plonky3, are you going to have to create a Plonky4? What's the difference now? Maybe you do need more space or something. I don't know.
+
+
+39:19: Branden Farmer:
+
+
+Well, no. I think that the sort of parlor trick for Plonky2 was, what if we had smaller fields? And you can't get smaller than characteristic 2 fields. And so I think for me, this might be sort of a terminal innovation in some sense. I think that eliminating the embedding overhead is really powerful. And I'm not the hardware person and I don't want to claim to have any insight there. But I think if what Radi is saying is correct and we can eliminate carry propagation and we see these huge efficiencies on FPGAs, then I think that there are some really long-term structural benefits to taking this approach. And so, I mean, certainly for Polygon, it's something that we're really, really interested in.
+
+
+40:05: Jim Posen:
+
+
+I mean, to build off, I think what Brendan was saying, like, I want to have some humility because there's new research every six months or every couple of months in this space. And certainly Binius in its current form is not the end product of the binary field movement. But I do think there's something very fundamental about binary fields and they have a history in cryptography, and I think a lot of the ideas that Binius uses do date back quite a while. So the sum-check protocol was this really seminal work from the early 90s that proved a really important complexity theory result. It's not like some new thing that came out of the ZK space. The binary field tower construction that we're using is also several decades old, and the tower field construction is pretty much exactly in my opinion what you need here. So using all computation that we do today is based on power of two data types.
+
+
+41:10:
+
+
+We have bytes, which are 8-bits, and we have 32-bit integers and 64-bit words and memory addresses. So I think there's something very fundamental about having data types at your arithmetization and your proof system level that are powers of two the way that Binius is able to achieve.
+
+
+41:30: Branden Farmer:
+
+
+Yeah, I think that that's right. I don't want to claim that we've reached the sort of end of history for SNARKs by any means. I think that there's still plenty of innovation that can happen for the PCS, but I do think in some sense, this movement towards smaller fields terminates with binary fields.
+
+
+41:48: Jim Posen:
+
+
+Yeah, we have a lot of conviction that this is the right way to do prover-efficient verifiable computing. And looking forward, what we're trying to do is basically educate and promote this technique and develop it and bring it into production and work with the teams that we consider to be experts in the areas where we're not experts, which are like arithmetization and building VMs and stuff. It's not always expressed this way, but basically proof systems and SNARKs and zero-knowledge proofs have basically a frontend and a backend, where your frontend is what translates the high-level logic that you're trying to express, like an Ethereum transaction, into what is essentially a matrix of field elements. And the backend takes this matrix of field elements and does a whole bunch of stuff and produces a proof.
+
+
+42:38:
+
+
+And we consider ourselves experts at proof system backends and understand the ins and outs of that. But the actual frontend engineering, how do you translate a program into this matrix of constraints and field elements, and how do you write the framework to do that is not as much of our domain, but there are other really stellar teams in the space that have been doing that for a while.
+
+
+43:05: Branden Farmer:
+
+
+I think one other thing that we haven't discussed is sort of the opening up of choice in terms of hash functions. I think that many practitioners in the space have varying levels of discomfort with some of the arithmetic hash functions in terms of security, in terms of performance. And so one thing that using binary fields enables is really efficient verification of symmetric hash functions like Keccak or Blake2, Blake3. And so maybe you could talk about the advantages of that from both the security perspective that we can use constructions that have been around for a very long time and then also from a hardware perspective.
+
+
+43:44: Jim Posen:
+
+
+Yeah, absolutely. It's unambiguous that the arithmetization-oriented hash functions, especially over prime fields, have computational disadvantages. But they're also new. I am not a symmetric cryptography expert. I don't do cryptanalysis on hash functions, so I sort of take the word of experts on this, but hash functions and symmetric crypto, in my opinion, is a bit of a dark art where you just trust in how battle-tested it is and the total value of the systems that these primitives have been protecting. So it's a lot more comfortable to use not only well understood hash function primitives, but also hash functions from very conservative assumptions.
+
+
+44:33:
+
+
+So, in our paper, we talk about the hash function Grøstl. This is one suggestion. We also think that Binius would be great at verifying programs that use SHA-2 and many of the other symmetric hash functions. But Grøstl is a hash function that's probably not familiar to most people. It actually has undergone a lot of cryptanalysis in the SHA-3 computation, but it is also based on what I consider to be very conservative symmetric primitives. So it uses the same underlying techniques as AES, which is a very standard encryption cipher. And that's fundamentally different from what Poseidon is doing, which has a sort of new type of S-Box and a new type of cryptanalysis. 
+
+
+45:16:
+
+
+So I think both the security and performance advantages we get by creating a proof system that's compatible with standard hash functions is one of the main benefits, like a really notable benefit of this approach. And it also is an unlock for applications that natively need to verify hash functions, which you don't have control over. So there's a whole effort in our industry to verify the Ethereum virtual machine in a way that's fully compatible with the Ethereum spec, which uses the Keccak-256 hash function. That is, among the things that we've learned from talking to teams, like this huge bottleneck that everyone's running into, that verifying Keccak is killing their performance. So, if we can solve one thing, we think that we have the best solution so far that we've seen to that problem.
+
+
+46:12:
+
+
+It's not just the binary field approach. We think that there's like real, just subtle advantages in the combination of binary fields and multi-linear protocols. We develop a number of techniques for efficiently verifying cyclic shifts like bit rotations, which is an operation that you need to do in Keccak and how to combine the fact that your binary field towers, your tower fields are powers of two with the fact that the hypercube structure of the trace also is powers of two, and there's some very cool synergies of those approaches.
+
+
+46:54: Anna Rose 
+
+
+On the topic of hash functions, I want to just do a quick shout out to another episode, and we'll add that as well, which is called, What's the Deal with Hash Functions with JP Aumasson, Dmitry, where they talk about how they battle test those hash functions. So yeah, we'll try to add that if somebody wants to check it out.
+
+
+47:11: Radi Cojbasic:
+
+
+On the hardware efficiency side of hashes, things are really dramatic. We compared Goldilocks 64 implementations of Poseidon and Baby Bear 31-bit implementations of Poseidon2 hash functions, which are currently sort of state of the art in the prime field domain. And we basically see that Grøstl outperforms these for 50 to 200 times in terms of hardware efficiency. And having said that, hasher is really important performance bottleneck of current STARK-ish protocols. This is a huge advantage really for binary type arithmetization of hash function.
+
+
+47:52: Anna Rose 
+
+
+So, Jim, you've sort of broken it down into these two components, the front and the backend, and this is more focused, I guess, on the backend side of things. What are the limitations of it? Or is that just not known yet because the frontend part of it hasn't really been discovered or explored?
+
+
+48:07: Jim Posen:
+
+
+So, this is a change to the backend. So, the way these interact is the backend supports particular capabilities that are exposed to the frontend. So, an example of this is like a lookup argument. This is fundamentally a backend protocol, but it exposes this feature of a lookup argument to the frontend arithmetization design. So, the Binius paper exposes a number of tools to the frontend. We have not fleshed out a frontend software library or SDK yet. We have several things sort of in progress there and are looking for, I think there will be a number of solutions from low complexity and suboptimal performance to high performance and takes a longer time to engineer.
+
+
+48:56: 
+
+
+But among the things that change, like the most notable thing that changes to the frontend is that, you have the ability to do binary field arithmetic and multiplication natively in your constraint system, but you don't have the ability to do modular multiplication natively in your constraint system, which is something that the current frontends and circuit designs take advantage of. So this will require a rewrite and a re-arithmetization of at least many of the low-level gadgets that are used in proof system front-ends today. Hopefully, some of the higher-level abstractions are able to be preserved.
+
+
+49:36:
+
+
+But another thing that's really cool and ours is the first work to do this, we think about constraint systems over a field. Like you write a constraint system over the Goldilocks field or over the Mersenne31 field or something. Binius exposes a whole family of fields that the person writing the constraint system is free to choose between. So you have the 1-bit field which is F2. So, if you need to do bit operations, that's what you would use. But you also have a field with 8 bits, which maps basically to bytes of data, which is really useful. So, if you wanted to do integer multiplication, and we show how to do integer multiplication fairly efficiently in our constraint system, and one of the ways you do this is you look at, how would I multiply one 8-bit unsigned integer with another 8-bit unsigned integer? Well, you can do that with a lookup argument.
+
+
+50:35:
+
+
+So you lookup the product of these two 8-bit unsigned integers and you get that result. And in your constraint system, you can do this not with just bits, but you can use the larger field elements that are 8-bits and 16-bits, which has efficiency advantages. So there's a number of places this is useful. So ours is the first proof system to expose sort of a whole family of data types in some sense, which gives people who are writing constraint systems more flexibility.
+
+
+51:08: Branden Farmer:
+
+
+I was just going to touch on... So I think for practitioners and developers in the space that are used to simulating 32-bit or 64-bit or 256-bit operations, this won't be that big a change because we sort of have to abstract away like how we simulate those operations anyway. But I think for developers that are used to writing in Circom or Noir, and they're just able to sort of adapt to their program to do multiplication and addition over a different modules, it's going to be like a pretty big change for them, right? Because now they suddenly have to use lookup arguments, whereas before they could use addition and multiplication natively in the finite field. I wonder if they look at this approach and are thinking like how do I use binary or and binary and to subtract from my balance calculation when I send the token or something. And so I wonder how you think... I don't think it's a problem at all, but I wonder how you think about that complexity.
+
+
+52:10: Jim Posen:
+
+
+Yeah, I think it's the answer to software engineering problems is modularity. So we give what in the paper, gadgets for doing integer addition and integer multiplication. And actually addition, we thought that we were going to use lookup arguments more extensively, but actually addition is just really simply defined in terms of bit operations. So we don't use lookups for addition. We have these efficient gadgets for sort of carry propagation and so on where we can efficiently do integer addition just over F2 in terms of bits. And it's very efficient. And so if you have that as a low level module in your frontend and you expose it as a library, then hopefully the higher levels of your logic that you're building on top of that don't need to change.
+
+
+53:02:
+
+
+I'd also note that we recognize in talking to some of the teams that especially as you move to smaller prime fields like 31-bit prime fields, the ability to use native multiplication gets more limited. So, if you're trying to multiply to 16-bit integers in a 31-bit prime field constraint system, you can't multiply 16-bit integers without overflow and without possibly mangling your values. So, you kind of already need to decompose it to maybe multiplication of 8-bit limbs, which is exactly what we get with a lookup argument in the binary field setting or in the Binius setting. So, I actually think that in the world we live in now, which has been moving towards smaller fields anyway, and more extensive use of lookups anyway, that basically the timing is right to just totally jump over to binary fields.
+
+
+54:01: Branden Farmer:
+
+
+Yeah, I think that's right. And I think that there's also the higher-level problem of reducing dependency on your choice of field. So, if you write a constraint system that's over like a 256-bit field and you want to suddenly take advantage of the efficiency gains of moving to a smaller field, you'd better hope that that program isn't deployed on-chain because you won't be able to seamlessly upgrade to use the new field. So I mean, personally, I think the approach makes a ton of sense. 
+
+
+54:32: Anna Rose 
+
+
+I have a question a little bit on the timing of this innovation and how maybe your team or other teams would develop it further. So the paper has come out now, just sort of something for the listener if they're not as familiar with the ZK industry like usually what happens is research and then obviously lots of implementations it doesn't hit mainnet or is not yet used in production for some time. Do you feel like now that this is out, are you gonna start creating an implementation that you're aiming to have be on mainnet or is this like, here's the first research. We're gonna continue to do research and then do an implementation.
+
+
+55:13: Jim Posen:
+
+
+I'm so glad you asked Anna. We released the paper a few weeks ago, and we also released our software library, which is a Rust implementation of Binius. It is not a complete system yet. We are progressing and going to be continuing to develop that to the first milestone, or the next milestone would be a full SNARK that can verify the Keccak hash function, which is going to be really demonstrative of the performance benefits that we're able to get with this approach. The state of the software implementation right now is that many of the low-level primitives, including the polynomial commitment scheme, are fully implemented and sum-check. Actually, the underlying arithmetic is fairly optimized and uses assembly and low-level Intel instructions set extensions to basically demonstrate the performance of low-level operations, which is what we needed for the performance evaluation of our paper. And we are going to continue developing the software library, hopefully be able to collaborate with other teams in the space who also want to help push this approach forward. Yeah, and then on the hardware side, Radi can mention what we're doing there.
+
+
+56:27: Radi Cojbasic:
+
+
+Right. So this is one of the proof system that we started hardware acceleration pretty early in the process. In particular, for Binius proof system, we identified three major compute bottlenecks, one of them being entity, second one being, hasher for leaf hashing and Merkle tree and third one to be the sum-check. We have already implemented the entity in the binary tower fields and Grøstl hasher as Jim mentioned for the Merkle tree leaf hashing. And the third part is currently under the process of architecting, and we are going to try to implement that as fast as possible. So, following the high performance Rust implementation, there will be a high performance hardware implementation, which will then eventually show the full potential of this proof system.
+
+
+57:14: Branden Farmer:
+
+
+I had a more general question and it sort of goes to our experience with Plonky2. And in developing Plonky2, there was a ton of uncertainty around whether the direction would end up being fruitful at all because we knew that previous attempts at recursive FRI had been super, super inefficient. So we were sort of working along this path and it was very speculative. We didn't know if it would pay off, and it did. And I wonder if there's a theme here where the conventional wisdom is you should leave these sort of theoretical R&D to academics or to sort of full-time researchers and you should sort of stay in your lane and focus on implementing hardware and software optimization. And I wonder if that is a really big mistake given this sample size of two. And if the sort of hardware and software co-design approach is really the right one. And it's a good thing for practitioners and developers in industry to really take a broader perspective and focus on fundamentally theoretical R&D and incorporate that into how they work. And I guess my long-winded question is, I wonder if there's a similar sense that you were taking on risk that was uncomfortable in the R&D phase. And if you agree that it's a good thing for theoretical R&D to extend beyond academics and full-time researchers into history.
+
+
+58:46: Jim Posen:
+
+
+I think the approach of having cryptography, engineering-oriented way of tackling proof systems is what has given us a lot of the performance benefits that we've seen in SNARKs over the past few years. Honestly, so Brendan and I met in spring of 2020 at a time when I was finishing grad school and was frankly pretty pessimistic on the prospects of us having efficient proof systems in the next five years or decade. And I was kind of completely proven wrong in basically the year or two years after that. The thing that changed was that you had a lot more practitioners understanding these ideas and just applying engineering principles to drive up performance. So we talk about hardware-software, co-design. I think Binius is also an example of algorithm, hardware-software co-design, right?
+
+
+59:40: 
+
+
+I mean, Radi talked about parallels to other industries in the beginning a little bit, but there's this anecdote from, I don't know if I'm allowed to talk about other podcasts, but on the Acquired Podcast, there was a really interesting anecdote from their Nvidia episodes where they talk about how Nvidia released the RIVA 128 in, I think, the late 1990s and they had to support Microsoft's 3D Acceleration API, Direct3D, and they released the RIVA 128, and it's got monstrous performance, but it supports a fraction, like a third of the feature set of the API, and it's just broken for the rest of it. And they go around and tell all the graphics developers, you didn't really need that extra functionality anyway, and so the developers just sort of bent around the limitations of the hardware because they needed that performance to get their games to be good.
+
+
+1:00:38:
+
+
+So my point isn't that hardware should dictate what happens at the algorithm level, but there needs to be a feedback loop between the algorithm design and the implementation, and that's where we're going to get really efficient proof systems that can deliver ZKML and Type 1 EVMs and verifiable software builds and sort of the long tail of things that we dream that verifiable computing can accomplish.
+
+
+1:01:04: Anna Rose 
+
+
+Wow.
+
+
+1:01:05: Radi Cojbasic:
+
+
+If I can add my portion of the answer, Brendan, I think what's really important to have cost-efficient and high-performance proofs. This is really required for this industry to lift off and tackle all of this that Jim just mentioned. And I would like to use another example, not from another podcast, but really like true story. Trust me, it happened. When we say networks today, we primarily think about Ethernet. The same way that when we talk about internet nobody really questions where it came from as a protocol, right? We are at this stage of protocol development where we are not sure which protocol is going to win. But I like this parallelism with early days network. So what happened in 1980 was introduction of Ethernet by a company called Xerox, which was a big name in traditional hardware industry. 
+
+
+1:01:53: 
+
+
+And pretty quickly, two or three years later, both Apple and IBM came with their own versions of networks, Local Area Networks, really the way to connect computers. One is AppleNet and the other one is Token-ring. And I bet that nobody ever discussed this in a podcast like this. What happens though, is that at conferences, these particular years, this was the key subject, like which network protocol is going to win and is going to enable computers to connect together. The reason Xerox won with Ethernet because they had a network interface card or Ethernet hardware available few years before Apple and IBM had their own and they reached a level of cost efficiency of this protocol to run and effectively became IEEE standard in 1985. My point here is that when situation is a little bit volatile and liquid in terms of protocols and there is a lot of different academic prospects on which one is going to win in the long term, my advice is to look at the compute price efficiency and that's likely the protocol that may win in the long run.
+
+
+1:03:07: Anna Rose 
+
+
+So like my last question was around what real-world impact something like this could have, and Jim, I think, you did share that. You sort of said, this could enable like the ZKML use cases and this provable compute in the ways that we want. But on the sort of shorter term, is this proving system likely to be the basis of a zkEVM? Or do we kind of imagine these types of innovations of eventually entering into the designs of systems that users of maybe blockchain would see?
+
+
+1:03:41: Jim Posen:
+
+
+Yeah. I'm, as I've said, fully convinced that this is the future of prover efficient verifiable computing. And we would have liked to make more progress on the software implementation but felt like it was really important to just get these ideas out to the community as soon as they were in a state to be presented so that we could start making progress together on implementing this vision. And I think Binius is a really natural platform to develop a lot of the zkEVM efforts that are being deployed on L2s and hopefully, we can see more momentum from lots of players in the space to help push this technology forward.
+
+
+1:04:19: Anna Rose 
+
+
+I have a sort of very different question. I don't know that this is something you guys were thinking about, but there has been some chatter about the SNARK marketplaces, these like places where people would be generating SNARKs for other systems. If you're in the hardware intersection, is that something you are thinking of as well, like potentially creating the software-hardware combination for these types of things, or is that completely separate from what you guys think about?
+
+
+1:04:48: Radi Cojbasic:
+
+
+Yes, I think this is a pretty good question, Anna. So first of all, one of the contributions that we are trying to bring to the ecosystem is actually contributing to the decentralized proving by private cloud. If you look at the proving right now, most of the mainnets are running their centralized proving for this stage of the operation, but running pretty much from the same public cloud. So we are actually helping decentralization by bringing private cloud in the space. And in the short term, we are going to be working with professionals as we can put this way to bring this technology into the zero-knowledge stacks, which are already designed for this in a sense to be backend for already existing frontends. But down the road we are evaluating different platforms, how we can make this technology wider accessible, and I guess Snarketplace are one of the options that we are evaluating.
+
+
+1:05:41: Anna Rose 
+
+
+What do you think of this, Brendan?
+
+
+1:05:42: Branden Farmer:
+
+
+I think that what Radi said is completely right, and there will be providers of hardware accelerated proving for the protocols that we use today on L2 and otherwise. And I don't think that that's controversial. I think that there will have to be some recognition of this tension between decentralized proving and cost. Because if you want decentralized proving, then you also want a liveness guarantee. You want some assurance that your proof will actually be generated. What that ends up doing is it introduces redundancy into work or your proofing setup. Instead of having one party that you can depend on to generate proofs, suddenly you need to have four parties that are generating proof. And the network needs to compensate the provers for actually doing this, regardless of whether or not they end up providing the proof because in order for them to continue to operate, they need to have some sort of financial incentive. And so I think that decentralization is great. I think that there just needs to be some sort of, we need to sort of navigate the cost versus decentralization trade-off and come to a place where it sort of makes sense rather than blindly pushing ahead to decentralization.
+
+
+1:06:57: Anna Rose 
+
+
+What is it right now for a lot of zkVMs? Is it just like a centralized proof generation from the team that had developed the thing?
+
+
+1:07:04: Branden Farmer:
+
+
+Yeah. So certain zkVMs, I believe, have backup mechanisms. So if the prover goes offline for some period of time, then anyone can submit a proof. And so there's a decentralized mechanism, but right now there's only one party that produces the proof. And again, I think at a superficial level, people look at that and they say, oh, that's terrible.
+
+
+1:07:28: Anna Rose 
+
+
+That's bad.
+
+
+1:07:28: Branden Farmer:
+
+
+What are we even doing in crypto if we don't have decentralization? And it's like, my response to that would be decentralization for what? Decentralization is an instrumental goal. It's a means to an end. And I think for certain applications, having decentralized provers is really important. For others, I think we need to interrogate what the guarantee is that it's meant to be provided.
+
+
+1:07:52: Anna Rose 
+
+
+Is the proof generator... This is sort of dumb, but is it the same role as the sequencer in a way?
+
+
+1:07:57: Branden Farmer:
+
+
+Not necessarily.
+
+
+1:07:58: Anna Rose 
+
+
+Or is that a separate thing?
+
+
+1:07:59: Branden Farmer:
+
+
+Yeah, so right now, it's generally, I think for every single ZK rollout, the sequencer is the same as the prover, but it need not be that way.
+
+
+1:08:08: Anna Rose 
+
+
+Well, I want to say thank you, Radi and Jim, for coming on the show and sharing with us Ulvetanna, the kind of reason for Binius, the innovations that Binius brings. Yeah, thank you so much for this conversation.
+
+
+1:08:22: Jim Posen:
+
+
+Thank you, Anna. This was a pleasure.
+
+
+1:08:24: Radi Cojbasic:
+
+
+Thank you, Anna, and greetings to all of your listeners.
+
+
+1:08:27: Anna Rose 
+
+
+And Brendan, thanks for coming on and co-hosting this one with me.
+
+
+1:08:32 Branden Farmer:
+
+
+Yeah, thanks for having me, Anna.
+
+
+1:08:33: Anna Rose 
+
+
+All right, so I want to say thank you to the podcast team, Henrik, Rachel and Tanya, and to our listeners. Thanks for listening.

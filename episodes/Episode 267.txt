@@ -1,0 +1,372 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+This week we continue on the topic of ZK hardware through our interviews with participants in the recent ZPrize Hardware Acceleration Competition. My co-host for these interviews was Alex Pruden, CEO of Aleo, and the creator of the ZPrize Initiative. We aired part one of our two-parter last week, and I do recommend listening to that one for context before you jump into this one. In that episode, we heard from Luke from Polychain, one of the architects for the prizes, as well as the Hardcaml team who competed and won in a few of the ZPrize categories. In this episode, we hear from the team at Xilinx, which is part of AMD. Our guests Swati and Hamid offer us insights from the perspective of an FPGA manufacturer and for our final interview, we chat with Niall Emmart, also a competitor in the ZPrize competition.
+
+(01:11):
+Niall competed and won in the MSM for GPUs and MSM for Wasm competitions. It's been really interesting to have a look at the hardware level of the SNARK stack and get to meet those folks who specialize in this. Through these interviews, I've learned all about areas of optimization, specifically the underlying math and engineering techniques our guests presented, as well as the ways in which we might see hardware acceleration complement all the work that's happening on the protocol and software side, something we cover quite heavily on the show. I also just think ZPrize is a really cool initiative for the community, and I hope we get to see more things like this in the future. Now, before we kick off the episode, I do want to direct you to the ZK Jobs board. There you'll find jobs from top teams working in ZK. If you're looking for your next opportunity, be sure to check it out. Alternatively, if your team looking for great talent, be sure to post your job on the ZK Jobs board today. I've added the link in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (02:06):
+Today's episode is sponsored by Ingonyama. Ingonyama's mission is to improve the performance of Zero-Knowledge Provers by designing hardware optimized for ZK computation. And now, they are proud to introduce their latest project, ICICLE. ICICLE is an open-source CUDA library that enables GPUs to accelerate Zero Knowledge primitives like MSM, NTT, and ECNTT. Using ICICLE, Ingonyama built a GPU version of Danksharding builder for the Ethereum foundation, now also open source.The Ingonyama team is excited to share their toolbox with developers, and committed to maintaining and improving ICICLE for as long as it's useful to the community. As always, the emphasis remains a superior dev experience and ease of use. For ideas and discussion around the code, visit the ICICLE channel in the Ingonyama discord server, where team members and fellow developers await. We have added the link in the shownotes. So thank you again Ingonyama. And now here's our episode.
+
+Anna Rose (03:02):
+So we are here with Swati and Hamid who lead product management for FinTech and blockchain in the Adaptive Embedded Computing group, which is part of AMD. Welcome to the show.
+
+Hamid (03:13):
+Thank you, Anna.
+
+Swati (03:14):
+Thanks, Anna.
+
+Anna Rose (03:15):
+I would love to hear a little bit about the two of you, Hamid. Maybe we can start with you. What got you interested in this field in general?
+
+Hamid (03:22):
+Sure. It was about maybe 3 or 4 years ago, about 2018, early 2019 which is pretty late if you think about the space because the whole blockchain revolution has started for almost 10 years now. But for the most part, I kind of didn't pay much attention to it until somewhat by accident. I started reading some of the white papers at my previous job, and I was totally mesmerized. It was, you know, the mass was beautiful, but also the concept really was so revolutionary. I realized that for generations, for as long as humans have existed for every transaction we always needed, you know, a third party, whether we get married or we buy a house or we go to a bank, and now we don't need that, we can eliminate trust. So, long story short, I was just talking to everybody about it and then one of the friends alerted me to an opportunity at Xilinx that's now acquired by AMD about this new practice they're creating to look at the blockchain space more closely and I jumped on it and joined Xilinx. And ever since we have been involved with different kind of blockchain projects and I'm pretty excited about it.
+
+Anna Rose (04:30):
+Nice. Had you been working in hardware before? Like what were you actually, you know, before you got interested in the blockchain part of things, what were you doing?
+
+Hamid (04:39):
+Yeah, no, absolutely. My, my own background is hardware. I did my PhD at the University of Waterloo, and then I worked as a hardware developer engineer for a number of years and then on my previous job I was with Marvell Semiconductor and I was in charge of designing products for MVH and networking autonomous cars, which was a pretty interesting area as well. So this was probably the only thing that could have separated me from that job. But yeah, I have been in the hardware space overall, I would say for 10, 15 years.
+
+Anna Rose (05:06):
+Cool. Swati, I'd like to hear a little bit about you as well. What first got you interested in this field?
+
+Swati (05:12):
+Yeah, so my background is in engineering also. I was an engineering manager at Xilinx when I enrolled myself in a part-time MBA program at UC Berkeley and it was the student activities there and the courses that were offered there, that got me intrigued in the space at first and fortunately for me AMD Xilinx became interested in that space around the same time and a group was being formed, which was going to explore the space. So it became clear to me that this group was going to be working on some of the most interesting and impactful problems at the company, in my opinion at least. So I expressed an interest in joining and that's how I became part of the group.
+
+Anna Rose (05:47):
+Cool. So you had already been working there in hardware.
+
+Swati (05:50):
+That's right.
+
+Anna Rose (05:51):
+What was it about hardware that got you excited in the first place? Like why hardware?
+
+Swati (05:56):
+I think it was just the most fundamental piece of innovation that you can have for an application and I think that's why FPGA has attracted me as well is because you can really optimize things at the absolute bit level, you know, so at the lowest level. So I think that's what got me interested in the space.
+
+Anna Rose (06:15):
+Cool.
+
+Alex Pruden (06:16):
+Can you guys talk a little bit about Xilinx and how the company came to be? I know you mentioned that, you know, it's now part of AMD, but you know, maybe how that process worked and can you just give us a little bit of background about the company?
+
+Hamid (06:27):
+Sure. So Xilinx has been founded for a few decades now and until it was acquired by AMD in, I think it was February of last year officially, so the focus of the company has been on FPGAs, basically it's field programmable gate array devices and the main characteristics of FPGAs are you can design any circuit you want at the hardware level, at the gate level and implement it and then if you decide to change your hardware, you can go in and reprogram your hardware, which is, you know, very different compared to how you program a CPU or, you know, a GPU and also it's very different how you do it, an ASIC I would say it's probably closer to an ASIC with the big difference being that when you are designing an ASIC you are basically stamping a hardware with a certain characteristics.
+
+(07:17):
+And in the FPGA you can keep doing that over and over again, almost like creating a sketch and then changing it and in that sense it's pretty powerful because you can have really detailed optimization at the bit level, at the gate level and also your memory hierarchy, how you talk to memory, how these different pieces talk to each other really optimized thing and then 10 minutes later you can go and change it and then have a totally new hardware. Now if you compare that with CPU and GPUs so these are fixed hardware architectures and here you have all the flexibility you want. Obviously all the benefits come with cost as well. So for one thing, it's relatively harder to program naturally because you have to understand the hardware description languages, like very large in VHDL.
+
+(08:05):
+and also in terms of the silicon itself, if you compare with an ASIC, you are going to be be needing much more silicon area because at all that flexibility come at the cost. So for a lot of, you know, I guess startups specifically that are trying to come up with an idea and they think it's going to be be an excellent idea to create a chip with people typically install on an FPGA and design their circuit to make sure it does what it says it does and then after a certain time you can go and kind of create your own piece of silicon basically.
+
+Anna Rose (08:38):
+So when you say sort of like you fixed the, I guess it's the algorithm, like you've made your decision, is that the point where you would then turn it into an ASIC? Is that the sort of creating the fixed version?
+
+Hamid (08:50):
+So think about creating the circuit. If you want to create a circuit, you have a state machine, you have a massive true stable, and then you are going to be implement that in terms of gates, you are going to be have a bunch of ANDs and ORs and that type of thing and that creates a circuit that's an ASIC. You go in, you go to a foundry, you say these are the gates I want, these are how they're connected. They how they're connected to the memory and then you go and you have a mask, and you go create a circuit, and that comes back and it has a fixed architecture. So after the circuit comes back, you cannot change the configurations. It's exactly like you have a stamped something, you cannot change it. Now with FPGA, all of that is configurable.
+
+(09:31):
+So each gate you can decide what the function of that gate is. So if you think about it, we have a lot of tiles and each tile is a flexible gate. So you decide what the content of that true stable is, and that's how you define your circuit, your estate machine and then if you realize that you made a mistake or the protocol is changed, or you want to make a change, you can go in and change the definition of each of those gates and now you have a whole new circuit and there are lot of different pieces of resources in an FPGA. And Swati maybe you can give a little bit of more in depth in terms of what are the resources in an FPGA.
+
+Swati (10:04):
+Yeah, absolutely and I was thinking about the question that Anna asked about, you know, application specific integrated circuits. In general, once standardization occurs in a new area of research or a new technology, we typically see ASICs emerge. So ASICs optimized for a very specific application they can run that at higher speeds, at lower power. So once we see standardization in areas like AI, for instance we saw FPGAs used for a while initially, and then ASICs emerged and we see that typically with new technology, FPGAs tend to be used when technology is changing rapidly and protocols are changing and it doesn't make sense yet to invest a lot of money and time into building an application-specific integrated circuit that's optimized for a very specific protocol and as Hamid mentioned, FPGAs consist of reconfigurable blocks, but they also have some fixed blocks such as DSPs or digital signal processors, which are optimized for specific functions such as multiplication, for instance, which may be very expensive to do with the configurable logic in the FPGA, other blocks such as protocols like PCIe, which are commonly used, are also hardened within the current generations of FPGAs that we have today.
+
+Anna Rose (11:24):
+Was AMD not doing that before? Why did it want to buy the company?
+
+Hamid (11:30):
+Yeah. So basically if you think about the FPGA market, it's a very specialized market. The two companies that dominated the FPGA market was one was Altera that was acquired by Intel, and the other one was Xilinx that was acquired by AMD. So now AMD and Intel are basically dominating, I would say, 85 to 90% of the FPGA market. The nature of this hardware, I would say is fairly complex, providing all this flexibility comes with a lot of complexity as well. So it's not a trivial task to create an FPGA and very few companies in the world have that expertise.
+
+Alex Pruden (12:05):
+Can you talk a little bit about, you know, so we talked about FPGAs and we've emphasized flexibility a lot, but you know, many people may be kind of ignorant about what that means, you know, because they're thinking to themselves, well, I'm listening to this podcast and my laptop has a CPU, which is of course also very flexible, right? So can you guys give us a sense for and this could be for blockchain applications or just for general applications, like what kind of performance or cost benefits do you see when you introduce an FPGA over just using a run of the mill CPU?
+
+Hamid (12:38):
+So if you think about the main question that people commonly ask, you know, CPUs versus GPUs versus FPGAs, and everybody has a CPU and GPU at home, and I would dare to say 99% don't have an FPGA at home. And hopefully we can change that one day, but it comes very natural to them and the question is what's different? If you think about CPU, that's fairly easy. CPUs typically perform sequentially, so for a lot of tasks that you have to finish one task and then go to the next, and for a lot of tasks that really need massive parallelization, then that's not going to be be a good choice, right? So people understand, okay I have a CPU you know, I need to use GPU if I want to have a parallel, you know, problem that requires a lot of parallel computation and we are going to be use a GPU.
+
+(13:25):
+So what's the difference between GPU and FPGA? So if you look at GPUs, yes, you get massive parallel compute power, which is great and frankly solves a lot of problems but the architecture itself is again, fixed. So each of the cores are fixed, the memory hierarchy is fixed. So you have to work within that boundaries, and that poses a certain limitations. Also, another thing to keep in mind, especially when it comes to hardware acceleration, when you're thinking about the system and you want to accelerate it, sometimes you see that with GPU, for example, you can accelerate a specific function, but then how you move the data and you create the whole system, it creates other bottlenecks. And as a result, the overall system doesn't have as much performance as much benefit and we have seen this time and time again where people, you know say, oh, I found a solution, this one function, I can do it a hundred times faster on a GPU.
+
+(14:22):
+And they do it, but then they create the whole system, and the whole system is not that much faster and kind of defeats the purpose. Now with FPGAs, you have such a control in terms of telling the hardware at each gate what to do and how these gates are connected, that you can create a whole system on an FPGA and optimize the whole system. Also, because you don't have fixed architecture, you can decide what's your bit widths, how you talk to memory, how you move it, it gives you really a huge amount of power to customize but obviously with that power comes responsibility as well because you see that we have seen teams again implement the same design on the same FPGA and one solution is a hundred times faster because you have all the flexibility in the world, you can kind of shoot yourself in the foot, but you can also be very smart in terms of how you design something.
+
+(15:17):
+So I would say that's an area that is ripe for innovation. You know, specifically when it comes to zero knowledge, we are engaged with a huge number of startups that are trying to use hardware acceleration and then we see sometimes some startups try to do something, but not the right way and then the choice of FPGA itself also is important because as Swati said each FPGA has a slightly different combination of resources and how you bring all of that to bear makes a big impact in terms of what's your final outcome.
+
+Alex Pruden (15:49):
+Yeah, that's, I think that's a really important point and that was a great explanation about FPGAs, GPUs, and CPUs. And one thing on that last point that you just mentioned, I wanted to call out was, you know, it can also matter whether or not you're accessing the GPU, whether you're hosting the FPGA yourself or whether you're accessing it as part of a cloud instance. So many people probably know that Amazon, or maybe some people may know that Amazon hosts at FPGA, so you can get access to it via their cloud, via AWS. But you guys, for the purposes of ZPrize actually gave the competitors the physical hardware, the C1100 cards, I believe that that Xilinx manufacturers and sell for the individual competitors to use. So removed, at least for the purposes of ZPrize, you know, that extra variable of needing to consider, hey, what limitations are being introduced by a cloud provider? So it all goes back to the point that you were making is, you know, you can zoom in on one single part of the problem and consider it from a very low level, but if you don't consider the whole end-to-end system, well then it may just become irrelevant. So yeah, I think that was, that was a great point.
+
+Anna Rose (16:55):
+I know you've already mentioned this quickly, but I was hoping you could actually tell me what do each of these acronyms actually stand for when you mention FPGAs, ASICs, CPU, like all of them. I think it would be helpful for our audience.
+
+Swati (17:10):
+Absolutely. FPGA stand for field programmable gate array. So as the name suggests, it's a silicon device that's programmable by a user in the field to the desired functionality, CPU stands for central processing unit and I don't think that needs an explanation. GPU stands for graphics processing unit and ASICs are application specific integrated circuits. So it's a silicon device that does one thing very well. So it's optimized to a very specific application.
+
+Anna Rose (17:41):
+Do youu think you could actually put these on a spectrum from one side to another? Like is that how you often think of it?
+
+Hamid (17:47):
+To some extent, if you think this, I would say GPUs and FPGAs are for the most part can be on one side, CPUs on the other side but again, you know, if you think about fixed architectures, both CPUs and GPUs have fixed architecture. FPGAs don't have a fixed architecture, but for GPU and FPGA, both of them are good at parallel processing.
+
+Anna Rose (18:09):
+Okay.
+
+Hamid (18:09):
+So I guess there are some similarities and some differences.
+
+Anna Rose (18:12):
+Got it.
+
+Swati (18:13):
+One of the ways that I think about this is also access and ease of use. So most people have access to CPUs and they have access to SDKs and compilers and ways to program on a CPU that they're familiar with. So that's probably the easiest way to start. Once they hit bottlenecks with the CPU, typically the next choice is GPUs and that's because there's easier access to GPUs as well. Since they've been used in rendering and graphics processing for a while now, the companies that are involved in providing GPUs have done a very good job of making the SDKs available and open and develop the community around that. So again, the challenge of developing an application for a GPU tends to be a little bit easier than moving on to FPGAs once you hit a bottle and with GPUs, you can optimize further on an FPGA
+
+(19:02):
+FPGAs are relatively easy to access now, and AMD Xilinx have been doing quite a bit. At least that's one of the goals of our team, is to make FPGAs accessible and we've launched, you know, certain products that are available on our website and, you know, can be purchased, for instance. So access is is relatively easier now. In terms of the tool chain, it used to be more difficult to program FPGAs as you had to be well-versed in a hardware description language an HDL, that's no longer the case. So now you could still write a program in C++ and have that be implemented as hardware. You probably wouldn't see the same level of performance with that and optimizations with that but it's possible to start there and then finally, I think at the end of the spectrum are applications specific integrated circuit. So when you can determine exactly what you'd like to optimize and bring that to market in a way that's competitive and you know, you want to create the best solution that's out there in terms of speed, power, efficiency, cost, then ASICs might be the way to go.
+
+Anna Rose (20:06):
+Cool.
+
+Alex Pruden (20:07):
+So we, we saw this in Bitcoin. I mean, Bitcoin mining, for example, is a relatively simple application, and you sort of saw this linear development, right, with like, okay, you know, Satoshi is mining onto CPU, people mine on GPUs. There was actually an error where people used FPGAs for Bitcoin mining but that very quickly gave way to ASICs. Now as we see the emergence of zero knowledge cryptography or just, you know, cryptographic applications in general and the need for greater degrees of specialization, people are, again, turning to FPGAs similarly, like what we saw on Bitcoin mining. Now this is obviously much more complex than something like simple Bitcoin mining, but do you think FPGAs are just inevitably an intermediate step in the development of an ASIC or do you kind of think of them as being, having more longevity in terms of zero knowledge applications versus something like Bitcoin mining
+
+Hamid (20:58):
+That that's the general life cycle of an FPGA as you mentioned about the Bitcoin, and we see that in a lot of different applications where people have an idea or there is a protocol and they want to accelerate the start an FPGA, and eventually when the dust settles, they transition to an ASIC. And we believe that in the case of zero knowledge, we are going to be have similar pattern. The main question here is what does intermediate mean, right? Especially as we move to a smaller process nodes, creating an ASIC is becoming more costly. Say if you want to create an ASIC in the 3 nanometer node or, you know, even a 5 nanometer node, you are going to be be spending tens of millions of dollars to create an ASIC and obviously if you make any mistakes or the choice of protocol changes or any of these hard wiring should be done differently, you have to do another ASIC.
+
+(21:51):
+So you have to go and spend another tens of millions of dollars. Now instead of doing that, you can, you know, stay on an FPGA until the industry matures, and then be 99% sure that if you create an ASIC that's going to be last for a few years, then you can transition to an ASIC. What we have seen is specifically as it relates to zero knowledge early on we saw some of the startups talking to us wanted to jump into an ASIC, and some of them still do, but they realize that even some of them, after looking at the space and how every day there is a new protocol and there is another optimization that jumping to an ASIC to optimize a function or, you know, whatever they perceive as to be the main building blocks of ZK might not end up being the blocks that matter.
+
+(22:36):
+And they might end up with, you know, tens of hundreds of millions of dollars of investment that, you know, with a piece of hardware that does nothing basically for them. So, the intermediate, is it going to be be 5 years or 3 years? We think it's going to be be fairly long before people can actually come with ASICs that's going to be have longevity and that's the pitfall that we advise a lot of startups that get engaged with us to really make sure they know at what point they want to make that massive investment, they go to their VCs and they give certain promises and we just warn them that, just be mindful of all these pitfalls of kind of jumping too quickly into an ASIC.
+
+Alex Pruden (23:13):
+Well, and I think listeners of this show would, you know, can probably pick up on the speed at which development happens in zero knowledge. I mean, a few years ago, you know, we talked about relatively simple proof systems that weren't very flexible and now we, you know, there's like a menagerie of different proof systems of PLONK and Marlin and Nova and FRI and STARKs, you know, and it's just, every year there's like more and more of these that come out and to your point, you know, once you invest in basically hard wiring an ASIC, it can never be changed, right? And so you either have to throw that away and start over, or, you know, if you used something like an FPGA for example, you could, you know, it gets some optimization benefits without having to invest overly upfront.
+
+Hamid (23:53):
+Yeah. Even if you think about if you want to do an ASIC to create certain libraries or functions, you know, you think about how people are using KZG and now people talk about Fry and how these need different underlying functions even. So again, you know, not to kind of overemphasize the point, but people have to be extremely cautious when they think about an ASIC because frankly we have seen startups raise money and fail because they were overtly ambitious in terms of what they think they can be achieved and frankly, it might make sense to develop your whole system and get to some critical mass. The way I talk to the startups, I advise them is, what's your business model? Don't focus on margin. Because the main reason frankly, to go from an FPGA to an ASIC is the chip itself is going to cost less.
+
+(24:42):
+Probably you can get similar to same level of power efficiency and by the way, that's another advantage of FPGAs over GPUs because you can really design your architecture, you can make it as per efficient as an ASIC almost, you know, I would say 90%. So don't worry about the margin, focus on proving your business model and then get to some critical mass with FPGAs and then if you can prove that and you have customers or you have business models or you are going to be do proof as a service or you know, go to market, go to market first, make sure people are paying for what you are offering, and then let's talk about raising money and you know, making that a hundred million dollar investment to do an ASIC
+
+Anna Rose (25:21):
+Makes sense. I have sort of a last question that brings us back to the ZPrize topic, but yeah, what was your take of ZPrize and why did you decide to support it actually?
+
+Hamid (25:32):
+So we have a huge tradition of supporting the startup ecosystem. I think that's a Xilinx tradition. We have been a big supporter of Hackster.io so this is something we do kind of on a regular basis on areas that we think has great promise and when we formed the group and, you know, Swati did a lot of research on this, we identified zero knowledge as one of the key enablers of blockchain technology. We believe that this could really finally help blockchain to break out of kind its shell and, you know, scale and really get mass adopted, because a lot of applications really require this underlying technology. So that's, you know, we think it's going to be be very disruptive and at the same time it's very compute intense, which selfishly is good for us so naturally we said, okay, we want to support the ecosystem.
+
+Anna Rose (26:23):
+Yeah.
+
+Hamid (26:24):
+And we had Rami actually from DZK approached us and said, hey, we have this competition that if you guys want to support the community, you can participate, provide hardware, and also we want to get people to get using FPGAs more, as you said, you know, everybody has a CPU and GPU at home, people usually don't have FPGAs. So that was a opportunity to kind of introduce FPGAs to the community and I have to say we were pretty surprised in terms of attendance as it was more than what we expected. The interest was more than we expected and even some of the traditional guys that we deal with in, you know, in the regular financial services, they also participated, as you guys know and, and we think this is something that probably we are going to be continue in terms of supporting this ecosystem and we are very excited about it.
+
+Anna Rose (27:10):
+Cool.
+
+Alex Pruden (27:11):
+I know you did a lot of research in different future areas of high potential within blockchain and Web3 and ZK was one of the areas. Can you just talk a little bit more about some of the applications in Web3 that you, you or AMD's Xilinx have looked at where FPGAs could be applied?
+
+Hamid (27:27):
+So Alex, as you mentioned initially FPGAs were used to to mine Bitcoin in early days and which kind of was short lived and then later on, naturally people start using FPGAs to mine Ethereum, anything that we call like memory card, that kind of Proof-of-work and when our team was formed, that was our main task because our management saw that we are selling a bunch of FPGAs and they were not sure why and we started that and it turned out that FPGAs can be very efficient in terms of mining Ethereum, especially toward the end of, I guess, Ethereum mining life before it went to proof of stake. A lot of miners had some constraints in terms of how much power they had access to. So say you had the mining operations in, you know, some kind of far reaching location and they had access to some fixed amount of hydro and then they wanted to increase capacity, we realized that we FPGAs, we could have mined the same thing at a 10%, maybe like a fraction of the power, maybe 25% of the power, and then they could increase their capacity board four times.
+
+(28:33):
+So that became an interest and obviously as mining kind of went away for Ethereum and proof of stake, we had started looking at different areas. So one was zero knowledge that we realized that it's going to be be very impactful, but beyond that another area was distributed as storage. So we are engaged with Protocol Labs and Filecoin to see how we can accelerate that protocol as well. Interesting enough a big piece of Filecoin as well is zero knowledge in a way. It's kind of very similar algorithm that they have in the, in the end of their protocol. So that was another area and then another area that we did some research on was more on the enterprise side. So obviously being a big company there is a lot of pressure to focus on enterprise and we did focus on enterprise.
+
+(29:18):
+We have some work published on Hyperledger Fabric as well. But I think looking at all these areas I think the issue with some of the more enterprise type blockchains is it's going to, it loses some of its blockchain characteristics that make blockchain so great. So we take some of those away and it becomes an enterprise. So we realize that at the end of the day even for enterprise applications probably makes sense if the security comes from Layer 1, which is a more public blockchain, and then you can build enterprise applications on top of that, which incidentally to be able to do that, you need certain level of privacy and zero knowledge again, comes into play. So that's why our team is very bullish on zero knowledge as an enabler of a lot of these technologies, even when it comes to an enterprise application.
+
+Anna Rose (30:07):
+I want to say thank you for coming on the show and sharing with us, you know, all about FPGAs giving us real insight into how those work, where they stand and how they can be used in ZK stuff.
+
+Hamid (30:17):
+Thank you Anna. I appreciate for having us. We had great conversation.
+
+Swati (30:20):
+Thanks Anna for having us.
+
+Alex Pruden (30:22):
+Yeah. Really enjoyed the conversation. Thank you for being here. And thank you for your support of not only the ZPrize, but the zero knowledge ecosystem.
+
+Anna Rose (30:32):
+Now we're here with Niall Emmart, president of YrrID software. Welcome Niall.
+
+Niall (30:36):
+Hello. Thank you.
+
+Anna Rose (30:38):
+Niall, what was your path to hardware? What got you started in this field?
+
+Niall (30:43):
+I guess it goes back to my PhD, which I started in about 2007. I had been interested in big number arithmetic and I had been running a software company for a number of years and decided to go back to grad school to do a PhD and so this is one of the things that I had found interesting and I ran into an old professor of mine and he said, yeah, why don't you come and do a PhD with me? So we started applying for grants with the National Science Foundation, the NSF and we got awarded two grants actually and that was the beginning of my work. We did big number arithmetic on GPUs, which is the same sort of computations that are used in the ZPrize.
+
+Anna Rose (31:28):
+Cool. So that's maybe a bit different from the other interviews that we've done so far, which is like, you're coming right from the GPU world. Have you ever touched FPGAs or have you only ever worked with the GPUs?
+
+Niall (31:42):
+I have only been on the software side doing GPUs and CPUs, so I have no hard experience with FPGAs. I mean, I have a bit of background from things I've read and things like that but no actual experience.
+
+Anna Rose (31:57):
+A question I have there is like, what is it to work on GPUs then, like in the GPU world, like GPUs are fixed, you're not changing the hardware directly or anything like that. If you are directly interfacing the GPU, like what are you doing? Like if you're trying to optimize something, how do you actually optimize it?
+
+Niall (32:19):
+Yeah, that's an interesting question. So it, it is a completely different world from FPGAs. GPU's are more of a software environment, so you can think of it as kind of like having lots and lots of CPU cores that you can do something incredibly parallel on.
+
+Anna Rose (32:36):
+Okay.
+
+Niall (32:36):
+So there are only certain kinds of software that runs well in a GPU and fortunately this is, this is one of the types of things the GPU tends to be like a really high throughput engine. So it's not very good at at latency, it's much better at throughput.
+
+Alex Pruden (32:54):
+Your PhD work was in the, you know, in the area of big number arithmetic and can you kind of talk about how GPUs and specifically this high or this, you know, high throughput platform of a GPU specifically applies to or how you applied it in the research for these algorithms to do big number arithmetic more, you know, faster or more performantly?
+
+Niall (33:18):
+So I think the main reason that GPUs are so good at this is that the GPUs are originally of course used for graphics and one of the main operations that graphics has to do is a lot of these floating point operations for 3D manipulations of scenes. But it turns out that the same hardware that is being used for floating point operations can be used for integer arithmetic. So the same actual hardware inside the GPU is doing both of this stuff. So what that means is that GPUs are really fantastic at integer arithmetic as well. Now NVIDIA has been working for many generations of GPUs and I think in the early days they thought that the only thing that was important was the floating point math, but as the generations have gone on, they went through like Kepler then Maxwell Pascal, then Volta, then to Ampere. As they progressed through these generations, they realized that the integer arithmetic was really important for something somewhat surprising for addressing math, for calculating the addresses, for data to load. But it turns out that we can sit on top of that same arithmetic that they've made extremely fast and use it for big number computations and that fits in perfectly with the with the ZPrize work.
+
+Alex Pruden (34:36):
+So backing up a little bit, can we actually talk about your research into big number arithmetic? So what I think to, you know, to the average person, they might just think of arithmetic as like one plus one big number arithmetic applies, it's with big numbers. But maybe, can you just give us a sense for like, what does that mean? What is it to have a PhD focused on big number arithmetic?
+
+Niall (34:56):
+So normally computers work on numbers that are in the range of 32 bits or 64 bits. Like if you have an Intel processor that's really the size that it manipulates in a single instruction. But for this elliptic curve cryptography and most of these crypto algorithms, they're dealing with numbers which are much larger than that. They're actually, it depends on what curve you're using, but for many curves it's like 384 bits. So that's actually represented as a sequence of these 32 bit numbers. So when we talk about big number arithmetic, we're really talking about operations that work sort of like doing long multiplication that you used in school or long division or long addition where you have multiple digits, but each of these digits is in fact a 32 bit quantity and that's the way that these things are represented and processed on the GPU.
+
+Alex Pruden (35:48):
+Oh, cool. I see. So now I understand what you said about the GPUs and their ability to parallelize computation is effectively the equivalent of like, if you're doing long division, you can do every single digit of the number that you're dividing it once effectively, right? If you're, you can run those, each process in parallel. Is that how to think about how big number arithmetic, you know, algorithms are applied in GPUs?
+
+Niall (36:12):
+Yeah, that's a great question. Unfortunately, GPUs have, have a lot more chorus than that. So like the devices that we were working on on the ZPrize have literally thousands of cores. I'm trying to think on the top of my head exactly how many days, but it's something like 4,000 cores. So it turns out that there are too many cores to really do this sort of fine grained processing and what we do in our implementation for the ZPrize is we actually sign a problem interest to each core on the GPU and that gives you better performance. You don't have any inter-thread communication that slows things down.
+
+Anna Rose (36:47):
+So this work in your PhD, this led you to actually work in hardware. Tell us a little bit about, you know, what were you doing, what kind of projects have you been working on?
+
+Niall (36:56):
+So I was fortunate when I was doing my PhD work I managed to get two internships within NVIDIA. So when I finished my PhD, I actually joined NVIDIA as a full-time employee. So I did that for like four and a half years until the ZPrize came along and and then I went off to the ZPrize
+
+Anna Rose (37:15):
+And then you quit?
+
+Niall (37:15):
+I took a leave of absence, let's put it that way
+
+Anna Rose (37:21):
+I see. Okay. This, I'm really curious about though, like, you having worked, this is sort of going back to my earlier question. When you were working at NVIDIA, like you're not designing hardware, you said you were working on the software side, so like what job do you have there or had there?
+
+Niall (37:37):
+So I actually was building the big number libraries for NVIDIA. So during my first year, I think there, we wrote some libraries something called CGBN, which is out on GitHub. And then I kind of got drafted into other projects at NVIDIA working on something called TensorRT, which is the deep learning frameworks for inference.
+
+Anna Rose (37:59):
+Interesting and like, these are libraries that the company's creating for people who have this hardware to actually use it. Right? Is this an open source project that the company's just doing so that people can actually engage with it? You're not selling it, it's not like software?
+
+Niall (38:12):
+No, it's an open source thing and it doesn't take a huge amount of imagination to to guess who might be interested in doing cryptographic stuff really quickly.
+
+Alex Pruden (38:25):
+And I guess like, it's common like hackers, you know, people who are trying to crack passwords, like GPUs are, you can use GPUs because they're paralyzable, they can pack, they can go, you know, basically try a million passwords at once.
+
+Anna Rose (38:38):
+Yeah
+
+Alex Pruden (38:38):
+That's oversimplification but that's like, that's the reason why there's a very specific way when you're storing passwords on a database is you have to do it because that's the attack that like a hacker would use if they got your database of all the encrypted passwords. If you don't do an additional step, they can just like brute force effectively.
+
+Anna Rose (38:54):
+Yeah.
+
+Alex Pruden (38:55):
+You know, a single password. I don't know. Niall maybe you'd know more about that, but that's like roughly the idea.
+
+Niall (38:59):
+No, that's exactly right.
+
+Alex Pruden (39:01):
+So this is awesome background and now I think, you know, maybe we can turn to the ZPrize, which you've referenced a couple of times, you know, and, and I guess I should say at this point, who you are in kind of context of the ZPrize. So you were a competitor in two categories and you did quite well. In other words, you won both categories in which you competed. Given everything you've just said about GPUs, it's probably not surprising that was one of the categories you won. So you won the category of for accelerating multi-scaler multiplication on the GPU as well as accelerating, I think we called it accelerating elliptic curve operations in Wasm, which stands for web assembly. So the idea with Wasm is effectively like it's a runtime in your browser and in the competition, you know, we had you basically performing this multi-scaler multiplication to replicate effectively as if you were running a consumer laptop. So maybe just before we go any further, can you define for everyone what is a multi-scaler multiplication?
+
+Anna Rose (40:00):
+Hmm.
+
+Niall (40:01):
+So a multi-scale or multiplication is where you have a set of n points from elliptic curves and you have a set of n scaler values and it's a pretty simple computation. What you do is for each point you multiply it by its associated scaler value, and then you sum all of those up. Now the thing that makes it challenging is that it's a pretty expensive operation to do. And I guess that's partially where the security comes from because this is an expensive thing to compute. It's really a good key primitive to put into proof systems. In terms of proof systems, I think Alex probably knows far more about that than I do. So let me pass it back to him for maybe some input on that.
+
+Alex Pruden (40:44):
+Well, I guess just quickly to comment, you know, these, like MSM is a widely used in most zero knowledge proof systems with one big exception, which is STARKs. STARKs overwhelmingly rely on something called fast Fourier transforms but MSM is used, you know, in most flavors of zk-SNARKs in the process of proving, right. So there's, yeah, maybe I'll just leave it at that.
+
+Anna Rose (41:09):
+Okay. So competing in these two categories, MSM for GPUs and MSM for Wasm, which I'm now pronouncing it because it's web assembly, I've been told but yeah, like, so when you're competing in this, was there already a starting point? Was there some benchmark that you were up against or was this sort of like an uncharted territory where, you know, everyone's benchmarks are the first of their kind?
+
+Niall (41:35):
+So I think fortunately in the competition there was some starting code for both competitions.
+
+Anna Rose (41:41):
+Okay.
+
+Niall (41:41):
+On the GPU side the starting code was, was shockingly good. I remember taking a look at it, the first time round and thinking, oh wow, this is way harder to beat than than I was thinking. We spent a lot of time and we did a lot of optimizations and over time we got it to be quite a bit faster than the starting code that was was given out. On the Wasm side, there was also some starting code that was based on arkworks, but fortunately there was, there was quite a bit of, of margin and it wasn't so difficult to beat the arkworks implementation.
+
+Anna Rose (42:16):
+But on the GPU side, was it hard?
+
+Niall (42:19):
+Yeah, the GPU side was really hard. So I guess I was a little bit overconfident when I started the competition but I also know that some of the other teams had people from NVIDIA and when that really started to sink in, that oh my gosh, this is going to be be a lot harder than than I thought. I did a lot of work and, and cool found some places to optimize it.
+
+Alex Pruden (42:47):
+It's probably important to note here is that you were the winner of the competition but it was actually I think strictly speaking, a tie for first with another team, which was for Matter Labs and you guys did something I thought really cool where you both took slightly different approaches to getting almost the exact same benchmark or beating the benchmark by almost the exact same amount and then you combined the two into the super version
+
+Anna Rose (43:14):
+The super team.
+
+Alex Pruden (43:16):
+The super team. Yeah. Voltron. Can you talk a little bit about that process and your reaction to their implementation, which was different than yours, but did almost as well or as well?
+
+Niall (43:28):
+Near the end of the competition, Matter Labs and I had both frozen our code. so we were felt comfortable sort of talking about the ideas that we used and we realized that we each had some great ideas that the other team hadn't picked up on and ideally had wanted to just do a single submission for the prize, but for some complicated reasons we decided it was better not to do that. So we ended up with two submissions and you know, our prediction was that there were going to be be pretty close in performance, but we didn't know exactly how close and they turned out to be basically identical in performance, but we realized that we could merge the two of them and actually get something quite a bit better. So after the competition ended, we did that merging process and I think we got about a 10% performance improvement for the merge thing and that sort of represented the best ideas out of both teams.
+
+Anna Rose (44:24):
+That's so nice to hear. That's actually kind of one of the questions was about the competition and if you learned anything from seeing what others had submitted. I guess this is sort of the hope of the competition, right? That like, everyone's competing, yes, there's winners, but like, there's definitely going to be like new techniques uncovered along the way.
+
+Niall (44:42):
+I learned a lot, but I would say that these implementations are surprisingly subtle. So I wouldn't be surprised if if people come after the prize and start looking at these things and realizing that, wow, you know, there's some stuff going on on in those implementations that are really complicated and not so easy to understand. You know, maybe there's possibility in the future that we could do a bunch of really deep dives into these things and sort of describe how they really work in more detail than, than just the Read Mes give. Because I think there's some really interesting techniques that that come out of that. In fact I've been invited to Stanford to give a talk on the implementations and I think that's going to be be sometime in April or May. Maybe we could put a link to it out.
+
+Anna Rose (45:30):
+Cool.
+
+Alex Pruden (45:31):
+This leads to to a question. So there's some amazing work that you did in collaboration with Matter Labs in the end, right, with the submission, the final submission for the ZPrize. Now looking forward, what would you personally like to see if we run this competition again, or if something like this happens again, like what direction would you like to see it go? Like how, what types of problems would you like to see it focused on?
+
+Niall (45:52):
+Yeah, so that's a great question personally I'm interested in MSM and sort of the low level algorithm. So maybe also NTT. I think that there's still more performance to be squeezed out of all of these implementations, both on the GPU side and on the FPGA I, I think on the GPU there's some new cards that Nvidia has released that have a lot more level 2 cash. And I think that can be leveraged to accelerate MSM further than what's already been done and I think on the FPGA side, although I've said I have no expertise in that space, which I really don't, my belief is that there's a bunch of performance that can be squeezed out by keeping running competitions on the FPGA side.
+
+(46:38):
+I think it's the same thing on the GPU, you know, the GPU submissions are building on years and years of development of, of big num and big num libraries. But I don't think that's the case on the FPGA side. I think this is really the first time people have tried to do something like MSM in terms of really high performance on the FPGA side. So I'd be really curious to hear what the other interviews say about FPGA and, and how they view the same question.
+
+Alex Pruden (47:05):
+And what about the Wasm side? How do you kind of look at that? So we talked a lot about GPU and FPGA, but what about Wasm and kind of the other part of the competition, which of course you also, you know, you won that prize as well.
+
+Niall (47:16):
+Yeah, so the Wasm implementation had some restrictions. You weren't allowed to use any of the vector operations, the vector instructions, and you were only allowed to use a single thread. So if there was to be another Wasm competition, it might be interesting to remove those restrictions so because I think that would open up a bunch of new techniques if you could use the vectorized instructions.
+
+Alex Pruden (47:43):
+Cool. Well thank you so much Niall, this is amazing. Thank you for your contributions to the ZPrize, which of course are now open source contributions to the community. In the show notes we'll have a link to the GitHub organization associated with the ZPrize, where folks can check out Niall's implementation as well as the implementations of Matter Labs for the GPU and then, you know, Wasm and yeah, all of the submissions are there and we encourage everyone to check them out and as Niall mentioned, you know, there might be some further optimizations that can be squeezed out there. So it'll be interesting to see what the community does with that. So, but again, Niall really appreciate your time being with us here today and really appreciate all of your contributions to the ZPrize.
+
+Niall (48:23):
+Actually, Alex, I want to give a heartfelt thanks to you. I think you did an amazing job putting this competition together and I'm really happy that I was able to participate in it.
+
+Alex Pruden (48:34):
+I appreciate that and as you know, it was a journey and there were high times and there were low times and we ended up in a good place. And I'm very thankful for your understanding as we went through that together because as you know, better than anybody, I did not know nearly as much as I do now on on how to structure a competition like this and it wouldn't have been possible without your patience, frankly and your advice so
+
+Anna Rose (48:58):
+Yeah, thanks so much for coming on, sharing with us your experience and also your work before.
+
+Niall (49:05):
+My pleasure. It's been really fun interviewing with you guys.
+
+Anna Rose (49:07):
+So that wraps up our hardware episode through the lens of the ZPrize. I want to say big thank you to the zkPodcast team, Henrik, Rachel, Tanya, and Adam. I want to say thank you, Alex, for being the co-host for these four interviews. That was really fun to do together. Thanks for being on.
+
+Alex Pruden (49:24):
+Thank you.
+
+Anna Rose (49:25):
+And yeah, to our listeners, thanks for listening.
+

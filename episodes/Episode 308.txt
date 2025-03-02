@@ -1,0 +1,703 @@
+00:05 : Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:27:
+
+
+This week I chat with Prabal Banerjee, one of the co-founders of the Avail project. We cover his background from academia to joining Polygon in 2020, then to the evolution of the Avail project from a proof of concept to an internal brand to eventually spinning out as a standalone company. We then do a deep dive back into the topic of data availability, or DA. We talk about how Avail is built, the technological choices they made, their use of KZG validity proofs, and how they position themselves within the Ethereum and wider blockchain ecosystems. We talk about the interaction of DA with different parts of the modular blockchain stack, and how Avail compares to competing systems like Celestia or EigenDA. I also get a chance to ask all sorts of questions about edge cases and what this would mean in a DA-based stack. And we get to find out how the team at Avail is thinking about this.
+
+
+01:18:
+
+
+Now before we kick off, I just want to share a reminder that ZK Hack IV online is happening right now. Running from January 16th to February 6th, this multi-week event features workshops and puzzle hacking and a job fair. There are still a few sessions left, so be sure to join us. It's all virtual and free. I'll add links in the show notes. Also, earlier this month, we opened up the ZK Summit 11 application form for potential speakers and attendees. This time around, the Zero Knowledge Summit will be happening on April 10th in Athens. But, space is limited and we seem on track to beat all application records with this edition already. Only folks who filled out the application form will be eligible to get access to tickets to attend. So at the very least, if you want to join, do get that application in early. I've added the link to that in the show notes as well. Now Tanya will share a little bit about this week's sponsor.
+
+
+02:13: Tanya:
+
+
+Aleo is a new layer-1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated layer-1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. As Aleo is gearing up for their mainnet launch in Q1, this is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. And now here's our episode.
+
+
+03:01: Anna Rose:
+
+
+Today I'm here with Prabal Banerjee, one of the co-founders of Avail. Welcome to the show.
+
+
+03:06: Prabal Banerjee:
+
+
+Thanks, Anna. Thanks for having me.
+
+
+03:08: Anna Rose:
+
+
+And our audience can't see this, but you're currently wearing a ZK Hack shirt, which is awesome. Thanks for wearing that.
+
+
+03:16: Prabal Banerjee:
+
+
+Yeah, I guess you guys would like that.
+
+
+03:18: Anna Rose:
+
+
+Today we're going to be diving back into the topic of data availability, DA. I've had Celestia on the show before to talk about DA. I feel I sort of understand what it is, but I know we're going to dive much deeper into it and kind of cover it again. I do want to say one quick disclosure is that ZK Validator is actually a validator on Celestia, which is kind of a competitor to Avail. So I just feel like I should throw that out there. I'm more familiar with their projects, so I'm going to probably bring that up a fair bit. But I'm very excited to learn about Avail. In general, I've been wanting to do a little bit more of a deep dive into DA layers and sort of these tools that live around rollups and ecosystems. So, yeah, this is very cool to get a chance to talk to you. So first off, why don't we hear a little bit about where you're coming from? What got you started? What got you excited? Yeah, how did you start working on this topic?
+
+
+04:14: Prabal Banerjee:
+
+
+Yeah, so I think I've been interested in cryptography from around 2013. I was in college, it always got my imagination and that's why I always fiddled with cryptography and cryptographic algorithms and such. After that, I wanted to pursue a more academic approach, and I joined a PhD program in 2016 on cryptology and security. That's when I first came into the blockchain world. It completely fascinated me the combination of so many different topics that I had studied till then, all kind of came together and all made sense in one application, which can fundamentally change how we use technology in general. And again, that was kind of the rabbit hole that I got in. Four years into the research, I realized that, of course, I'm taking a more theoretical approach, studying about algorithms, writing some of the new ones, and so on. Like, I worked on proofs of retrievability, on marketplaces, on fairness of data exchange and so on and so forth.
+
+
+05:23:
+
+
+But I wanted to do something more applied. I wanted to contribute directly to a use case which many people can use. And that's when I started looking into different solutions. Polygon, which was MATIC at that time, was one of the major scaling solutions who were thinking of scaling Ethereum at that point in time. They were one of the only few ones in production at that point. And hence in 2020, I dropped from a PhD program and joined Polygon, then...
+
+
+05:56: Anna Rose:
+
+
+You dropped out?
+
+
+05:57: Prabal Banerjee:
+
+
+Yeah.
+
+
+05:59: Anna Rose:
+
+
+And question about the timing here. So were they still plasma-based at the time? Was that more like a... Yeah, because I know a little bit of the eras of the Polygon MATIC project. 
+
+
+06:09: Prabal Banerjee:
+
+
+Yeah, I think when I joined, they had both. So there were Plasma contracts and then there was PoS contracts. And we were increasingly seeing, whenever I joined also, like what we were struggling with Plasma in the sense that what are the pitfalls of Plasma, how... You know, general logic had to be written specific contracts for Plasma exits and such, how that kind of didn't make much sense in terms of the Plasma exits and the long queues that you had to maintain, and how that was not really a practical solution at that point in time with Plasma. And increasingly, people were preferring to use PoS for its simplicity because of how it actually solved the scaling challenges at that point in time. And you could really see the push for deprecating Plasma as a whole and just pushing and making just a PoS solution.
+
+
+07:05: Anna Rose:
+
+
+But wasn't the original Polygon PoS just like a separate chain, a fork of Ethereum and then a multisig connecting it?
+
+
+07:13: Prabal Banerjee:
+
+
+I think the Polygon or the original MATIC PoS chain was different things altogether, right? So they had a... How I like to think about it is that they had the same kind of architecture what Ethereum has today, I would say. And again, I'm stretching it a bit. So they had the execution engine, which was a fork of Geth, which was called Bor. And then they had a consensus engine, which was based on Tendermint or a variant thereof, which was Cosmos SDK based. The validators used to live or still lives on the Heimdall chain, which is on Tendermint, and the execution happens on Bor, and this gives them the hybrid ledger kind of a situation where execution can go on with probabilistic finality, and then the validators can finalize it later.
+
+
+08:12: Anna Rose:
+
+
+Yeah, this makes sense. I'm just going to correct, because it wouldn't have been a for... Like ETH at the time was proof of work, but the PoS chain was already proof of stake. This makes complete sense. Okay, so it wasn't like an exact replica, but the connection point was not a ZK rollup, it was not cryptographic. Just one extra question here, is Plasma... This is such a kind of basic question, but is Plasma an economic game? Is it closer to a fraud proof?
+
+
+08:40: Prabal Banerjee:
+
+
+It's actually not economic game, but it's actually also that you can permissionlessly exit. Now, what does it mean is that if at any point in time you think as a user of a Plasma chain, that you are facing a data withholding attack or some form of censorship and you want to exit, you would be free to report that on-chain with the last known state and you will be able to exit within a challenge period, which is when other people might have to also force exit because there can be other attacks where you want to spend a balance which you have already spent on the Plasma chain. So you come up with a still balance, report it on-chain and want to exit, and then others will have to come up and submit that, no, no, wait, he had actually sent those funds to me and that's why he's not the rightful owner, I am, and that's why I need to exit and so on. So there are this Plasma exits became a problem. And also, beyond payments, it was hard to encode all the business logic for account-based systems inside those Plasma contracts because it grew out to be pretty complicated once you grew out of something like, let's say, simple UTXO.
+
+
+10:03: Anna Rose:
+
+
+Okay, okay. But anyway, let's go back to that part of the story. So we're at the PoS state where it is proof of stake. I mean, I know a lot about the Polygon story after that where there's been an investment in ZK and putting together this amazing team of researchers. They've since... I mean, there's new chains kind of on the market or coming out that are much more cryptographic. When you're joining though, so they have these two parallel systems. When you joined though in 2020, were they already thinking about data availability as a second... As a separate thing? Or would you say that concept kind of emerged over time?
+
+
+10:43: Prabal Banerjee:
+
+
+They were already thinking about it. Like when I joined, this was one of the first assignments that I worked on. Because the problem was that when you design a Plasma game, you quickly realize that optimistic execution is great and off-chain DA is also great, but they need to come together to be able to give a very nice construction, which is solid, which inherits the security of the base layer, but suddenly they are very hungry for data on the base layer. And it quickly realized that in this rollup-centric world, how is it, or what it is going to look like. So even before I joined, I think they were already discussing that, because when I joined there, pathway was very clear that it is going to be a rollup-centric ecosystem. Doesn't matter how the rollups get built, because there was, I think, a few designs like some research papers out there about how rollups can be built, a few debates all out there, will ZK be efficient enough? Will there be economic guarantees be good enough to secure optimistic solutions and things like that? Whether there will be an efficient challenge game that you can play during the fraud proof period? Once the fraud proof has been submitted, will there be efficient fraud proofs to be handled on-chain and so on? So there were many, many questions that were there as far as I can recall, but the vision was clear that it is going to be a rollup-centric roadmap is how blockchains are going to scale.
+
+
+12:28: Anna Rose:
+
+
+How long were you there, actually?
+
+
+12:30: Prabal Banerjee:
+
+
+I was there for almost three years, I think a little less than three years. So during my time in Polygon, I contributed to Avail, as I said, which was one of my first projects that I started working on, also contributed to the PoS chain, a little bit on the ZK efforts there, when the ZK teams came in, tried to help them somewhat, led their research at some point in time, and then spun Avail out of Polygon last year in March.
+
+
+13:04: Anna Rose:
+
+
+Cool. Before we move on to sort of that spin out moment, I am kind of curious what it was like. You had been in academia looking... I'm assuming like if you were researching a lot of the space, you were kind of looking into the space, but you weren't part of it yet. Then you made the move over, also during some of the craziest time in the industry, and I'm sure at Polygon, just given the 2020 to 2023, that's a wild ride, I'm sure. Yeah, can you talk a little bit about just the going on the other side? Like if you were excited about that, if it gave you energy, if you had to re-adjust maybe because it's so different from academia?
+
+
+13:43: Prabal Banerjee:
+
+
+I think even during my academic studies, I was quite clear that I wanted to be in the industry, as I said, like my excitement was more about how I can build systems or at least contribute to building systems which users can try out rather than have a paper which is awesome to read, really great to discuss about, but practically is suboptimal or doesn't work or cannot be implemented and such. And that's why even during my four years of research, I did around three internships, two of which were at IBM research. And in IBM research, I think IBM at that point was working on Hyperledger Fabric. I tried to work on Hyperledger Fabric. And at that point... I mean, retrospectively looking at it right now, they're already thinking of sequencers and executors and so on, because Hyperledger Fabric had a CFT Kafka-based sequencing engine. And we used to criticize that how can an L1 be not BFT in its ordering layer, and how can it be permissioned? So there were many criticisms of the Hyperledger Fabric platform that IBM was working on, but at the same time, I learned a lot. Like it kind of fundamentally made me think about how you can take L1 blockchain and kind of try to bifurcate it into many different layers, but all of which have to have the same trust model, have the same fault tolerance models, and so on and so forth.
+
+
+15:19:
+
+
+So that is one part of the story. But even after joining Polygon, I think I learned a huge, huge lot. It was, of course, a bit unsettling all through, but that's what probably kept me on my toes in some sense, because you could... If you are interested on making impact, and you are inside Polygon, everything that you do, there are thousands of people using it. And there can not be anything better than that, if that is what keeps you awake at night, right? And everything starting from how... And again, I would just go back to that reference, right? So simple things like, how can you have a hybrid ledger? How can you give a finality on a world where only probabilistic finality is given? And how can you give something like with provable finality, but at the same have liveness ensured by decoupling things and so on.
+
+
+16:20: 
+
+
+I think Ethereum at that point and Polkadot as well had pretty solid thoughts and constructions around it. So I learned a lot from them. I think many people wrote very, very good papers on these kind of ledgers attacks on Ethereum and such. And it was very interesting to take them and put those research ideas into action in something like Polygon, where people are using it, where that is a real, real pain point. Something like a reorg was a major, major pain point in someone using Polygon. But that was, you had to explain to a user that it's not either or, you have to take in both. You have to take in both the probabilistic finality and the liveness together because that' s a fundamental dilemma that you have. Again, things like EIP-1559, how can you take those transaction pricing mechanism and can actually do it in a much, much smaller block time and things like that. And then there will be huge uproar about how transaction prices are going so high and things like that. So it was always, always extremely, extremely interesting.
+
+
+17:39 Anna Rose:
+
+
+I like that idea that you sort of you got a chance to build something that thousands of people would use and it would be stress tested, I guess, like right away, right? You deploy something... I mean, I'm sure it wasn't so willy-nilly. You weren't just like throwing things out there, seeing what happens to the blockchain. But yeah, it wasn't the experience that I think a lot of other builders in the space have had, which is they spend a lot of time building systems that don't get that many users or maybe don't get users for years. In your case, you enter into this company that's already rolling. Because 2020 was the beginning, right? By that point, it was already picking up steam.
+
+
+18:18: Prabal Banerjee:
+
+
+Yeah, absolutely. I think when I joined, as I mentioned, that it was only one of the few real scaling solutions which were there in production. And the team immediately struck me because there was always debate about whether that's the right way to scale. But this is the team that always believe that we will find out the right way, let's just build a scaling solution, make sure that people are able to use it, people are able to use Ethereum, the ecosystem, the tooling, the same things, and still be able to benefit from this entire production-grade chain. And it was very, very good to see. And I keep saying that to others as well, there are other problems, which Polygon, PoS chain is kind of encountering because it has all those traction, because it has all those activity, things like latencies, things like state I/O read writes, things like state bloat, which are at the forefront of kind of, what are the kinds of things that you need to make an EVM compatible chain in production.
+
+
+19:27:
+
+
+And these are not going to go extinct with the coming of the rollups or any other technology that we are talking. There are fundamental problems that needs to be solved even if we talk about rollups and such. So these are some of the crucial problems that always kind of excites me that there are so much more to achieve in this space and that just one new technology is going to, of course, help a lot, but there is so much more work to be done.
+
+
+19:58: Anna Rose:
+
+
+Your background is... As far as I just heard from your kind of the department where you're doing your PhD, it was cryptology. It was actually cryptography, but at this point, you became... Like it seems It's way more CS and architecture and implementation. Were you more research and then moved more into the engineering side? Did it change your role?
+
+
+20:21: Prabal Banerjee:
+
+
+I think it was, of course, I had to shift a bit in terms of how I practiced kind of things, how I kept on top of the situation. But at the same time, there was a big engineering team, extremely talented engineering team within Polygon, and I didn't have to go into the nativities of it. I could stick to things like BLS signatures or KZG commitments and erasure coding and things like that. As I mentioned, Avail was one of my core focus areas, but I also got time to think about ZK proofs and how we can work on them and so on and so forth. So cryptography had always been part of what I was doing, but also there was a lot of engineering, thinking that you had to do because you knew that an idea is not good enough if it cannot be implemented on that production chain, which is kind of the holy grail of standard that Polygon had put up at that point.
+
+
+21:29: Anna Rose:
+
+
+Cool. Okay, now I want to hear about the origin story of Avail itself. You sort of mentioned you were already working on an internal project around DA. Tell me how that developed and what made you decide then to split out?
+
+
+21:43: Prabal Banerjee:
+
+
+Yeah, I think from the beginning, like me and Anurag, we were thinking of DA and we were writing POCs, very simple code, just trying to figure out the architecture and so on. And then in 2021, we made to a bigger team so that we can write a more complete POC. And that worked. We realized the problems, we realized the bottlenecks of the technology, we modified the architecture of it, and so on and so forth. Then the team grew bigger and bigger, and that's when you will see that Avail was launched as Polygon Avail from within the Polygon org. But at the same time, we quickly realized that a DA layer is kind of the fundamental layer around which rollup ecosystems are going to thrive. Which means that if we are not credibly neutral, then it's a problem because competing solutions are not going to use a DA layer no matter how good or bad it is, how secure it is, it doesn't really matter. If a competing token is the one which is securing your base layer, you wouldn't accrue value. You are actually giving... You are accruing value to your competitor and such.
+
+
+22:58: 
+
+
+And those kinds of conversations were very clear at that point. And the second thing was that Polygon always wanted to focus on the scaling, the L2 story. And something like Avail, which is more fundamental as more like a DA-specific L1, it didn't really fit into their portfolio that they wanted to focus on, right? So it was clear that if we can build something which is neutral, we have to go outside the org, and for the org also, it made sense just to keep it as a spinning off as a separate entity.
+
+
+23:36: Anna Rose:
+
+
+Got it. And this actually might help explain how I've understood the project. It sounds like it was first an internal only project, like proof of concept. It then had this brand, but it was a sub-brand. So Polygon Avail was almost data availability for Polygon, primarily, and then you are now Avail outside of that.
+
+
+24:01: Prabal Banerjee:
+
+
+Yeah, absolutely. And that's the kind of core thesis, right? That Avail should be at the centerpiece of many different types of rollup solutions, irrespective of whether they are optimistic, whether they are ZK, whether they are something else. But from within Polygon, for example, there's a deep emphasis on the ZK rollup tech, right? And that's why we didn't want to bring an opinionated base layer because the base layer should be always be un-opinionated, although the stacks on top can be completely opinionated depending on the use case.
+
+
+24:38: Anna Rose:
+
+
+I mean, at this point, I want to bring in kind of a competitor, Celestia, because I've had them on the show to talk about DA and I feel like they definitely did a lot of the groundwork in popularizing the term, in introducing the concept of a modular stack. And I think in 2021, they're already there. I feel like I saw a talk from Mustafa talking about the modular stack in Lisbon in 2021. I feel like that happened. So I'm kind of wondering like, you're working in tandem to this other project, were you inspired by what they were doing? Were you working from a different angle? Were you competing? Like how did you kind of approach them?
+
+
+25:20: Prabal Banerjee:
+
+
+Yeah, I think to be honest in 2020 itself, they had the paper, I think Vitalik, Mustafa and others wrote a paper. It was extremely inspiring because we were looking at that problem, they were talking about a particular solution. It kind of all made sense. And again, throughout 2020, 2021, there were a few different design constructions which were coming up. LazyLedger was already a thing in 2021. And of course, they gave one of the most promising DA solutions that are out there even right now in production. So a lot of credit to them for kind of thinking about the problem, framing it that way, thinking of solutions, actually implementing it and so on and so forth.
+
+
+26:03: 
+
+
+Given what we were trying to do at that point, again, as I mentioned, in Polygon, there was a deep emphasis on the ZK tech and realizing that the Celestia construction is kind of fraud proof secured, which is of course efficient, but it is definitely you have to wait for a fraud proof because it's an optimistic construction. It didn't fit really well with the ZK rollup constructs which we wanted to have at that point in time. At that point we were very much convinced that ZK is the way to go and that the base layer needs to be validity proof driven rather than ZK proof driven and those are the kind of... That's why we chose not to follow something like a hash-based construction, but rather to take a KZG polynomial-style... Polynomial commitment style construction, which was more, you know, can avoid fraud proofs and be more validity proof driven. So those were some of the core deltas that we knew early on that we wanted to do. And that's why our design decisions were different, although we were trying to solve a similar problem.
+
+
+27:14: Anna Rose:
+
+
+When you say that though, does that mean that some sort of optimistic system like OP or Arbitrum, would it be harder for them to work with you? Are you more purpose-built for ZK rollups?
+
+
+27:27: Prabal Banerjee:
+
+
+Not really. I think there are two layers that are kind of interacting at this point, right? So one is the DA layer and the other is the execution layer. The execution layer and the DA layer need to be individually secured for anyone to be able to verify the correctness of their transaction data and so on, right? So as a user, user need to be confident about both that the execution was performed correctly and the data behind the execution is actually available. That's the guarantee that a user needs. So in optimistic execution constructions like the OP Stack Arbitrum, the execution is secured by fraud proofs. So they can be using any DA layer, and that doesn't matter what DA layer they use. They can use a Celestia, or Avail, they can use a DAC. In fact, Arbitrum uses a DAC at this point, right? So...
+
+
+28:24: Anna Rose: 
+
+
+What does DAC mean? What does that stand for?
+
+
+28:27: Prabal Banerjee:
+
+
+It's a Data Availability Committee.
+
+
+28:28: Anna Rose:
+
+
+Okay.
+
+
+28:28: Prabal Banerjee:
+
+
+So there are two layers, execution and data availability, both need to be individually secured, and both of them have either validity proof secure solutions or fraud proof driven solutions. Celestia is fraud proof driven data availability solution. Avail is more of a validity proof driven data availability solution. Similarly, Polygon zkEVM, zkSync, StarkWare, they are more validity proof driven execution solutions, execution scaling solutions, and Arbitrum, OP Stack, and a few others are the optimistic style solutions. But each one of them can talk to each other seamlessly. There are, of course, a few nuances here and there, but they are not incompatible. Some things are a better fit than others, but we will talk about that maybe later.
+
+
+29:19: Anna Rose:
+
+
+Is that when you're going to the application level, like some applications might work better on one of these systems versus another?
+
+
+29:26: Prabal Banerjee:
+
+
+It's more about, let's say you have a ZK-based solution, ZK-based execution engine, and that is when you decide that you will not want to wait for a fraud proof. And those kind of systems will not want to wait, would not want a ZK proof in hand for execution, but had to wait for a fraud proof to arrive for the DA to be secured. So these are the constructions where it might not make very much sense for a user to have these two solutions pitched together. But those constructions are also available today.
+
+
+30:06: Anna Rose:
+
+
+Okay.
+
+
+30:06: Prabal Banerjee:
+
+
+In terms of the DAC versus the right now constructions, I think today there are a lot of different constructions in production and sadly it is either a good thing or a bad thing, I don't know, but many different systems are today in production which might not be extremely, extremely secure as people want to believe, right? But all of that aside, something like let's say Arbitrum has both a DAC as well as Ethereum based DA solution. So they have a rollup, which is a optimistic rollup, as well as something which people like to call as Optimiums, where there's an external DA, which is a data availability committee and an execution engine, which is secured by fraud proofs. So those kinds of constructions also coexist. So they have an Arbitrum One and an Arbitrum Nova, both have different security and cost implications and such.
+
+
+31:12: Anna Rose:
+
+
+So you're saying that there's like Ethereum data availability, another committee or something that's doing a second version of this data availability. I want to find out why there's the two. We know that the settlement layer for something like that is also the Ethereum base chain. Why are there two data availability sources? Why do that?
+
+
+31:33: Prabal Banerjee:
+
+
+No, I think it's not about that there are two data availability sources, it's that there are two different constructions which are running. So the different constructions make different trade-offs. On one hand, you would want to run a rollup secured by the base layer which inherits the complete security, and that's where you would want to have an optimistic rollup in its final form, which uses, let's say, Ethereum as a DA and as settlement. So that's something like Arbitrum One. And then there is Arbitrum Nova, where you want to... You are seeing that you are already spending something like $1,300 to $1,600 per MB of data that you are posting on Ethereum. That is getting to be your main bottleneck, that is where your cost is skyrocketing, and that's why you find that there is no other very good DA solution that is present. So right now what you do is you set up a committee, you allow them to handle the data availability depart, and on-chain you verify that the committee has given the vote, has signed, have had enough signatures that the data behind the attestation or the assertion of execution is available. So those are two different systems. 
+
+
+33:00: Anna Rose:
+
+
+Got it. And so I understand what you mean. So they could be running, they're sort of running at the same time. But in order for efficiency reasons, for affordability, they've created a centralized DA, in a way, I realize it's committee, but it's more centralized. It's not a fully decentralized group that's doing the same kind of sampling, I guess, that any DA layer would be doing anyways, right? Like they're... 
+
+
+33:28: Prabal Banerjee:
+
+
+Not sure.
+
+
+33:29: Anna Rose:
+
+
+Oh, not even. Okay. So then, is this what you mean by it's less secure? It's not only that it's not decentralized, but it's also like just using a different form of DA.
+
+
+33:39 Prabal Banerjee:
+
+
+Yeah, exactly. So that's when what you do is you send the same data to various different members of the committee and the committee members sign that, I have access to this published data and I sign it off and on Ethereum you just verify that they claim to have the data, right? So there is no sampling, there's a bit of re-sampling, it's a small group of people, but that's how it works in a DAC.
+
+
+34:09: Anna Rose:
+
+
+Okay. I think it would be really good for us to now introduce DA in the way that you're building it, which involves sampling, I guess. I'm assuming. So, yeah, why don't we talk about the DA system that Avail presents and then we can kind of understand maybe how that's an evolution or maybe a step up from these DACs.
+
+
+34:32: Prabal Banerjee:
+
+
+Yes. So in Avail, we wanted to create a decentralized data availability base layer. And for that, we wanted not only a base construction which is secure and decentralized, but also a way for light clients to achieve data availability sampling in order to verify on their own whether the data is available or not, without relying on the super majority of the chain for data availability guarantees. So that's why what we do is we used KZG polynomial commitments and erasure coding in tandem to create those construction where the super majority of the chain only decides on the ordering of the data and creates those commitments, whereas the light clients who have access to these commitments can do the sampling and ask for openings, which are individually verifiable by them.
+
+
+35:35:
+
+
+And by the order of sampling, we also have created a peer-to-peer over the network of light clients, so that the light clients have minimum reliance on the full nodes of the system. The full nodes act only as the initial source of the sampling information, but at the same time, once the peer-to-peer network is populated enough, then anyone can ask the peer-to-peer network to give them samples and they can verify on their own and have a high guarantee of data availability of the particular published blocks.
+
+
+36:12: Anna Rose:
+
+
+Going back to Celestia, do they have a different kind of sampling?
+
+
+36:15: Prabal Banerjee:
+
+
+I don't think that they have a different kind of sampling. There are two major things which are slightly different than what we do. The first thing is even after sampling, you have to wait for a challenge period for a fraud proof to arrive or not arrive, so that to know whether the sampling was done on the correctly encoded data or not. So that is the optimistic construction that I was talking on about a bit while back. And the second thing is that I don't know the exact status right now, but to the best of my knowledge, the peer-to-peer light client doesn't directly sample from the peer-to-peer itself. They have a high reliance on the RPC nodes for getting the samples, whereas in Avail, we try to retrieve the samples from the peer-to-peer first, rather than going to the RPC for the samplings. But that's implementation detail, I guess. It's just more trust minimization and less kind of reliance on RPCs that we are choosing to go for.
+
+
+37:22: Anna Rose:
+
+
+All right. I mean, I'm going to actually have them on the show in a few weeks, so I'll be able to also ask them some of these questions just to get clarity. I want to kind of also ask about EigenLayer, because we had Sreeram on, he talked about building EigenDA on top of EigenLayer base thing that they have, the restaking thing. Do you know anything about that system and how it might compare to Avail?
+
+
+37:46: Prabal Banerjee:
+
+
+I think EigenDA, as far as I have seen and read the various reports, is that it's a DAC solution, and it's a crypto-economic guarantee, which they derive from the EigenLayer's AVS systems. So it's going to be extremely efficient. We are still to see how many people are going to be there in these committees, how do they work, and how do they sign off and so on. But at the end of the day, there will be again a smart contract on Ethereum, which will verify that the committee has given enough signatures. The only way of slashing would be things like double signing and such. So they do not inherit the full security that an L1 can provide, because at the end of the day, there are classes of faults which are non-attributable, which at the end needs to come from things like social slashing and things like that, that only base L1s have.
+
+
+38:49:
+
+
+But at the same time, there are other provable faults that you have, which are easily verifiable by something on-chain, which are some of the things that any of the EigenLayer services will be able to derive. And the crypto economic security is going to come from something like already staked ETH and so on, but that will also be opt in and will not naturally kind of inherit any other base layer security as people like to think.
+
+
+39:17: Anna Rose:
+
+
+Let's talk about how you do it then. So Avail, I guess, is a blockchain in its own right? Is it standalone? Is it sort of floating next to the chains that it works on?
+
+
+39:30: Prabal Banerjee:
+
+
+Avail is a standalone chain built on Substrate framework and we chose kind of Substrate because of the various properties that it offers in consensus systems and in economic design that it has. For example, we can support up to a thousand validators as of today, but it can go up to something like 10,000 validators once we activate BLS signatures and such. On the other hand, it has fragment election, which secures the base layer in a nominated proof of stake system that allows for maximal decentralizing the base layer system and keep the centralization risks at a minimum. At the same time, there are things like how the BABE and GRANDPA protocol works together, as I was mentioning in the beginning of our discussion, about how it provides a hybrid ledger so that you can give liveness as well as strong finality guarantees and then block production using a verifiable random function and things like that.
+
+
+40:40:
+
+
+So there is a host of different things that we have at the base layer to make sure that it's one of the most secure and elegant designs that we have seen around. And that's why we hope that people can be using the DA layer, not only because it's just a very good validity proof driven design, but also because it's decentralized, because that matters. Otherwise, there's going to be lesser and lesser differences between a DAC and a blockchain which has high centralization risks. 
+
+
+41:13: Anna Rose:
+
+
+Oh, interesting. In researching this, I heard another interview where you'd mentioned that you originally started with Tendermint and then switched. Just so you know, like with the ZK Validator, we actually... We validate on Polkadot and on Cosmos Hub and some other chains. We've experienced both of those models as validators. And so I understand what you mean when you talk about fragment. This is the kind of evening factor of Polkadot. It makes it very difficult as a validator to predict where you're going to stand in the list. Whereas with Tendermint chains, it's very, very obvious. Like stake delegated to you is only delegated to you, and you can kind of see the ranking. And that's been a really interesting kind of thing to see from that side. But yeah, you decided to go with the Fragment Polkadot model. The other thing I heard from that interview, though, is you're not in the Polkadot realm. You're not a parachain.
+
+
+42:07: Prabal Banerjee:
+
+
+Yeah, that is correct. We chose to bootstrap our own security, creating a solo chain based on the Substrate framework and not join as a parachain to the Polkadot relay chain. At the same time, we didn't really start with the Tendermint or the Cosmos SDK because we already knew, as I mentioned, one of the Heimdall layers of Polygon PoS is built on Tendermint and Cosmos SDK. So we knew the experience there.
+
+
+42:36: Anna Rose:
+
+
+You knew it.
+
+
+42:37: Prabal Banerjee:
+
+
+So what the pros and cons are and so on. We of course had other considerations like we had a Rust-based code base, so it was easier to write it in Substrate and we didn't want to port over in Go and things like that. But there are many, many different considerations which come together. But yeah, largely there were two options to us, Cosmos SDK and Substrate, and we chose Substrate.
+
+
+43:01: Anna Rose:
+
+
+Interesting. It being built on Substrate though, if you wanted to, would you have access to things like XCM or any of the other tooling in the Polkadot world, if you wanted to connect to it?
+
+
+43:13: Prabal Banerjee:
+
+
+The answer is it needs research because we have made so much changes to the fundamental block production engine, the header structure, because it's a fundamentally different chain, right? So one of the things that I keep focusing on is that sometimes it feels like anyone can create a DA chain by forking off any of these SDKs and just creating another chain which has very low cost call data or something. But that is not true because you need to make fundamental changes inside the block production engine, inside what you keep in the header, how you construct it, how you sequence the transactions, how you encode them, and so on and so forth. So at this point, of course, the tooling is something that we already use right now, like we get access to the explorers, the APIs, the indexers, and everything of the Polkadot ecosystem. So that's a good thing that we have a lot of tooling of the Polkadot ecosystem that works as it is with us. But at the same time, getting connected to a particular Polkadot chain using something like XCM, which is deeply embedded inside how the verification works on the relay chain, might be difficult to achieve, but I haven't looked at it deeply.
+
+
+44:33: Anna Rose:
+
+
+That matches what I would have expected there, that it seems like XCM right now really functions primarily in the Polkadot world, kind of using the relay chain as that central hub. In your case then, like the Substrate that you have, this is sort of the interesting thing always about open source technology, right? Open source stacks is, like you've altered it, I guess. It's a different Substrate. Do you feed it back into Substrate somehow? Like do you kind of still add to their libraries or like the maintain parity libraries? Or are you kind of just on your own journey with it?
+
+
+45:05: Prabal Banerjee:
+
+
+I think it's a conundrum that we were even discussing yesterday because one of the things that with Substrate is that they have changed from a Substrate specific repo to a Polkadot SDK, Mono repo for all their tooling related to Substrate and so on. And we use Substrate like a delta on top of Substrate that we maintain on our own, but we haven't tried to fork it off because then it becomes hard to contribute back. And as well as making sure that we are up to date with the latest of the changes because it's an awesome community that keeps on bringing innovation into their chain and we want to, of course, be helping them contributing back to them and so on. So that's why we are right now at that juncture where we are moving from having Substrate as a dependency to Polkadot SDK as a dependency and we were thinking whether we should use Polkadot SDK fork or not. But yeah, roughly speaking, how we will do it is that, again, we will keep Polkadot SDK as the main dependency. We will try to work on it, off it, try to contribute back as much as we can. And we have already started kind of doing that using the verifier, the bridging that we are contributing to the Polkadot community.
+
+
+46:31: Anna Rose:
+
+
+It's funny when I hear about not exactly, DA, but just if you look at the models we now see, they sort of mimic that Polkadot relay chain with things coming off it. And I know, I mean, the Celestia model that I remember that they've presented also sounds a little bit like that. Ethereum with rollups now looks a little bit like that. But I think when they created it, remember, they're planning it many years ago. I don't know that they conceptualized it as a DA layer exactly. In the case of Avail though, do you see Avail as sort of a central hub, which rollups will link out of? Or do you see it more as a kind of added tool to existing rollups on another hub? Do you kind of know what I'm saying? Like this hub and spoke where like there's a center and then there's the rollups that branch off it.
+
+
+47:25: Prabal Banerjee:
+
+
+I think that is one of the fun things to kind of think of in this explosion that we are seeing of rollups. I think it will be a bit of both. It's very hard to predict which one will be the dominant one, but it's going to be always a bit of both. So for example, there are constructions like sovereign rollups and based rollups, which will always kind of live off the DA layer, because they fundamentally work on a central DA layer, and that acts as their source of truth. For any rollup, to be honest, DA is the source of truth, whether you think of it as a ad hoc service that you can plug into or whether you think of that as the base layer. But because execution proofs do not work alone, they have to be proven over sequences of data or state deltas, and it is important that the state delta is actually available and that is the fulcrum over which the execution proofs are built off.
+
+
+48:27:
+
+
+And that's why DA is always going to be part of their security modeling that they will have to do. It's now a question about what is there maybe the canonical bridge that they decide, right? I think some of the discussions and the controversies and the to and fro on crypto Twitter is sometimes about what is a rollup and how do you define a rollup? What is its canonical source of truth? How do you determine the state of a rollup and so on and so forth? I think that we will see, like right now you will see that the dominant strategy is to keep the canonical bridge on Ethereum because Ethereum is such a well-known settlement layer with all the users and the liquidity and such. And that we will continue to see because that will be the canonical bridge for most rollups.
+
+
+49:16:
+
+
+But at the same time, there are other constructions which will come where the bridge is less important, there will be app-specific constructions which will come and so on, which we will continue to keep on seeing how things evolve and how to think about it is more like a mesh rather than a hub and spoke, I would like to say, because there are these constructions where a rollup talks to two different layers, and then there is an L3 built on a particular rollup, and then there are bridges which are through some settlement layers, some want L2s to be settlement layers, some only rely on the L1 to be the final settlement layer. So there's a plethora of constructions which are possible in this space. So it's yet to see how things will evolve, in my opinion.
+
+
+50:07: Anna Rose:
+
+
+So far, we're mainly talking about the data availability side of this. So this is the ability to sample the fact that data is available. But what about when we do kind of think of a rollup coming off of a DA hub, often you need also the consensus, the consensus mechanism. Like those rollups may be using that in that model. So does Avail have both DA and consensus that a rollup could use? Or in the case of Avail, are you expecting these rollups to live on another form of consensus, like a consensus hub and kind of doing it elsewhere?
+
+
+50:44: Prabal Banerjee:
+
+
+Yeah, I think Avail, just to answer it straight, it has both ordering and data availability. And to kind of go into a little bit deeper is that there are two aspects to the transactional data that someone is sending. The one is the ordering of them, and the second is the data availability. As I mentioned, the sampling works great on the data availability guarantees, because once you have the ordering fixed and committed, you can then sample that parts of the data are available or not, and that's why you have a guarantee that the entire data that was committed to is available. You still need the consensus, which is the crypto-economic guarantee that the ordering was set right and that they cannot deviate now from that ordering. So now once they have committed to something, they cannot do a double signing and then fork off the chain. And then the committed ordering is different, which means their sampling is now irrelevant.
+
+
+51:46: Anna Rose:
+
+
+So it's interesting the way you describe it. So in your case, consensus here is just about the ordering of transactions. I guess maybe it's always been that, but for some reason I thought it was bigger. But yeah, at the same time, the ordering that you're talking about, this is meant to be the canonical truth. This is the immutability. This is the sort of blockchain aspect. But each one of the rollups may have their own ordering on their side. So they have sequencers that are putting things in order potentially. So the ordering you're talking about though is on, just on the DA level, like the Avail level that you're doing the data availability and then making sure that there's something immutable about the way that that's being built.
+
+
+52:30: Prabal Banerjee:
+
+
+Absolutely, absolutely. I think the sequencers in the sequenced rollup world will always determine the ordering within their existing rollup. There are shared sequencers where multiple rollups will allow their ordering to be determined by their shared sequencing engine. And then there are based rollup constructions which will rely on the DA layer to determine the canonical ordering for their transactions and users are going to directly submit to the base layer rather than to a sequencer or a shared sequencer. So there are many constructions which are possible in this space with different varying levels of guarantees of censorship resistance, of liveness, and so on and so forth.
+
+
+53:12: Anna Rose:
+
+
+Got it. The things that are actually being ordered in the case of Avail, what are they? Are they just commitments from the sequencer of a rollup onto this new chain or what is the actual items that get written?
+
+
+53:28: Prabal Banerjee:
+
+
+It's actually data blobs. So, sequencers or individual users, they submit data blobs to Avail. Avail is an extremely dumb layer. It doesn't know what it is dealing with. It takes all of these data at face value as blobs of transactional data and then just orders it within its block, like the block ordering engine, and commits to the data blobs. So that's all it does. Either the sequencer submits exact blobs where they have transactional data, might be compressed or state deltas, which are also much compressed and stuff, or it can be someone like a user directly submitting their transaction as a data blob, which may be incorrect even after the ordering is done.
+
+
+54:17: Anna Rose:
+
+
+In this case, though, does the security of Avail then also depend a little bit on how valuable the network is? Like, in the way that we think of execution, like Ethereum or what have you, like sometimes people will say security, but what they actually mean is market cap, because it would cost so much to buy two-thirds of the validator set or what have you. In this case, are you still working under that model? Like say, you don't have a big market cap, if someone bought those validators, what could they do? I guess that's the question. Yeah.
+
+
+54:55: Prabal Banerjee:
+
+
+Yeah, I think exactly like that is essentially the security of any PoS chain. For that matter, any blockchain network is the crypto economic guarantee that it takes to overcome the majority of the network is how typically security is defined. Of course, there are many ways to define security, but crypto economic security is the cost to either halt the chain or take over the chain is how I like to think of it. And then for Avail as well, if it doesn't have a high enough security, then as you said, a state actor can come in, take over the complete validator set or super majority of it, and then revert the ordering that was present. Right?
+
+
+So what it can do is that the existing validators can create a chain and the light client should be sampling on that fork and be sure that the data is available. But then later the super majority can revert back to fork off to another chain in which it has a different ordering which will then be incompatible to the light client who has already maybe processed... Like agreeing that the data was available and the execution was correct. So that's the kind of attacks that is possible.
+
+
+56:17: Anna Rose:
+
+
+For the rollup itself, since you said it's just blobs of data, is there any sort of... Remember I'm coming from ZK worlds where it's sort of... It's usually private or hidden or something. But in this case, if they knew where the blobs were, would it almost be like an application running on the L2 deals in some financial trade and because it's been able to corrupt that underlying DA layer, it can reorder, which would allow them to have some arbitrage opportunity, or they get a better trade, or they sandwich, or they do some weird MEV thing. Is that sort of what we're dealing with in terms of the scope?
+
+
+57:01: Prabal Banerjee:
+
+
+Absolutely. So I would like to think of it like, let's say you have a financial application on Ethereum, and you say you do a transaction where you send some assets to me, right? When is it that you will decide that this is final, this is going to be done? I would consider them to get the services that they paid for or something like that. You would have to wait for the finality of Ethereum, right? Let's say 12 minutes, you wait for that. Of course, you wouldn't wait for that long. It would take the probabilistic finality and be sure in maybe a few minutes, but If you want to be very, very sure, you want to get the full backing of the crypto economic security of Ethereum, you will wait for that time and then determine that it is final, so it's done. But then, if there is some actor which can corrupt the entirety of Ethereum, of course, improbable, but if someone goes ahead and does that, then they can now revert the payment that you've done and maybe do something else. It's like send it back to them or whatever. Right. So that's the kind of same problems which can happen on rollups as well if the ordering can get reordered.
+
+
+58:16: Anna Rose:
+
+
+Except that there's so many layers between it. I guess this is what's kind of complicated to me, which is on the Ethereum example, it makes sense because they're looking at those transactions. But in this case, there's a DA layer with a blob that comes from a sequencer that has another network attached to it. And so is it so transparent that someone could still map it back to that and corrupt the application that lives on the L2 through affecting the DA layer?
+
+
+58:48: Prabal Banerjee:
+
+
+There are two ways to answer this. So the first way to answer it is, okay, let's see how does Ethereum protect against these kind of attacks. So what you have to do on Ethereum is that you want to be running a full node in order to determine what is correct and what is incorrect. Just because someone can reorder and revert the finality doesn't mean that the full nodes are going to accept that reverted finality and the second fork that has been talking about. If the full nodes determine that this is not the canonical ordering that I believed on and the finality was reverted on their fork, because it's a finality reversion, they would actually slash a large amount of network and keep on maintaining a minority fork, which they will follow. It doesn't matter the crypto economic security of the total chain, because a lot has been slashed, but they will still go on and keep maintaining the minority fork.
+
+
+59:50:
+
+
+It would also kind of slowly leak the stake of the malicious actors, so as to the active stake being able to recapture the maximal stake in the minority fork as well. So there are different ways in which PoS chains protect themselves from these kind of attacks, and that's why you kind of rely on running a full node in order to know whether Ethereum is working correctly. You just don't rely on the Ethereum super majority for everything, for these kind of attacks. And similarly in Avail, what we want to give our clients the guarantee is similar guarantees, but by running light clients. And that's why in light clients, they will also do the same. They will do the sampling on the canonical fork, and if the canonical fork in any time reverts the order, then it will stop following that canonical ordering, and it will keep following this minority order here. And that's the social layer of any blockchain system is when these kind of attacks happen, the social layer is supposed to kick in, and that's one of the things which people sometimes use or abuse in theoretical conversations like this.
+
+
+1:01:03: Anna Rose:
+
+
+But in my question, I'm imagining that all of those things fail. I'm literally just trying to understand how nuanced an attack could suck. Could an actor get some financial gain with all of those levels, with the sequencer and the blobs? This is where I'm just kind of confused about how an attack like that looks if like say, let's remove all of the guarantee, like all of the good things, like say it's a tiny little chain, it's only half built, it does DA. But how would someone attack it is actually the... Like what could they actually do?
+
+
+Prabal Banerjee:
+
+
+I think they can go and attack the core rollup ecosystem around it that the DA chain is getting used for, because that's such a fundamental section of this entire ecosystem that we are talking about. Now with other layers on top, it makes things much more nuanced. For example, you talked about having, let's say, a settlement on Ethereum, whereas this super low security chain being the DA, and then Ethereum depends on how Ethereum is going to verify the attestations which come from this DA layer. If Ethereum is going to only listen to the super majority, then these attacks are then viable, right? Because your social layer will kick in, but it will kick in too late and it doesn't matter because your settlement layer only listens to a super majority and doesn't care what your social fork is going to look like. For example, the similar way of looking at Ethereum is that I can maintain a minority fork, but if all the exchanges of the world doesn't care about my fork, then my fork is not valuable, right? I can today only take the entire Ethereum chain, fork it off and claim that that is the default Ethereum.
+
+
+1:02:59: Anna Rose:
+
+
+All yours.
+
+
+1:03:00: Prabal Banerjee:
+
+
+That's all mine. Everyone's assets is mine. Right? But that doesn't mean that all the exchanges, all the settlements of the world actually agree to that. So it would... At the end of the day, it is a complex social game that is going to get played in this kind of attacks. 
+
+
+1:03:17: Anna Rose:
+
+
+Interesting. And I guess that is the big thing is that there's the settlement layer that is separate from what you're talking about, which also has its own role. And actually, if there was an attack, it would somehow have to be incorporated into the attack. One of the reasons, though, I ask this question, I realize I'm asking you to predict a worst-case scenario, and I'm sure there's lots of reasons why it wouldn't happen, but in terms of the value of Avail, if you're working with networks that are worth more, I guess this is sort of a question, like can the security of one network, if you are securing things that are so much more valuable, does that change the economic game for an attacker somehow? Can it still secure really valuable chains?
+
+
+1:04:05: Prabal Banerjee:
+
+
+No, I think the answer is very nuanced, but if I had to answer it very succinctly, I would say yes, definitely. So the answer to that is whenever our rollup is using some base layers for whatever reason, let's say for DA, for settlement, it inherits the security as a function of these layers. What is the exact function? I like to think of it as the minimum of the two, right? But there might be other debates about how people would like to frame because security is also very nuanced. Like what is it that it actually fails? Is it the liveness, the safety, censorship resistance, things like that. So there is a plethora of different things which we have to consider, but I like to think of it as definitely it has to be very secure for someone to be using a DA layer, otherwise it's a problem because you inherit the security of all the base layers that you work with.
+
+
+1:05:12: Anna Rose:
+
+
+What if you have a really strong DA, but a really weak settlement layer, would you say that then the security is sort of that of the settlement layer?
+
+
+1:05:18: Prabal Banerjee:
+
+
+I would say yes and no, as I mentioned, is this is nuanced, but...
+
+
+1:05:22: Anna Rose:
+
+
+Super nuanced, sorry.
+
+
+1:05:24 Prabal Banerjee:
+
+
+Super nuanced. But at the same time, let me... Okay, let me try to break it down a bit, right? So let me try to break this down a little bit so as to make sure that we are propagating the right notions to the end user because someone listening to this might think that, oh God, I am now talking about another layer in another chain, which I don't know how the security is. And so all my assets are going to go for a toss. The actual answer is that it all depends on the design and the architecture of the rollups. But in an ideal world, when the rollup uses a DA layer, and we are talking about light client based samplings, then a user is going to do their own sampling to know whether the data is available or not.
+
+
+1:06:16:
+
+
+Under those conditions, the user has the chance to verify DA on their own. And for the settlement part, in general, how we like to think of things going forward is that this user is going to verify the proofs of their own. Like for example, we are already working with wallet teams to embed a DAs light client of Avail inside the wallet, as well as a ZK verifier inside the wallet. So if you think of it, then people are relying on Ethereum to do the settlement on their behalf, but actually users are powerful enough in this future world to actually verify both the execution and the data availability inside their wallets and only rely on Ethereum for L2 to L1 bridging. And not for all the L2 interactions that is happening because that is essentially verifiable. And what that really means is for someone like Starknet, who we are partnering with and so on is, they publish proofs maybe six to eight hours. But in these kinds of designs, the users can get a very high finality guarantee because they can do data availability sampling, which means they know the canonical ordering and the data availability, as well as they have a ZK proof, which means that they can verify all the L2 to L2 transactions. And then after six to eight hours, only Ethereum gets convinced, but the user is much convinced much before that.
+
+
+1:07:51: Anna Rose:
+
+
+I see. That was actually one of my questions was, do you use ZK? This is a separate construction. This is like a wallet that's using a lot of different things, but this is sort of the future you see. How advanced is this? Who builds this wallet? Does it already exist or is this a theoretical thing?
+
+
+1:08:10: Prabal Banerjee:
+
+
+This is one of the RFP grants that we have as part of Avail Uncharted. It's partially built. It's like the Android client already works roughly, but there are many different things to actually work on. We are actually also working with a few other wallet providers, people like SubWallet we are working actively with, in order to have these DAs light clients inside them. And it's a work in progress because there is a lot of different technologies that I right now spelled out, but all of them working in a constraint environment, like in a mobile or in a browser extension needs a little bit of. For example, I think one of the questions which you were asking is whether we use the ZK technology or not. The answer is we do not use the full ZK, but we use the KZG commitments, which are part of a few ZK constructions as part of the commitment scheme that they use. And in those KZG commitments, there is a lot of field operations, which we have to do inside those wallets, which might be inefficient when running inside, let's say, WASM and such. And also I talked about the peer-to-peer design that we have for the light clients, and peer-to-peer operations are notoriously hard to do inside browser extensions and such because of security reasons and the limitations under enclaves and such. So there's a lot of different things which need to come together for this vision to actually happen. But the basic building blocks are getting built and we are actively working towards building one.
+
+
+1:09:48: Anna Rose:
+
+
+Just going back to that sort of fraud proof versus, I mean, I think you call it the validity part of a ZK proof, one of the criticisms in the past with ZK rollups was sort of latency and timing, like that it would take longer to create these proofs. Does that also affect the KZG proofs in any way?
+
+
+1:10:07: Prabal Banerjee:
+
+
+Yeah, I think the KZG proof, we had similar reservations, but at the same time, that is one of the reasons why we wanted to do an early POC and check this out and so on. Inside our test environments, we can create blobs, like blocks of up to 128 MB with ease inside one block period. At that point, the block propagation and things like that dominate over the KZG commitment generation. So the commitment generation is extremely fast. We are not, as I mentioned, not doing the full ZK route of the entirety of what a ZK algorithm does today, but we are only taking the small commitment scheme and there has been huge improvements done in the performance of this KZG commitment generation schemes.
+
+
+1:10:59: Anna Rose:
+
+
+Cool. You mentioned a few of the people that you're planning on working with where you already have partnerships. I know you have quite a few. So can you share a little bit about... You started from Polygon, you've gone past, you're out of Polygon in a lot of ways. Is Polygon still going to use Avail?
+
+
+1:11:16: Prabal Banerjee:
+
+
+I think all the major rollup stacks are going to use Avail. And again, I'm saying that not because we have announced all of these collaborations, but because I believe that we will keep on seeing that the DA layers are going to be used by all these different chains across different solutions that we provide. In terms of Polygon, yes, we already have a zkEVM fork that we maintain which uses Avail and we have a public endpoint that anyone can use today to test out how the experience looks like, how the blobs are getting submitted to our incentivized testnet, and how they're getting verified on Ethereum, Sepolia and such. There is also work that we are doing with the CDK ones that is in production. We will take a look at it, we will talk about how we are going to jointly collaborate on that. But things Starknet, we have already announced our collaboration for the Madara App Chain world. Again, Madara uses something like Substrate. So it was purely easy for us to make sure that we are fully compatible with that.
+
+
+1:12:35: 
+
+
+In terms of others like we have an OP Stack fork, which anyone can use today to use with Avail and OP Stack. And then we are also working with the other stacks to kind of make them compatible. So in the end, we will have all the major rollup stands, but these are all EVM compatible or beyond. But there is also things like zkVMs that we are working with like RISC Zero, like the ZK-WASMs and so on, where we also think that huge progress will be made in the coming days about how people are going to not think about too much when deploying their own rollup because it would be so easy and so tailor-made for their application.
+
+
+1:13:23: Anna Rose:
+
+
+Wow. That was actually one of my questions was other VMs, non-EVM, do you have to change something to deal with that or can you keep the same system?
+
+
+1:13:33: Prabal Banerjee:
+
+
+As part of Avail, as I mentioned, it's a very dumb layer. It doesn't really know anything about the execution engine. But at the same time, I think we don't have to change anything, but typically, the different things change, for example, transaction sizes. How big does a transaction look like? The structure of them, that changes for the execution engine, but not for Avail. There are other stuff, like for example, there are sovereign rollups and such, where some of the design decisions also play a key role, but that's not for the execution engine style.
+
+
+1:14:12: Anna Rose:
+
+
+Got it. Do you think anything over in Solana will ever need DA? Do they have rollups? I don't know. I feel like it's like an ecosystem I know so little about. And weirdly, I've mentioned them multiple times in the last few episodes, and I don't know why. They seem to be the talk of the town at the moment.
+
+
+1:14:31: Prabal Banerjee:
+
+
+Exactly. Exactly. I think, believe it or not, we really like the Solana VM, and we have been actively approached by Solana ecosystem applications who want to tap into the Ethereum ecosystem right now, then they want to use the Ethereum user base, the liquidity that is there, and then they're exploring some of the rollup stacks that are present today. And that is because the SVM is extremely, extremely efficient in terms of its performance and such. And that's why you will see a few different projects which are trying to use the SVM as an execution engine, but then Ethereum as a settlement engine. And these kind of… Interesting kind of architectures are going to come up more and more. There are going to be problems because this also means that the SVM by itself has a lot of chatter, which means that the transactional demands are going to be much higher than the Ethereum ecosystem rollup demands and such. So scalable DA is going to be one of the fundamental things that this entire ecosystem is going to need.
+
+
+1:15:50: Anna Rose:
+
+
+Fascinating. Prabal, thank you so much for coming on the show and letting me ask all of these questions about... Like it's these edge cases for DA layers. I realized that we at some point just went off topic a little bit, like into the, what could someone do if they had like unlimited money and it was a different world, but thanks for kind of walking me through that. Because I think this is something, even kind of testing out those edges, it's like very unlikely cases, it just kind of gives a bit of a sense for what this is, the power of it, yeah, what you need to build around it as well.
+
+
+1:16:25: Prabal Banerjee:
+
+
+No, absolutely. I think those are some of the edge cases for which we are also, I wouldn't say very prepared, but we have designed it, keeping them in mind so that even the super majority and stuff can get compromised and such. But thanks for asking me the questions because I don't get to talk about them a lot.
+
+
+1:16:44: Anna Rose:
+
+
+Cool. All right. Thank you so much for coming on the show. I want to say thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners, thanks for listening.

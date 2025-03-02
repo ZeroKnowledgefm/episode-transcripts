@@ -1,0 +1,1180 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Guillermo and I catch up with Joe Bonneau, Assistant Professor in Computer Science at NYU and Research Partner at a16z Crypto Research. We catch up on the work he's been doing since he was last on the show. Specifically, we cover the naysayer proof work, ZK middleboxes, sealed-bid auction, and other ZK-related research projects that he's been working on.
+
+
+Now, before we kick off, I just want to highlight two events for you. First, ZK Hack Montreal, the IRL hackathon is happening very soon. On August 9th to 11th, we will be building the next generation of ZK applications in Montreal. Applications remain open. If you've started your application and have not submitted it, be sure to get it through. And if you've gotten accepted, be sure to RSVP so we know you're coming. So yeah, hope you will join us. The second event I want to highlight is ZK Summit 12, happening in Lisbon on October 8th. The application to speak or attend is now open and it's good to apply early if you want to be eligible for the early bird tickets. Also, if you want to speak, be sure to apply before August 15th because that's when I'll be closing the speaker forum. So yeah, hope to see you at both of those events, all the links are in the show notes.
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:01:41]: Tanya:
+
+
+Attention all projects in need of server side proving! Kickstart your rollup with Gevulot's ZK Cloud, the first ZK-optimized decentralized cloud. Its flexibility and customization supports any proof systems such as SP1, Polygon, RISC Zero, or ZKsync, at rates 5.8 times cheaper than AWS with two times the performance. Get started with a free trial plus extended grant opportunities for premier customers until Q1, 2025. In addition, Gevulot is currently onboarding institutional prover node operators. Register at gevulot.com. So thanks again Gevulot.
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure Internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. 
+
+
+And now here's our episode.
+
+
+[00:03:04]: Anna Rose:
+
+
+Guillermo and I are here with Joe Bonneau, Assistant Professor of Computer Science at NYU and Research Partner at a16z Crypto Research. Welcome back to the show, Joe.
+
+
+[00:03:14]: Joe Bonneau:
+
+
+Thanks for having me. Great to be back.
+
+
+[00:03:16]: Anna Rose:
+
+
+And hello, Guillermo.
+
+
+[00:03:17]: Guillermo Angeris:
+
+
+What's up?
+
+
+[00:03:18]: Anna Rose:
+
+
+So, Joe, you were last on the show in 2019. At the time, I think you were only an Assistant Professor at NYU. Now, you're also a Research Partner at a16z. Let's talk a little bit about what's happened in the last five years.
+
+
+[00:03:33]: Joe Bonneau:
+
+
+Sure. I actually had a detour and taught in Australia for a bit at the University of Melbourne too. But back at NYU and also working at a16z on the crypto research team, which has really been great. For me, the dual role, having both... I get to work with students, I get to teach, working on a new textbook on the academic side, which is still quite some time away, but it's an exciting project. So I really like teaching and working with undergrads, getting them into the space, working with grad students, latest research. And then I love working at a16z because there's a large portfolio of companies that we've invested in, and basically my job is to both do great research that we think is interesting for this space as a whole, and also to work with founders and engineers at the companies that a16z has invested in and try and help them out with problems.
+
+
+And the two kind of create a feedback loop because we see problems on the industry side through a16z sometimes. Then they turn into research problems that we can work on. Now that I work at a16z, I do have to say on podcasts like this that, of course, I'm speaking on my personal capacity. So anything I say is not an official position of a16z and certainly not investment advice.
+
+
+[00:04:51]: Anna Rose:
+
+
+Got it.
+
+
+[00:04:51]: Guillermo Angeris:
+
+
+Quick question for you, by the way. Is the textbook kind of going to be a rewrite of your kind of OG blockchain textbook, or is it going to be a bit more towards cryptography? I know, but what is the outline, if you can say, of course, of the new textbook?
+
+
+[00:05:05]: Joe Bonneau:
+
+
+Sure. I mean, I can tell you the current plans with the disclaimer that we're very --- at the very early stages, we're still getting feedback from some people who've taught using the original textbook. We do have an outline that we're writing toward, but that could change. But we're actually writing it as a new book. We're essentially starting... We waited so long. It's been eight years now since the original came out. Some of the original authors aren't working in crypto anymore, some have left academia and are full-time in industry. I guess that's Ed Felten and Steve Goldfeder at Arbitrum. Yeah. So lots have changed just among the set of authors.
+
+
+That being said, we decided it would actually make more sense to start fresh. In particular, the original book, more than 50% of the text is specifically focused on Bitcoin. And as you know, even though Bitcoin is still going very strong, the amount of mindshare and the amount that people that discuss Bitcoin and are building on top of Bitcoin really doesn't compare. So the new book will be much more anchored on Ethereum. The practical examples will mostly be Ethereum and Solidity, which was enough of a change that we decided to rewrite. We are thinking about it as a replacement for the original book. The original book will still exist. It will still be possible to buy, and people who do have a particular interest in Bitcoin might prefer it. But we are thinking that for most people teaching a first year college course on cryptocurrency, the new book will make more sense. It will obviously cover smart contracts, a little bit about DeFi, modern consensus, a lot of things that weren't around in 2016.
+
+
+[00:06:50]: Anna Rose:
+
+
+Do you think it might touch on ZK?
+
+
+[00:06:52]: Joe Bonneau:
+
+
+Yeah, that's a good question. The whole cryptocurrency space is so big now, it's really a rush to fit the whole thing into a one semester course, which is what most professors that I've talked to who are teaching in this space are given, is basically one course. We did at NYU last year, actually, we had the opportunity to have two courses. So I taught an introductory course, and Benedikt Bünz taught an advanced course that focused mostly on ZK.
+
+
+[00:07:19]: Anna Rose:
+
+
+Cool.
+
+
+[00:07:20]: Joe Bonneau:
+
+
+That's a little bit of a luxury, though. I think most professors don't. There's not room in the course catalog for two different cryptocurrency courses. But to answer your original question, we'll probably have one chapter on ZK that will mostly black box the math and the mechanics of how it works and talk about the applications that it opens up.
+
+
+[00:07:41]: Anna Rose:
+
+
+That's cool.
+
+
+[00:07:42]: Guillermo Angeris:
+
+
+Has the perks of being more practical, but I feel like consensus in Ethereum is actually a rather complicated beast. So I don't know, I'm curious to see how that turns out, because proof-of-stake, in general, can be quite complicated fairly quickly.
+
+
+[00:07:58]: Joe Bonneau:
+
+
+Yeah, it is going to necessitate rethinking the flow. When you teach Bitcoin the nice thing since Bitcoin consensus is so simple to define, the analysis is a little bit more complicated, but it's very simple to define, that you can start from the practical example of this is how Bitcoin consensus works, and then you can zoom out a little bit from there and you can think about consensus in general and other ways that you might build it.
+
+
+With Ethereum, we kind of have to go in the reverse order. So we have to say, here's what consensus is trying to achieve, and some general concepts. And then how Ethereum consensus actually works is the more advanced thing that comes later after you've sort of established the high-level goals.
+
+
+[00:08:39]: Guillermo Angeris:
+
+
+So essentially you start by saying, look, here are kind of designs of some mechanism, and there exists a thing which we call Ethereum which satisfies it. We'll explain later exactly how it satisfies it. But given this, we now have a blockchain. Let's go have fun with this particular thing. 
+
+
+[00:08:57]: Joe Bonneau:
+
+
+Yeah. And in particular, consensus, we're thinking about roughly three sections of the book. One is kind of basic mechanics of a blockchain, signatures, hash functions, things that you really need to understand anything, and just the general idea of decentralization. And then there will be a lot about smart contracts and how you build applications on top. And then a bunch about ways that you can make the whole process more interesting, have better privacy, have better performance, and it's really only there that I think we'll be able to explain how Ethereum consensus works at any level of detail. So just too much. If you try to explain Ethereum consensus before building smart contracts, I think people are never going to get there.
+
+
+[00:09:40]: Guillermo Angeris:
+
+
+Yeah, this is the explaining category theory before learning to add type problem, like we should start from set theory, you know, what is a set, before you learn how to do like 2+3+4 or something?
+
+
+[00:09:51]: Joe Bonneau:
+
+
+Yeah. And I think with Ethereum, the core thing that you want to get to as fast as possible, I think is just a smart contract. People can... If they have a programming background, they can usually look at a smart contract written in Solidity and start to understand what it's supposed to do. So you can see the end goal and then you can say, okay, how do we build a platform that will actually run this smart contract, enforce all of the guarantees so that it's actually interesting?
+
+
+[00:10:18]: Guillermo Angeris:
+
+
+Yeah, absolutely. It is interesting too, because it also has the property of how do you address state is implicitly encoded in the Solidity contract, stuff like that, which is very useful in understanding why we do things the way we do in Ethereum, for example, or something like that.
+
+
+[00:10:34]: Joe Bonneau:
+
+
+Yeah, definitely.
+
+
+[00:10:35]: Anna Rose:
+
+
+So last time you were on, not only were you not yet a Research Partner at a16z, but you also were talking about a different topic, VDFs. And I'm sort of curious to hear from you, like what's happened to that research and what's happened to VDFs? Did they get incorporated into the systems that we expected them to, or, yeah, what's going on there? I don't know if you've sort of stayed in that space.
+
+
+[00:11:00]: Joe Bonneau:
+
+
+Yeah, it's a great question. I've definitely stayed in this space. So I've published a couple of papers since then. The field has blossomed a lot. There have been a, I mean, I would guess about 100 follow up papers to the early VDF papers in 2018 that introduced the concept. So I think the results have been mixed in a sense. Probably the good news, or the interesting news is that the original work on VDFs has led to a lot of other interesting things. I would talk about delay functions in general, which are just cryptographic functions that are supposed to be slow, some of which don't have exactly the API or the properties that we thought of with the original VDFs. So I think we've actually found a lot more applications for them since then. There have been papers not just about randomness beacons, which was kind of the original motivating applications, but about applying VDFs to things like auctions, things like voting, or to multiparty computation, MPC as a whole. 
+
+
+So we found that they're sort of a more universal building block than we expected, maybe, which has been great to see. The research community has kind of taken this and run with it. We haven't gotten as far as I would have hoped in 2019 on deploying them on building hardware. And I think the big part of the story there, Ethereum was quite interested and did put a lot of work into it. Unfortunately, Ethereum developed MinRoot as a candidate VDF and would have been last spring, about a year ago, they had a dedicated workshop, and they brought a lot of really great cryptographers together to really say like, are there attacks against this MinRoot version that we haven't thought of? And there are some. So they released a nice report on Cryptanalysis of MinRoot, and they uncovered some ways that you could probably try to attack it. If you have a lot of parallelism, like a million or a billion processors, there's some ways to speed up parts of the calculation.
+
+
+I would say different people looked into the report and saw different things. Some said this thing's not bulletproof, there's some ways to attack it. Some people said there are these attacks, but they're not actually that practical. So depending on who you ask, VDFs are on some sort of moratorium or deprioritization at Ethereum.
+
+
+[00:13:31]: Anna Rose:
+
+
+I see.
+
+
+[00:13:31]: Joe Bonneau:
+
+
+They don't have an immediate place in the roadmap anymore. The main place that they would help, that they could potentially plug into Ethereum, is on the Beacon Chain. So there's currently a known hole, potentially, that validators or stakers can withhold their contribution, their Randall contribution when it's their turn. And that does give them -- for each slot, there's one bit of bias into future values. So you can bias the randomness a little bit, and there's a cost to doing that. At the very least, you miss out on your block reward. 
+
+
+So the story today is basically that there's some level of crypto economic security. It is possible to manipulate the randomness, but you're disincentivized economically from doing so. If you add VDFs to the picture, then there's not actually any way to attack at all anymore, unless you had a speed up where you could compute the VDF much faster. So I think that my current understanding, and based on conversations, is that it's still something that might happen in the future, maybe there's a bit of a wait and see approach. If people start withholding, if this attack becomes practical, then it would be time to add this in. But as far as I know, it's not on the immediate roadmap for Ethereum. There are a whole bunch of other projects and people looking at VDFs for things.
+
+
+[00:14:51]: Anna Rose:
+
+
+I feel like there was a time where there was a hardware component to this as well. I know some of the teams that were working on these VDF hardware. I don't know if it was an ASIC for VDFs. Seems kind of like counterintuitive if it's a delay function, but yeah, I think a lot of those have switched, as far as I know, to working on like ZK prover tech.
+
+
+[00:15:11]: Joe Bonneau:
+
+
+Yeah, it does seem a little weird. Why would you want -- if it's supposed to be slow, why would you want hardware to make it fast? But it's actually an essential component of the story, because what you want is for adversaries to not be able to go very much faster than honest participants. So if you assume the adversaries might build dedicated hardware to speed up this computation, the idea is you want the honest parties to have it too. So if you invest some money into having a decent dedicated ASIC that can compute the VDF, then the amount of money an adversary would have to invest to, say, compute twice as fast could be really, really large. Whereas if you just implement in software, then maybe the adversary could cheaply run it on an FPGA or something and go much faster than the software, and that would be a problem. So yeah, there was a lot of effort put into this, but I agree that proving hardware is now sort of seemingly a much more lucrative market.
+
+
+[00:16:10]: Anna Rose:
+
+
+Or at least that's where the attention is. I think that's also TBD.
+
+
+[00:16:14]: Joe Bonneau:
+
+
+Yeah, true.
+
+
+[00:16:16]: Guillermo Angeris:
+
+
+We'll find out next.
+
+
+[00:16:18]: Anna Rose:
+
+
+I want to sort of shift focus because one of the reasons we wanted to have you back on was to learn a little bit about other topics that you've been working on since working on that VDF work. And we had a couple papers that stood out to us. I don't know if we'll get a chance to cover all of them, but I'll just sort of throw them out here to just give people a sense for what we want to cover. There's one called Naysayer proofs, which looks really interesting. Some work on middleboxes, auctions. Yeah, and if we have a chance, maybe we can do a little bit more there. But I'd love to start in on the naysayer proofs. Maybe just give a bit of a background on this work. And what I understand it as is, it's almost like an optimistic ZK or something. So like... And I've heard that referred to like zkrollups that are optimistic, but ZK. But I think they mean it differently. So this is... Yeah, this is a cryptographic optimistic ZK proof. So, yeah, I'd be really curious to hear more about that.
+
+
+[00:17:16]: Joe Bonneau:
+
+
+Yeah, sure. This is a really fun work. I think it's quite conceptual, and the original paper is only eight pages, which...
+
+
+[00:17:24]: Guillermo Angeris:
+
+
+It's really very lovely, actually. It's one of the first ZK papers that I actually picked up and could just read from top to bottom and be like, I get it, and this is good. Like this is great.
+
+
+[00:17:33]: Anna Rose:
+
+
+It's written in a way that Guillermo likes it. That's so rare.
+
+
+[00:17:37]: Guillermo Angeris:
+
+
+That's shocking, one might say. Yeah, yeah.
+
+
+[00:17:41]: Joe Bonneau:
+
+
+Well, yeah, glad you enjoyed it. As a side note, this has bothered me about the crypto space for quite some time, that the average length of crypto papers over the years has gone way up...
+
+
+[00:17:53]: Guillermo Angeris:
+
+
+Literally insane.
+
+
+[00:17:54]: Joe Bonneau:
+
+
+If you read crypto papers from the 90s, they're quite short, they get right to the point. Now, you could say we didn't know as much, the field wasn't as deep then, which is true. But I also think that the expectation has become that you can't just present a new idea. You have to present the idea and completely exhaust all feasible analysis of it before people will publish it at big academic crypto conferences. And I think that leads to a lot of premature optimization, where researchers have to spend a huge amount of time working out the details of some new idea that more than likely is never going to get picked up or will fail for reasons that don't have to do with some subtle detail of how you prove the thing is secure.
+
+
+So I have always wanted, if there's a way to do it, to get back to a space where people publish the idea first, you get some feedback from the community, is this idea interesting? And you can always do the deep analysis later if there's sufficient interest in the idea itself. So I've wanted to do that with other ideas as well. In this case, I really said we can really present this idea succinctly and have a really nice short write up that will be readable.
+
+
+[00:19:06]: Anna Rose:
+
+
+I feel like, doesn't ETH Research, the message board sort of try to fill that gap of presenting ideas before you write the paper? Or is it too short there? Too early?
+
+
+[00:19:18]: Joe Bonneau: 
+
+
+Yeah, that's a good point. It definitely does. And some interesting cryptographic idea have come about there. There's some limitations. I mean, they're often not writing in LaTeX. It's often harder to write super clearly, references and things aren't quite as easy. Maybe a bigger problem is just academic snobbery, that they don't like to read things that aren't PDFs. They like things to be on ePrint or Archive, and that's kind of the currency of that world. But I mean, I'd like for academic conferences and workshops to accept more short papers and to encourage that. So financial crypto, in a way, is a holdout. It's one of the last crypto conferences that explicitly accepts short papers which have to be at most eight pages.
+
+
+[00:20:02]: Guillermo Angeris:
+
+
+Yep.
+
+
+[00:20:03]: Anna Rose:
+
+
+Oh, wow.
+
+
+[00:20:04]: Joe Bonneau:
+
+
+And it's not even very popular. There's only two or three a year, I would say. But that's how Naysayer proofs was published, and I'm glad that we went that way. But that's a big detour. I should probably tell you what Naysayer proofs actually are.
+
+
+[00:20:16]: Anna Rose:
+
+
+Sure.
+
+
+[00:20:16]: Guillermo Angeris:
+
+
+Yes.
+
+
+[00:20:18]: Joe Bonneau:
+
+
+So like you said, it is kind of an intermediate point between doing full ZK or succinct proving of a statement and doing just optimistic verification, where you assert the statement and then have to do a fraud proof game if somebody disputes it. The observation that we started with when we were thinking about it is that a typical rollup or other kind of similar service will publish updates with a proof regularly. They might publish dozens of these a day. And most rollups... Essentially every rollup that we could see has never published an invalid proof. So these proofs get published. In some cases, they're sort of big. So it's a lot of data to put on-chain. Some of them are expensive, computationally, to verify. And in all, millions of dollars have been spent verifying these proofs on-chain, even though, like I said, we had to really dig, and we asked on Twitter, we sort of asked internally to find one example somewhere where someone actually tried to post a proof that didn't validate, and this whole process actually found something.
+
+
+[00:21:27]: Anna Rose:
+
+
+Okay.
+
+
+[00:21:28]: Joe Bonneau:
+
+
+So it's so rare.
+
+
+[00:21:30]: Anna Rose:
+
+
+Yeah, yeah, yeah.
+
+
+[00:21:30]: Joe Bonneau:
+
+
+So our thought was, is there a way we don't have to spend this much money checking proofs that, for a variety of reasons, organizational reputation, you just expect in the real world, are almost never going to fail?
+
+
+[00:21:42]: Guillermo Angeris:
+
+
+Quick question. Was a counter example, it was like a testnet, right? Wasn't it, where someone was running one of the validators. I remember when it happened, everyone lost their minds. So I posted an invalid state route transition, I believe.
+
+
+[00:21:52]: Joe Bonneau:
+
+
+Yeah, exactly. So the idea with naysayer proofs is really simple. You just publish the proof, but you don't verify it, and you only verify it if someone challenges the proof. That was the original idea. Sounds very, very simple. Just publish the proof, but don't verify it. And then there's a couple of embellishments I can get to, but that's the basic idea.
+
+
+[00:22:17]: Guillermo Angeris:
+
+
+I mean, the idea is quite lovely, right? It's very simple, but I think the embellishments are particularly interesting because the fact that you can prove that a statement, a succinct proof is incorrect in smaller time, much smaller than you can verify that proof itself, is itself very interesting. But so anyways, I don't know if you want to describe what that even means. I kind of just went straight to the high level on that one but...
+
+
+[00:22:43]: Joe Bonneau:
+
+
+Sure. Yeah, so great. So the default, the simplest possible naysayer proof is really just one bit, which says, I think this proof is wrong, so run the validation and you'll see that it's wrong. More advanced naysayer proofs that can be even more efficient than that. You don't just say the proof is wrong, you say the proof is wrong and this is exactly the part of the proof that's wrong. So you don't even have to verify the entire proof, you can just see this one little part is wrong and therefore the rest of it must be wrong. And there's some really simple examples of that.
+
+
+So Groth16, one of the most famous proof systems, essentially the verifier does three pairing equality checks. All of them have to pass for the proof to be valid. So a naysayer can just say, oh, check number two out of three is not going to pass. Try it and you'll see. And then you're instantly convinced, it doesn't even matter if the other two pass or not, this one's wrong, so the whole proof is invalid. There's a lot of other examples of proof checking that has similar structure where you have to check a list of things, FRI proofs, you open a bunch of different Merkle paths and check things. So a naysayer saying that a proof is wrong just has to say which of the openings is wrong, and that's it.
+
+
+[00:23:56]: Anna Rose:
+
+
+In this case, is it a new proving system then, or is it more just like the technique to check to verify a proof? This is the focus of this work.
+
+
+[00:24:05]: Joe Bonneau:
+
+
+Yeah, so I think it's the latter. It's not a new proving system because it doesn't let you prove arbitrary statements in NP. It only lets you prove very specific statement, which is that a proof in the original proving system is wrong. It doesn't even let you prove that a proof in the original system is right. To verify that, you have to just run the original verifier. The key observation is that it's often much easier to tell that something is wrong than that it's right. If a proof is right, every aspect of it has to be right. But if it's wrong, it can be wrong for any one thing. So you just need a hint, this is the part that's wrong, and then you're done quite quickly.
+
+
+[00:24:44]: Anna Rose:
+
+
+How would this actually exist in practice? Would a rollup company implement this and then they're verifying? Like when would they deploy this naysayer verifier? I can't fully place how this would actually work.
+
+
+[00:25:00]: Joe Bonneau:
+
+
+So maybe it would help to just say, how would you actually build a rollup system using naysayer proof. You could think of taking a zk-rollup today as a starting point. So you still post state transitions on-chain, you post a proof that the state transitions are valid, but what you don't do is have the smart contract actually verify every one of those proofs that's posted. By default, you do nothing.
+
+
+[00:25:27]: Anna Rose:
+
+
+I see.
+
+
+[00:25:28]: Joe Bonneau:
+
+
+Just like with an optimistic rollup, where by default, you don't do anything to check that things are valid. The difference is that with a naysayer proof-based rollup, there's still a short challenge period, and if a challenger or a naysayer shows up and says the most recent update was wrong, they'll also -- this naysayer proof, they'll point to the part of it that's wrong. And then the smart contract will actually have to wake up, check the naysayer proof, which is more efficient than checking the original proof, and then they'll undo the most recent state transition.
+
+
+[00:26:03]: Anna Rose:
+
+
+So the proving system can still be whatever was already deployed, but it's this verifying contract would act differently?
+
+
+[00:26:09]: Joe Bonneau:
+
+
+Yeah.
+
+
+[00:26:10]: Anna Rose:
+
+
+Okay.
+
+
+[00:26:10]: Joe Bonneau:
+
+
+Exactly. So you don't even have to implement or deploy a full verifier on-chain, you just need a naysayer proof verifier. And you save money in two ways. The main savings actually just come from the simple fact that most of the time, this verifier never runs. Just like with an optimistic system, if there's no fraud, there's no challenges. But even if there is a challenge, it's cheaper than verifying the original proof. That's where the naysayer magic, this pointing to the specific error and the proof part comes in.
+
+
+[00:26:41]: Guillermo Angeris:
+
+
+So maybe for a little bit more detail is, let's say I'm using FRI, for example. You mentioned a little bit earlier, but I just want to reiterate, what is a naysayer proof for FRI look like? So, let's say I have some FRI proof, supposedly, that does not verify if I were to run this whole thing. You know, the proof for FRI is already quite small. The proofs provided by FRI maybe is the better term. So the natural question is, how can a naysayer proof be even smaller than that? What does it even look like? What's the structure? I mean, it might help to explain FRI for a second in the first place, but...
+
+
+[00:27:17]: Joe Bonneau:
+
+
+So FRI proofs contain my understanding of them, and should say I'm not an expert on FRI, but you commit to a very large amount of data. You have a Merkle root of that commitment, and then through Fiat-Shamir, you get a challenge, which forces you to randomly open some number of paths in the tree and prove that the individual items are correct. Now, so there's multiple openings. There have to be for security amplification. All of the openings have to be correct for the FRI proof to be correct. So if it's incorrect, at least one of the openings is wrong and the naysayer can just point to the specific opening that's wrong. And you can check the naysayer proof, you can be convinced that the proof is invalid by just seeing that one of the openings is invalid.
+
+
+[00:28:09]: Guillermo Angeris:
+
+
+Right.
+
+
+[00:28:10]: Joe Bonneau:
+
+
+Sometimes there's a metaphor, if it helps, I can try that.
+
+
+[00:28:12]: Guillermo Angeris:
+
+
+Let's hear it.
+
+
+[00:28:14]: Joe Bonneau:
+
+
+If you want to check that an airplane is safe for takeoff, there's a long checklist of things. You have to check the tires have air in them, you have to check that the engine's running, you have to check that the flight controls are active before you're convinced that that plane is safe to get in. So they have this long walk around checklist the pilot's supposed to do. Now, if I want to convince you that the plane is not safe and you should not get on it, all I have to do is tell you one component of the plane that is not safe. If I just say, look, just check the right wing, there's a hole in it, 2ft from the end. You'd go look at that and say, okay, this is not a safe plane, I don't care about the flight controls, it cannot be safe with that problem, and then you're done.
+
+
+[00:28:56]: Guillermo Angeris:
+
+
+The negation of for all of x, p of x is true, is simply there exists an x for which p of x is not true. Right, so.
+
+
+[00:29:04]: Joe Bonneau:
+
+
+Exactly. That's really the basis of the whole idea.
+
+
+[00:29:07]: Anna Rose:
+
+
+The thing is, there are already optimistic rollups. So what is the benefit of having a system like this? Like, is there anything extra that you get from doing all of these proofs?
+
+
+[00:29:18]: Joe Bonneau:
+
+
+Yeah, it's really, really good question. I think it's actually helpful to think of a spectrum, and the two endpoints which are pretty well known are optimistic rollups and zk-rollups. Naysayer proofs or a naysayer rollup would exist in the middle. It has some of the advantage and disadvantages of each. So I've said the advantages over a full zk-rollup, that you don't have to pay the cost of proof verification every time. Compared to optimistic, full optimistic, the disputes are much, much simpler in an naysayer proof system. It's only one round, you immediately point to a problem with the proof and the fraud is basically instantly settled.
+
+
+With optimistic rollups, usually there's this somewhat complicated logarithmic number of rounds, fraud proving game where the original prover plus the challenger have to iterate and find the exact point in the original statement that was wrong. And it turns out that A, it eats up a lot of gas because it requires multiple rounds and a lot of transactions. It's also sort of error prone. Both parties have to be online, they have to go back and forth. There's a lot of corner cases and bugs that come up. So naysayer proofs contrasted with optimistic, they are a little bit more expensive, even in the optimistic case, but in the pessimistic case, they are much faster. It's only one round. You get sort of instant settlement of a dispute.
+
+
+[00:30:47]: Anna Rose:
+
+
+Cool. I sort of want to move on to another work. I think the name of it was Middleboxes that Don't Snoop. I don't know if that's the real title, but somewhere in there you had that sentence, so what is that? First of all, what's a middlebox?
+
+
+[00:31:01]: Joe Bonneau:
+
+
+Okay. Yeah, so this work is in a totally different direction.
+
+
+[00:31:04]: Anna Rose:
+
+
+Although it uses ZK.
+
+
+[00:31:06]: Joe Bonneau:
+
+
+It does use ZK. So this actually came out of my work at NYU. So NYU participated in a DARPA project called SIEVE. It actually just wrapped up. It concluded in 2024. It was a big DARPA project. Essentially, the goal was to accelerate the development of ZK for every application except blockchain and cryptocurrency. So that was kind of an informal rule of the program. Blockchains were kind of like that which must not be named.
+
+
+[00:31:41]: Anna Rose:
+
+
+Yeah.
+
+
+[00:31:42]: Guillermo Angeris:
+
+
+Oh my God.
+
+
+[00:31:43]: Joe Bonneau:
+
+
+But I do think that there was a sensible argument for it, which is that the Web3 industry has seen a lot of investment in this space. So there's been a lot of development of ZK tools and new proof systems and everything else in this space. And DARPA was interested in other applications and thought that they would be better directing their funds at things that the Web3 industry wasn't looking at. So one of the grand goals of the whole project was to have better interoperability between different proof front ends and backends, and develop a common intermediate representation so that you could mix and match, you could have different ways of specifying the statement you were proving, instantly compile and run it on different backends and see which was the most efficient. So there were a lot of really nice ideas, plus a whole bunch of interesting applications. I mean, people were looking at proofs of software exploit, proofs of things like ML models being trained, or that some linear programming optimization was done correctly. So that was basically the challenge was like, what can we do with ZK that has nothing to do with the Web3 industry, but is interesting.
+
+
+[00:33:01]: Anna Rose:
+
+
+That's awesome.
+
+
+[00:33:01]: Joe Bonneau:
+
+
+So along with a bunch of colleagues at NYU, we wrote two papers actually on this notion of zero-knowledge middleboxes, and it's basically an application of ZK to try to get better privacy on the web. So middlebox is really just any computer that sits between you and the server that you're trying to get to.
+
+
+[00:33:20]: Anna Rose:
+
+
+Truly a middlebox. Got it.
+
+
+[00:33:22]: Joe Bonneau:
+
+
+Yeah, exactly. So, I mean, it's usually defined as one that actually does something. You could think of, every router is sort of being like a middlebox, but they're not usually called middleboxes unless they're actually changing the traffic in some way. But for example, there's middleboxes that act as firewalls that try to prevent attack traffic from entering or leaving your network. There's loss prevention middleboxes that some companies have installed data loss prevention that try to prevent employees from uploading sensitive documents and shipping them out from the enterprise network. But probably the most common and well known middlebox is for filtering. So if you browse the web on an airplane or a coffee shop, and you try to get to a website that says it's blocked on the local network, usually it's an adult content filter. And these are pretty widely deployed. So there are lots of public Wi Fi networks. There's a huge industry of parents setting them up in the home, typically, if they have young children at home and they want to have what's sometimes called a family filter. And of course in some other places in the world, you think more about censoring political speech and things like that. In the US context, the dominant application is usually filtering adult content. Okay, so where does ZK enter the picture?
+
+
+[00:34:44]: Anna Rose:
+
+
+Yeah.
+
+
+[00:34:45]: Joe Bonneau:
+
+
+So, basically middleboxes have existed and worked for a long time implementing these filters by just blocking DNS requests. They work at the DNS level. They don't let you figure out what IP address corresponds to the name of the domain that you're trying to get to. And that worked for a really long time because DNS was never encrypted. Even with HTTPs and the growth of encryption everywhere else on the web for your content, your DNS queries weren't encrypted until really the late 2010s, when encrypted DNS started to become a widespread thing.
+
+
+[00:35:18]: Guillermo Angeris:
+
+
+In many ways, they're still kind of not encrypted though, right? Unless you use... I don't know if Chrome has a specific thing, but for sure Safari does not encrypt DNS requests in general.
+
+
+[00:35:29]: Joe Bonneau:
+
+
+Safari, I don't know about. Firefox uses encrypted DNS by default and has for a couple of years now.
+
+
+[00:35:35]: Guillermo Angeris:
+
+
+Oh, interesting. Okay.
+
+
+[00:35:36]: Joe Bonneau:
+
+
+So the interesting thing is that when Firefox, when Mozilla planned to turn on encrypted DNS, this conflict came about that it was going to break filtering on all these networks. Now it turns out there's actually a law on the books in the US that says that schools that have 12th grade or below students have to filter the school network for adult content.
+
+
+[00:35:59]: Anna Rose:
+
+
+Okay.
+
+
+[00:36:00]: Joe Bonneau:
+
+
+It's been a law since I believe, 2003. So the implications is basically Firefox, Mozilla realized if they turned on encrypted DNS everywhere, schools around the country would be forced to remove Firefox, not allow people to use it, because it would get around their filter.
+
+
+[00:36:19]: Guillermo Angeris:
+
+
+Interesting.
+
+
+[00:36:20]: Joe Bonneau:
+
+
+So what they did instead, which is interesting, they basically built a kill switch into the browser. So Firefox tries to use encrypted DNS, but when you join a new network, it first does one kind of dummy DNS query, and if the network responds, then it says, this is a network where I'm not supposed to use encrypted DNS, so I will turn it off.
+
+
+[00:36:43]: Anna Rose:
+
+
+Interesting.
+
+
+[00:36:43]: Joe Bonneau:
+
+
+Yeah. Your network operator has the power to tell your Firefox installation, don't use encrypted DNS on my network, please, and they basically have to go along with it. All this led to us thinking a lot, there has to be a better way. Maybe ZK could help us out here. And the basic idea is that you shouldn't have to turn off encryption and reveal all of your plaintext to the middlebox, to your network operator, just to essentially prove a very simple fact that my traffic is not going to websites which are filtered on this network. Instead, what you can do, and what we did in this research project is to actually prove my browser is sending out a packet. This packet complies with the local network use policy. For example, it's nothing going to some domain that's on this block list. So that's all you need to know. I don't have to tell you my plaintext, I don't have to tell you where on the network this traffic is going. It just complies with the policy. And the middlebox should be able to say, okay, I've learned the information I actually need to know, the zero-knowledge proof has convinced me of that fact and nothing beyond it, which is exactly what ZK gives you. So I'll permit this traffic to transit my network.
+
+
+[00:37:58]: Guillermo Angeris:
+
+
+Interesting. Okay.
+
+
+[00:37:59]: Anna Rose:
+
+
+I love use cases like this, by the way. I just love these very tangible, actually non-blockchain use cases. This work is this Zombie: Middleboxes that Don’t Snoop. Is that the paper? Or you sort of mentioned, there's two papers, so.
+
+
+[00:38:14]: Joe Bonneau:
+
+
+Yeah, so there are two papers. The first one was just called Zero-Knowledge Middleboxes, and then that was a bit more conceptual. We did an initial proof of concept and laid out this paradigm that you could use ZK to prove that you comply with network use policies. The Zombie paper is more of a built out system where we optimize and we tried to see like could we get the performance to work here. Now, this is a really, really challenging space performance wise, because basically you have to compute a proof for a packet that you're sending out on the network, and the proving time translates directly to latency for the human that's sitting there at the browser browsing the web, and people are really, really latency intolerant when they're browsing the Internet. Adding a half a second makes browsing the Internet really unfun. Maybe back in 1996, people were used to it, but today we're used to everything loading really fast. Google famously has whole teams, and people get promoted for shaving ten milliseconds off the latency of a page load.
+
+
+So yeah. So I should caution, I guess. I think this is a really exciting application of ZK, and it's an interesting paradigm. Performance wise, it's really challenging. We were able to get, with a lot of work from some really great students at NYU, we were able to get latency down to maybe the 1 second per packet range. And there's some tricks where you can precompute parts of it and other things like that, but it's not really -- with today's proving systems and without any hardware acceleration, it's not really ready to be something that you can really prove every packet that you're sending out from your computer. The DNS example is maybe a little bit more practical, because it's not every packet, it's just your DNS requests, which there aren't that many of, and it won't add latency to every packet, just your DNS queries. And maybe the time is tolerable there.
+
+
+[00:40:17]: Anna Rose:
+
+
+Interesting.
+
+
+[00:40:17]: Guillermo Angeris:
+
+
+I mean, what's interesting there too, is that as if you're using some simple system that you can actually tune the security parameter for, like the Halo or FRI or something like that, it doesn't matter that it's to the negative 80 or whatever is your security parameter. It just matters that it's reasonable enough. So I feel like if you set a parameter, it's like every 1 in 1000 passes incorrectly or whatever. And this is great. Okay, you've shaved a crap ton of queries...Well, specifically, I mean, sorry, ZK queries, not queries to the DNS server. And it functionally is the same. If one of every thousand or so packets happens to verify correctly, okay, well, big deal. I don't think that's big of a problem.
+
+
+[00:41:06]: Joe Bonneau:
+
+
+No, I think that's a great point, the benefits of this space, and again, it's interesting to work on because it's so different, maybe from the Web3 dynamics that a lot of people in this space are used to. Yeah, you definitely don't need the same security level. The whole thing about filtering, there's a lot of ways... If somebody wants adult content to play on their laptop on an airplane really badly, they can pre-download it before they get on the plane, they can type in an IP address manually, that gets around most DNS filtering today.
+
+
+So filtering is not really designed to be ironclad. There's ways to get around it. We liken it more to sort of putting up fencing at a concert or something like that. It doesn't need to be a fence that people are incapable of climbing over, but it will keep most of the people in kind of sort of the place that they're meant to be. So, yeah, I think you could operate the proofs at a lower security level. Another thing that's interesting is that the proofs could be much bigger. You're only sending them typically over the local network. So if the proof is 100 kilobytes, it's really not a big deal at all. Whereas in the blockchain space, that would be terrible and unacceptable for most applications. So it's kind of a very different domain here.
+
+
+[00:42:18]: Guillermo Angeris:
+
+
+You should think about kind of like low security parameter proofs for this stuff, I think would be fascinating because you can... for a FRI and Halo proof where your secure parameter is to the negative five or something, they're both tiny and extremely fast.
+
+
+[00:42:33]: Joe Bonneau:
+
+
+That might be a little low because a malicious client can grind over that.
+
+
+[00:42:37]: Guillermo Angeris:
+
+
+Sure, sure. But look, if you have a malicious client that's grinding or whatever, maybe to the negative ten, but if you're doing it for every DNS request like, come on, you have other problems to deal with at that point. Like that person's probably just doing something else.
+
+
+[00:42:50]: Joe Bonneau:
+
+
+It doesn't need to be 2 to the 80, right? Like 2 to the 40 might be pretty solid.
+
+
+[00:42:56]: Guillermo Angeris:
+
+
+To the 40, to the 20, to the 10. Yeah. I don't know.
+
+
+[00:42:59]: Anna Rose:
+
+
+So I do wonder, at what point -- when did this work come out? What systems were you actually looking at when you built this?
+
+
+[00:43:06]: Joe Bonneau:
+
+
+So the original paper I believe was 2022, and the follow up was this year, 2024.
+
+
+[00:43:13]: Anna Rose:
+
+
+Okay, so it is recent then.
+
+
+[00:43:15]: Joe Bonneau:
+
+
+Yeah. Oh, so you're asking what proving systems?
+
+
+[00:43:17]: Anna Rose:
+
+
+Yeah, I'm just kind of curious if some of the small fields Binius work or anything. I don't even know if it would be relevant here, but any of the new sort of proving systems were already out as you were working with this.
+
+
+[00:43:29]: Joe Bonneau:
+
+
+Yeah. So, I mean, we used Spartan in Zombie, which...
+
+
+[00:43:35]: Anna Rose:
+
+
+Spartan in Zombie, sounds so cool.
+
+
+[00:43:39]: Joe Bonneau:
+
+
+I know it sounds like Halloween costumes or something. But I mean, so Spartan has a fast prover, relatively large proofs, but is a good fit for this space. Interestingly, yeah, we didn't use Jolt or Binius or Jolt plus Binius, even though my student Arasu, who is the lead author of Jolt, was also involved in the middleboxes work. But there's definitely a lot of future room to optimize, and different people are sort of exploring this whole ZK middlebox, or even ZK applied to network traffic idea. So I think that we'll see a lot more optimization in the future.
+
+
+[00:44:21]: Anna Rose:
+
+
+Cool.
+
+
+[00:44:21]: Joe Bonneau:
+
+
+It might fundamentally be a question of if you believe that in the future a lot of consumer devices will have ZK acceleration in them.
+
+
+[00:44:31]: Anna Rose:
+
+
+Wow.
+
+
+[00:44:32]: Joe Bonneau:
+
+
+So, I mean, I've heard this vision, maybe it's been discussed on your podcast too.
+
+
+[00:44:39]: Anna Rose:
+
+
+I don't know. I don't know. Tell me what you're thinking here. Hardware acceleration has been discussed, but like...
+
+
+[00:44:46]: Joe Bonneau:
+
+
+Yeah, yeah, yeah. So the initial -- All the initial focus is on having this hardware in the cloud to do big proofs for rollups and things like that. It's possible in the future it will downstream a little bit to client devices. So your laptop might have a ZK coprocessor on it. I mean, I think probably even better chance that we'll have an AI coprocessor on it, like a Tensor processing unit. But the idea is that if we find enough applications of zero knowledge to privacy, then this could be something that device manufacturers would say, oh, yeah, we should accelerate this so that our users can get access to these great privacy enhancing features, nothing to do with blockchain. And there's other applications too, where being able to... If you could prove things really efficiently on your laptop, there'd be nice privacy benefits to that.
+
+
+[00:45:41]: Anna Rose:
+
+
+This is so cool. I love this idea.
+
+
+[00:45:43]: Joe Bonneau:
+
+
+Yeah, I mean it's -- Well, it's really on the community, I think, to demonstrate enough that, interestingly, I always say most of the time when people say ZK and the blockchain space, they really just need succinct where they barely using the ZK and the privacy part of it at all right now.
+
+
+[00:46:01]: Anna Rose:
+
+
+What? To get the privacy, you're going to have to go more towards the client anyway. I think it's because it's all server side. There's no point.
+
+
+[00:46:08]: Joe Bonneau:
+
+
+Exactly. So yeah, I mean, I think if we -- I hope that the space doesn't become so completely focused on building efficient rollup servers, which is a great application that I think everyone wants to see have better performance blockchains. But the original conception of zero knowledge was about privacy. There's a lot of great applications, I think, where it can help improve people's privacy, not just the middleboxes stuff, but things like selective disclosure credentials, where you can sort of prove in ZK that you're over a certain age or live in a certain area on the web, all sorts of stuff like that. I think if there's enough applications like that and we can demonstrate the value, then the case will start to make sense where we'll have hardware acceleration for clients to actually do these proofs. And hopefully it gets to be a positive feedback loop where hardware means the applications are cheaper, so more people are using them, and then more people want the hardware.
+
+
+[00:47:06]: Anna Rose:
+
+
+And then we can do more things with them. I do want to make a quick distinction though, because you just used the term ZK coprocessor, but I think you meant a hardware coprocessor, the classic term coprocessor, but focused for ZK, unlike the ZK coprocessor in our space, which is like off-chain compute using ZKP.
+
+
+[00:47:27]: Joe Bonneau:
+
+
+Exactly. Yeah, same idea, But for your laptop, you'd have a...
+
+
+[00:47:33]: Anna Rose:
+
+
+Little piece of the hardware.
+
+
+[00:47:35]: Joe Bonneau:
+
+
+Yeah, it might be as simple as a piece of hardware that does multi-scalar multiplication really efficiently for you.
+
+
+[00:47:41]: Anna Rose:
+
+
+Cool.
+
+
+[00:47:41]: Joe Bonneau:
+
+
+It might be more of a complete end-to-end thing tailored to one specific scheme. So, yeah, I mean, I'm excited by it. It's a ways off, but I'm definitely excited by that vision of the future, that ZK is a common building block in a lot of applications, not just in the blockchain space. And it's something that we have good support for, not just hardware, but of course good tooling and good software support and everything.
+
+
+[00:48:07]: Guillermo Angeris:
+
+
+I will say it's not that far-fetched. Right? We've had AI processors in our iPhones for I don't know how many years, more than eight years now, I think. Just like little linear algebra chips that just do the thing very efficiently and certainly all the Apple M series laptops. And my suspicion is actually that the ZK hardware is not that far into the future. It is a bit on us, though, to demonstrate its utility, but there are many ways you can make it fairly modular, fairly quickly in a way that isn't --- It's useful for many things that aren't just a particular proving system or something of the like.
+
+
+[00:48:45]: Anna Rose:
+
+
+Is there any other work that you've done in this sort of non-blockchain ZK space?
+
+
+[00:48:52]: Joe Bonneau:
+
+
+Yeah, I mean, definitely actively working on it. So one answer is that there have been a lot of applications of succinct proofs to transparency logs, which kind of look like blockchains if you squint at them, but they're usually sort of run by one company. So Certificate Transparency is the best known system. There's other things like Sigstore, which are Binary Transparency for software programs. And all of these are basically aiming to create a public log of... Well, Certificate Transparency is all certificates that are in existence and valid. Binary Transparency is all versions of a piece of software. And those give, of course, I have to say key transparency, which is something I worked on for ten years, and WhatsApp finally announced that they're launching this year and Apple also quietly launched for iMessage.
+
+
+[00:49:42]: Anna Rose:
+
+
+Cool.
+
+
+[00:49:42]: Joe Bonneau:
+
+
+And in that case, you want transparency to all the public keys that are listed for your username in some messaging system. All of those somewhat similar to in blockchains, but for different purposes. There's been new protocols using ZK that make these systems usually more succinct, much faster, but also potentially privacy preserving. So you can have a public log that lists all the users and their public keys in a system... Sorry, doesn't list them explicitly, but makes them public so that you can verify that you got the right public key for some user that you're trying to message, but using ZK to keep that information private. That's been an application I've been interested in for quite a long time and I think is having its moment right now.
+
+
+[00:50:34]: Anna Rose:
+
+
+Neat.
+
+
+[00:50:34]: Joe Bonneau:
+
+
+And the last thing I can quickly plug because the paper is not even out yet, but hopefully out by the time people are listening to this. Also on the line of applying tools from zero knowledge to traditional network security protocols, we've been looking at using zero knowledge to improve certificate issuance. So every website that you go to on the web, you get a certificate asserting that you got the right public key. That translates into the little glowing padlock, which actually the padlock is going out of style pretty quickly. Browsers have decided they don't want to show a padlock, they just show you nothing if it's actually secure and otherwise, like a scary warning.
+
+
+[00:51:16]: Guillermo Angeris:
+
+
+Correct.
+
+
+[00:51:17]: Anna Rose:
+
+
+Yeah.
+
+
+[00:51:18]: Joe Bonneau:
+
+
+But for a long time the security advice was like, look for the green padlock before you enter your password or credit card number or anything like that. And that's really just saying that you have TLS session enabled and certificate has been checked. So certificate system has long been a huge mess. People in the security space always bemoan how your browser trusts a few hundred different certificate authorities, all of them can issue a certificate for any domain on the whole Internet. If you want to get a little scared, you can look in your browser's actual certificate store and see all the certificate authorities that you trust. A lot of them are owned by foreign governments. There's a lot of weird stuff in there. But yeah, I mean, if you get a new laptop and get a fresh install of Chrome or Edge or whatever browser you're using, there's this huge set of parties that you're asked to trust. And there have been a lot of incidents where they've been hacked, issued a certificate incorrectly, different things have gone wrong. 
+
+
+So the security community has tried for 20 years to say there has to be something better than trusting these weird certificate authority agents. It's been pretty hard, right? Aside from Certificate Transparency, we haven't had a really good proposal for what to replace it with. There's been the idea to use the DNS system. So you already trust DNS to figure out the right IP address, so why not get the right public key at the same time? And the answer has basically been that DNSSEC, the secure version of DNS, which actually signs everything, is a very bulky, kind of unwieldy protocol. It's really based on RSA signatures, the records are big, you have to get this full package of signatures from different parties validating a full DNSSEC chain is... It's a pretty big process.
+
+
+So basically for performance reasons, we haven't been able to use that as a distribution point for public keys. But the really nice thing you can do, that sort of ZK magic, or at least succinct proof magic, is that you can take all the DNSSEC signatures -- So if my domain, jbonneau.com, right? I control my own DNS, but then I have to get it registered with the Com DNS server and they get registered with the root and all those parties need to sign off. But what I can do is just verify the DNSSEC chain once, create a proof that says that I've actually done it, and then you get a very short proof that say this is the right public key or the right IP address for my domain. So yeah, with colleagues at NYU, we wrote a paper showing that you can do this, the performance is actually pretty good. And if you use Groth16 with the smallest proofs, the proofs are so small, you can actually embed them in a legacy certificate.
+
+
+[00:54:09]: Guillermo Angeris:
+
+
+Nice.
+
+
+[00:54:10]: Joe Bonneau:
+
+
+So you get a certificate that basically has validated domain ownership in two ways, through the legacy CA system and also through the DNSSEC system and a proof. Which is really, really nice, because then it means you're not vulnerable to either. If both of the systems fail, then the attacker might impersonate the domain, but if either one of them fails individually, it doesn't. I thought it was a really fun kind of creative paper. The technical challenge was a lot of representing crypto, like RSA signatures, that's quite old. Efficiently in proof systems you don't have the luxury like in blockchain space, sometimes of being able to pick your crypto specifically to be proof friendly or circuit friendly, have an efficient representation. If you're dealing with these legacy protocols and trying to accelerate them in ZK, you just have to deal with what's out there. It's really, really difficult. It takes ten years for protocols like this to actually change.
+
+
+[00:55:06]: Anna Rose:
+
+
+Wow.
+
+
+[00:55:07]: Joe Bonneau:
+
+
+But yeah, in general, I think that this is a really fun application of ZK to sort of, you can think of it as trying to fix some of the really messy, complicated network security protocols that are out there, but are really, really hard to change for a variety of reasons.
+
+
+[00:55:21]: Guillermo Angeris:
+
+
+Yeah, this fits very nicely into, I don't know who said it first, but you can view ZK as a universal translation layer -- of like ZK, is you have these systems, they're ugly and stuff, and you can think of them as... Like ZK is a nice beautiful box that just encapsulates it and gives you a nice short version of it. And you can treat it as like, okay, that now exists out there, here's a proof that we've done all the shit correctly. Please take it and verify it as needed. And the rest is all details, so to speak.
+
+
+[00:55:51]: Anna Rose:
+
+
+Wow.
+
+
+[00:55:52]: Guillermo Angeris:
+
+
+It's really quite a lovely... Very much looking forward to reading the work.
+
+
+[00:55:56]: Anna Rose:
+
+
+I feel like the more I learn about -- As a non computer science major, I did one computer science course many, many, many years ago. It's kind of terrifying to realize that everything we rely on is, it feels like it's all put together with tape.
+
+
+[00:56:15]: Joe Bonneau:
+
+
+That's definitely the feeling. If you read a lot of these RFCs that define all the network protocols that you rely on every day, like HTTP and even just TCP, it's amazing how sort of old and brittle they seem and they're so difficult to change. We've been trying to switch from IPv4 to IPv6 for 20 plus years and very little... I mean, it's so difficult to actually change things on the... It's funny, I think, because we think of the Internet and tech being so modern and cutting edge, but it's like there's already these core foundational pieces of it that look... It feels like archaeology to read and figure out how they actually work.
+
+
+[00:56:58]: Anna Rose:
+
+
+And then you do have systems that emerge where people are trying to rebuild it from scratch, like Urbit or something, and it seems almost like an impossible task because the amount of adoption, and I mean... I don't know if Urbit is even in that category, but yeah.
+
+
+[00:57:17]: Joe Bonneau:
+
+
+Yeah, certainly its people have dreamed of replacing the whole stack and doing this kind of clean slate redesign of the internet for a long time and nobody's cracked it yet. So I think it's a pretty safe bet that this kind of research and using ZK to sort of...
+
+
+[00:57:36]: Anna Rose:
+
+
+Clean it up.
+
+
+[00:57:37]: Joe Bonneau:
+
+
+Figure out a way to muddle along and clean up a little bit, it's like, will be a pretty exciting application.
+
+
+[00:57:42]: Anna Rose:
+
+
+Wow. We don't have much time left, but we did mention this a little bit earlier on. I want to just shift gears to a last work, which is about auctions. And I'm guessing, are we going back into blockchain land for this one? Sounds like.
+
+
+[00:57:57]: Joe Bonneau:
+
+
+Typically, yeah.
+
+
+[00:57:58]: Anna Rose:
+
+
+So this is about decentralized sealed-bid auctions. The name was Riggs.
+
+
+[00:58:04]: Joe Bonneau:
+
+
+Yeah, I guess also two papers in this space, actually, because we had a follow up to Riggs called the Cicada. But, yeah, both of them -- I mean, it also sort of a follow up to our earlier discussion about VDFs and what's happened in VDF since then. So both Riggs and Cicada are about using time lock puzzles to implement auctions. Sort of like a conceptually simple problem that has parallels all over the blockchain space. So typically, in a sealed-bid auction, everybody, in an offline classic way to do it, everybody would write their bid in an envelope, turn them in. Once you have everybody's bids, you open all the envelopes, and the famous result, this Vickrey auction format, is that the highest bidder gets the item, but they pay the price of the second highest bid. And that solves a lot of incentive problems. It makes sure that everybody is incentivized to just put their actual valuation down. You could get the same result if you just had what's called an English auction or an open outcry auction where people bid, and then you keep bidding until no one wants to bid anymore. But that can take a while, and it's a big interactive protocol and everything. So it's simpler to just do the sealed-bid format.
+
+
+Interestingly, economists have been saying for decades this is the right way to do auctions, and they're sort of rarely done in practice. People aren't totally sure why. I mean, one theory is just that the bidding and outbidding is kind of fun or more dramatic for people writing something in an envelope and then just being told if you want or not isn't as compelling. But anyway, another theory is it's hard to do this because the auctioneer actually has a lot of power. The auctioneer, they collude with buyers or the sellers to change the price, which is also why this is sort of hard to do in a decentralized setting.
+
+
+So if you think about trying to do this on a blockchain, you could think about everybody committing to their bid. But then you have to have everybody open their bid, and that gets a little bit complicated. So there's a tax where, for example, if you're the seller and you want to inflate the price, you submit a bunch of bids at different prices. Then you wait for all the honest bidders to open their bid and you open whatever your highest bid is that was just below the honest winner, and then that will force them to pay the max price. So if you have the ability to add bids to the system and selectively decide if you want to open them or not, the incentives kind of fall apart. So how can you do an auction in a decentralized setting where people submit a sealed-bid, but they're sort of forced to open it in the future?
+
+
+There's a couple of ways you can try and do it. Some of the usual suspects, you can have a threshold, you can encrypt the bids to some committee, and you trust the majority of them are honest and won't decrypt the bids until after a deadline? You could try to use trusted hardware and TEEs, you could try to use incentives, you could say if you don't open your bid, you get slashed, or you pay some penalty. All of those could work and have some downsides, but the approach in Riggs and in Cicada is that you actually submit your bids using a time-lock puzzle. So it's a commitment to your bid that anybody can open, anybody can recover your bid, but they have to do a slow function to get there. So it's really nice because it ensures that in the short term, nobody can see what you bid. But even if you drop off the face of the earth, you never return to open your bid, eventually everybody can compute what your bid was. So kind of private in the short term, but public in the long term, which is what you want here. You want everybody's bids to be private while the bidding is still open, but then you really want to make sure you get everybody's bids out.
+
+
+So it's a really elegant formulation. There were a lot of interesting problems to solve that I don't think we thought about too much before we started this work. We thought this is an idea you could just apply to the blockchain space and it would work. And then we realized, for example, you have to prove that you actually have enough money to pay your bid. So that's a little bit tricky. If I'm bidding $100 for an item, I have to prove that I have $100. Of course, if I just put $100 on deposit, then it's not really private anymore because everybody can sort of see. So it's very tricky how you actually combine privacy in a fully decentralized setting with proving that you actually have as much money as you bid. If you're not careful, you can get into some attacks. For example, you could submit a bid, and then if you want to retract the bid, you could just move the money that's actually backing that bid out of your account, and then you don't have enough money and the bid becomes invalid.
+
+
+[01:02:50]: Anna Rose:
+
+
+Oh wow. This is using zero knowledge, ZKPs, but would this also work in something like a TEE or an FHE setting? Aren't auctions even better in those environments?
+
+
+[01:03:03]: Joe Bonneau:
+
+
+Yeah, as I mentioned, TEEs are another way of solving this problem of making sure that everybody's bids are opened after some deadline. Of course you're relying on hardware at that point. So if the TEEs breaks, if there's some side channel problem or the key is extracted, then security kind of collapses completely. The trusted hardware certainly works, as long as the hardware is not broken. FHE, I don't think you need full blown FHE, because even with FHE, you would need some committee that would decrypt the bids. You don't have to actually do any computation on the bids. What you could do in FHE is a slightly more private version where you don't actually reveal all the bids, you just compute the winner and the only information that becomes public is who won and at what price. So yeah, if you wanted to eat the cost of full blown FHE, you can improve the privacy a little bit. Most applications of auctions, people are happy if all the bids become public and you just compute the winner in the clear. So that's why you could potentially use a much simpler tool than FHE.
+
+
+[01:04:07]: Anna Rose:
+
+
+Makes sense.
+
+
+[01:04:07]: Guillermo Angeris:
+
+
+So on the note of why people don't do the kind of sealed-bid is exactly like what you said, the auctioneer has a lot of power, not just in the blockchain setting, but I think recently, maybe as of two years ago or something, wasn't Google in some amount of trouble for inflating their second, their winning price, if I recall correctly?
+
+
+[01:04:25]: Joe Bonneau:
+
+
+I heard about that. I don't know the details, but I've heard things like that.
+
+
+[01:04:30]: Guillermo Angeris:
+
+
+Yeah, I think Venezuela was also doing the same thing with oil payments as well. So there was some implicit collusion between the auctioneer that was running the thing and then the players who were in it to maximize their revenue by pushing up the second highest bid up a little bit. I mean, the technologies are a bit more complicated than that, but that's essentially the high level stuff. So even in things that you might expect would be reasonably trustworthy, it turns out that it's actually not so easy to guarantee. So, yeah, it's very cool work in that sense.
+
+
+[01:04:58]: Joe Bonneau:
+
+
+The last thing I'll say too, is that there's kind of an interesting connection, and we showed this a little bit in the Cicada paper, that voting has a really similar property, that you want people's votes to be private while the vote is happening, so that people aren't voting in reaction to other people. But then depending on the type of election, a lot of on-chain elections, you want to actually see how everybody voted if it's a governance vote. So just like in the auction setting, you want privacy in the short term, you want to keep everybody's vote secret and then you want to reveal everybody's votes. So you can kind of use the same time lock puzzle idea, works in that case, too.
+
+
+[01:05:38]: Anna Rose:
+
+
+That's so cool. Joe, we've sort of run out of time to go into other work. We actually had a longer list. We had deniable messaging, decentralization of the Powers-of-Tau. We know you've actually been doing other stuff. Before we do sign off, though, is there any other, maybe just highlight. You think if people want to check out something you find really interesting, what should they look at?
+
+
+[01:06:01]: Joe Bonneau:
+
+
+So, well, I mean, first of all, thanks for having me, it's great to be back. I mean, I guess it's good and In five years, I've done enough work to fill an hour conversation is a good sign.
+
+
+[01:06:15]: Anna Rose:
+
+
+Plus more. We just don't get a chance to get to it.
+
+
+[01:06:17]: Joe Bonneau:
+
+
+Yeah, I mean, I guess I really like my role at NYU and at a16z and the fact that I get to work on so many different projects with so many great students. I feel like I should always disclaim both as a professor and as a Research Partner at a16z with really great research interns, most of the work I'm talking about was done by students. So of course I have to give them all the credit for doing the hard work on these projects. But, yeah, I consider myself really lucky that I get to work on a variety of really different projects. And, yeah, the second thing you asked, I mean, I guess I would say the Fair Data Exchange project, FDE also came out of the a16z research program. That was really fun. I think there were five different students who collaborated on that paper trying to solve this problem of how you can atomically pay somebody to download some data that they're holding. So, yeah, I know we didn't have time to get into that work at all, it is going to be presented at SBC next month, so.
+
+
+[01:07:21]: Anna Rose:
+
+
+Cool.
+
+
+[01:07:22]: Joe Bonneau:
+
+
+I would guess a number of your listeners are going to go to SBC, and that, I guess, should be happening soon after this episode airs.
+
+
+[01:07:30]: Anna Rose:
+
+
+So before we sign off, I did just want to kind of highlight something. The last time I saw you in person was actually in Athens at ZK11. And then I was really happy to see that you guys had done... You did like a write up of what you saw there. Was that your first summit? Just real quickly.
+
+
+[01:07:48]: Joe Bonneau:
+
+
+It was my first time at ZK Summit. Yeah.
+
+
+[01:07:51]: Anna Rose:
+
+
+Cool. I will quickly plug ZK12 is happening in Lisbon in October, so we'll add the link to that. And actually, applications as this airs, they're open. Applications to speak and to attend. But, yeah, kind of curious, like what was it for you? Well, what did it... What did you think of it? You're coming in at like a ZK11 at this point. So it was like a pretty big event. Didn't start that way, but yeah.
+
+
+[01:08:16]: Joe Bonneau:
+
+
+Yeah. I'd seen some of the recorded talks, I think from some of the other events, I believe. Right? The talks are recorded from the past events?
+
+
+[01:08:24]: Anna Rose:
+
+
+Yeah, yeah, for sure. They're all on YouTube.
+
+
+[01:08:26]: Joe Bonneau:
+
+
+Okay. Yeah. So it felt familiar, even though I hadn't been explicitly because I'd seen some of the talks and there's a lot of overlap between different conferences. So there's a lot of familiar faces, but it was amazing to see that much energy around ZK specifically. And all these people that I've seen, people starting companies, people maintaining libraries, all that were all in one place. Yeah, it was really great. a16z said why don't you write a short blog post saying what you saw, and I said sure, and I think it actually helped because it forced me to think about what I thought were the interesting trends. But no, I loved it. It was a great event.
+
+
+[01:09:06]: Anna Rose:
+
+
+Nice. Yeah. Well, I hope we'll see you at the next one. Well, thanks, Joe, for coming back on the show and sharing with us all of this work that you've done, all of these different topics that you're tackling, a lot of them using ZK which is so cool. Yeah, thanks so much for being here.
+
+
+[01:09:21]: Joe Bonneau:
+
+
+Yeah it was a blast. Thanks for having me.
+
+
+[01:09:23]: Anna Rose:
+
+
+So yeah, thanks Guillermo for being the co-host for this one.
+
+
+[01:09:25]: Guillermo Angeris:
+
+
+Thank you for having me.
+
+
+[01:09:27]: Anna Rose:
+
+
+And I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners, thanks for listening.

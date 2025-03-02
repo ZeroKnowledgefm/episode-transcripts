@@ -1,0 +1,748 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Nico and I chat with Alessandro Chiesa, Associate Professor at EPFL, and Eylon Yogev, professor of computer science at Bar-Ilan University, about a new book they've recently published called Building Cryptographic Proofs from Hash Functions. The book is a comprehensive and rigorous exploration of cryptographic proof constructions using ideal hash functions, also known as random oracles. They cover notable constructions of SNARGs that is Succinct non-interactive arguments. And something I didn't get to mention in this episode. Alessandro Chiesa is known for having formalized important SNARK concepts, such as the concept of IOPs during his work at Berkeley, and this was one of the first steps to make ZK systems more modular. This step actually resulted in an explosion of innovation and breakthroughs in improving ZK systems. I just wanted to highlight why these attempts to standardize parts of SNARKs or SNARGs can be deeply impactful. I realized at the end of the episode that we hadn't quite highlighted that correctly, even though actually in a previous episode, episode 200, I think we did go deeper into it.
+
+
+Now, before we kick off, I want to let you know about an upcoming event that may be relevant for you. That is ZK Hack Montréal, happening August 9th through 11th, 2024. In case you don't know, ZK Hack is another project that I'm involved in. It's a hub for ZK learning, which is very much community-driven, and as part of that, we produce IRL ZK-focused hackathons that bring together builders in the space to hack on ZK tools. The next of these is ZK Hack Montréal, and that's bringing the event to my hometown. ZK Hack Montréal will be happening, as mentioned on August 9th through 11th, and it promises to be a very special one, being the first time we host our hackathon series in North America. Applications are open and I hope you'll join us. We have some amazing judges and partners lined up, so keep an eye on zkmontreal.com, the website for the event, or the ZK Hack Twitter account for more info about it. I've added the link in the show notes as well, you can apply directly from there. 
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:02:33]: Tanya:
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure Internet, Aleo has interwoven zero- knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org.
+
+
+Namada is the shielded asset hub rewarding you to protect the multichain. Built to give you full control over sharing your personal information, Namada brings data protection to existing assets, applications and networks. Namada ends the era of transparency by default, enabling shielded transfers and shielded cross chain actions to protect your data, even when interacting with transparent chains. Namada also introduces a novel shielding rewards system. By holding your assets in a shielded set, you help strengthen Namada's data protection guarantees and collect NAM rewards in return. Namada will initially support IBC and Ethereum-based assets, but will ultimately serve as a single shielded hub for all assets across the multichain. Learn more and follow Namada mainnet launch at namada.net
+
+
+And now here's our episode.
+
+
+[00:04:02]: Anna Rose:
+
+
+So today Nico and I are chatting with Alessandro Chiesa, Associate Professor at EPFL, who's running a group there called the Laboratory for Computation Security, and Eylon Yogev, Professor in the Computer Science Department at Bar-Ilan University. Welcome both of you to the show.
+
+
+[00:04:18]: Alessandro Chiesa: 
+
+
+Thank you.
+
+
+[00:04:19]: Eylon Yogev: 
+
+
+Thank you.
+
+
+[00:04:19]: Anna Rose:
+
+
+Hey, Nico.
+
+
+[00:04:20]: Nico Mohnblatt:
+
+
+Hi, Anna. Hi, Alessandro. Hi, Eylon.
+
+
+[00:04:23]: Anna Rose:
+
+
+So I want to start with you, Alessandro. It's wonderful to have you back on the show. This is your, at least, third time here. I did go back and listen a little bit to our past episode, and it was episode 200. So it was quite a special one. You came on for that. And in that, what we talked about was education in the SNARK world. I know that talking to you at that time, you highlighted that because things had been moving so fast. It was really hard to kind of completely define any part of it at that time. But you also had already voiced to me around then that you had this ambition to write a book. And that's really what we're going to be talking about primarily today. But I don't know if you can just share with us a little bit of what's happened in that time since episode 200, which, by the way, was like October 2021.
+
+
+[00:05:15]: Alessandro Chiesa:
+
+
+Yeah. So back then, I was already discussing for some time the idea of a pedagogical effort around SNARGs with Eylon. We had been working already on SNARG-related topics for a number of years. And while it is true that the SNARG-scape has been evolving very fast, I think it became clear at some point in 2021 that pieces of it were perhaps ripe for systematization and exposition in a more accessible way that is not just some quickly put together monograph or research papers. And we started... Yeah, now it's over three... Almost three years ago, an effort to define what would be a reasonable scope, because an effort of a book, if you are too ambitious, you just never get to the end of it, and nobody can benefit from it. So the first thoughts that we had in discussions were, okay, where do we draw the line for what to put in the book and what to keep outside of it, and how do we stay true to these lines?
+
+
+[00:06:21]: Anna Rose:
+
+
+Nice. Something I didn't just mention too, and I think folks maybe were familiar with a lot of your previous work. Before joining EPFL, you were at Berkeley, and you were the professor. I mean, you were Patoches? Howards? There's like a lot of people who've come through this show and who are now kind of top engineers, top founders in the space. And then you made the move to EPFL. I think when we met, you hadn't yet joined EPFL. I'm not sure, but what's it like? What's the change like? I mean, you're now a professor in a new space.
+
+
+[00:06:55]: Alessandro Chiesa:
+
+
+You're right. I joined EPFL in September 2021. So that was shortly after we last talked, and it's been a wonderfully smooth transition. Of course, there's been some work to rebuild a group and a pipeline and get used to the new kind of hiring workflow for PhD students and postdocs. But it's been easy and pleasant. I was very happy about seeing this, and actually, I can say that EPFL is a wonderful place, and I'm kind of at least as happy as I was at UC Berkeley in terms of the strength of students, of colleagues, the research environment, a And on top of that, I'm closer to home. So overall, I'm happy about that.
+
+
+[00:07:41]: Anna Rose:
+
+
+Nice.
+
+
+[00:07:42]: Alessandro Chiesa:
+
+
+And research, I guess, has been continuing very well, reflecting the overall happiness of doing research there.
+
+
+[00:07:48]: Anna Rose:
+
+
+Can you share a little bit about the new group, like the Laboratory for Computation Security? Is this different from the lab that you were running before? Does it have a similar theme and spirit?
+
+
+[00:07:59]: Alessandro Chiesa:
+
+
+It's just a continuation. The only difference is that at EPFL, for bureaucratic reasons, you are required to give a name and enshrine your group behind some label. And this was, I think, sufficiently nice and interesting label that I found.
+
+
+[00:08:18]: Anna Rose:
+
+
+I see. I see.
+
+
+[00:08:20]: Alessandro Chiesa:
+
+
+But otherwise, it is the usual life of a professor. You hire PhD students, you advise them for x years until they graduate, and you keep recruiting every year, whichever strong students you're able to attract. And it continues this way, just in a new place.
+
+
+[00:08:36]: Anna Rose:
+
+
+Okay, great. Eylon, I want to hear a little bit from you. This is the first time you come on the show. Can you share a little bit about your work and what led you to also work on this book?
+
+
+[00:08:44]: Eylon Yogev:
+
+
+Yeah. Hi. It's great to be on the show. I've been studying interactive proofs and SNARKs and other friends, I guess, for the past decade or so, and in general, being in field of cryptography for more than that. I attended semester at the Simons Institute in Berkeley, where I kind of already knew Alessandro from before, but I had an opportunity to really spend some time there and talk to him and connect. And we kind of started talking about what open problems are there in this area. If I remember correctly, we already started writing papers during the semester. This was right before the pandemic began. So after the semester, I kind of joined Boston University, but then the pandemic started and I kind of physically came back to Israel. And I guess it was kind of crazy times. Like, everybody was at home and me and Ale just... We established this connection and this base of questions that we wanted to pursue. And I think for the entire time of the pandemic, we kind of talked, I would say, every day, and I'm not exaggerating, I'm including holidays, Saturdays, and stuff like that.
+
+
+[00:10:17]: Anna Rose:
+
+
+What were you talking about?
+
+
+[00:10:19]: Eylon Yogev:
+
+
+Just the research... Research. Like, just every day, either what we discovered yesterday, coming with new conclusions, what we're gonna focus on tomorrow? First, for me, it was great because the pandemic wasn't fun.
+
+
+[00:10:33]: Anna Rose:
+
+
+Yeah.
+
+
+[00:10:34]: Eylon Yogev:
+
+
+And so that really kept me going. And second of all, we had... I don't know, a lot of luck, and we kind of managed to publish a lot of papers in that time. And at some point, kind of noticing that what else can we do except  to write new papers and how can we expand this knowledge to other people? And at some point, we started talk about potentially writing a book. I admit it seemed like a dream, like what do you mean, write a book? That's like a multi-year effort. Right? It's not like a paper, which usually is within one year, you finish a paper. Okay? This is like a multi-year project writing a book. Unclear, exactly, as Ale said, what is the scope and what we should write about? And I'm kind of very excited and happy that we're here today.
+
+
+[00:11:35]: Anna Rose:
+
+
+You made it.
+
+
+[00:11:36]: Eylon Yogev:
+
+
+You know, fast forward, after this, actually I have the book online, and I'm just so pleased with it also.
+
+
+[00:11:43]: Anna Rose:
+
+
+Nice. I know that you have also produced a lot of research work. Before we jump into the book, I just want to just highlight a few of these things. Like, you talk about some of the work you were doing over the pandemic. Are there any key works that you would highlight that came out of that time?
+
+
+[00:11:58]: Eylon Yogev:
+
+
+That's a good question. It's hard to choose between your children, but in the context of interactive proofs, because I also did... I have a lot of work in very, very different, let's say, cryptographic areas, but in the context of interactive proofs and zero-knowledge proofs, I have one paper that I really like where we kind of studied what is the weakest assumption possible to constructive interactive... Succinct interactive argument. And so kind of from this, what's called the Kilian's result, we know how to do this from a collision-resistant hash, and it only needs three rounds, three messages. And the question if we can do it from a one-way function, is still a completely open problem. What we kind of did, we established a new primitive called a multi-collision-resistant hash. This is a weaker primitive than a collision-resistant hash, but a stronger primitive than a one-way function. It's a primitive where maybe it's very easy to find collisions, but it's hard to find a KY collisions, meaning k elements that all hash to the same value. 
+
+
+And we build a succinct argument from this weaker primitive, and kind of the main obstacle is, of course, you cannot do Merkle trees, because if you do a Merkle tree, actually, there's like millions of collisions, and somehow you have to overcome this. One other example that I want to give is interactive proofs for social graphs. So in this context, you have a prover. The prover is like a strong entity as always. But the verifier now is not just one computation device, but like a distributed network. Okay, so the verifier is like all Twitter users, let's say, these are the verifier. And the prover is Elon Musk. Okay? Or just Twitter itself. And Twitter wants to prove something about their network. Oh, we have this, and this monthly active users, we have some other health measures of the network, proving that they're maintaining the health of the network and the users. They're not biasing users to see specific news and so on. So they want to give some proof on the network, but the network is, of course, huge, and kind of, we want the community to verify this proof. And this is what we did in that paper.
+
+
+[00:14:27]: Anna Rose:
+
+
+Interesting.
+
+
+[00:14:28]: Nico Mohnblatt:
+
+
+Is that the community as a whole, or each individual of the community?
+
+
+[00:14:31]: Eylon Yogev:
+
+
+As a whole.
+
+
+[00:14:32]: Nico Mohnblatt:
+
+
+As a whole? Okay. Yeah. Otherwise we're back to the sort of one prover, one verifier model.
+
+
+[00:14:35]: Eylon Yogev:
+
+
+Yes.
+
+
+[00:14:37]: Nico Mohnblatt:
+
+
+Okay.
+
+
+[00:14:37]: Eylon Yogev:
+
+
+Okay. So, like, individual user of Twitter cannot verify a claim about the entire network because it never sees the entire... It cannot even... Like the input here is so huge. It's not defined for specific users, but the input is distributed among all users.
+
+
+[00:14:55]: Anna Rose:
+
+
+One other paper that I do want to just highlight here, also for our listeners, is STIR, because we just recently had your other two co-writers on the show. And so it was the four of you who put together the STIR work. I think we might get a chance to come back to this later in the episode because we definitely want to dig into where that work may lead. But, yeah, I just want to sort of mention that for anyone listening. Why don't we start with just the topic of the book? What is this book about? And kind of what part of the stack are you focused on?
+
+
+[00:15:26]: Alessandro Chiesa:
+
+
+Our intention with the book was to systematize and digest a piece of the SNARK-scape in detail. So we aimed for comprehensiveness, rigor in depth at the expense of breadth. That is distinct goal from a survey or overview of the whole landscape. Right? And why? Because we wanted to empower other people, not in direct contact with us, whether they are PhD students, ambitious undergraduate students, or just practitioners in industry, to really understand and be able to manipulate and apply in detail security definitions and security analysis of constructions that are used in practice. And for that, we need to, in some way, cut ourselves out of the loop. So they should be able to do that without access to Eylon, without access to Alessandro. And for that, we have to provide a resource that is sufficiently comprehensive and precise to communicate the things that are in our heads and not in the research literature, which is fragmented and incomplete and usually written in a hurry.
+
+
+[00:16:43]: Nico Mohnblatt:
+
+
+I have to say this is something that I myself have been struggling with a lot, finding the right definitions because there are so many variants of the same definitions, because these things do change slightly over time as we learn about them. So to me, this is a goldmine of precision essentially.
+
+
+[00:16:58]: Anna Rose:
+
+
+I mean, even in the term that you're using, the SNARG, like this might be something we want to just kind of highlight as well. So you don't say SNARK... I mean, you may say it later, but the term that you're using to kind of define this overall class is SNARG. So I'm wondering if we should just kind of redefine that for the listener as well.
+
+
+[00:17:18]: Alessandro Chiesa:
+
+
+Sure. I was merely highlighting the succinctness of it. The K at the end would have been highlighting the knowledge, and ZK in front would have been highlighting the zero-knowledge part. I would say maybe the knowledge soundness part, the K at the end almost always is needed, though the ZK part only sometimes. But what makes it most interesting, of course, is the succinctness to begin with. But we could have also said SNARK-scape, maybe without ZK, without necessarily highlighting it.
+
+
+[00:17:45]: Anna Rose:
+
+
+I see, I see.
+
+
+[00:17:46]: Alessandro Chiesa:
+
+
+So, we wanted to cut ourselves out of the loop and enable others to have access to full details and definitions. And Eylon and I, having written a number of papers, both together and separately on these topics, we have seen a lot of variations, a lot of different notation, a lot of different strengths of definitions. And so... And also, we were aware of which parts of the literature are incomplete and lacking. So we had a good view through all of this experience how to select the right level of strength of definitions to not make them overly cumbersome, while on the other hand, make them sufficiently strong to be relevant to practice and now delineate a particular subset of the SNARK-scape ripe for digestion and systematization. And specifically, we focused on the setting of SNARGs that are built from hash functions, okay? Specifically cryptographic hash functions. These are hash functions that are modeled as random oracles. Maybe I'll let Eylon highlight why this is a particularly interesting and exciting subset of SNARGs.
+
+
+[00:18:57]: Eylon Yogev:
+
+
+Yeah. So, the book is about how to build SNARG from a hash function. We curved out a part of the landscape of SNARGs that is kind of stable today. So what we want from this book... So, the general landscape of SNARGs is kind of changing every year rapidly. But hash-based SNARGs and the part that we focus the book on come to a point where we feel that it's very stable and it's gonna remain very similar in the next 10, maybe even 15, 100 years.
+
+
+[00:19:30]: Anna Rose:
+
+
+Can you share an example of one of these hash-based SNARGs? Are we talking STARKs mostly here, or things like STARKs?
+
+
+[00:19:41]: Eylon Yogev:
+
+
+Yeah, STARKs and things like STARKs is an example.
+
+
+[00:19:44]: Anna Rose:
+
+
+Okay. Great.
+
+
+[00:19:44]: Eylon Yogev:
+
+
+Okay. These are SNARGs that are usually built from an IOP and then compiled to a SNARG or SNARK using a transformation that is based solely on hash functions.
+
+
+[00:19:59]: Anna Rose:
+
+
+Got it.
+
+
+[00:19:59]: Eylon Yogev:
+
+
+No bilinear groups or other assumptions. And actually, in one of our papers with Ale, what we showed is that you can take an IOP, you can compile it, and get a SNARK in the random oracle model. And what we showed is that actually, any SNARK in the random oracle model, you kind of can apply a reverse transformation. So you can take that SNARK and you can extract back an IOP. So what happened is we used to have what's called the Micali transformation, which build a PCP and compile it to a SNARK. A PCP is just a one round IOP. That's all. And then we kind of introduced the notion of IOPs and said, oh, now let's just compile IOPs, multi-round PCPs into SNARGs. Why? Because we can do that. Because anyway, we can compress rounds using what's called the Fiat-Shamir transformation. So one could say, okay, we build SNARGs, we build hash-based SNARGs, first from PCPs, then we build them from IOPs. Let's wait 10 or 20 years, and we'll build them from some other three letters. And our kind of answer is no, any SNARK in the room, we can distill back an IOP that has very similar corresponding parameters. And so we know that this is what you need. They're necessary and sufficient. So this is like some fixed point of hash-based SNARGs, and thus, of course, up to smaller order optimizations that might come, kind of this is... Now looks like something in stone, and we should write a book about it.
+
+
+[00:21:45]: Anna Rose:
+
+
+I want to ask, what is not a hash-based SNARG? What kinds of systems that we've maybe heard about on the show would be excluded from this kind of model? But would something like Plonk still work in here? Are pairing-based systems still included in this?
+
+
+[00:22:01]: Alessandro Chiesa:
+
+
+Yeah, anything that uses algebra. So, for example, Bulletproofs relies on cyclic groups and specifically, the hardness of the discrete logarithm problem on cyclic groups. The good old pairing-based SNARKs, like Groth16, they rely on more than a cyclic group. You have three cyclic groups that are connected by a bilinear map. Also, you can have lattice-based SNARKs. Again, you have different type of structure. It's at the intersection of number theory and geometry, where you talk about the length of integer combinations of vectors over certain rings. So all of these have some structure that come along with the SNARK, and you exploit it, on the one hand, for, sometimes, very often for better efficiency, compared to the case of hash-based SNARKs, maybe smaller proof size, most notably, right? In particular, the smallest argument sizes for SNARKs are known from bilinear maps. Okay? But then the structure that comes along and helps you with this or that parameter sometimes also kind of backfires and makes the underlying assumptions more exposed.
+
+
+So in particular, for instance, the assumptions that underlie Bulletproofs and pairing-based SNARKs will fall eventually if a large scale quantum computer will be built. The same, we don't know whether it's the case for lattices or not, but nevertheless, the structure of lattices makes it quite complicated and error prone to specifically set parameters in practice. On the other hand, if you don't rely on any structure whatsoever, you just use on exactly the lack of structure, an ideal hash function, then in this case, you kind of put yourself in this almost information theoretic setting. It's almost no longer cryptography. And here, in this ideal world, you can quantify security very precisely with kind of explicit constants, explicit security reductions, and you can really understand in extreme level of detail what's happening there. And in the real world, you make the heuristic step and assumption. You conjecture that things like SHA-256 and Keccak, for all we know, essentially behave like an ideal hash function.
+
+
+[00:24:25]: Nico Mohnblatt:
+
+
+Yeah. You have an expression that I really loved in the book, which is the pure ROM. We work in the random oracle model and just that, nothing else.
+
+
+[00:24:34]: Alessandro Chiesa:
+
+
+That's right. We should highlight that the random oracle does play essential role in many SNARK constructions in addition to other structure.
+
+
+[00:24:42]: Anna Rose:
+
+
+I see.
+
+
+[00:24:43]: Alessandro Chiesa:
+
+
+So, for example, in the non-interactive version of Bulletproofs, you first construct a public coin interactive succinct argument, assuming the hardness of the discrete logarithm problem over a cyclic group. And in a subsequent step, you rely on the random oracle model to compile this interactive protocol into a non-interactive one. And at the end, you rely on both the structure of cyclic groups and the help from the random oracle. Whereas what we focus on in the book is the help that comes from the random oracle and only the help of the random oracle. That's it. So it's kind of use and only use hash functions.
+
+
+[00:25:20]: Anna Rose:
+
+
+Nice. Can we define random oracle model? I know you've just said it a couple times, but if we are talking pure random oracle model, what is that?
+
+
+[00:25:28]: Eylon Yogev:
+
+
+So we can. So you should think of a truly random function that is sampled and sits in the sky. So this is a function that for every input x, you sample a truly random output y. You do this for all pairs. So for every input x, you sample something completely random just to represent this mapping, this is like an exponential size mapping. So no party or the prover or verifier can hold this mapping. So you just assume that this function appears in the sky, and the prover and verifier just have oracle access to this function. So what they can do, they cannot know the entire function f, okay, if we call it f. What they can do, they can send to the sky this... some query x, and they get back the answer f of x equals y. And what we do, we measure how many queries they perform. And so we want our constructions to be efficient. Meaning, for example, that the verifier is just going to perform a few queries to this function in the sky. And when we want security, then we say, oh, we have a cheating puller, we have some adversary, and we're only bounding the adversary by the number of queries it performs to the random oracle.
+
+
+Other than that, the adversary is actually computationally unbounded. So he can factor numbers, he can break anything, he can compute discrete logs. The only thing he cannot do is he's limited, there's some parameter t for the number of queries he performs, and he can perform any queries that he wants, even adaptively. And that's it. So in that sense, really the proof that we get in the random oracle model is really information theoretic. It's a mathematical proof, relies on no assumptions at all, no cryptography. The only crypto part comes when you say, oh, I don't have a truly random function in the sky. Right? Like, who does? And so you have to choose some concrete hash function, for example, SHA-256, Keccak and all these. And you're saying, I'm going to heuristically replace the construction I have, where every time they do a query to this random oracle, they're just going to do a query to the hash function that I chose.
+
+
+[00:27:54]: Alessandro Chiesa:
+
+
+And to jump in to link it to real world things, a STARK is an example of a succinct non-interactive argument in the random oracle model that has been heuristically instantiated using some hash function. Okay? So the security analysis of a STARK happens and only happens in the random oracle model. And subsequently you do this heuristic step described by Eylon.
+
+
+[00:28:21]: Nico Mohnblatt:
+
+
+How big of a leap of faith is this?
+
+
+[00:28:24]: Alessandro Chiesa:
+
+
+Well, it's a wonderful question. We know it is a leap of faith because there are constructions that are secure in the random oracle model, but are definitely not secure, no matter which hash function you prove. Now, these constructions are set up to fail. They're kind of artificially assembled. But for the constructions that we know and love, like the Micali construction, the Fiat–Shamir transformation, the BCS construction, which is kind of Micali extended to multiple rounds for IOPs. We are not aware of any such pathologies, but it is a leap of faith. And nevertheless in terms of things that can fail, the random oracle is used in similar ways in many other places of cryptography that is deployed in the real world already for many years, just not about SNARGs. For example, the Fiat–Shamir paradigm is used elsewhere for reasons having nothing to do with STARKs, and people are very comfortable with that there. So we're not really introducing that much that is new in practice.
+
+
+[00:29:35]: Nico Mohnblatt:
+
+
+A lot of signature schemes also rely on random oracles. Right?
+
+
+[00:29:36]: Alessandro Chiesa:
+
+
+Specifically. Exactly, yeah.
+
+
+[00:29:36]: Nico Mohnblatt:
+
+
+And no one flinches.
+
+
+[00:29:40]: Alessandro Chiesa:
+
+
+I wanted to highlight before maybe we move on. So we highlighted so far that the random oracle model is this setting with no structure, that it is ripe for systematization. But there are other very compelling and exciting properties of the random oracle model. So one of them is deployability. Every succinct non-interactive argument in practice must have a setup. But the question is, what kind of setup? In the case of a random oracle, choosing the hash function is the setup. So that is a very easy setup to have. So a system declaring to its users, guys, our heuristic instantiation of the random oracle is going to be SHA-256, that is the action of having a setup. You don't need any complicated cryptographic ceremonies to create the setup. Choosing the hash function is the setup, and that's super easy to do in practice. So they're very nice from the perspective of deployability.
+
+
+Another wonderful property is the fact that these constructions, like the Micali construction in the random oracle model, are known to be secure even if the adversary is a quantum algorithm, namely queries the random oracle in superposition. This is known as the quantum random oracle model, and we have proof that both, for example, constructions of STARKs and similar things are secure in quantum random oracle models. So not only this area of the SNARK-scape is ripe for systematization, but after being systematized, it has a pretty good chance to remain relevant and secure for potentially a very, very, very long time. So that's something I think that as a scientist, we feel pretty excited about because we make this effort, multi-year effort, to systematize, digest, and present useful constructions that are useful today, but in our view, are going to be useful potentially when we are no longer around, period. And so that is, I think, some sort of impact that has a high chance of transcending our own lifespan, which may not be true of some constructions, for example, pre-quantum.
+
+
+[00:32:00]: Eylon Yogev:
+
+
+I have another comment on hash-based SNARGs. So, even if you're kind of you want a SNARG to be very, very succinct, very small, and so you're willing to use bilinear maps, you are willing to be not post-quantum secure. Maybe you're willing to do a trusted setup so you can use other SNARGs that are much smaller, Bulletproofs, Groth16 and others. Even in that setting, what's happening today is there's kind of a big race of optimizing the prover side. So you want to create a proof as fast as possible. You want it to be very near real time. And one way to do that, if you just use bilinear maps for the entire construction, typically, this tends to be slightly slower. And hash-based SNARGs, because they use this very easy primitive, such as Keccak or stuff like that, they have the potential to be very, very fast. However, you get something that is not small, okay, relatively bigger, might be 50 kb, not 1 kb. So in practice, something that is commonly done is that first you create a proof very, very quickly, that might be 50 or 100 kilobytes. And then you recursively give a proof that, you know a proof, okay? So you do a recursive composition. And for the second scheme, you use something that is small. So you start with something that is fast and big, and then compose it with something that is slow but small. And then overall, you get something that is fast and small. So even when you are interested in something small and not hash-based, in many cases, the first step is actually a hash-based proving system.
+
+
+[00:34:01]: Anna Rose:
+
+
+The thing is, you just talked about, Alessandro, this post-quantum, the queries. And I think you said super... position. How did you pronounce that?
+
+
+[00:34:10]: Alessandro Chiesa:
+
+
+Supposition.
+
+
+[00:34:11]: Anna Rose:
+
+
+Supposition. Does that mean, like, unlimited queries? You talked a bit about, like there's a limit to the number of queries that a malicious actor could make. I was kind of curious how that's chosen. And when you say this, queries in supposition, does that mean unlimited? What does that actually mean in that context?
+
+
+[00:34:28]: Alessandro Chiesa:
+
+
+Yes. So in the random oracle model, you consider, as Eylon mentioned earlier, adversaries that make at most, some number of queries to the random oracle. For example, you're going to set this bound t to be, I don't know, two to the 128. Okay? In the quantum case, an algorithm has an additional power. It cannot just ask, hey, what's the answer to query x? And the oracle answers y. But it can ask what is called a supposition query. So indeed, it can ask many, many x's all at once with different amplitudes, and it will receive a corresponding answer with corresponding amplitudes. This is different from asking many, many queries at the same time, because it only gets, as an answer, a supposition of the answers, and then it has to measure, and it will only get one answer sampled according to the amplitudes of the answer.
+
+
+Nevertheless, it is a strictly more general type of query. And in the quantum random oracle model, you consider quantum adversaries that are allowed to make up to t supposition queries. So there is still a resource bound, except that now the type of query is slightly richer and it requires different tools and different analyses. And potentially something that was secure in the random oracle model may not be secure in a quantum random oracle model. And there are separations, including unconditional ones. In particular, that exists a SNARG that is secure in the random oracle model, just not in the quantum random oracle model. Fortunately, that SNARG, again, it's kind of pathological, and it's artificially set up to fail. It's non-trivial to set it up to fail, but constructions that we have that are not pathological, like the Micali construction, the BCS construction, one can show that even t supposition queries are not enough to break it.
+
+
+[00:36:26]: Anna Rose:
+
+
+Got it. Thanks for that clarification. Nico, I know you're about to ask another question. Please go ahead.
+
+
+[00:36:32]: Nico Mohnblatt:
+
+
+Yes, I was going to talk about, or ask you to talk about the contents of the book, which I was saying is sort of Fiat–Shamir. So this idea of replacing interaction with a verifier by a random oracle and Merkle trees or Merkle commitments, which allows you to take a long message and have something small instead. Essentially, the book goes through different types of proofs and using these tools to make SNARGs.
+
+
+[00:36:56]: Eylon Yogev:
+
+
+Yeah. So the book starts with introduction definitions. As you said, this is already like a very non-trivial step to set down definitions.
+
+
+[00:37:04]: Nico Mohnblatt:
+
+
+Absolutely.
+
+
+[00:37:06]: Eylon Yogev:
+
+
+That we all agree on, we all like and are actually strong enough to serve practical purposes.
+
+
+[00:37:12]: Nico Mohnblatt:
+
+
+Once again, thank you so much for these, because it's, again, a goldmine.
+
+
+[00:37:16]: Eylon Yogev:
+
+
+Yeah. It also has many small dilemmas that serve as examples for the reader to kind of exercise the definitions and so which definitions imply what other definitions and so on. So after we settled the common ground, we kind of start building things. And the first thing we build is this Fiat–Shamir transformation. We have a version for Sigma protocols. These are just three message protocols. This is like the more common and easier one to prove. And then we go and advance it to Fiat–Shamir for multi-round protocols, which is also required in many settings. For example, the Bulletproof proof systems actually needs it. And this becomes much more complicated. Actually, while writing the book, we kind of observed that there's a big difference between a few different flavors of the Fiat–Shamir transformation. So when you do Fiat–Shamir for multi-round, there's two versions that we call a slow version and a fast version. In the slow version, every time you Fiat–Shamir a round, you kind of just put in all the history, all the transcript up to that round, inside the Fiat–Shamir query. And that is very secure, of course, and much easier to analyze.
+
+
+In practice, that is slower than the fast Fiat–Shamir transformation, where instead of putting the entire transcript in the Fiat–Shamir query, every time you just hash the transcript and you create this hash chain where you just tag along a hash of the last transcript, and only this you put inside. So when the number of rounds becomes slightly bigger, this is actually a crucial optimization. And this optimized version of the Fiat–Shamir is actually much more complicated to precisely analyze. So, throughout the book, the bounds that we give are very precise. So they're meant to serve... They're meant to help practitioners set parameters in practice. So losing seven bits of security is not something that we could just allow us to do in a proof, even if it kind of helps the argument. We kind of wanted to be precise, we lost a bit of security only when we had to. In many parts, actually, even for the Merkle trees, in many parts, we lose some bits of security, and it kind of remains an open problem, if that is necessary or not. So not all losses are clear, but in any place that we could find an argument to get something, squeeze out a few more bits, in practice, that could be a lot. So we really aimed for that.
+
+
+[00:40:11]: Nico Mohnblatt:
+
+
+I do want to add to your point of this hash chain optimization of Fiat–Shamir is a lot harder to analyze. It's also a lot harder to implement. And it's been a recurring source of bugs in implementations. And there are often write ups, I think every year, every year and a half coming out saying, hey, some people forgot to hash the final round, or some people weren't hashing the group description or stuff like that.
+
+
+[00:40:34]: Alessandro Chiesa:
+
+
+So Eylon talked about the multi-round Fiat–Shamir. But as some of you may be familiar with, multi-round Fiat–Shamir is only about removing interaction from a protocol. Succinct arguments need a second different, in some sense, orthogonal ingredient, something that is going to take a long string like a PCP or an IOP, and squeeze it down into a short commitment. And that is this wonderful data structure of Merkle trees or Merkle commitments. These are short commitments to long strings that enable you to subsequently open a small number of locations of these long strings, like the queried locations. Right? And certify that the values you're opening to the verifier are indeed consistent with the previously given so called Merkle root, the commitment to the long string.
+
+
+And wonderfully, these Merkle trees can be constructed just from hash functions, specifically a random oracle. And so the next part of the book goes into extreme detail, articulating the properties of Merkle commitment schemes in the random oracle model. So talking about how they are binding, but also how they are so called extractable, which means that when an adversary gives you a commitment, you can already tell from the behavior of the adversary what are all the possible answers it can give you. And these answers are kind of unique, determined by the commitment. Also how you can make them hiding, so that the commitment and the corresponding openings later don't reveal anything other than what is revealed to you. This is important for zero-knowledge SNARKs. So we have a whole chapter that it's in the first time actually where in the literature we take and analyze extreme detail, the standalone properties of the commitment scheme, which, as I will get to in a moment, we use in later parts of the book to construct succinct arguments.
+
+
+[00:42:39]: Nico Mohnblatt:
+
+
+So in the introduction of the book, you do mention that you want to systematize and actually prove results that are sometimes forgotten or inexistent from the literature. Was this one of the cases where a result was missing?
+
+
+[00:42:52]: Alessandro Chiesa:
+
+
+In this case it wasn't necessarily missing, it was personally proved. For example, in the BCS paper by Eli Ben-Sasson, myself and Nick Spooner, where we introduced IOPs and showed how to construct SNARKs in the random oracle model from IOPs. We did have some statements about Merkle trees in a random oracle model, but they weren't very ergonomic usable. They were particularly tailored to that one proof that we needed in that paper to prove BCS secure. But in the book, we had higher aspirations to provide properties that could simultaneously serve multiple different constructions and potentially even beyond the world of SNARKs, because Merkle trees are used in a number of other settings, not just SNARKs. And so we had higher aspirations for easy to articulate, intuitive and flexible definitions that could be applied in this or that setting without having to reopen up and analyze Merkle trees, which, Eylon and I can tell you, is very painful and annoying. It's very technical. Everything is kind of intuitive at the end, but really making precise statements and being clear and comprehensive, it does involve a lot of attention to detail.
+
+
+[00:44:14]: Eylon Yogev:
+
+
+I would just give a very small example for Merkle trees, let's say, for hiding. You kind of, it's not too hard to show that one node of the tree is hiding and has some small statistical error. And then when you want to conclude about the entire tree, you're kind of union-bound over the entire tree, and you accumulate all the errors of all the nodes in the tree. And that works. That is kind of common in many papers and is kind of not optimized for practice. And if you want to not lose this huge factor... Well, the tree can be kind of huge, it could be like billions of nodes in the tree. You prefer a slightly smarter analysis that only pays, let's say, according to the depth of the tree. And these are things that we put a lot of effort into.
+
+
+[00:45:13]: Nico Mohnblatt:
+
+
+So now that we have this tool, what else can we build? I think there's a few more chapters on the book right after Merkle commitments.
+
+
+[00:45:20]: Alessandro Chiesa:
+
+
+Yeah. Now that we have in hand Merkle commitment schemes in the random oracle model, and we separately understand that the Fiat–Shamir transformation, the first thing that we do is we analyze this wonderful, beautiful construction, the Micali SNARK. This was the first SNARK ever constructed. How does it work? You commit to a PCP, you get a Merkle root, you stick it back into the random oracle, Fiat–Shamir style that gives you randomness to run in the prover's head, the randomness... the PCP verifier, which determines certain locations, which tells you which parts of the PCP to reveal and to certify via so called authentication paths, or the Merkle tree. And so the first SNARK that we analyze in the book is the Micali construction. We give very careful analysis for soundness, knowledge soundness and zero-knowledge. And this is kind of the first real SNARK in the book. And to some extent, this is kind of the beautiful and thing... beautiful construction that you would want to deploy. Sadly, we do not have practically efficient PCPs. Okay? And so this motivates the next chapter which deals with constructing SNARKs from multi-round PCPs, also known as interactive oracle proofs, IOPs.
+
+
+[00:46:44]: Eylon Yogev:
+
+
+Luckily IOPs, we actually do have a long line of research now of more and more practical schemes. So these things are very, very practical, very, very fast and becoming even faster every day. And what you do, you want to simulate the Micali construction. Just you want to do this for every round. So you have the first round of the IOP, you're going to run the Merkle tree, compress it to a root, you're going to put this root in the random oracle and get the randomness of the verifier for the next round. Then you can, the prover in his head can feed itself this randomness and derive the second message of the IOP. And in the second message, he compresses this again, gets a root, puts it in the Fiat–Shamir query. Wait, here, you know, bugs happen. So when you put it in the Fiat–Shamir query, you should put also the first root. Right? So you should put in the entire history or a hash of the entire history. Okay? And how to do this properly is well defined in the book. So you can take a look there and you continue to do this for every round until you finish. And eventually when you're done, you see all the queries that the verifier wants to do for all the rounds. And then you open all of these together and everything you send to the verifier, this is the entire proof. So this is almost the last part of the book. I just want to say something before we move on. You could ask why do we even write a part of the book on the Micali construction? So the Micali construction is like a simpler version of the IOP one. Okay, we have...
+
+
+[00:48:33]: Anna Rose:
+
+
+When is that from? It's older, right?
+
+
+[00:48:36]: Eylon Yogev:
+
+
+It's like '96.
+
+
+[00:48:38]: Anna Rose:
+
+
+Very much older.
+
+
+[00:48:39]: Eylon Yogev:
+
+
+Okay. We have no practical constructions of PCPs, even to date. Okay? Not just back then. And so potentially we could have removed this part from the book. However it serves, I think, two main purposes. First, it's an extremely good warm-up to the BCS construction. Okay? So, if you read that part, then you only have to read the delta, the difference to the IOP-based one, and that's good. Because the entire construction, the BCS transformation, relying on the IOP is actually hard. It is complicated, it's hard. And so it's excellent to have a warm-up. Second, there's another purpose. If you're thinking of some improvement, you have some idea to optimize things, which happened to me and Ale in many cases, and you want to test them, you want to see if the proof works. It's almost impossible to do it directly for IOPs. So the starting point would be, oh, let's just imagine that IOP has one round, one message, which is the Micali transformation, and do it there. And then there's kind of a lot of technical work to actually make it work for many rounds. So this is kind of a crucial stepping stone towards what you really want.
+
+
+[00:50:00]: Alessandro Chiesa:
+
+
+The BCS construction is kind of the climax of kind of the technical build-up that incorporates all of the features and ideas into a protocol that is deployed in practice, and we want people to be able to understand and reason about. We also added another part of the book that is not about other constructions. It's more about, in some sense, understanding better what happened. For example, how do you set parameters? What does it even mean to have a security level of 128 bits of security? What does that mean? It turns out that cryptographers have not been great at formalizing what this means precisely. So we do a rather systematic and comprehensive discussion that puts forward some precise definitions for the case of arguments and says, look, these are reasonable definitions you could use. Here's how you use them, here's how you set parameters. We go through actual examples of numbers that take the theorems that we prove and shows how to set security levels according to this or that definition, and show the computations that a practitioner may have to do to determine what is the output size of the random oracle, what is the salt size to achieve a certain level of zero knowledge? What is the soundness error that you need for the underlying PCP, for example.
+
+
+So we go through all of this and we discuss other things that are important in practice. For example, Merkle trees are rarely used as out of the box. For example, when you have many locations that you reveal to the verifier, you try to prune away redundant information. But this tree pruning actually changes the construction. It means that potentially the security has changed. And so we explain why it's okay, it's fine. We also put on more precise terms, what is this optimization of pruning, and what guarantees does it give you, efficiency wise? And we are able for the first time to articulate this in precise terms. And then we talked about other more technical matters that I'm not sure this is the best venue to get into, but briefly, when you do multi-round Fiat–Shamir, the underlying interactive protocol has to be particularly secure to allow for Fiat–Shamir to happen. And that is because after Fiat–Shamir, an adversary can replay the protocol in its head and attack it multiple times with different kind of continuations, which means that the original protocol that you started from should have been able to withstand that to begin with. And this is something known as state-restoration soundness. It's a notion of soundness that was introduced in the BCS paper with this BCS construction and pointing out that, look, you really need the IOP to be state-restoration sound, but it's not a very convenient notion to use. In practice, you typically prove that protocols of interest satisfy stronger notions of soundness than that, for example, round-by-round soundness. And so in the book we explain how stronger notions such as round-by-round soundness, special soundness imply state-restoration soundness. So you don't have to think about it ever again in some sense. Right? So for protocols of interest, all you really need to do is just prove round-by-round soundness.
+
+
+[00:53:25]: Anna Rose:
+
+
+Interesting.
+
+
+[00:53:26]: Nico Mohnblatt:
+
+
+So I guess one thing to say about the book is if you're a practitioner and you've deployed hash-based SNARK, and your construction somewhat is different from what is described in the book, please double check your work, because probably something is off. But moving sort of almost beyond the scope of the book, IOPs are often applied with also error correcting codes, and then we do a test of proximity to these codes. And this seems to be sort of ubiquitous in most of the efficient SNARGs we've deployed. Is this something that you considered to include in the book? I know you mentioned it in STIR as well, you have compilers for these types of proofs. Yeah, is this something you've considered in the book?
+
+
+[00:54:06]: Eylon Yogev:
+
+
+Yeah. So the book is kind of about the part of the literature that is stable. So the book is saying, okay you give me an IOP, you give me a PCP, or you give me an interactive proof, and I will show you how to compile them to a SNARG, a SNARK, with zero-knowledge, without zero-knowledge and all these variants. What it doesn't describe, it does a small survey, but it doesn't go into technical details of how to construct these PCPs or IOPs and how to construct this proximity tests and all of that. So first, the book is like a big enough project as is without this part. Okay, that is first. Second, that part we feel is very unstable. So we feel that if we would, let's say, start today to write a book about it, it would be outdated by the time that it's published.
+
+
+[00:55:05]: Anna Rose:
+
+
+Yeah.
+
+
+[00:55:06]: Eylon Yogev:
+
+
+And so I think that should wait maybe a few more years, and then we potentially can consider to see how stable things are. But with all these new developments of new proximity tests, new IOPs...
+
+
+[00:55:21]: Nico Mohnblatt:
+
+
+That's a shame. I was looking forward to a standardized definition of IOP of proximity.
+
+
+[00:55:28]: Alessandro Chiesa:
+
+
+So I'd like to add something to that. So indeed, we drew this very strict line of what's in the book, what's not in the book, and then we decided we are not going to open up and tell you how to cook probabilistic proofs. While that's, on the one hand, maybe a shame, because that still leaves people out hunting for resources for probabilistic proofs, there are still nevertheless good things that come out of it. First, the background to digest the book in its current format is rather limited. Throughout the book, you really need to only understand discrete probability, discrete math, really, what is just a random function? There is really not even a complex theoretic background. You don't need to understand NP reductions, you don't need to understand finite fields, you don't need to understand polynomials, you don't need to understand a lot of, let's say, fancy math or more advanced math. So we feel like it makes the book not only a good scope, but also a pleasantly limited background to really understand what's happening in these compilers.
+
+
+Now, separately, of course, the problem of teaching and spreading the word of how to cook probabilistic proofs remains, but it's not something that we are indifferent to. So both Eylon and I teach a course that does open up probabilistic proofs and talks about how you cook these things. What are the ingredients? What are the fundamental paradigms? What are intuitions? And on the one hand, some fundamental ideas are stable. Yeah, these are not the things that people necessarily use in practice, but to understand the things that are used in practice, these stable concepts are the things you should understand first. Like linearity testing, arithmetization, basic results in PCPs. Even though they're not practical, understanding them will put you a long ways towards what state of the art. So we do have... Each of us have been teaching a course, and some of these resources are publicly available. So, for example, last summer, summer 2023, Eylon's student, Gal Arnon, two of my students, Giacomo Fenzi and Ziyi Guan, and myself, we ran a summer school covering how do you make probabilistic proofs? And the resulting lectures are recorded and homeworks are available online.
+
+
+[00:57:57]: Anna Rose:
+
+
+Amazing.
+
+
+[00:57:58]: Alessandro Chiesa:
+
+
+And so people can open up and we feel like maintaining and updating a course is currently a better trade off, rather than working on a book which indeed might get updated a bit too fast for our taste. There are other resources as well. There is the wonderful survey of many different actual constructions of SNARKs, including Probabilistic Proofs by Justin Thaler. It's a great book that takes, in some sense, an orthogonal approach to what we did. It takes a breadth and a lot of context for practitioners and specific protocols that people use in practice, with wonderful intuitions about why they're secure.
+
+
+[00:58:40]: Anna Rose:
+
+
+Nice. Just a quick note to listeners. If you're not aware, there's a Thaler Book Club actually over in the ZK Hack Discord. And Ale and Eylon, I don't know if I mentioned this to you yet, but we're very likely going to be hosting a study group about your book as well in the ZK Hack Discord. So this will be like a group of people who are going to go through it chapter by chapter. It's not announced yet. Maybe by the time this airs we will have some more info about it, but if people are interested, they should head over to the ZK Hack Discord.
+
+
+[00:59:10]: Alessandro Chiesa:
+
+
+That's wonderful. We'll be happy also to be kept in the loop, and maybe we can find some way to help as well. So far we haven't taken any specific actions in a direction. We're still in the recovery phase post...
+
+
+[00:59:24]: Anna Rose:
+
+
+Post publishing.
+
+
+[00:59:25]: Alessandro Chiesa:
+
+
+Exactly.
+
+
+[00:59:27]: Anna Rose:
+
+
+But the book itself is also very... It's available, right? Anyone can access it. I saw it when it was shared in our groups. So this is open and free for people to use, right?
+
+
+[00:59:38]: Alessandro Chiesa:
+
+
+So we took this maybe modern approach rather than going straight to a publisher in the traditional way, which we might still do some years from now. For now, the decision that we took was to publish the PDF and the LaTeX source code and put them both online, available for free under a rather permissive license, so that others can not only access the PDF and use it as they see fit, but also it is easy for others to file pull requests and suggestions for big and small things, and also potentially reuse a some of the LaTeX source code for whatever they need in their life.
+
+
+[01:00:20]: Nico Mohnblatt:
+
+
+Just being able to reuse the definitions and the notation, I think, goes a long way to standardize efforts. I did want to ask one thing, since we said all these beautiful things that the ROM can do, what can the random oracle model not do?
+
+
+[01:00:35]: Eylon Yogev:
+
+
+Good question. So I would say, first, at least today, it cannot give us a very, very small SNARGs, okay? They are still an order of magnitude bigger than SNARGs based on bilinear maps and other assumptions. Second of all, there's kind of a tension between the fact that a hash-based... a random oracle, like a hash, is unstructured, which makes it very, very secure and post-quantum secure, etcetera. But since you lack structure, you cannot construct things that are, for example, homomorphic. So maybe you want a homomorphic commitment. I want to commit to x and commit to y, and then create a commitment to x + y. These are typically things that cannot be constructed from unstructured assumptions. So anything in that area, I would say, would be a limit to the random oracle model. Just another example, we do not know how to construct public encryption from a random oracle. I would say that there's actually many things you cannot construct from a random oracle, and the fact that we can construct SNARGs only using a random oracle, it's kind of magical. And it's just we're kind of lucky. We're so lucky that we can do it, that we should study this part and enjoy the fact that there are very important constructions that only use hash functions.
+
+
+[01:02:12]: Nico Mohnblatt:
+
+
+I was also trying to hint at something we mentioned earlier in the show, which is the difficulty of doing recursive proofs. Maybe one of you wants to give a brief overview of what the problem is there.
+
+
+[01:02:21]: Alessandro Chiesa:
+
+
+The problem is a little bit circular and confusing, but let's give it a shot. Okay? One of the things that you do when you have a SNARK is sometimes you run the SNARK to prove computations that involve the SNARK's own verifier. This, for example, happens rather naturally when you have everlasting computations that you're going to prove one piece at a time as the computation unfolds, like in a blockchain, for example. Right? So SNARK of SNARKs is a very kind of natural thing that you might do. Unfortunately, before you heuristically instantiate the random oracle into the real world with a concrete hash function, now you're left with... you have an ideal world where now computations potentially might involve the random oracle itself. So, for example, a computation that says, please do, blah blah blah, and then, among other things, run the SNARK verifier on this proof. The SNARK verifier is going to say, yo, hey, I want to query the random oracle, and now you want to prove correct a computation that involves the random oracle, and that's something that we don't know how to do, but in fact we provably don't know how to do. Precisely for the same reason that the random oracle is so unstructured that queries to the random oracle don't really fit with the techniques like error correcting codes and property testing and things like that, and one can actually prove that.
+
+
+And it's a bit unfortunate, and this kind of leads you into an area that is called relativization, relativized SNARKs. These are basically SNARKs that can prove things. There are SNARKs that are in an oracle model that can prove computations about that oracle itself. And sadly, we don't know how to do this formally, but this doesn't stop us from doing things in the real world that are still seem to make sense, because you can just say, you know what, actually, I don't have a random oracle anyways, so whatever, I'll just prove correct the computation of the actual hash function. The annoying thing is that now your security analysis is kind of interrupted in the middle. You don't have an ideal primitive that is about recursion. You have to first instantiate your primitive heuristically and then analyze it, which is a bit annoying. Nevertheless, there are some ways around this, despite the relativization barriers, and actually in a work together with Eylon and other students and a wonderful engineer at StarkWare, we proposed some way to somehow do some double dipping, and still, even though you have these relativization barriers, you can still somehow say something semi interesting about the security of recursive STARKs, let's say, for example, in practice. But it might be a bit too technical to unpack here. But these are wonderful questions, and they're very relevant practical motivations, because people really do have to set parameters in the real world about recursive STARKs, for example.
+
+
+[01:05:22]: Anna Rose:
+
+
+So now that, I mean, this book is finished, and I know you're doing ongoing work, but what's next for you in terms of a part of the SNARK-scape that you might want to formalize or standardize? Like, is there another area that you think may become stable enough in the next, I don't know, three to five years that it would be worth keeping an eye on and potentially doing another book?
+
+
+[01:05:46]: Eylon Yogev:
+
+
+Thank you for encouraging us to write another book. Writing a book is a huge amount of effort. It is not like writing a research paper where vaguely put, writing a research paper is kind of a linear thing where we just... If it's 40 pages, you just write one by one and you're over it. And a book is kind of a quadratic process where everything you do, you have to go back and make sure that it's maintain everything systemized, make all the notation align and everything. Yeah, I guess the next step would be to talk about IOP constructions and IOP proximity tests, specifically low-degree tests and compiling NP language, NP-complete languages to low-degree tests. So these are two areas that are still in development, but I guess could use a lot of effort to standardize some of the parts. Even if later on, things continue to develop. It seems that we do have some themes coming back again and again. For example, the Sumcheck protocol and knowledge about polynomials and Reed-Solomon codes. So these things would be very nice to have a book about.
+
+
+[01:07:13]: Alessandro Chiesa:
+
+
+I agree with Eylon, and indeed, we have ongoing pedagogical efforts there, particularly around these two courses we've been teaching that not only cover something about SNARGs from hash functions, but mostly focus on constructing probabilistic proofs. And there, even though the exciting envelope of knowledge moves and things change there, indeed there are recurring paradigms and design patterns. And so a lot of the classical material has been digested over the past ten years, and it's becoming in better and better shape, in a sense that it's becoming more and more accessible, gone through several kind of iterations together of lectures that illustrate these ideas. Also, this is connected to the book because this is the missing part. And systematization of probabilistic proofs would provide the right compendium to the first book, to provide a unit of something that has been fully standardized, and again will be with us for a long period of time.
+
+
+I'd like to conclude also by mentioning that we're very excited that things that we've been working on are now exciting new technologies. But what I think is even more exciting is things that we've worked on to become established technologies. That is, being new is not as cool as being established and old. Right? At some point, these SNARKs will transition from, hey, it's so cool, new and fresh off the presses, deployed new capabilities to just used and boring. And that is the place where we would like to be in some years. And to get to that place, we cannot keep knowledge in the research literature. The knowledge has to migrate and mature into canon in books. And so that's also one of the aspirations of this effort, is to move SNARKs at least some of the SNARKs into just all the things that everybody understands, and they're just widely taught and understood, and Alessandra and Eylon are just no longer needed for that material.
+
+
+[01:09:28]: Anna Rose:
+
+
+Well, you'll be working on something else important, I'm sure, by that point as well. Very cool. I want to say a big thank you to both of you for coming on the show and sharing with us a bit of the motivation that led to this work, how it came together, and then, yeah, Nico, thanks for these great questions, digging into the work itself, and thanks for answering.
+
+
+[01:09:47]: Eylon Yogev:
+
+
+Thank you. Maybe I'll just say that the book is available at snargsbook.org. And I would also want to take this opportunity to thank our sponsors, the Ethereum Foundation, Protocol Labs, Provable and Forte.
+
+
+[01:10:06]: Alessandro Chiesa:
+
+
+As well as StarkWare, who was... 
+
+
+[01:10:07]: Eylon Yogev:
+
+
+As well as StarkWare. Yes.
+
+
+[01:10:09]: Alessandro Chiesa:
+
+
+Yeah. Thank you for having us. We're very happy to share our excitement about the conclusion of this project.
+
+
+[01:10:16]: Nico Mohnblatt:
+
+
+Thanks so much, both of you, for being on the show. It was a pleasure chatting.
+
+
+[01:10:19]: Anna Rose:
+
+
+Cool. And I want to say thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners. Thanks for listening.

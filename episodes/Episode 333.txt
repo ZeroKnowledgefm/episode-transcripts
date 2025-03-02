@@ -1,0 +1,1114 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week I chat with Ismael, the founder and CEO at Lagrange Labs, and Babis, Chief Scientist at Lagrange Labs and Co-Director of the Applied Cryptography Lab at Yale University. We revisit the concepts of ZK-powered coprocessors and dive into the work that Babis has done previous to joining Lagrange on verifiable SQL. We then learn how this is incorporated into the Lagrange coprocessing system, the work that they're doing on Reckle trees, future work, and what all of this enables for dApp developers. We also discussed their new prover marketplace, the general state of infrastructure, and how they are keen to bring more concepts from general computing into decentralized blockchain systems.
+
+
+Before we kick off, I want to share a message from one of our recent ZK Summit 11 sponsors, the Web3 Foundation. They are bringing back the legendary Web3 Summit. The next edition will be happening in Berlin from August 19th to 21st. This is an event designed for builders and researchers to collaborate and hack together. And it's programmed by the community. In fact, I put together the program on one of the stages on the 19th, which will be a dedicated ZK stage. And we have some top speakers from the ZK ecosystem who will be presenting there. You should head over to the web3summit.com to see the program as it's being confirmed and grab your tickets. Today. They're offering a discount for listeners of this show. We've added the code in the show notes, so check it out.
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:01:54]: Tanya:
+
+
+Namada is the shielded asset hub rewarding you to protect the multichain. Built to give you full control over sharing your personal information, Namada brings data protection to existing assets, applications, and networks. Namada ends the era of transparency by default, enabling shielded transfers and shielded cross-chain actions to protect your data even when interacting with transparent chains. Namada also introduces a novel shielding rewards system. By holding your assets in a shielded set, you help strengthen Namada's data protection guarantees and collect NOM rewards in return. Nemada will initially support IBC and Ethereum-based assets, but will ultimately serve as a single shielded hub for all assets across the multichain. Learn more and follow Namada Mainnet launch at namada.net.
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure Internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org.
+
+
+And now here's our episode.
+
+
+[00:03:24]: Anna Rose:
+
+
+Today I'm here with Ismael, the Founder and CEO at Lagrange Labs, as well as Babis, Chief Scientist at Lagrange Labs and Co-Director of the Applied Cryptography Lab at Yale University. Welcome to the show, both of you.
+
+
+[00:03:37]: Ismael Hishon-Rezaizadeh:
+
+
+Thank you so much for having us. Anna. We've been a big fan of ZK podcast for a while, and we're very excited to be on it.
+
+
+[00:03:41]: Charalampos (Babis) Papamanthou:
+
+
+Thank you, Anna.
+
+
+[00:03:43]: Anna Rose:
+
+
+Alright, Ismael, I want to start learning a little bit about you. We actually met a few years ago when... I think when you just started or you were just kind of bringing Lagrange Labs out into the world. We've also met through a few events, but I want to hear a little bit about what drew you to this space. What got you excited about it? Yeah. Is there a specific problem that captured your imagination? Yeah. What got you here?
+
+
+[00:04:07]: Ismael Hishon-Rezaizadeh:
+
+
+So before I founded Lagrange, earlier in my career, I was a Solidity engineer. And I worked on building on-chain DeFi and SocialFi applications. And I continued to run into a rather intractable set of problems. Problems related to how an on-chain dApp can access and compute over data. How can I determine my most loyal users? And so as I bumped into these problems, I started kind of thinking of what would the solution to these be? And what it turned out to us was that the solution required some really fundamental innovations in applied cryptography. And so I was looking around the literature, and I came across some of Babis's work, in particular some of his work on vSQL, IntegriDB, Hyperproofs, BalanceProofs, and I reached out to him. And I think over a period of time, Babis and I started building relationship, and a lot of the form of Lagrange has been designed and created with this idea that it's fundamental that innovation in authenticated data structure design and zero-knowledge systems enable us to do things on-chain that in the last generation of crypto applications was untenable.
+
+
+[00:05:20]: Anna Rose:
+
+
+What era were you a Solidity dev in? Is this 2017?
+
+
+[00:05:25]: Ismael Hishon-Rezaizadeh:
+
+
+No, it was like 2018, 2019 into, like 2020. And then I left a little bit to be a VC at a SaaS fund. Yeah, I went the wrong way, and I had to go back home after...
+
+
+[00:05:38]: Anna Rose:
+
+
+You rage quit crypto and then came back?
+
+
+[00:05:40]: Ismael Hishon-Rezaizadeh:
+
+
+At the wrong time. Right? I rage quit when stuff were going up.
+
+
+[00:05:44]: Anna Rose:
+
+
+Okay. I'm glad you corrected that trajectory fast enough. Were you going to hackathons and stuff at that time?
+
+
+[00:05:52]: Ismael Hishon-Rezaizadeh:
+
+
+A bit. I was at an insurance company based out of Boston, Manulife, John Hancock, and I led engineering for their digital asset strategy. It was early decentralized insurance products. We were trying to use at that time, zero-knowledge proofs like early systems like Zocrates to approve properties about baskets of policies that were Merkleized on-chain to be able to underwrite reinsurance vehicles from liquidity pools, wherein you could insure some basket of policies where the decedent data could be kept private, but you would be able to understand that there was some claims payout and there in the pool had a drawdown.
+
+
+[00:06:29]: Anna Rose:
+
+
+So then you left for a moment, and then what was the exact thing that... I mean, it sounds like meeting Babis and seeing that work kind of drew you back in, but was there anything else that made you make that choice?
+
+
+[00:06:41]: Ismael Hishon-Rezaizadeh:
+
+
+I mean, I love crypto. I love the fact that we're solving problems that are foundational to global financial infrastructure, that are foundational to kind of how I see the world working. I can't imagine a world where crypto is not a dominant force. And for me, it didn't feel right to be in any other industry.
+
+
+[00:07:00]: Anna Rose:
+
+
+Cool. All right, Babis, I want to hear a little bit of your backstory. It sounds like you were maybe, correct me if I'm wrong, but were you very much in the academic world leading up to your... joining Lagrange Labs?
+
+
+[00:07:12]: Charalampos (Babis) Papamanthou:
+
+
+Right, right. So my story with crypto started back in Maryland. So before Yale, I was a professor at Maryland, and in the lab that I was part of, it was Andrew Miller, who's now a professor at University of Illinois. He was starting out with his PhD student. He was particularly excited about blockchain and cryptocurrencies. And really, it's because of him that I learned about this field. We're talking about 2013, right? So he was bringing a lot of excitement, he was teaching us about Bitcoin, and this is how I kind of learned about the space.
+
+
+And then as years went by and traditionally in my PhD, I've been working on authenticated data structures. So that was my PhD back in 2011. So I saw learning about the space that all of these techniques and data structures I've been studying are being used in blockchain and cryptocurrencies. And then more formally, I got involved in 2019 in Real World Crypto in Switzerland, where I met some people that were interested in this authenticated data structures and vector commitments. And of course, when Ismael talked to me, I got really interested to see what will be the application of my research in these real-world systems.
+
+
+[00:08:27]: Anna Rose:
+
+
+When you say authenticated data, what kind of thing does that... Like what does that mean? And is there any ZK overlap with authenticated data, or is it very different?
+
+
+[00:08:36]: Charalampos (Babis) Papamanthou:
+
+
+Actually, so I meant authenticated data structures.
+
+
+[00:08:39]: Anna Rose:
+
+
+Yeah.
+
+
+[00:08:40]: Charalampos (Babis) Papamanthou:
+
+
+So I worked on authenticated data structures back in 2011. So one authenticated data structure, for example, is this Merkle-Patricia trie that Ethereum is using. So it's basically combining data structures, traditional data structures as we know them, with security. Right? So how you verify a query that you can make on a data structure, which is kind of a very, very simple type of zero-knowledge proof system. So it's like verification of a very, very primitive computation, yet very important.
+
+
+[00:09:09]: Anna Rose:
+
+
+What was the work that kind of nerd sniped Ismael, or where Ismael decided to nerd snipe you? What was that specifically?
+
+
+[00:09:17]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah, so from my standpoint, I think the question of how you can compute for blockchain data specifically with zero-knowledge proofs, is constrained by the data structure of Ethereum, and that most EMV-compatible rollups use the MPT tree, where you have non-finite field friendly hash functions like Keccak and you have RLP encodings for serialization of nodes that make it computationally intensive in a circuit to prove the inclusion of a large subset of leaves within the tree in a current block or historical blocks. And I think we know... I could see the problem, but it was very hard for me to identify a solution. And with Babis work, in particular Hyperproofs, BalanceProofs, vSQL, IntegriDB, there were a lot of examples I saw in the academic literature of being able to devise ways to address these problems and other circumstances that I felt were not applied into crypto from a research standpoint. People in crypto were looking at it solely from an engineering standpoint of how do we take the current tools and simply build something that hopefully works. Nobody was going down the first principles on it. And that was the impetus behind me originally being nerd sniped by this.
+
+
+[00:10:31]: Anna Rose:
+
+
+You just mentioned vSQL, and then what was it? Hyperproofs.
+
+
+[00:10:36]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah.
+
+
+[00:10:37]: Anna Rose:
+
+
+What are those?
+
+
+[00:10:38]: Charalampos (Babis) Papamanthou:
+
+
+So, if you think about the work of authenticated data structures that I did, this is kind of precursor to this vSQL. In authenticated data structures, what you're trying to do is you have a commitment to a set of data, say, like a binary tree, and you want to verify some sort of query on this binary tree. So, for example, give me all the leaves that fall between this range. Okay? So we know how to do that with Merkle. This is very, very well studied. And that was part of my PhD thesis at Brown.
+
+
+Now, the next step as I started my faculty career was to look at more complicated queries, which is database queries. Right. You're not only doing ranges, you want to do filters, you want to do joins, you want to do various group bys, various database operations. And really, the public statement you have is a commitment to two tables. You have stuff like commitment to two tables, and you wanted to just run some queries, SQL queries, and get proofs for the correctness of these answers. So I started thinking about this problem as I was starting out. So we built IntegriDB. I think back then, there was nothing about databases. There were some sort of attempts from a database community to build these verifiable systems but they didn't seem to scale that well because the cryptography that was used was not too sophisticated. So we built IntegriDB, which was the first verifiable database system that was handling a very limited subset of SQL queries.
+
+
+Then we went on and we built vSQL, which was a more general verifiable database system based on the Sumcheck proving system. So that was back in 2016. And after that, I always... That's a very, very hard problem. I always wanted to make more progress, but I'd never found the motivation and the right application to attack the problem to its full extent. So then there's a whole notion of computing on blockchain data came up, and then with Ismael encouragement, and as I was convinced that this is going to be important, started working on the problem again of how to do things much, much better. So this is actually some of the work that we're doing now. 
+
+
+[00:12:53]: Anna Rose:
+
+
+Very cool.
+
+
+[00:12:54]: Charalampos (Babis) Papamanthou:
+
+
+On verifiable database, which is the Perseus that hopefully I'll have the time to talk about.
+
+
+[00:12:58]: Anna Rose:
+
+
+Can I ask you some history questions? Like some computer science history questions?
+
+
+[00:13:02]: Charalampos (Babis) Papamanthou:
+
+
+Yes, sure.
+
+
+[00:13:02]: Anna Rose:
+
+
+Merkle trees, the initial Merkle tree, when is that from, actually?
+
+
+[00:13:07]: Charalampos (Babis) Papamanthou:
+
+
+So that is a paper from Merkle in 1978.
+
+
+[00:13:11]: Anna Rose:
+
+
+That's quite old. Yeah.
+
+
+[00:13:12]: Charalampos (Babis) Papamanthou:
+
+
+Right. And it was meant to... It was cast as a digital signature as a way to hash a message before you sign it.
+
+
+[00:13:20]: Anna Rose:
+
+
+Okay. And when are the Merkle-Patricia tries introduced?
+
+
+[00:13:23]: Charalampos (Babis) Papamanthou:
+
+
+After this paper in 1978, there was no... I think that was it. Nobody talked about Merkle trees. I think about 1996 there was, I think, a paper by Moni Naor or [inaudible], that they kind of took this to a data structure level. And then my advisor at Brown, Roberto Tamassia started working on authenticated data structures. But specifically for Merkle-Patricia tries, I think the knowledge goes out there that you can do authenticated data structure for any data structure. There was sort of a compiler to go from any data structure to authenticated data structure, but I think the very first time we learned about Merkle Patricia tries was when Vitalik introduced them for Ethereum, in Ethereum.
+
+
+[00:14:08]: Anna Rose:
+
+
+Yeah, years ago, we actually did an episode... Many years ago we did an episode about Merkle trees, Merkle tries on this show. But trying to explain it in audio-only format is tricky because it's really good to see what this thing looks like. But during that time or around that time, I feel like there was also this introduction and I don't know if it ever took off, but I remember Benedikt Bunz describing, I think it was Merkle Mountains or something. It was like these Merkle trees, but they were different sorts of size. They weren't symmetric in a way.
+
+
+[00:14:43]: Charalampos (Babis) Papamanthou:
+
+
+Right.
+
+
+[00:14:44]: Anna Rose:
+
+
+Did you hear... Do you know anything about that? I don't even know if that's a thing.
+
+
+[00:14:47]: Charalampos (Babis) Papamanthou:
+
+
+I've heard the term, but I don't know technically exactly what it represent. I have to read on those. But right, you can have definitely authenticated data structures that are not symmetric. Actually, one of the things that we're innovating right now at Lagrange is the notion of authenticated AVL tree, where basically you have completely unbalanced Merkle trees where you can arbitrarily insert, delete elements and use underlying AVL operations to rebalance so that you don't get really bad worst case complexities. So this is part of the things that we're currently building.
+
+
+[00:15:17]: Anna Rose:
+
+
+Okay, I have one more history question.
+
+
+[00:15:19]: Charalampos (Babis) Papamanthou:
+
+
+Of course.
+
+
+[00:15:20]: Anna Rose:
+
+
+And this is about SQL. Because you talk about verifiable SQL, but let's talk a little bit about what SQL is generally. I know it's a very important computer science term, but yeah.
+
+
+[00:15:34]: Charalampos (Babis) Papamanthou:
+
+
+Right, right. It's SELECT Query Language. So probably database person will be able to explain this better than me. But you know, I'm a cryptographer, but I'll give it a try. I believe what happened was when back in the 60s, I mean, we're trying to understand how to write programs, right? And then the only data structure, so to say, existed was kind of arrays where you can access data. But people realized the power of organizing data and data structures was one way to do it. But when you have data that massive amounts of data need to go to disk, you need to use some sort of database. So then there has to be a way to query this database and they developed this language to query databases. It's called SELECT Query Language. From what I understand, it's one of the most dominant ways to build databases these days.
+
+
+[00:16:25]: Anna Rose:
+
+
+And I mean, I think you have this query already written into it. I feel like it's really good we define that because leading into Lagrange, I feel like there's where some of the connection comes. But let's now talk about the V part. So the verifiable SQL is a language. When you add the verifiable, how do you change it?
+
+
+[00:16:44]: Charalampos (Babis) Papamanthou:
+
+
+Right. So before you add the verifiable, what happens, like normal SQL, you have a database table, you write a query in SQL, which is a short program in a specific language, and then you execute this query and you get back some data. Can be, for example, return the set of records that fall within a specific range. Okay? This can be expressed easily as an SQL query. So what we want to do now is we want, if this query is run by an untrusted entity, we want to be able to verify this query without having to execute the query ourselves. Also, we don't have a database locally at hand. Even if we wanted to execute the query ourselves, we wouldn't be able to because we don't have the database. Right? So what we have is a commitment to the database. It's a small Merkle hash, so to say. So we're still sending the query to the person that has database. The person who has database runs the query but also attaches a proof to it. Similarly with zero knowledge, right? So it's a proof for this SQL query. When I get back the proof and the answer and then having... The only thing I have is the commitment to the database, I'm able to verify that the answer is correct.
+
+
+[00:18:00]: Anna Rose:
+
+
+With something like this, would you be able to run SQL in a private environment and then use this verifiable SQL to prove that whatever's happening in that private environment is done correctly?
+
+
+[00:18:12]: Charalampos (Babis) Papamanthou:
+
+
+Right. So I guess what you're alluding to is some sort of zero knowledge version of SQL.
+
+
+[00:18:18]: Anna Rose:
+
+
+Or a TEE actually, or just any... Or FHE, like any environment where there's no visibility. Would this be useful?
+
+
+[00:18:25]: Charalampos (Babis) Papamanthou:
+
+
+Right, right. So potentially, as far as TEE is concerned, if you're willing to make more assumptions about the medium that runs the computation, you can potentially build a vSQL that is faster by leveraging trusted hardware. So for example, you don't have to not trust everything. You might choose to trust some parts of the computation. And in this way you can definitely build a vSQL that is going to be faster.
+
+
+[00:18:51]: Anna Rose:
+
+
+But in what you've described, the vSQL, this is all happening in the open. So this is for public data or viewable data.
+
+
+[00:19:00]: Charalampos (Babis) Papamanthou:
+
+
+Right.
+
+
+[00:19:00]: Anna Rose:
+
+
+Okay, cool. So I think this has been really great prep to dive into Lagrange because I feel like in what I know of the project, it deals with a lot of this stuff. But Ismael, I want to talk first about the history of Lagrange. When we met a few years ago, I remember in my mind at least, this was a coprocessor in the way that some of the other projects like Axiom or Herodotus had proposed. Has it changed from that? Would you still say that that is what it is, or would you say the project has evolved somewhat?
+
+
+[00:19:34]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah. So Lagrange is still a ZK coprocessor, but we've evolved a lot how we think about structuring computation for blockchain data. And so a lot of the concepts that Babis have been talking about, about authenticated data structure design, proving computation over authenticated data structures really get to the basic question of you have a large amount of blockchain data that is provable with respect to any of the recent block headers. And so, how do you structure a meaningful amount of computation, whether you want to call it coprocessing or storage proofs or receipt proofs or VM extensions over that data such that an application developer on-chain can verify that some computation is accurate with respect to that commitment. So, to put that in a very concrete terms, what is the moving average of price over the last 10,000 blocks on Uni v3? What is the volatility of the price of an asset of ETH to USD on Uni v3, so I can do Black-Scholes and issue an option? Like very basic statistical analysis or computation of historical data. You can call that coprocessing, you can call that storage proofs. But at the end of the day, from a research standpoint, we think of this as compute over an authenticated data structure.
+
+
+[00:20:51]: Anna Rose:
+
+
+This is what I learned back when I was kind of getting my head around coprocessors was like on-chain, and you actually alluded to this as well. When you're creating a dApp on Ethereum, you can't actually look at the history. There's nothing in the state at that moment which tells you what has happened before. And I think people have previously been relying on oracles and kind of other means to get that information into their application because they need it sometimes. So yeah, in this case you're kind of talking about a replacement to that. It's off-chain where it's happening. And then I guess are you using ZKPs to prove it on-chain? Are you using these verifiable... Like is it a different model to prove it onto the main?
+
+
+[00:21:33]: Ismael Hishon-Rezaizadeh:
+
+
+It is ZKPs. And so that is a very good way of putting it. So in effect, there were previous generation solutions that used economic guarantees or used K of N solutions that were MPC-based or TEE-based to try to verify computation over on-chain state. And the limitations of this are always security. It is if you have a mission critical function to your application that's underwriting hundreds of millions in option issuance or in swaps every year, you need to ensure that the mechanism that is being used to secure that is proportionately secure to the risk of this being compromised. And so, with what we do with Lagrange, we're able to verify that computation over blockchain data. So when we say a contract makes a call to our coprocessor and says what's the moving average of price over the last 40,000 blocks for this asset pair, what they get back is the result in a proof. And that proof is verifiable with respect to the block header of that chain that's accessible in the smart contract. Which means that you don't have to trust any off-chain parties, you don't have to trust any nodes, you don't have to trust anybody. You can get back the proof and the resulting computation. So it's don't trust, verify, but for computation over on-chain data.
+
+
+[00:22:58]: Anna Rose:
+
+
+That was what you kind of were at the start, and that is what you are today, I guess. But has something changed as well? I feel like just kind of where you live, which ecosystem you live in, kind of evolved a bit.
+
+
+[00:23:11]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah, there's been a lot of things. So we've had that central vision to Lagrange since the onset, but there's a lot of things over how we've altered the course of the business to ensure that we have as performant systems as possible. So we recently launched a prover network on top of a restaking platform, EigenLayer, that we have had a great relationship with for a very long time. And we have now a very large set of decentralized provers who are participating in our proving process. We have this run by some top tier institutional provers in the space, including Coinbase, Kraken, OKX, Figment, P2P who are participating in this proving process. And the reason we did that is because we felt that we could scale the computation we do much larger if we have multiple parties in this network and we can guarantee liveness, which was an imperative for a lot of our customers and our partners, who wanted to be able to actually guarantee that if they need pricing, they need volatility, they need some reward program, that our coprocessor issue some proof to them that that proof would come when they expect it. But the journey of Lagrange has been a lot of that. It's been a lot of trying to identify the best way to accomplish this goal, changing how we're doing the cryptography, altering the proving systems, altering all of these components to be able to get to a scalable performance and cost effective as a system as possible for our end users.
+
+
+[00:24:34]: Anna Rose:
+
+
+What were you originally going to be before participating in the restaking side of things? And I'm assuming this prover network will be like an AVS chain. Right?
+
+
+[00:24:44]: Ismael Hishon-Rezaizadeh:
+
+
+Mhm.
+
+
+[00:24:44]: Anna Rose:
+
+
+Before that, though, what was your vision for how this system worked? Like did you just not have the prover network at that point? Was it just the coprocessor and then you realized you needed this? Or, yeah, and sort of where did it live? Or where does it live? Like the actual coprocessor side?
+
+
+[00:25:01]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah. So originally we were going to do the proving in a... we were thinking of whether or not it was worthwhile doing the proving at decentralized or centralized capacity. One of the main benefits of the way we've designed our systems is that they're hyperparallel. They're naturally parallelizable, which means we can distribute computation over 100,000, 10,000 nodes and be able to coalesce and recurse these small proofs that each prover computes back into something that from a performance standpoint, can scale much better than these more monolithic attempts to do storage inclusion.
+
+
+And so because of that, we felt that it was very naturally suited to being deployed in a decentralized capacity, because we were already doing it internally in a distributed capacity. But the final decision from us really came, as always, down to our partners and our customers, which was, do people want their proofs to be computed in a decentralized way? Do they care about liveness? And what we found from talking to a lot of people is that they do. And so we decided that we were going to deploy our network in that capacity. And right now the coprocessor lives on that network. When you get a proof from Lagrange, you actually can go to our dashboard and see who computed it.
+
+
+[00:26:19]: Anna Rose:
+
+
+Oh, wow.
+
+
+[00:26:20]: Ismael Hishon-Rezaizadeh:
+
+
+Which I think is a very interesting thing. You can see if Coinbase did, you can see how many proofs Coinbase did in the day, you can see how many proofs Kraken is doing, you can see how many proofs OKX is doing. You have big exchanges now who are actually doing proving.
+
+
+[00:26:32]: Anna Rose:
+
+
+So this is interesting that you've basically adopted the prover network model. There are some other teams that are doing prover networks. There is another class of project which are doing these like verification aggregation. Do you know these as well? I don't know if you've seen, I mean, Nebra I had on the show quite recently, they originally had proposed to me that they were more like a prover network and have since moved much more to the verification side. How do you interface with that? Or do you provide that as well? Are you also looking at that other side of the, I guess you call it the ZKP timeline or the... What is the... There's a word that people use, lifecycle or something.
+
+
+[00:27:10]: Ismael Hishon-Rezaizadeh:
+
+
+Supply chain.
+
+
+[00:27:11]: Anna Rose:
+
+
+Supply chain. That's it. Yeah.
+
+
+[00:27:13]: Ismael Hishon-Rezaizadeh:
+
+
+So we don't do proof verification. I mean, obviously our proofs are verified on-chain and we are agnostic to aggregation or verification solutions. Nebra is a team that we think incredibly highly of. We've had a great relationship with Shumo for quite a while and there's a lot of other teams in the space we have a tremendous amount of respect for. What Lagrange is focused on, first and foremost is the generation of proofs for our ZK coprocessor, for state proofs that we do, and potentially for other proofs down the line. But right now, we have a ton of foundational innovation led by Babis on computer authenticated data structures, or coprocessing over how we structure SQL queries over data that we're coprocessing over. And so what Lagrange focuses on is how can we be as performant as possible and deliver the best value to our end users in the domains that we specialize in.
+
+
+[00:28:06]: Anna Rose:
+
+
+To run on the prover network are the kind of agents, the provers do they need to run specialized hardware to do that? How are you thinking about that action of making the proof?
+
+
+[00:28:19]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah, so we have a configurable set of machines that provers can run. At the end of the day, they just have to be able to compute the proof within the allotted time slot for that proof. Obviously, if they have a GPU-accelerated machine and they're able to do those proofs far faster, they can make up a larger component of the network. Even if they have a giant machine that they've deployed and they're doing CPU proving, they're going to be faster than someone with a small machine. But the way we designed it, since it's hyperparallel, we can simply benefit from that. Since we have a large number of different actors in the network, they have agency to select the machines that they consider to be the right trade off of cost for performance and cost for reward. That heterogeneity means it's very, very easy to join and then it's very easy to scan.
+
+
+[00:29:07]: Anna Rose:
+
+
+Would one of these provers also be able to just use cloud infrastructure though, to do it? I'm just trying to understand how big are these proofs? Is it something that's you need specialized hardware to be able to do it, or is it actually somewhat general and you can do it on a lot of different systems? Sounds like it's the latter.
+
+
+[00:29:26]: Ismael Hishon-Rezaizadeh:
+
+
+It is the latter. So the great thing about the ZK coprocessor and the system that Babis has developed is the types of proofs that we have, in particular with Reckle trees and with the verifiable SQL work that we do, are very small. And because of that, you can have a single node that is not necessarily the largest machine that can compute proofs occasionally. And it can compute them at a rate that's far lower than what someone would compute if they're running specialized hardware, but they can still participate. I mean, we have actors in the network, and you have the P2Ps of the world, you have the Figments of the world, who have the DevOps, they have the experience to generate very large proofs or generate a lot of very small proofs, and they can contribute to a greater extent to the network. So just to put it in perspective, over the last month we've had about 90,000 queries across 60,000 unique users, primarily on DeFi, GameFi. And within those proofs, we've had about 2 million proofs computed within the network. They are very small, but are recursively combined together as part of Reckle trees and verifiable SQL constructions. So the scale of what we can do, this network is just churning out proofs right now.
+
+
+[00:30:36]: Anna Rose:
+
+
+Is it proving system dependent? Does it only support certain kinds of proving like something like Plonk or something like Groth16. Like do you have to do anything on your side to be compatible with these different proving systems, or is there a single one that you've chosen and you only work with that one?
+
+
+[00:30:55]: Ismael Hishon-Rezaizadeh:
+
+
+So in theory, the network's agnostic to all of that. The only thing that I'd say is that in the current state, most of the work that we do on the network is for our coprocessor.
+
+
+[00:31:06]: Anna Rose:
+
+
+Ah yeah. Okay.
+
+
+[00:31:06]: Ismael Hishon-Rezaizadeh:
+
+
+When we think of proving very broadly, there's a lot of prover networks, not a lot of teams actually doing proofs right now. And so with the demand that we have on the coprocessor side is what we are serving within our network right now, but nothing in our network is fundamentally or theoretically tied to a given proving system. So a lot of the work that we do right now is with Plonky2, and Babis has been actually doing a lot of interesting work with trying to alter some properties of Plonky2 and general recursion overall. But there's nothing that stops us from moving to a different system down the line.
+
+
+[00:31:38]: Charalampos (Babis) Papamanthou:
+
+
+So the system that we have developed requires recursion as an abstraction. So in theory, it can use any proving system.
+
+
+[00:31:50]: Anna Rose:
+
+
+They can do recursion.
+
+
+[00:31:52]: Charalampos (Babis) Papamanthou:
+
+
+In theory, all proving systems can do recursion.
+
+
+[00:31:54]: Anna Rose:
+
+
+Okay, right. But not all as well.
+
+
+[00:31:56]: Charalampos (Babis) Papamanthou:
+
+
+But this is in theory.
+
+
+[00:31:57]: Anna Rose:
+
+
+Okay.
+
+
+[00:31:57]: Charalampos (Babis) Papamanthou:
+
+
+Because in theory, you can always express the verifier circuit as a circuit for the zero-knowledge proof system that you're using. Now, of course we need to build the system. So we're using right now for our system, the most performant recursion out there, which is Plonky2. Right? We have research ongoing that tries to build the next generation recursion system. So we're interested in performant recursion. This is very important for what we're doing.
+
+
+[00:32:33]: Anna Rose:
+
+
+And Plonky2 offers some features that allow for more performant recursion.
+
+
+[00:32:39]: Charalampos (Babis) Papamanthou:
+
+
+Plonky2 does recursion in less than one second.
+
+
+[00:32:41]: Anna Rose:
+
+
+Oh, wow.
+
+
+[00:32:41]: Charalampos (Babis) Papamanthou:
+
+
+So this is quite important for us.
+
+
+[00:32:44]: Anna Rose:
+
+
+And so, yeah, just to kind of finish off that question though, on the different proving systems, so what you're saying is like, because you are the biggest customer right now of the proving network, it's mostly your proofs and you're using a Plonky2 system. The prover network can definitely handle that. But if you did open it up to other, I don't know, actors or applications that needed this, would you yourselves need to implement anything, or is it sort of system agnostic? It doesn't really matter.
+
+
+[00:33:12]: Ismael Hishon-Rezaizadeh:
+
+
+We have some very great teams in pipeline that we're very excited about, hopefully announcing soon, who will be building other things on the network. But I think at the fundamental, we don't necessarily have to implement anything. There's standard interfaces that the network abides by that as long as you can reach those interfaces with the type of proving system that they're using, and all major ones would be able to, then you can have proof served by it. The only thing I'd say though, is that within any system, no matter how permissionless, there is work that has to be done to deploy something onto it. And so from that standpoint, obviously we work very closely with anyone who is looking to work with our network and with our team.
+
+
+[00:33:50]: Anna Rose:
+
+
+This is also living as an AVS as you mentioned. What does that entail from your perspective? Like, what do you need to do to lock into that system?
+
+
+[00:34:00]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah, so one of the things I think is very interesting, obviously, is the parallelization of the types of proving that we do. Which means we can benefit from having a large number of protocol participants doing that proving. We can actually benefit from scale in that case, whereas the network scales to more and more actors, we're able to actually have much more computation across it than you could otherwise pay for or underwrite in a centralized capacity. But within every network, there's a fundamental question over cost of capital. So if you require someone to stake whether that's staking for security of a PoS system, or whether that's staking for maybe liveness of a ZK system, which we built, for example, you have to incentivize that capital. And incentivizing capital in any capacity is expensive.
+
+
+There's a risk-free rate, and then you have to make sure you're higher than that risk-free rate. And then you have, in effect, the risk you have to then offset for holding some native asset, the risk of that asset decreasing in price. And so what you find for rates, in the Cosmos, for example, is 15%, 25% annually has to be paid on those tokens to have anybody stake them. With an AVS, because you're having ETH staking, and you have a principal cost of capital paid for by native staking on ETH, the benefit that you get is much, much cheaper staking, which means you can pay orders of magnitude less in admissions and fees, and still derive the benefits, and for liveness guarantees for your provers. So if a prover doesn't computer proof on time, they receive an economic penalty, but the amount we have to pay them in order to stake the capital that we penalize is much lower.
+
+
+[00:35:31]: Anna Rose:
+
+
+What is the exact thing that powers the AVS, like the person, the actor?
+
+
+[00:35:37]: Ismael Hishon-Rezaizadeh:
+
+
+Oh, they're just running provers.
+
+
+[00:35:38]: Anna Rose:
+
+
+They're running provers. But in the case of, if you're borrowing from the EigenLayer security model, restaking, I'm wondering on that front. And this is maybe more of a question about EigenLayer's system. What do you call the restaking agent there?
+
+
+[00:35:52]: Ismael Hishon-Rezaizadeh:
+
+
+Oh, you have restakers, and then you have operators who run infrastructure. And operators have delegated stake, typically. So the operators, for example, Coinbase, they run our prover, and they have stake delegated to them.
+
+
+[00:36:05]: Anna Rose:
+
+
+Would that actor then be running two things? Like, they'd be acting as an operator on the AVS side and then a prover as well?
+
+
+[00:36:12]: Ismael Hishon-Rezaizadeh:
+
+
+Operator and prover would be synonymous in this case.
+
+
+[00:36:14]: Anna Rose:
+
+
+Okay.
+
+
+[00:36:15]: Ismael Hishon-Rezaizadeh:
+
+
+I think people often think that ZK systems are more expensive than economic systems, but typically those analyses don't account for cost of capital. And I think this is something that we should maybe talk about, because if I say you have to stake $40 million, I'm typically not including, when I'm looking at how much I pay my user, the 2% I have to pay on the capital cost. I just offset that with emissions of my token, and then I don't amortize that across user transactions, and so the fallacy is that typically those things are cheaper when they're actually more expensive.
+
+
+[00:36:44]: Anna Rose:
+
+
+Interesting. So let's shift back to some of the cryptography. One of the... And a few of these have been mentioned through the episode, but I think you mentioned something called Reckle... Am I saying this right? Reckel trees.
+
+
+[00:36:57]: Charalampos (Babis) Papamanthou:
+
+
+Reckle. Yeah. So Merkle, Verkle, Reckle, these are not english word. You can't find them in dictionary. Merkle is the name of the person that invented it. So Verkle, which came after Merkle, comes from vector commitments and Merkle trees, because they replaced the internal node commitment with a vector commitment that made the node wider, so to say. So we kind of rolled on this wave, and we called our research this fundamental premium that we proposed Reckle trees from recursive arguments and Merkle trees. So the combination of Merkle trees and recursive SNARK. So it's Rec plus Merkle, Reckle.
+
+
+[00:37:39]: Anna Rose:
+
+
+Reckle. Okay. Okay.
+
+
+[00:37:40]: Charalampos (Babis) Papamanthou:
+
+
+So I think I like the term. I don't know if community liked it, but I liked it. So I went for it, so.
+
+
+[00:37:48]: Anna Rose:
+
+
+So are you okay with it sometimes rhyming with Merkle, though? Because then it would be Merkle, because you said Reckle tree. Yeah.
+
+
+[00:37:57]: Charalampos (Babis) Papamanthou:
+
+
+Reckle trees. Yeah.
+
+
+[00:37:58]: Anna Rose:
+
+
+Okay, cool.
+
+
+[00:37:58]: Charalampos (Babis) Papamanthou:
+
+
+So what is a Reckle tree? So it's a Merkle tree, but instead of storing hashes in the internal nodes, you actually store recursive proof generated through a recursive SNARK. So if you think about the Reckle tree at the root, instead of having the root hash of the Merkle tree, you have both the root hash and another proof of a SNARK proof. So what does this proof tells you? Right? So with Reckle trees, you can prove computation that takes place on a subset of the leaves of a Merkle tree, right? So, for example, you can use Reckle trees to prove something along the lines, this is the Map/Reduce computation on some subset of this Merkle tree, right? To give you an example, how you can prove what is the count of elements of leaves in a Merkle tree? How many leaves are there that are greater than five, for example. It's a filter. So you can use this notion of recursively computed proof to actually compute the final proof of root. And this is what Reckle tree is. It's basically, so to say, I like to call it proof carrying data on steroids. I mean, it's sort of an application of proof carrying data, so to say. Right? So the use of recursive SNARK in a DAG, a directed acyclic graph, which in our case is a Merkle tree.
+
+
+[00:39:28]: Anna Rose:
+
+
+I want to tie this back, though, to the actual use case for Lagrange, because when you use those terms like leaves and stuff, it's like, is that an entry, a historic data entry? Like going back to this idea of you're trying to use this system to perform computation on historic data, is that happening somewhere else, and then is being put into this tree and then being kind of like, you create one proof out of it, or is it happening in the tree itself?
+
+
+[00:39:59]: Charalampos (Babis) Papamanthou:
+
+
+So you have these data leaves, okay? And there's a question about those. The question is, how many are there that are greater than six, for example, greater than a number? So this is independent of the Merkle tree.
+
+
+[00:40:13]: Anna Rose:
+
+
+Let's go to a tangible use case. Like there's a price you're looking to find or something. Would it be like the price is actually in that leaf?
+
+
+[00:40:21]: Charalampos (Babis) Papamanthou:
+
+
+So for example, how provide a list of users that have greater than 6 ETH in their balance?
+
+
+[00:40:29]: Anna Rose:
+
+
+Perfect. Something like that.
+
+
+[00:40:29]: Charalampos (Babis) Papamanthou:
+
+
+So that's the use case.
+
+
+[00:40:31]: Anna Rose:
+
+
+Okay, but would it be historically? Would it be like who had more than this much a month ago?
+
+
+[00:40:37]: Ismael Hishon-Rezaizadeh:
+
+
+We could do that. I think the best way to think we can think of a single tree, and then we can think of how, in effect, all this MPT tree is a connection between all of these single trees. So we can instantiate Reckle trees both over a single tree and then over all of this historical data too. But I think the first example, the easiest to think of is just one tree, and then we'll extend from there onto how we can think of this over historical data.
+
+
+[00:40:58]: Anna Rose:
+
+
+Perfect. Cool, cool, thanks.
+
+
+[00:40:59]: Charalampos (Babis) Papamanthou: 
+
+
+Right. So basically, someone can tell you this is the list of users that have greater than 6 ETH in their account. But then how can you trust this? I know all users exist in the system have a commitment. So I want to prove that saying from this commitment, this is the list of users that have more than 6 ETH in their account. So Reckle trees provides a way to actually produce such a proof. So imagine any type of computation that you can run on the leaves of a Merkle tree, you can use Reckle trees to verify the computation. Now, I just want to be clear here. Reckle trees is not the only way to do that. This is a  SNARK... We can use SNARKs to do this thing. So we can basically write a giant SNARK circuit that verifies inclusion and runs the computation at the same time.
+
+
+Now, so what Reckle trees gives on top of this solution that this is a dominant solution that has been used in the space. So two things. First thing, the proof. This proof can be computed in a massively parallel fashion. The way we compute our proof is what we call naturally parallelizable. And so basically it can only... In theory, it can complete in a logarithmic number of steps, and it can be fully distributed. The way we compute this proof, it can be fully distributed. Number two, if you compute a proof and you invest a certain amount of work to compute this proof, and something changes in the next block, what Reckle trees offer is this amazing property of updatability of proof? What Reckle trees tells you if you maintain a data structure of previously computed proofs, you don't have to recompute the proof from scratch if something changes.
+
+
+So for example, if you have a count of elements greater than six and someone goes out, next block, you don't have to run the proof from scratch. You can just spend time proportional to the amount of change. So these are basically hyper-natural parallelization, which leads to a massively distributed system for computing proofs, plus updatability of proofs, which is really, really important from the blockchain setting where you want to maintain proofs from Block i to Block i+1, and typically the entropy is not that big. So the changes are small.
+
+
+[00:43:33]: Anna Rose:
+
+
+There's two questions I have. One is actually trying to still clarify one point that I was asking before, which is like, in the leaves, are those individual accounts balances or are they like... Are they calculations already in the leaf.
+
+
+[00:43:46]: Charalampos (Babis) Papamanthou:
+
+
+In the leafs, you have data. So think about...
+
+
+[00:43:49]: Anna Rose:
+
+
+Data. Exactly.
+
+
+[00:43:51]: Charalampos (Babis) Papamanthou:
+
+
+So the MPT data. So you take Merkle-Patricia trie, it's data that is stored in the blockchain, which can be like Ethereum balances, it can be like local data of a contract. Right. So these are data that are exposed through a blockchain header. Right?
+
+
+[00:44:06]: Anna Rose:
+
+
+Okay.
+
+
+[00:44:06]: Charalampos (Babis) Papamanthou:
+
+
+But now I want to do something with this data, right?
+
+
+[00:44:09]: Anna Rose:
+
+
+Yeah.
+
+
+[00:44:09]: Charalampos (Babis) Papamanthou:
+
+
+I want to ask meaningful queries. So this is where Reckle trees come, right? Where it allows you to make use of the data and extract information in a verifiable manner.
+
+
+[00:44:20]: Anna Rose:
+
+
+Cool. Don't SNARKs use Merkle trees already, though? But not Reckle trees, not the recursive version, usually.
+
+
+[00:44:28]: Charalampos (Babis) Papamanthou:
+
+
+Not all SNARKs use Merkle trees. For example, Groth16 does not use Merkle trees, but they are SNARKs, for example, ones based on FRI, they're like Plonky2. They're using Merkle trees as part of the proving and verification algorithm. So the prover needs to use a Merkle tree to commit to the witness, and the verifier needs to open... to verify some proofs on this commitment. So this is two different worlds.
+
+
+[00:44:53]: Anna Rose:
+
+
+Yeah, but when you add the Reckle trees, you're just... it's the recursion part that's being added. What does it add? What does it change? Like, what benefit does just that part bring?
+
+
+[00:45:03]: Charalampos (Babis) Papamanthou:
+
+
+Adding recursion, you mean?
+
+
+[00:45:05]: Anna Rose:
+
+
+Yeah, like having it be a Reckle tree instead of a Merkle tree.
+
+
+[00:45:08]: Charalampos (Babis) Papamanthou:
+
+
+Right. So Merkle tree, you can only prove inclusion of a leaf.
+
+
+[00:45:12]: Anna Rose:
+
+
+Okay. Okay.
+
+
+[00:45:12]: Charalampos (Babis) Papamanthou:
+
+
+Reckle tree allows you to prove arbitrary computation on this leaf.
+
+
+[00:45:16]: Anna Rose:
+
+
+Got it. That's the difference. Okay.
+
+
+[00:45:18]: Charalampos (Babis) Papamanthou:
+
+
+Right. That's the main difference. It's basically the way I used to call it when we started working on it, is Merkle trees for computation. And actually I was considering this title for the paper, but eventually I didn't use that. I went with Reckle trees.
+
+
+[00:45:35]: Anna Rose:
+
+
+Cool. Ismael, I know you've had something you wanted to say for a moment for a while there, but I wanted to get those questions in.
+
+
+[00:45:41]: Ismael Hishon-Rezaizadeh:
+
+
+So to add a really concrete example of this, I think Babis mentioned Ether. We can think of USDC, an ERC-20 contract where you have a large section of the MPT tree on Ethereum in a given block that you want to structure computation. So select all users that are top 1% of asset balances or select all users with asset balance greater than x. And so what you want to do fundamentally is to prove this very quickly, and then to be able to, if required, update that proof if you need to use it again. So proving very quickly we get from being fundamentally parallelizable, since the way we can prove this can benefit from the number of machines that it's running on. So if you think of the monolithic approach where I run inclusion proof on slot 1, 2, 3, all the way to n, and then I get all that data and I compute over that data. It's expensive. And then if I change one component of that, I have to redo the whole thing from scratch. And so in blockchains, typically, these are conceptually very low entropy data structures between Block b and b+1, the majority of USDC balances don't change. And so the computation you've designed, Reckle trees, that is designed with recursive SNARKs only has to be updated proportionate to the change, which is logarithmic, which means that you can structure these very, very big computations that are very, very fast on every iterative run.
+
+
+[00:46:59]: Charalampos (Babis) Papamanthou:
+
+
+One truly fantastic application of Reckle trees is this notion of digest translation or consistency proofs on the blockchain that we currently run. These things are running on Lagrange network right now. So let me try to say a few things about this. So we want to... Remember our initial goal at Lagrange is to run some computational blockchain data. But as you know, Anna blocks and data are Keccak based. Ethereum data structures use Keccak hash function, which is truly, truly expensive in SNARKs. So any approach that tries to compute, to run some SNARK and computation of Keccak hash data will hit a bottleneck. So one approach that we're using Reckle trees for is to maintain this proof of consistency where we take the Merkle Patricia trie data structure based on Keccak, we transform it on our data structure that uses Poseidon, and we use Reckle trees to maintain a proof of consistency from the Keccask-based data structure to the Poseidon-based data structure. So all our queries are run on the Poseidon-based data structure, not on the Keccak-based data structure, and we just maintain this proof of consistency between the two. And this proof of consistency can be updated from block to block very fast because of the updatability property of Reckle trees. Not too much changes. So we only need to compute a few Keccak hashes per block to maintain this proof of consistency. So I think in my view, this is like really, really an amazing application of Reckle trees and one we really have invested on, right?
+
+
+[00:48:38]: Ismael Hishon-Rezaizadeh:
+
+
+So the question over digest equivalents that Babis just discussed, which is how do we take a large portion of the MPT tree and prove that that is equivalent to a now SNARK-friendly, far faster to compute over data structure, is very relevant to a new line of work that we're doing called Perseus and it's verifiable SQL through decomposition. And so we mentioned earlier at the start of this that Babis has authored a lot of the original works related to verifiable SQL., but as a new approach that our team has, which is fundamental to our coprocessor works, that leverages a lot of these Reckle tree benefits to do some things that were otherwise impossible in all prior works.
+
+
+[00:49:19]: Charalampos (Babis) Papamanthou:
+
+
+So Perseus is a new verifiable database system that we're working on that is based on Reckle trees. Like I said, the main idea of Perseus is we want to be super general for SQL. We want to support arbitrary SQL queries, which by the way, the previous work was also doing, but I can mention what was the issue with the previous work. So the idea of Perseus is remember Reckle trees is a framework that you can use to verify arbitrary Map/Reduce computation on subsets of Merkle leaves. When we describe Reckle trees, the paper is going to appear, by the way, in CCS 2024 in Utah in November. So when we describe this work, what we do in Perseus is we start with basic SQL operators. Like for example, join, group by, select, project, various filters, and we take all of these and we map them to the Map/Reduce framework of Reckle trees. So we're trying to mimic how database community deals with SQL queries.
+
+
+The first thing that database compiler is going to do is going to take an SQL query and it's going to decompose it to the primitive operators that you can run in some sort of sequence and eventually give the output of the SQL query. So we do exactly the same and now we do the decomposition and we have the verifiable operators. And part of this is we're doing is how to find the best Map/Reduce mapping of these operators back to our framework so that we can use all the nice properties of Reckle trees like natural parallelization, massively distributed system and updatability. And second is how to put all these proofs together, which are not too many. Every SQL operator can be decomposed... Most SQL queries can be decomposed in, I will say like six to seven SQL operators. We have listed them in our table, in the paper we're writing right now. And then how to put them together and compute an actual single proof for every SQL query. So right now we're actually building that. We're mapping... We just finished mapping joins and we're moving on to map everything else. So Map/Reduce is this framework where basically you do some sort of computation on the leaves and then the outputs can be combined as you go up.
+
+
+[00:51:44]: Anna Rose:
+
+
+It's so interesting, by the way, as you go through this, I'm just learning more about databases and how SQL works in general. The idea of decomposing it, I think must be very obvious to you because that's how databases work, but for me it's not. So what it just sounds like is kind of like how coprocessors were bringing one piece of the computer stack into the blockchain world, it sounds like you're now trying to further bring some of those concepts that have been well explored in general computing.
+
+
+[00:52:17]: Charalampos (Babis) Papamanthou:
+
+
+Actually, there's several interesting research challenges that come out of this interaction. I'll just name one, because this is something that I'm really, really excited about. So when you do this decomposition in databases, you need to do this notion of result estimation to decide how you want to decompose the query. So before you run the query, you need to have an idea what the result of an operator will be. For example, if a join has a big result the first time you apply it, maybe you want to switch the order, but you cannot run the query and then decide. You have to... Because then it defeats the purpose. So in databases, they do this result estimation and they base... they optimizes this decomposition optimization problem that is solved using this result estimation. Now, the interesting thing about our case is we have to run the query. We know what the results are, so we can try different things because the main cost is actually computing the proof. So this is something that we can also explore in this notion.
+
+
+[00:53:18]: Anna Rose:
+
+
+Interesting. Are you doing that in the work, in the Perseus work, or is that future...
+
+
+[00:53:22]: Charalampos (Babis) Papamanthou:
+
+
+Yes.
+
+
+[00:53:23]: Anna Rose:
+
+
+Oh, cool.
+
+
+[00:53:23]: Charalampos (Babis) Papamanthou:
+
+
+Yes. This is part of the plan to build actually a query planner for verifiable databases? I mean, it's very, very ambitious, but. we're working on that.
+
+
+[00:53:33]: Anna Rose:
+
+
+At what state... So yeah, maybe just to clarify, like Perseus is a paper that you're going to be presenting, but how far along are you in implementing any of this stuff?
+
+
+[00:53:41]: Charalampos (Babis) Papamanthou:
+
+
+The basis of Perseus Reckle trees is a paper accepted in CCS 2024, will be presented in October, I think, in Utah. So the Perseus is a working paper that is based off Reckle trees that we're currently working on.
+
+
+[00:53:58]: Anna Rose:
+
+
+Got it. Cool.
+
+
+[00:53:58]: Charalampos (Babis) Papamanthou:
+
+
+So the main idea is there, but it's all these things that I know where this is going. It's just a matter of having good work ethic, just completing the work and just doing it.
+
+
+[00:54:08]: Anna Rose:
+
+
+Nice. Well, I think our audience will appreciate the tease. I think they'll like that you're sharing what you're working on. It's cool.
+
+
+[00:54:14]: Charalampos (Babis) Papamanthou:
+
+
+Okay.
+
+
+[00:54:15]: Ismael Hishon-Rezaizadeh:
+
+
+I think also I wanted to mention from a product standpoint, the first version of the verifiable SQL via decomposition, Perseus that Babis is talking about was on testnet in a partial capacity now, will be fully on testnet for a group of queries that we're supporting. That's entirely self-serve where you can think of it like Dune, but verifiable. That'll be about six weeks away. We have an engineering team that has been very, very hard at work implementing a lot of these things. One of the things that we've been very lucky about as a company is we've been able to concurrently productionize Reckle trees alongside the paper, and we're concurrently productionizing Perseus alongside the paper as well. This is not one of those situations where you see the paper and you're waiting two years for it to be usable. By the end of the summer, people should have this entire tech stack, both something they can assess from an academic standpoint and read a literature on it and be able to actually use on-chain in their products.
+
+
+[00:55:13]: Anna Rose:
+
+
+Neat. Are there analytics companies that would be using this kind of thing? You talk about sort of the applications using this information, but yeah, would an analytics something like Dune or something, like actually want this as well? Or would it be easier for them to just go straight from historic data themselves?
+
+
+[00:55:32]: Ismael Hishon-Rezaizadeh:
+
+
+So we've had good conversations with the Dune team, less so on actually consuming proof since they can just index the chain and display the data to their users. And I don't know if they have a requirement that their users want to know the data is accurate. What we've had conversations mostly about is being able to actually offer that as a feature to a lot of users. And this is something we're very excited about because we already have the usage of SQL within the blockchain context for how we visualize and think about data in things like Nansen, Dune, et cetera. But we just can't use it in apps. We can't use it on-chain. And so with what we're talking about now, the way I like to describe it for people who might not be as versed in cryptography is we think of a RISC-V ZKVM as being able to prove general purpose Rust code. You can almost think about this and not from an academic or research standpoint, but just from a conceptual standpoint as a SQL VM. Or you can think of parsing the SQL statement into how that would manipulate the data and then proving that without having to, for example, write a manual circuit for every little thing you want to do. And it just opens up the design space for what you can do across crypto rather materially in our view.
+
+
+[00:56:41]: Anna Rose:
+
+
+Another question is, how do you interface with L2s? Do you want to or do you...
+
+
+[00:56:47]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah. No, we're live on three L2s right now. We should be on...
+
+
+[00:56:49]: Anna Rose:
+
+
+This is the question. When you say you're live on the L2, what does that actually mean? Your AVS and the prover network is living on the mainchain on the EigenLayer stack, and then your coprocessor, you said, is sort of connected there. But what do you need to do on the L2? Or could people just access it already automatically?
+
+
+[00:57:11]: Ismael Hishon-Rezaizadeh:
+
+
+So we have a network of nodes doing proofs. And those network of nodes doing proofs have stake that is recorded in a contract on Ethereum. But the proofs can go anywhere and the proofs can be of anything. And so right now we're live on Base, Fraxtal, Mantle, and we're soon going to add support for Polygon, ZKVM, Arbitrum, and a number of other chains that we're integrating with. And what you can do is you can do two things. You can compute over L1 state and verify the proofs that were done over L1 state on L2. So what's the moving average price on Uniswap on L1? You can verify that on Base today. Because of how Base is built, it lets you do that.
+
+
+And the second thing you can do is coprocess over L2 state. So what is a moving average of price in QuickSwap on polygon, for example, for some asset pair? So you can do everything you would do on the L1 with your coprocessor on the L2. And that's partly because with the way we've designed this system with updatable proofs and with digest translation, it actually scales super, super well for other execution spaces with fast block time. And so when we typically have thought of coprocessing, most of these teams don't really do a very good job or they struggle to compute over L2 state. They don't have access to being able to write their accumulators on-chain and try to propagate all the information between them. Since we do everything in ZK we can actually just verify our proofs anywhere you have a block header.
+
+
+[00:58:45]: Anna Rose:
+
+
+When you interface with an L2, do you have to deploy a contract there? You sort of mentioned this accumulator. So what are you actually doing there?
+
+
+[00:58:54]: Ismael Hishon-Rezaizadeh:
+
+
+We don't use an accumulator. Most of the other teams try to do these MMR accumulators where they just like try to... because they can't go back in historical block headers in their proofs. So because we can do digest translation and scale things very well, we can actually compute within a single proof back 10,000, 100,000 blocks moving average. We have a query right now that we support... query right now we support over about a million blocks or a million storage slots. And so we can really do these really big things. Because of that, we don't have to do these hacky solutions in Solidity that some of the other teams have had to do, which means that we can just really deploy a verifier contract so entirely stateless on any L2, and then they can verify our proofs. There's no need for these continued interactions and propagation of weird things that some of the other coprocessors are stuck doing because of issues with their STARK designs.
+
+
+[00:59:42]: Anna Rose:
+
+
+And that's what I was trying to get at, was like, what exactly are you doing? So you're saying there's a verifier contract?
+
+
+[00:59:47]: Ismael Hishon-Rezaizadeh:
+
+
+Yes. All we need is a single verifier contract for Groth16 SNARK on every L2 that we want to support.
+
+
+[00:59:55]: Anna Rose:
+
+
+But aren't you using Plonky2? Are you using Plonky2...
+
+
+[00:59:57]: Ismael Hishon-Rezaizadeh:
+
+
+We wrapped that in Groth16.
+
+
+[00:59:59]: Anna Rose:
+
+
+Okay. Ooh, okay, okay, okay. The final recursion, I guess.
+
+
+[01:00:03]: Charalampos (Babis) Papamanthou:
+
+
+No, no. We output Plonky2 proofs, but then we do like, I guess a verification of a Plonky2 proof within a Groth16. Right?
+
+
+[01:00:11]: Anna Rose:
+
+
+Okay.
+
+
+[01:00:12]: Charalampos (Babis) Papamanthou:
+
+
+So you can view it as a final recursion.
+
+
+[01:00:15]: Anna Rose:
+
+
+Right, cool. The last question that I have is regarding sort of the target use cases. I think every example that we've talked about today have been like DeFi and DEXes. How are you thinking about the customer applications? Are they primarily financial? Do you have sort of a larger vision for where this could be used?
+
+
+[01:00:36]: Ismael Hishon-Rezaizadeh:
+
+
+Yeah, I think at its core, user experience in crypto lacks because of the inability for dApps to be able to reference data. So every experience that we're familiar with in Web2 uses state from our prior interactions with that application, with every iterative new interaction. Right? Loyalty programs, sign in experiences, everything you do. And so we can't do that on-chain today, and the experience that we feel, therefore, is these very limited applications. And so to make this concrete, think of NFT programs that give you rewards the longer you hold the NFT or have experiences baked on L2s that are entirely designed to encourage you to continue to hold that asset. You can think of points programs that reward you on loyalty, both in terms of airdrop points and then in terms of continued issuance of Sushi MasterChef style DeFi points or DeFi reward bearing tokens.
+
+
+And we can think of all of this as universal crypto. When you think of gaming applications like on-chain games, very heavily require the ability to determine who their most loyal and frequent users are, to give them experiences in that game, that are suited for the amount of time or the amount of effort that they put into that. How have your historical sessions been, how many assets you've put in there, all the way to GambleFi and things that people do there in terms of how they want to give rebates to frequent users. So the whole spectrum of everything you can do on-chain could benefit fundamentally from better data access. And so I think Defi is the most concrete. We can think of DEX incentives, we can think of liquidity incentives, we can think of pricing for options, pricing for lending. But then we can go a level deeper, and we can think of how a new generation of applications can be built without this idea that somehow we just can't access data on-chain the same way we could off-chain.
+
+
+[01:02:39]: Anna Rose:
+
+
+Is there anything else that we should share before we sign off today?
+
+
+[01:02:42]: Ismael Hishon-Rezaizadeh:
+
+
+Last thing I want to share is one of the things that we care a lot about at Lagrange is how do we both innovate on fundamental underlying cryptography, and then how do we apply that in a product that people can use and use almost immediately after we're able to come out with this new research. And so we actually have a brand new version of our coprocessor that's coming out in early August that will let users, for the first time in crypto, actually structure SQL queries over large scale on-chain state, where they can define their own query the same way they would in a Dune and be able to run those and verify the results in their contracts. And so we're very, very excited for that update to come very soon. And so anyone here who is a DeFi developer or GameFi developer, an NFT developer, or anyone who might want to experiment with this, we'd love you to reach out, and we'd love to try to find a way to kind of get this in your hands as soon as possible.
+
+
+[01:03:39]: Anna Rose:
+
+
+All right. So I want to say thank you, Ismael and Babis, for coming on the show.
+
+
+[01:03:44]: Ismael Hishon-Rezaizadeh:
+
+
+Thank you so much, Anna.
+
+
+[01:03:45]: Charalampos (Babis) Papamanthou:
+
+
+Thank you, Anna. It was great.
+
+
+[01:03:47]: Anna Rose:
+
+
+Yeah, it really gave me a chance to dig into Lagrange, which I feel has been... I mean, I've sort of seen it happening, but this was really cool to hear what all the work that you're doing and the direction you're taking.
+
+
+I want to say a big thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners, thanks for listening.

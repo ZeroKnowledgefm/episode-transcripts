@@ -1,0 +1,1081 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:26:
+
+
+This week, Nico and I chat with Alin Tomescu, head of cryptography and part of the founding team at Aptos. In this episode, we cover what led him to join Aptos, his work on distributed on-chain randomness, as well as the Aptos Keyless accounts, a construction which is similar to ZK Email and zkLogin, which we've covered previously on the show. In this conversation, we dig into the architecture and discuss some of the choices that Aptos took as they built out their system. Now, before we kick off, I wanted to highlight the ZK Jobs Board for you. There you will find jobs from top teams working in ZK. So if you're looking for your next opportunity, be sure to check it out. And if you're a team looking to find great talent, be sure to add your job to the Jobs Board today. I've added the link in the show notes. We also have our upcoming ZK Summit 11 event to look out for. It's happening in Athens on April 10th. The event is shaping up. We have been adding speakers to the website and we'll share the schedule very soon. As always, this is invite only and space is limited. There is an application process to attend and you need to apply to be eligible for a ticket. If you've already received an invite to buy your ticket, be sure to grab it. We expect the event to sell out. I've added the link to apply in the show notes. Hope to see you there. Now Tanya will share a little bit about this week's sponsor.
+
+
+01:45: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain asset-agnostic privacy via a unified set. Namada is natively interoperable, with fast finality chains via IBC and with Ethereum using a trust-minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada, for more information, and join the community on Discord, discord.gg/namada. And now, here's our episode.
+
+
+02:46: Anna Rose:
+
+
+Today, Nico and I are here with Alin Tomescu, head of cryptography at Aptos and part of the founding team. Hi Alin, welcome back to the show.
+
+
+02:55: Alin Tomescu:
+
+
+Thank you, Anna. Thank you, Nico. Thanks a lot for having me. Really good to be back. 
+
+
+02:58: Anna Rose:
+
+
+Nice. Hi, Nico.
+
+
+03:00: Nico Mohnblatt:
+
+
+Hello, both. Happy to be here.
+
+
+03:01: Anna Rose:
+
+
+So Alin, last time you were on the show, you were actually working at VMware. And you came on, we talked about stateless validation, scaling blockchains, new Merkle tree designs, the challenge of syncing sharded system, there's like all this terminology. For today's episode, I feel like we're taking a pretty far leap. But can you tell us what has happened with you since we talked about all of that research? And is there anything from that time that you've carried forward?
+
+
+03:32: Alin Tomescu:
+
+
+Yeah, sure. First of all, thanks a lot for having me. It's really great to be back. So we spoke in, I believe, April 2020 or something of that sort. And at the time, I was doing a lot of work on authenticated data structures, vector commitments, and I was very interested in stateless validation at the time, particularly because it leveraged these authenticated data structures. Since then, I've spent two years at VMware Research doing academic paper writing and research projects with other people. And my work has focused on a mix of authenticated data structures and threshold cryptography. And towards the end of my VMware year, I worked on a sensibly anonymous payment scheme that balances accountability or compliance with privacy.
+
+
+And being at VMware Research was amazing for me. I really loved my time there and my coworkers, but I wanted to have a little bit more skin in the game, let's say, with the work I do. So I found it incredibly exciting to work on cryptography that sees the light of day. And a lot of is at stake when you deploy that cryptography. It sort of forces you to rethink your approach to the work that you do. And so I had this opportunity to join Aptos Labs very early on as part of the founding team, and I really couldn't help myself and I did. So that was in February, 2022. And I should actually say like, I've had a lot of opportunities to join cryptocurrency since my years as a grad student and never have I ever been so compelled to join a team as Aptos Labs.
+
+
+05:16: Anna Rose:
+
+
+Interesting.
+
+
+05:17: Alin Tomescu:
+
+
+Our team is really fantastic. And I'm very, very proud and I'm having a lot of fun to be there.
+
+
+05:24: Nico Mohnblatt:
+
+
+Was that the differentiator for you? Like the team?
+
+
+05:27: Alin Tomescu:
+
+
+For me, yeah. Absolutely. Yeah, and sort of the technology stack that we were building upon. That was a huge, huge motivator for me.
+
+
+05:36: Anna Rose:
+
+
+Yeah, I had wondered if you had maybe done a detour through Facebook Meta on your way, because I know Aptos and Mysten, these are both projects that spun out of the Meta cryptography team. But in your case, you were just coming straight from VMware, I guess. 
+
+
+05:51: Alin Tomescu:
+
+
+Yeah, I was coming straight from VMware. Yes, that's exactly right. And a lot of people asked me if I had spent time at Novi on Facebook and nope, never been there.
+
+
+05:59: Anna Rose:
+
+
+Okay. What was it about sort of Aptos, the stack, that was unique or is unique in your mind?
+
+
+06:07: Alin Tomescu:
+
+
+At this moment or when I joined?
+
+
+06:11: Anna Rose:
+
+
+Well, actually just generally, because like there is Sui, at least with this show, we've covered Sui a little deeper. We've had a few more guests. We know that like Sam, Kostas, like we kind of know their history. Like is Aptos significantly different from Sui? And if so, what's kind of unique and interesting about it?
+
+
+06:28: Alin Tomescu:
+
+
+So there's differences first at the consensus protocol level. So we are building up on the Jolteon consensus protocol, which sort of is an iteration on PBFT and HotStuff. And on top of Jolteon, we are now deploying DAG-based protocols like Shoal, which iterates over Bullshark. At the language level, both Sui and Aptos use Move, but the subset of Move is starting to sort of fork a little bit.
+
+
+06:56: Anna Rose:
+
+
+Oh, interesting.
+
+
+06:57: Alin Tomescu:
+
+
+And so for example, Aptos supports scripts, which we think are much more powerful than PTPs, which are supported in Sui Move. Then let's see what else is worth emphasizing. In terms of cryptography on-chain, we have a very nice summary of all of our cryptographic features on our aptos.dev website. So for example, we have native support for arbitrary elliptic curve arithmetic in Move. So you can pick any supported curve, right now we support BLS12-381 and BN254, and you can do arbitrary arithmetic. You can do additions, multiplications, pairings, multi-pairings, multi-exponentiations and this is really powerful because we can write things like Groth16, zero-knowledge proof verifiers in Move with a generic parameter that is the curve type, right? And we're also getting contributors externally that are adding new curves. So we recently had an external contributor that added BN254 as a new curve. So we're very excited about empowering developers to build on top of Move, really powerful cryptographic dApps.
+
+
+Another differentiator between Aptos and Sui that we're working on recently and we'll talk about later is this distributed randomness effort. So we have something that we call instant on-chain randomness. And the idea behind this feature is to give smart contracts immediate access to unbiased, unpredictable randomness and improve the developer experience of smart contract writers who want to write things like games, lotteries, raffles, randomized NFTs, or even interactive zero-knowledge proof verifiers. And, once again, the whole philosophy there of Aptos is to improve the user experience and improve the developer experience and bring Web3 to the next billion users.
+
+
+08:55: Anna Rose:
+
+
+I wonder, would you say that there is a focus on ZK on the research team at Aptos?
+
+
+09:01: Alin Tomescu:
+
+
+It depends what you mean by ZK. So typically if you're doing cryptography one way or another, you're gonna use a zero knowledge proof. I mean, even if you look at a signature scheme, it can be regarded as a zero knowledge proof of knowledge of the secret key, right? Made non-interactive by using a message in the challenge which yields a signature. So one way or another, you're using zero knowledge proofs whether you like it or not in your cryptocurrencies. At Aptos, we have found zero knowledge proofs useful for many things. So the first thing that we started looking at was adding some privacy to our coin transfers. One thing that can be done there is this traditional technique called confidential transfers, which employs a primitive called the zero knowledge range proof, which argues that a committed number is within a certain range, like zero to four billion. I'm not going to explain how that need for a zero knowledge range proof arises, I'll just say that it arises even in things like confidential transfers.
+
+
+Another area where zero knowledge proof might arise would be, for example, in distributed randomness. If you employ protocols such as publicly verifiable secret sharing, it turns out that even there you might benefit from a zero knowledge range proof. In particular, if you want to deal to secret share a field element, you have to employ an additively homomorphic encryption scheme to encrypt the shares of that field element. And the most efficient schemes we know actually employ ElGamal encryption with a zero knowledge range proof. That's another use case of zero knowledge proofs.
+
+
+And lastly, for account management, you might find zero knowledge proofs very useful. So we're doing a line of work that we're calling Aptos Keyless accounts, which leverages the OpenID Connect standard and zero knowledge proofs to add privacy. And once again, we'll touch upon this later in the podcast, but those are three examples where zero knowledge proofs arise. And of course, there's more. As you know from talking to your guests, there's a lot of hope in zero knowledge proofs being useful for scaling blockchains via rollup techniques.
+
+
+10:59: Anna Rose:
+
+
+Interesting. Is there work on your team on that kind of ZK, like on the scaling type as well? Because so far, I think you've mentioned randomness, you've mentioned privacy, but I'm just wondering if like, do you expect rollups to exist on Aptos, or do you have other ways of thinking about like ZK on Aptos, things like coprocessors, stuff like that?
+
+
+11:20: Alin Tomescu:
+
+
+So we're thinking about it. One big fundamental challenge I see with scaling blockchain via rollups is the latency aspect of computing an expensive zero knowledge proof. And for us, latency is very important. And this comes back to the story I was telling earlier about user experience. If I have to wait 30 seconds for my transaction to be final, that's not good for my users. We really believe in this. So in that sense, we have not looked very deeply at using rollups to scale because we don't see how to solve this latency problem immediately. Now I'm very excited for the research that's being done in the zero knowledge space on people really doing amazing math and amazing engineering to lower the latency of the system. So there was a recent announcement, I think, by Polygon where they, I think, got around 30-second latency for a block of Ethereum transactions, which is very, very impressive.
+
+
+12:11: Anna Rose:
+
+
+Is this the Circle STARKs stuff that they did with StarkWare possibly? Or are you thinking it was this the Mersenne 31 or was this the Plonky3?
+
+
+12:21: Alin Tomescu:
+
+
+I think it's based on Plonky2 or 3 but I don't think the tweet said... Do you know Nico?
+
+
+12:26: Nico Mohnblatt:
+
+
+I think these were engineering efforts based on Plonky2 or similar primitives, all the newer stuff like Mersenne 31 and the Circle STARKs construction that comes from it, is not yet sort of at that level of implementation.
+
+
+12:41: Anna Rose:
+
+
+Got it.
+
+
+12:42: Alin Tomescu:
+
+
+Yeah. And you've had Brendan Farmer on, and they've done amazing work on really speeding up the prover in Plonky2 and the subsequent work. So that's really exciting. And I hope to the extent that people figure out how to parallelize the prover, there might be a chance in making rollups actually practical for scaling blockchains and lowering the latency. And the alternative is to just not care about latency and use economic mechanisms to deal with high latency. But I think that complicates the stack, and I think that complicates the user experience. And I just don't think that will be practical in the long term when you want to buy a coffee or a motorcycle, and you have to wait. Maybe for a motorcycle it's fine, for a coffee not so much.
+
+
+13:23: Anna Rose:
+
+
+Makes sense.
+
+
+13:24: Alin Tomescu:
+
+
+And getting back to the original question was if we're looking at rollups to scale Aptos. Because of the scalability issue, I guess we're not putting a lot of effort in it, but once we see that there is sort of a really exciting development, I think we might give it more attention.
+
+
+13:41: Anna Rose:
+
+
+Got it. 
+
+
+13:42: Nico Mohnblatt:
+
+
+Well, I'm very eager to get started with all these cool constructions that you've been talking about. So on-chain randomness, probably being the first one.
+
+
+13:51: Alin Tomescu:
+
+
+Yeah.
+
+
+13:52: Nico Mohnblatt:
+
+
+So you said we provide smart contracts with randomness that they can access during their execution, is that correct?
+
+
+13:59: Alin Tomescu:
+
+
+Mh-mmh.
+
+
+13:59: Nico Mohnblatt:
+
+
+Amazing. How does that work?
+
+
+14:02:
+
+
+Alin Tomescu:
+
+
+How deeply do you want to get into it?
+
+
+14:06: Nico Mohnblatt:
+
+
+I don't know. Should we start with a first, like a high level description and slowly work our way down?
+
+
+14:12: Alin Tomescu:
+
+
+Yeah. So that's a great idea. So let's start with the high level. So we actually have an Aptos improvement proposal, AIP 41, that describes the Move APIs used to give contracts unbiased, unpredictable randomness. And these APIs are very simple. It's literally a function called get random integer, for example, a contract calls it and it gets a random integer instantly. It doesn't have to wait for the next block, it doesn't have to wait for eight minutes, it doesn't have to commit ahead of the time to a future randomness that will be generated, just gets it instantly. And the question is how is that possible? And the way we do it is we make sure that every Aptos block has a randomness seed. And from that randomness seed, we can derive individual randomness for these contract calls. That's sort of the, again, high level.
+
+
+How do we put that randomness seed in there and how do we make it unbiased and unpredictable? At a high level, we're using a PVSS-based... Publicly Verifiable Secret Sharing based distributed key generation protocol and a Verifiable Unpredictable Function or a VUF. And I'm happy to go into the details and the challenges of making that work because it's not very easy to make DKGs practical in the proof of stake setting that we have at Aptos network, and it's not very easy also to make VUFs or weighted VUFs practical in that setting. So for us, that was a very nice challenge, and we wrote an academic paper about our solution, and it was sort of very in line with our philosophy at Aptos Labs as a research group. We want to work on really hard problems for actual deployed systems, solve them, and then publish a paper about it.
+
+
+15:57: Nico Mohnblatt:
+
+
+So these two components, the DKG I think probably listeners are going to be more familiar with. So, right, we spread a key amongst a committee.
+
+
+16:05: Alin Tomescu:
+
+
+Yeah. This VUF thing that you're talking about, what does it provide? 
+
+
+16:10: Anna Rose:
+
+
+And is it anything similar to a VDF, which we are more familiar with?
+
+
+16:15: Alin Tomescu:
+
+
+Yeah, it's not at all similar.
+
+
+16:16: Anna Rose:
+
+
+Okay.
+
+
+16:17: Alin Tomescu:
+
+
+I will expand on it. But actually, even before I go into the VUF, even the DKG is a little bit challenging. And the reason it's challenging is because we have a committee-based consensus protocol that proceeds in epochs of two hours. So every two hours, the validator set might change. And whenever a new epoch begins with the new validator set, you want the DKG protocol to be finished, basically, so that the new epochs committee has the shared secret and they can compute the VUF, which allows them to put the block seed in the block, the randomness seed in the block. So how do you get that to work? It turns out if you want to have the new committee in the new epoch have the shared secret, you kind of have to start dealing it in the previous epoch. So what's happening is the old committee is starting a DKG and dealing to the new committee, right?
+
+
+And to make that work, you have to use a publicly verifiable secret sharing algorithm because the new committee might not even be online. So you need to encrypt the shares of the secret for the new committee using publicly verifiable secret sharing. And actually getting the publicly verifiable secret sharing to be efficient enough to work at this scale is tricky. So we actually started by looking at a line of work that Kobi and I did back in 2021 on scaling the Scrape PVSS protocol. And that had some performance issues at the scale that we have at Aptos, because we have to deal transcripts of around a thousand shares, which is pretty large, the verification of such transcripts would have taken seconds. And it was a little bit too much work for the validators to do. So we came up with a new PVSS protocol and that allowed us to get good performance. So once you have a PVSS protocol, you get a DKG. Once you have a DKG, the validators have a shared secret every new epoch, and now they are ready to evaluate this verifiable unpredictable function or VUF, which is completely different than a VDF.
+
+
+18:18: Anna Rose:
+
+
+Verifiable delay function. Yeah. It's just weird... So when I've heard about randomness and like we've done episodes back in the day on randomness, VDFs were the way that people were achieving it. So are VUFs completely standard and I just missed that story? Or is it sort of unique to this project?
+
+
+18:38: Alin Tomescu:
+
+
+They're very standard. In fact, the BLS signature scheme, which I'm sure Anna, you've talked about a lot in this podcast, it is actually a VUF scheme also. So any deterministic signature scheme, or I should say any unique signature scheme that only has one valid signature for a message is a VUF. This is a known result. But I think you're asking a very interesting question, which is most projects have looked at using VDFs for randomness. So why haven't we done that? And I'm not saying it's impossible to use VDFs in our settings, I'm just... We couldn't do it in a way that lowers the latency because with VDFs fundamentally you have this problem that you're computing a delay function over a long period of time, right? And that means you can't have the randomness until this delay goes by. But we need randomness very fast and we don't want to tie the latency of our protocol to the delay in the VDF at all.
+
+
+19:37: Anna Rose:
+
+
+That makes sense. Like what you said too, it sounds like it's all about timing. Like you're trying to time it for the correct round. So if you added on this some sort of delay function, I can imagine it wouldn't work.
+
+
+19:47: Alin Tomescu:
+
+
+Yeah, not if done naively at least. I really am very curious if there is a way to use a VDF in such a way that the delay can be decoupled from the latency of the consensus protocol. And there's some line of work on something called continuous VDFs that kind of makes me wonder if there might be some ideas to explore there. And I urge the research community to think about that problem because VDFs are in a way much better than VUFs for randomness. They have better properties, but it's just unclear how to make them work in these low-latency protocols that want to proceed as fast as the network. And once again, we care about latency. Latency means good user experience.
+
+
+20:25: Nico Mohnblatt:
+
+
+I was going to say, it's also unclear just how to make them work at all. And this is a debate I have with Kobi very often. He just says VDFs aren't real, like we can't implement them.
+
+
+20:37: Anna Rose:
+
+
+I didn't know that. That's fine.
+
+
+20:39: Alin Tomescu:
+
+
+He doesn't buy, for example, the RSA assumptions that they're predicated on, or even the SNARK-based VDF assumptions?
+
+
+20:49: Nico Mohnblatt:
+
+
+The sort of SNARK-based ones says aren't real, can't implement them, and people will come up with faster hardware. It's relying on this assumption that this hardware and the scheme that we've put out is the best you can ever do to compute this function and this SNARK. And he sort of argues that it's not a feasible assumption.
+
+
+21:09: Alin Tomescu:
+
+
+Even for things like RSA.
+
+
+21:10: Nico Mohnblatt:
+
+
+Oh, that I'm not sure. That would be an interesting discussion to have with him. But back to the VUF thing, why are we calling them verifiable unpredictable functions and not verifiable random functions, if that's what we want them to be?
+
+
+21:24: Alin Tomescu:
+
+
+That's a great point. It's actually, we do use a verifiable random function, it's just that once you have a VUF, getting a VRF is trivial. All you do is you hash the VUF output, and that gives you a VRF output. So I just like to focus on the VUF as the key primitive, but yes, it's a VRF.
+
+
+21:41: Anna Rose:
+
+
+Is it just by creating this hash output that it becomes unpredictable? Like how does that work? 
+
+
+21:47 :Alin Tomescu:
+
+
+Yeah, so why is a verifiable unpredictable function called unpredictable and how does hashing the output achieve a verifiable random function? So for the first part, the unpredictability in a VUF is really the same thing as the unforgeability in a signature scheme. So in a signature scheme, if I give you a message, you cannot come up with the signature on that message unless someone has signed it before and you have a previous signature, right? That's what it means to be unforgeable. VUF unpredictability is exactly the same. Basically, you cannot come up with a VUF on a new message unless you've seen it before. So it's just a synonym. Us cryptographers, we like to rename things. And the verifiable random function part is kind of a subtle cryptographic thing. So in the signature or VUF output, you might actually be able to predict some bits. For example, you might be able to predict the most significant bit in a signature. I don't know, maybe it's always one. So it's technically not random. So if you actually want to get randomness, you have to apply a random oracle, and that's what gives you a verifiable random function. It's kind of a boring, subtle detail. Yeah.
+
+
+22:58: Nico Mohnblatt:
+
+
+The joys of cryptography. Yeah.
+
+
+23:01: Anna Rose:
+
+
+I want to understand where this is used in Aptos. Is this your validator selection random function? Like, once you create this randomness, what do you do with it?
+
+
+23:13: Alin Tomescu:
+
+
+So like I mentioned earlier, what we are using this for is to give smart contracts access to randomness. So they could enable a new class of applications that we call randomized dApps or randapps. And that's it. It's possible that we might use it to select a subcommittee in the future to sort of get an asynchronous consensus protocol rather than a partially synchronous consensus protocol. We have not looked at that yet, but there's many things you can do with this once you have it. The main application though is smart contracts. And why? Once again, developer experience I think is very important. It's really difficult to write randomized dApps right now with sources of external randomness. I've tried it, it's kind of tricky. We believe in good developer experience. We think that's going to empower cool applications and bring billions of users to Web3.
+
+
+24:03: Nico Mohnblatt:
+
+
+Something that really caught my attention earlier is you said, as part of these randomized dApps, you could have an interactive verifier as a smart contract?
+
+
+24:14: Alin Tomescu:
+
+
+Yeah, so we haven't explored this in depth. But in principle, right now, all zero knowledge proofs on-chain are non-interactive zero knowledge proofs, right? But technically, the chain, if you have on-chain instant randomness, the chain can be an interactive ZKP verifier where it generates some public randomness and verifies the ZKP. Of course, that's for public coins ZKPs, not for private coins ZKPs. This is kind of interesting because I think for some ZKPs and for some cryptographic protocols, interaction is much more powerful than arithmetic. This is something that I think Rafael Misoczki once told me in 2017, when I met him and we were talking about some problem. And I didn't really understand what he meant at the time, but now I do. So if you've done cryptography and you've tried to use a lot of arithmetic tricks, you can get your tasks done, but interaction is so much more powerful. And as a result, sometimes interaction can let you get really much more efficient protocols. So it's kind of interesting to think about what you could do with interactive ZKP verifiers on-chain.
+
+
+25:14: Nico Mohnblatt:
+
+
+It's very interesting, especially an example that listeners might be familiar with. When we talk about the security of STARKs, for example, we have to consider this non-interactive version of it, and we have to consider an adversary that grinds and keeps trying, keeps trying, keeps trying. In the interactive case, you can't keep trying forever because the verifier is going to reject you. If you try too many times, I'm going to say, no, I don't want to hear from you anymore. So that means we could have sort of an interactive STARK verifier that maybe works with much looser parameters, but still gets high security. 
+
+
+25:45: Alin Tomescu:
+
+
+That's really cool.
+
+
+25:45: Nico Mohnblatt:
+
+
+Looking forward to see where this goes.
+
+
+25:47: Alin Tomescu:
+
+
+Oh my God, you should build that. Please build that in Move.
+
+
+25:53: Anna Rose:
+
+
+So I think we just covered the on-chain randomness feature, but what other kind of ZK or cryptography is coming out of this lab?
+
+
+26:01: Alin Tomescu:
+
+
+Yeah. So this is probably the most exciting thing for me right now. It's a feature that we're calling Aptos Keyless accounts. So when we started Aptos, a big problem for us was, and really for any cryptocurrency in the space, onboarding new users onto Web3. These users have to download a wallet, write down a mnemonic, remember it, understand how important it is, and eventually they lose it, they lose all of their assets, and they never engage with the space. Okay? So the user experience in Web3 is kind of horrendous.
+
+
+26:32: Anna Rose:
+
+
+The user life cycle is very depressive.
+
+
+26:38: Alin Tomescu:
+
+
+So once again, coming back to Aptos, our goal is to improve the UX and bring the next billion users into Web3. So we have to solve this problem if we want to do that. So in 2023, we were thinking a lot about solving this problem with MPC protocols that manage the key for the users. But when you think about that, you kind of immediately realize that you're not really solving the problem because your users still have to authenticate themselves to the MPC system. So they still need some credential to prove they are the user so that the MPC system gives them the secret key. So when we looked at MPC companies around, a lot of them were using OpenID Connect to let users prove their identity to the MPC system using a Google account for example. And initially it didn't click for us, but after about a month or two, it was pretty obvious that if the MPC system can verify this OpenID Connect credential, then so can the blockchain and you don't actually need the MPC system. And as with all ideas, when you first have them, you wonder like, why the hell are people doing this stuff? Like, you can just verify this stuff on-chain, it's completely unnecessary.
+
+
+So when we realized this, we started thinking about the problem and we came up with this idea of, let's use OpenID Connect signatures on-chain as a way to prove that you are the user that you claim to be. So basically now, your blockchain account can be, for example, your Google account. You don't have a secret key, you don't have a mnemonic. There's nothing you can lose. Unless you lose your Google account, you won't lose your blockchain account. So that's the approach at a really high level, that's what we're trying to do. Now, the challenges around that is our privacy. And I can talk about that more, but so far does that make sense?
+
+
+28:27: Anna Rose:
+
+
+For me, this sounds a lot like zkLogin, ZK Email, TLSNotary maybe a little bit. Like there's a bunch of projects coming out where they're dealing with email addresses, connecting it to an on-chain identity. Is this in the same category? Is it using similar techniques?
+
+
+28:47: Alin Tomescu:
+
+
+It's in the same category of basing the security of a blockchain account on the security of OIDC account. So in AIP 61, we described this approach technically, and we referenced a lot of previous work on this idea of using JWTs from OpenID Connect to bootstrap blockchain accounts. And yeah, you can take a look at all of the prior art there. And it's kind of, yeah, if you've done research, you kind of observe over time that what tends to happen in research is there's the world with its current state in terms of ideas, and typically people often come up with the same idea around the same time. Like, Nico, you must know this, for example, having written papers and gotten scooped and stuff like that, that usually, yeah, an idea kind of tends to arise in a lot of people's minds around the same time. And I think for this idea, probably, it's been around for two, three years. It's quite surprising that it hasn't been around for 10 years because we could have done this 10 years ago on Ethereum, for example, without any zero knowledge proofs, because you don't really need zero knowledge proofs to make this approach work. You only need zero knowledge proofs if you care about privacy. Does that make sense?
+
+
+30:00: Nico Mohnblatt:
+
+
+Well, I guess there is one question, which is, not your key, not your coins, right? Like, does this apply here?
+
+
+30:09: Alin Tomescu:
+
+
+Of course. I mean, absolutely. But that's one way to think about it. If you are an expert user and you wanna manage a secret key, please go ahead. But you are not the target user for this product, if you are that. The target user is like at least 90% of cryptocurrency users. The target user is our parents, our friends who have never written down a mnemonic before and don't ever want to do so. And for most people, it's really cumbersome to sign up for a wallet. Even the fact that when you use a dApp, you have to install a wallet is a really big entry barrier. Like when we talk to partners or applications, they tell us that no, wallets are sort of unacceptable. We cannot have our users go to a website to buy a concert ticket and have to install a wallet. That's ridiculous. So another advantage of this approach is that you can actually completely avoid wallets. A dApp can directly sign you in with your Google account and can derive a dApp specific account associated with the dApp's identity and your email address. Right? No more wallets. And the nice thing is that that dApp specific account is completely isolated to the dApp. So that dApp cannot steal other assets from other apps.
+
+
+31:25: Anna Rose:
+
+
+So I want to add a link in the show notes to that previous episode. We actually had Kostas from Sui talk about zkLogin and Aayush from ZK Email talk about his system, and those two kind of... We knew those had emerged at the same moment. They talked about the similarities, which there were a lot of and a few differences. The reason I want to just sort of link to that is I know that goes into the general architecture. I have a question left over from that that I kind of want to ask you, which is like, what I understood this as is it would almost create a new account on-chain. But what I don't get is like, if you use this subsequently, how does it always connect to the same account on-chain? I get the idea that it's like in a short second, there's that connection made. But yeah, this is still like this question mark for me on how you keep that connection.
+
+
+32:17: Alin Tomescu:
+
+
+So are you essentially asking, when you sign in with Google into a dApp or into your wallet and you get access to the account for the first time, and then you log out, and then you sign in back again, how do you get access to the same account?
+
+
+32:30: Anna Rose:
+
+
+Yeah, because it all had to do with salt, and it's...
+
+
+32:34: Alin Tomescu:
+
+
+The salt, yeah, forget the salt. The salt is irrelevant. The salt is just for privacy.
+
+
+32:39: Anna Rose:
+
+
+Okay, okay, okay. But it sounded as you log on, you're creating a new account. At least that was the way it was described to me. And so that's why I'm like, how do you always connect to that same one?
+
+
+32:51: Alin Tomescu:
+
+
+Okay, I can describe this as well as I can think of. And I can also share some slides that you can link into the YouTube video, which describes the approach.
+
+
+33:00: Anna Rose:
+
+
+Okay. Cool, cool.
+
+
+33:00: Alin Tomescu:
+
+
+Let's forget about privacy and zero knowledge proofs and salts, okay? Because in order to actually understand how this approach works, all you have to look at is OpenID Connect and the signatures from Google. So how does the approach work at a really high level without privacy? Your blockchain address will be a hash or a commitment to your email address and the application that your account is associated with, like a wallet, for example, or a dApp. That's it. So your blockchain address is these two things, your email address and the application ID. Now, the question is, once you have a blockchain address that is associated with your email and the application ID, how do you authorize a transaction for it? How does the blockchain verify that a transaction is allowed to modify that blockchain address? And the answer is very simple. 
+
+
+When you sign in with Google, what Google does after you've completely signed in, successfully signed in, is it gives you a signature. And guess what? That signature will be over, one, your email address, which is committed in your blockchain address, and two, the application that you use to sign in to Google, like your wallet, which is also in your blockchain address. And three, any arbitrary data that you want Google to sign, which, by the way, can be the transaction that you want to authorize. So I have a blockchain address with my email and application ID, Google will gladly sign over those two things and any data I ask it to, right? So I can put a transaction in there. So now I'm basically getting Google to sign my transactions for me. And the validators can very easily check that the signature on the transaction is over the same email and application ID as in the blockchain address. So I hope that's sort of clear. But if not, please, please ask some questions.
+
+
+34:46: Anna Rose:
+
+
+I mean, I don't know how the Google sign in, exactly... I'm assuming this is something that's outputted, but if you've signed in, do you have to use your actual email account to sign? Like, do you have to send an email being like, sign this?
+
+
+35:01: Alin Tomescu:
+
+
+No, no, no.
+
+
+35:02: Nico Mohnblatt:
+
+
+Hello Google.
+
+
+35:02: Alin Tomescu:
+
+
+So you've used the sign in with Google on websites like Notion, for example.
+
+
+35:08: Anna Rose:
+
+
+Yeah, but I always think of it like you use it once to sign in and then you never... like Google disappears. But am I wrong?
+
+
+35:13: Alin Tomescu:
+
+
+Exactly. That's what's happening. There's a detail that I'm leaving out here, but that's what's happening. You sign in once and Google gives you this digital signature over your email address, your application ID like Notion or your wallet, and any arbitrary data. So what we do is we leverage this idea from 2022 by Ethan Heilman et al. where instead of signing the transaction directly, we sign an ephemeral public key when you sign in with Google. So now your wallet asks you to sign in with Google, you did so, and Google gave you a signature on this ephemeral public key. So if you present the signature to the blockchain and the ephemeral public key, then you can use the ephemeral public key to sign transactions repeatedly without re-signing into Google. So there's a layer of indirection. This is a classic idea in computer science. All computer science is just layers of indirection like this. Don't sign the transaction directly, sign another thing which signs the transaction so you don't have to sign in a million times into Google in order to authorize the transaction. This is the main trick we have. Probably the only trick as computer scientists that we have.
+
+
+36:16: Anna Rose:
+
+
+Would it be an application then? The dApp is what's doing that in between. You basically gave over power to the dApp to do the signing on your behalf, kind of?
+
+
+36:25: Alin Tomescu:
+
+
+Correct. Just like with the wallet, you give the power to any wallet right now, even with a secret key or a mnemonic, to sign transactions for you. So if the wallet is malicious, it can sign bad transactions. And there are even now dApps that derive a secret key for you in the browser and then use that secret key to sign transactions behind your back. So even now, users are trusting dApps to correctly manage their dApp-specific account.
+
+
+36:50: Anna Rose:
+
+
+Okay, so far we've talked about just sort of the general construction and thank you. I think this has added clarity into how you can log in multiple times to the same thing, that they are tied to each other and how you can actually sign transactions. But let's add the privacy component and the salt, which I still don't understand what that is. But anyway.
+
+
+37:12: Alin Tomescu:
+
+
+Oh, I'm going to confuse you even more. So because we're not calling it a salt, we're calling it a pepper.
+
+
+37:18: Anna Rose:
+
+
+Of course. Someone had to do it.
+
+
+37:22: Alin Tomescu:
+
+
+Well, it's actually the right name for it. So a privacy preserving salt, a salt whose purpose is to provide privacy is typically referred to as a pepper in cryptography. So that's what we're calling it. And if you look at past projects like Celo, who also have employed the use of peppers, they do the same thing. So anyway, that was kind of a parenthesis to make things more confusing. Okay. So the question was, how do you add privacy to this approach? So let's first identify the problem. So the problem is that if the validators are to verify the signature from Google, they must know your email address and the application ID, because that's the message that's being signed in order to verify the signature on the message. So that leaks to the blockchain who you are in terms of your email address, which would be pretty bad. It's bad enough that on a blockchain you see a transaction history for all addresses, now you see a transaction history for all email addresses. That's kind of terrifying.
+
+
+There's an associated problem too, which is that Google, when you ask it to sign over this ephemeral public key that I mentioned earlier, now Google knows your ephemeral public key and can track your transaction history on the blockchain too. So that's not good either. So we want to solve both of these problems at the same time. So how do you do that? Of course, the answer is you use a zero knowledge proof and you throw it at the problem and that's it, done. And we can end the conversation right here.
+
+
+38:48: Nico Mohnblatt:
+
+
+All right. It was a great episode. Thank you so much.
+
+
+38:52: Alin Tomescu:
+
+
+Yeah. But of course, in practice, it's a little bit more complicated. So of course, we throw a zero knowledge proof at it. What does a zero knowledge proof do? A zero knowledge proof will argue that Google did sign over the message, which is committed in the blockchain address. So it's a zero knowledge proof of knowledge of a signature from Google on the email address and the application ID committed in the address. And committed is really key here, because you cannot do a commitment unless you have some randomness. And that randomness is what people refer to as a pepper or a salt. So now this pepper and the salt is what hides your email address and the application ID inside your blockchain address. So that's at a high level, the most extent statement of how you use zero knowledge proofs to provide privacy. Now, there's the other side of the story too, which is how do you hide the ephemeral public key from Google? And the answer there, once again, is to use a commitment. Instead of having Google sign directly over the ephemeral public key, you have Google sign a commitment to an ephemeral public key. And the SNARK now argues that the EPK, the ephemeral public key, is committed in the signed message by Google.
+
+
+40:10: Anna Rose:
+
+
+But in this case, does your email show up somewhere, but it's just disconnected from what you're actually doing.  Because I'm just picturing that line of thinking that you described before where like, Google does the signature, allows this dApp to then do more signatures for you. But like that first signature, it's not really private, is it? Or is it just like... Is it public, but you don't know what it's connected to?
+
+
+40:37: Alin Tomescu:
+
+
+Oh, it's private.
+
+
+40:38: Anna Rose:
+
+
+It is private. Okay. So even the Google sign in, that thing you had said, like the email address... You kind of had all these things that would go into that signature.
+
+
+40:48: Alin Tomescu:
+
+
+Yeah, so the first... Whenever you sign in with Google, you get the signature. So even the first time you create the account, you will get a signature. This signature you use locally and you compute the zero knowledge proof that argues its existence. You never leak the signature to the blockchain, you never send it. You just keep it locally and you create a zero knowledge proof, arguing that you know the signature over the email address and the application ID committed in the blockchain address using the pepper. And then you also argue that the signature is over the ephemeral public key committed in the message that is signed. 
+
+
+41:22: Anna Rose:
+
+
+But then there's a verifier on-chain, I guess, that's saying like, yes, this is correct. I still don't get how it then connects. Like, how do you then connect it? Because all that I feel you've said is like, there is a Google account doing something correct. And the verifier is like, yes. But I don't know how it interacts without it revealing.
+
+
+41:42: Alin Tomescu:
+
+
+Let's look at the verifier component. What does the verifier check? So in a zkSNARK, you have public inputs and private inputs. And the verifier is checking that a particular relation holds over the public inputs and the private inputs. And the whole point of the ZK is that the private inputs are not leaked to the verifier, while the public inputs are known to the verifier. So what are the public inputs? The public inputs will be the blockchain address and the ephemeral public key at a high level. I might be missing something, but let's go with this.
+
+
+42:11: Nico Mohnblatt:
+
+
+I guess Google's public key as well, right?
+
+
+42:13: Alin Tomescu:
+
+
+Yes, I don't want to get into that level of details, but yeah, yes, of course. So those are the public inputs that the verifier, the blockchain will know. Hey, I have an address and I want to make sure that this ephemeral public key is allowed to sign for this address, right? And what am I going to verify in zero knowledge? I'm going to verify that there exists a signature from Google on a commitment of this ephemeral public key, and that that signature is over the same email address and application ID as in the blockchain address. And from a high-level perspective, that's what the verifier sees. Does that make sense?
+
+
+42:51: Anna Rose:
+
+
+I think so. So the connection to the address is just with this ephemeral output.
+
+
+42:55: Alin Tomescu:
+
+
+Yeah. What does zero knowledge proof effectively achieves is it temporarily tie the blockchain address to this ephemeral public key, which can then later be used to authorize transactions for the blockchain address.
+
+
+43:08: Anna Rose:
+
+
+But does it get replaced the next time you log in?
+
+
+43:12: Alin Tomescu:
+
+
+Yeah, the ephemeral public key, you could use it as long as you want. It does have an expiration date after which you have to replace it. You could reuse it, although it would probably not be good practice.
+
+
+43:24: Nico Mohnblatt:
+
+
+It's probably a good thing to have expiration dates.
+
+
+43:27: Anna Rose:
+
+
+But then on the other side the verifier still needs to understand... You need to recreate a new connection with a new ephemeral output each time.
+
+
+43:36: Alin Tomescu:
+
+
+Correct. And the verifier will be glad to do so as long as it sees a zero knowledge proof that ties together the blockchain address with a new ephemeral public key. It doesn't care that it's new, that it's old. All that it cares is that the zero knowledge proof successfully argued existence of an OpenID signature that's consistent on the blockchain address on that EPK.
+
+
+43:55: Anna Rose:
+
+
+I think I'm getting a little closer to understanding this. The way I sort of see it is there's two sides to this. Like there's the thing that's happening on-chain, the things that's happening off-chain, and I feel like every time I dig into this topic, I get a little closer to each other. But the exact thing that's going on, I think I probably need a graphic and someone to draw this for me. Because I've done it, just picture like all of my learning for this has been purely through conversation.
+
+
+44:20: Alin Tomescu:
+
+
+It's really hard, in your defense.
+
+
+44:23: Anna Rose:
+
+
+One day I need to see this drawn out.
+
+
+44:25: Alin Tomescu:
+
+
+Well, I got good news for you. I have slides and I'm happy to share them. And I think they'll be very useful.
+
+
+44:29: Anna Rose:
+
+
+Great. Okay. I think you already said this, we can share these as part of the show notes.
+
+
+44:33: Alin Tomescu:
+
+
+Absolutely.
+
+
+44:34: Anna Rose:
+
+
+Awesome.
+
+
+44:35: Nico Mohnblatt:
+
+
+So about this SNARK, we're saying, all right, the SNARK is going to verify a signature, it's going to sort of open my commitments and verify that it matches the contents of the signature. That sounds pretty expensive to run. Is a plan for people to do that locally on their devices or how long does that take?
+
+
+44:58: Alin Tomescu:
+
+
+Good. Great. And I think that's kind of a great segue also into the challenges of this approach because so far the way we've described it, we looked at it as a black box that can be instantiated efficiently, but in practice there are a lot of difficulties. And one of the difficulties that Nico rightfully points to is the high prover time associated with creating this zero knowledge proof. So what the SNARK has to do is verify an RSA signature, which involves doing a SHA-2 hash. So we are able to achieve this in around 1.5 million constraints with R1CS using Groth16 as a zero knowledge proof system. And some of the tricks that we use to achieve this are some polynomial-based protocols for concatenating strings and for checking sub-stringed matches inside the signed message because we have to match things like the email address in the signed message, but the message is much larger. Right? Then we have to concatenate a header with the payload and then verify that this concatenation is signed by Google, which once again adds overhead. So what we've done there is came up with some neat, cute tricks that use polynomials to really lower the complexity of the approach and makes our circuit much simpler and we believe easier to audit by external people. And also efficient, because if you don't do this concatenating stuff in SNARKs is horrendous. It's really complex.
+
+
+46:25: Nico Mohnblatt:
+
+
+What was your quote earlier? Interaction is stronger than any algebraic tricks.
+
+
+46:31: Alin Tomescu:
+
+
+Than algebra, yeah, the arithmetic. That's a Rafael Misoczki in all fairness, not me. Yeah, and to answer your question, Nico, if you were to compute this proof in a browser, it would take you around 30 seconds. So it's kind of expensive, right? You don't want to wait for 30 seconds before you can sign a transaction because you have to wait for the zero knowledge proof before you can sign with the associated ephemeral pub key.
+
+
+46:53: Nico Mohnblatt:
+
+
+It sounds somewhat acceptable, no? If I only do it once for the duration that I use the app for, maybe people... Like if it's a game, loading the first screen and then I can play the game.
+
+
+47:05: Alin Tomescu:
+
+
+Maybe in some settings you're right, it could be acceptable.
+
+
+47:07: Anna Rose:
+
+
+2018, that was allowed. 
+
+
+47:10: Alin Tomescu:
+
+
+But going back to our philosophy at Aptos, we care about UX. So for a dApp, there will be a large class of dApps where it's probably completely unacceptable to wait 30 seconds. And once again, people wait tens of seconds and minutes and hours on blockchains already. We don't want to make the problem worse, we want to make it better. We care about user experience a lot. So fortunately, there's a trivial fix, but it does have caveats. The trivial fix is to use an external proving service to solve the problem. Unfortunately, the proving service will have to know both the public input and the private input to the SNARK in order to compute the proof. So, with respect to the prover service, you don't get privacy. So for us, a really important future line of work is to completely remove this prover service or make it privacy preserving, either via MPC or via other techniques.
+
+
+48:01: Anna Rose:
+
+
+FHE.
+
+
+48:02: Alin Tomescu:
+
+
+I hope not.
+
+
+48:03: Anna Rose:
+
+
+Some people have suggested like FHE eyes it and then you send it to provers.
+
+
+48:07: Alin Tomescu:
+
+
+I think that will make performance worse, not better, but in 20 years maybe. 
+
+
+48:13: Nico Mohnblatt:
+
+
+Exactly. I was going to say in the near future, probably not, but one day.
+
+
+48:17: Alin Tomescu:
+
+
+Yeah, one day.
+
+
+48:18: Anna Rose:
+
+
+Yeah, I wondered actually about who's doing the proving. I think really, wouldn't you want this? Could you ever make this client side though? Where it's just like... Yeah.
+
+
+48:28: Alin Tomescu:
+
+
+Yeah, and we're really excited to work with folks in the space on making the proving practical client side. I think for a reasonable goal might be to make sure they can compute a proof in a couple of seconds, because then you can kind of do it in the background, and it usually takes the user a second or two to click on something to transact. And I think that might be practical. I mean, with all of the exciting developments in the ZK-SNARK space, like lookups and these, what's it called, folding-based schemes and so on, I think there's a lot of stuff we can do. We had to use Groth16 and Circom because it's probably the only sane language at the moment that you can use to specify a ZK-SNARK relation. And that's saying a lot because it's a very difficult language to write safe code in.
+
+
+49:16: Anna Rose:
+
+
+Yeah. Well, it's the most well-trodden. There are a lot of new languages coming out, but they're often tied to particular blockchains as well. So I don't know if you can... Like in your case, actually, you just said you're using Circom, but Circom is not Move-specific. Did you have to rethink it to do this, or you could just use it as is?
+
+
+49:37: Alin Tomescu:
+
+
+Not at all. So Circom will gladly generate a R1CS file for your prover. So you can use it in any R1CS-compliant SNARK, including Groth16. Once we have a Groth16 proof, whether generated by Circom or any other tooling, we can verify it in Move, because like I mentioned earlier, we can verify Groth16 proof over any arbitrary curve including BN254, which is what we use.
+
+
+50:02: Anna Rose:
+
+
+I think I have this sort of misconception of Circom being deeply tied to Ethereum because there's so much use. And I think there's so many libraries in that, like Solidity to Circom kind of connection, but I guess you're right. The language itself is kind of standalone.
+
+
+50:18: Alin Tomescu:
+
+
+I think, Nico, you had a question.
+
+
+50:20: Nico Mohnblatt:
+
+
+Oh, no, it was more of a comment in passing because you were saying you can do the proofs in the background and I just wanted to give a shout out to Penumbra actually, who do that extremely well. I don't know if you've tried any of their tools, but it is Groth16, but they do it as soon as you launch any program. And while you're doing your thing, you're typing instructions, by the time you press enter your proof is done. And so it looks instantaneous and it's very nice. So I recommend looking at their tooling or playing around with it.
+
+
+50:51: Alin Tomescu:
+
+
+That's very useful. Thanks. Thanks for mentioning that. We'll definitely take a look. Yeah. But unless you want to talk about something specifically, I did want to go a little bit into the other subtleties of the approach and how we're dealing with them, because it's actually quite an intricate project, I think. So one thing that I want to say is we mentioned this ephemeral public key that authorizes transaction. So the problem with the ephemeral public key is typically it'll be in your wallet. And if you sign in with Google in your wallet, once you're signed in, you have to ask the user for a pin code to authorize transactions, for example, right? Because otherwise anybody who sees your laptop open, you're signing to Google, they can just sign transactions. I think this is one of the reasons why you don't see sign in with Google approaches for online banking. Because like you can't really have a user-friendly way to secure them unless you use a pin code.
+
+
+So what we've done there is we're using something called passkeys, which are these public key credentials that are backed up on the cloud for you in Apple and Google. And the secret key component of that credential is secured in trusted hardware, like on your iPhone, for example. So we actually allow the ephemeral public key to be a passkey. So that means that, for example, if you have a wallet on a mobile phone and you sign in with Google into that wallet, and now somebody has your phone and they're trying to sign a transaction on your behalf to steal your money, well, they will get a Face ID prompt when they try to sign that transaction, because the phone is trying to access the passkey. So this is a way to sort of secure this approach and make it more robust, right? Because otherwise it's kind of, if you don't do this, the alternative is to use a PIN code, which is very user-unfriendly, right? So we're very excited about this.
+
+
+And another reason why we're excited about it is because it secures the ephemeral secret key associated with the EPK much better than any other approach. Now it's in trusted hardware. So, and another reason we're excited about it is because passkeys are actually not backed up online on all platforms yet, like Microsoft. So we actually have a way now of using passkeys in a completely reliable way without users ever using them.
+
+
+52:59: Nico Mohnblatt:
+
+
+There's something also very nice about almost the security theater that comes with this Face ID prompt, you know? Like you're on your phone and you're like, oh, I'm gonna do this super secure thing. Ooh, Face ID, bam. Like passkeys give you that experience.
+
+
+53:11: Alin Tomescu:
+
+
+Yeah, yeah, yeah, yeah, yeah, yeah, in a way, sure. If you're trying to point out that the Face ID, there's sort of attacks on Face ID, right?
+
+
+53:20: Nico Mohnblatt:
+
+
+Oh, not necessarily. I was just saying users who aren't accustomed to cryptography will feel safer when they see this Face ID prompt.
+
+
+53:28: Alin Tomescu:
+
+
+Yeah, absolutely. Absolutely. I think so too. And even though there might be machine learning based adversarial attacks on Face ID, the class of such attackers is probably very small. And I suspect it's still way more secure than a PIN code, which has way less entropy.
+
+
+53:45: Nico Mohnblatt:
+
+
+Agreed.
+
+
+53:46: Anna Rose:
+
+
+In a conversation I had with Dan Boneh last fall, we were talking a bit about kind of the passkey cryptography and how it's different in that the EdDSA version or like type is definitely different from what they have on Ethereum from what I gather.
+
+
+54:05: Alin Tomescu:
+
+
+Yes, correct. 
+
+
+54:06: Anna Rose:
+
+
+So there was this issue connecting the two things, but in the case of Aptos, is it the same? So you don't have that issue?
+
+
+54:13: Alin Tomescu:
+
+
+Okay, I love that question.
+
+
+54:14: Anna Rose:
+
+
+Do you want to explain... Like do you want to say what I'm trying to say? This is like EdDSA something something K1 versus EdDSA something something R1? I don't remember which one it was, but yeah.
+
+
+54:26: Alin Tomescu:
+
+
+Great. So it's ECDSA actually, not EdDSA. And ECDSA is a digital signature algorithm that works over any elliptic curve. But most often, it's deployed on these popular curve called SecP256k1. And I believe the reason this curve is so popular is because Satoshi used it for Bitcoin ECDSA signature when Bitcoin was first created, but I may be wrong. So this curve became very popular and Ethereum natively supports verifying ECDSA signatures on SecP256k1. However, for reasons that I haven't looked into yet, passkeys use a different curve, also ECDSA signatures. The curve is SecP256r1 to make things very confusing like we like them to be. Yes. So now Ethereum doesn't support verifying signatures over r1, okay? Unless you implement the arithmetic manually in Solidity.
+
+
+The nice thing about Aptos is that we really believe in upgradability. So we've designed our system to make it very easy to upgrade our validator nodes. So we ship upgrades every month. So one of the upgrades that we've shipped in particular, our engineer, Andrew Hariri, big shout out to him, who is very passionate about passkeys, he shipped a transaction validation logic that can verify ECDSA signatures over Secp256r1. So we previously had ECDSA over k1, but Andrew added over r1. So now we can verify passkey signatures natively on-chain. So in fact, in Aptos, you can use passkeys without the Aptos Keyless infrastructure. So you can just have a passkey-based account. It's just if you're going to do that, you have to be really careful, because if you're on Microsoft Windows and a website or a dApp or a wallet generates a passkey for you, that passkey may not be backed up unless you do it manually and are very careful about it. But if you're on iPhone, if you're on Apple, in the ecosystem, passkeys are nicely backed up for you. You don't have to worry about it.
+
+
+So for some applications, I believe they might just want to use the passkey accounts natively. Other applications might want to use Aptos Keyless combined with passkeys to get the benefit of both. 
+
+
+56:36: Anna Rose:
+
+
+Cool. So you have done that... I mean, I just wondered, couldn't Ethereum also upgrade themselves though?
+
+
+56:43: Alin Tomescu:
+
+
+Well, I don't see why not. It depends how easy it is for their code to change. Sometimes when you write code, the way you serialize messages over the network can be very difficult to upgrade in a backwards compatible manner. So you kind of have to look a little bit ahead into the future and structure your code in a particular way. We are very careful about that, we care a lot about upgradability because we don't believe the solutions are all determined now, things change in the future. And our consensus algorithm has been upgraded already once, and we're currently working on the third upgrade, which is a Shoal DAG-based algorithm. And the reason we can do keyless, the reason we can do passkeys, or distributed randomness, is because we have an upgradable infrastructure.
+
+
+57:27: Anna Rose:
+
+
+Cool.
+
+
+57:28: Alin Tomescu:
+
+
+Yeah. There's much more to be said about challenges with keyless, but we could talk for another 30 minutes. So I'm just going to mention like a list. Okay?
+
+
+57:36: Anna Rose:
+
+
+Okay, do it.
+
+
+57:37: Alin Tomescu:
+
+
+So when you verify these signatures, like Nico pointed out, you need the public key of Google. This thing changes, and it's published at a URL. So you actually need to achieve consensus by having the validators pull this URL. So we have a very efficient implementation of this in our validators. Once again, upgradability. If you're doing zero knowledge proofs, you know that it's really hard to write code securely in Circom. So there might be bugs in your circuit. So we have a training wheel safety option in our code where we can make sure that if there's a bug in the circuit, the training wheels will save us. So this basically is enforced by the prover service who signs over the Groth16 proofs that we generate. So this is very important for a responsible deployment because until a lot of people look at the circuit and until a lot of people look at code in general, you really don't know what's going to get you, right? So we're trying to be very safe and very cautious about this.
+
+
+If you don't want privacy, you can just use OpenID signatures directly. You don't even have to use zero knowledge proofs in our implementation. So we have that option too. And there's also another subtlety associated with dApps or applications disappearing and users not being able to access the accounts associated with that application. So we actually have a recovery service that'll allow users to recover their applications if their wallet or dApp disappears. Yeah, and then we have some other cool things like revealing a public field in this message signed by Google, which could allow for things like KYC. That's an extra feature that we've added in and we're very excited about this too. And yeah, there's much more to be said here, but maybe....
+
+
+59:15: Nico Mohnblatt:
+
+
+So can you do things like checking that the account is at least five years old or some kind of age to make sure that there's some form of reputation?
+
+
+59:23: Alin Tomescu:
+
+
+If Google exposes that, sure. And if not Google, then if whatever OIDC provider you use, like Facebook or Apple, or yeah, you could expose anything they expose. So then in a contract, you could argue, Hey, this account is this many years old. or Coinbase, think of Coinbase as an OIDC provider. They might expose some fields about you having passed the KYC check and now contracts can know about that, and then you could do reasonable, sensible, anonymous payments, for example, predicated on that KYC check.
+
+
+59:52: Anna Rose:
+
+
+Nice. If anyone, I guess, wants to find out more about this, I mean, you will be giving a talk at ZK Summit on this topic, I assume. So in that, I'm sure there'll be slides, graphics that describe this flow. And maybe you can cover more on that as well.
+
+
+1:00:08: Alin Tomescu:
+
+
+Absolutely. And I have to write a blog post, too. It's just there's too many blog posts I have to write and too little time left to write them. 
+
+
+1:00:16: Anna Rose:
+
+
+Nice. As a last question on this topic, at what stage is it? Like is this deployed, is this in the works, is this still kind of theoretical?
+
+
+1:00:26: Alin Tomescu:
+
+
+Yeah, it's deployed on our developer network, Devnet. We have not yet announced it because we are still polishing the final product and the documentation and the SDK. But, you know, if a really brave soul wants to play with it, technically they could play with it now on Devnet by looking at our code and using the SDK that's public now. But I think by the time the podcast will come out, it should be announced on Devnet and possibly testnet too. So yeah, it'll be released very, very soon.
+
+
+1:00:58: Anna Rose:
+
+
+We'll try to grab any of those links to put in the show notes as well if people want to check it out. 
+
+
+1:01:01: Alin Tomescu:
+
+
+Yeah, I'm going to inundate you guys with links.
+
+
+1:01:05: Anna Rose:
+
+
+Perfect. Very cool. Alin, thanks for coming back on the show. Thanks for sharing the update on the randomness, as well as on the Aptos Keyless feature and how that works under the hood. 
+
+
+1:01:18: Alin Tomescu:
+
+
+Yeah, thanks so much for the questions. It's always fun to try and explain some complicated cryptography. The details have to carefully be left out, but I hope things made some sense. And if not, please look at the slides and at the AIP, AIP 61, I'll provide you with the links. And it's been a joy to talk to you guys. Thank you.
+
+
+1:01:37: Anna Rose:
+
+
+Thanks.
+
+
+1:01:38: Nico Mohnblatt:
+
+
+Yeah, thanks so much. 
+
+
+1:01:39: Anna Rose:
+
+
+So I wanna say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners, thanks for listening.

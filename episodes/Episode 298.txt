@@ -1,0 +1,744 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:26:
+
+
+This week I dive into the Mina project with CTO Brandon Kase and head of product Steve Pack from O(1) Labs, the team building Mina. We chat about how their journey led them to work on Mina, how Mina has developed since we last did an episode with members of the team, the zkApp's building environment, o1js and the philosophy behind it, and what use cases we may see on the horizon, especially as we see ZK move from being more research-centric to builder-centric as an ecosystem. Now, before we kick off, I just want to remind you to check out the ZK Jobs Board. There you can find jobs posted from top teams working in ZK, as well as deeply technical teams like Gnosis, Zama, Aleo, and more. If you're looking for a new job opportunity in ZK or in adjacent technologies, be sure to check out the ZK Jobs Board. I've added the link in the show notes. Now, Tanya will share a little bit about this week's sponsor.
+
+
+01:23: Tanya: 
+
+
+NEAR, the OS for an open web, and Polygon, the leading Ethereum Layer 2 scaling solution, are teaming up. NEAR Foundation and Polygon Labs just announced from NEARCON23 that they will build zkWASM, a zero-knowledge ZK prover for WASM blockchains. With NEAR's deep WASM runtime expertise and Polygon Labs' authority in ZK scaling technology, the zkWASM prover will help create a more secure, interoperable Web3 ecosystem. Set for a 2024 launch, the zkWASM prover also positions NEAR protocol closer to Ethereum and enables WASM chains to tap Ethereum liquidity. In the near future, an interop layer will allow blockchains including Layer 1s, EVM Layer 2s, and WASM chains to share liquidity within a unified ecosystem. Leveraging zkWASM prover, WASM chains will settle transactions efficiently and securely, unlocking the full potential of zero knowledge for a multi-chain open web future. Stay up to date with the zkWASM announcement at near.org. So thanks again, NEAR. And now here's our episode.
+
+
+02:26: Anna Rose:
+
+
+Today I'm here with Brandon Kase, CTO and Steve Pack, Head of Product at O(1) Labs. Welcome to the show.
+
+
+02:34: Brandon Kase:
+
+
+Hello.
+
+
+02:35: Steve Pack:
+
+
+Anna.
+
+
+02:35:
+
+
+Now, before we kick this off, I just want to mention that I'm an advisor to O(1) Labs. It's actually been a couple of years. I get a chance to speak to both of you every two weeks, so it's really fun to have you on the show. And also ZK Validator is a validator on Mina as well. I feel like on the show, we've actually covered this project a number of times. Even like way back when the project was called Coda, we had Izaak and Evan on at the time. We did an episode all about the Mina SNARKitecture with Izaak. And two years ago, we did an episode about Snapps with Emre and Izaak. I'm going to add links to these in the show notes. Today's episode I think is very much taking from that last episode on Snapps, which has been rebranded since then to zkApps and kind of going forward with that. But before we do that, let's get to know both of you. Brandon, let's kick it off with you. You've been at O(1) Labs for a really long time. Tell us a little bit about what got you started, how you got into it.
+
+
+03:36: Brandon Kase:
+
+
+Yeah, so what got me started? Two things. Well, maybe three. One, I was really good friends with Evan Shapiro, one of the co-founders of O(1) Labs, Mina Foundation and Mina Protocol. And we had built things together in university, so I knew that we worked well together. At the time, I was really excited about functional programming, software engineering in general, building engineering teams in a certain way. So when I talked to Evan and Izzy, I got really excited about the project. So yeah, so I came in working nights and weekends originally in the fall of 2017. And then as soon as the... 
+
+
+04:14: Anna Rose:
+
+
+Whoa.
+
+
+04:15: Brandon Kase:
+
+
+Yeah, a long time ago.
+
+
+04:16: Anna Rose:
+
+
+It's so early. Was that... Had the company even been founded then?
+
+
+04:19: Brandon Kase:
+
+
+No, no.
+
+
+04:20: Anna Rose:
+
+
+Oh, wow.
+
+
+04:20: Brandon Kase:
+
+
+No, the company was founded officially in January. So around my birthday. I remember it. And at the time we were building a JavaScript prototype of Mina, which we threw out and switched to OCaml. But yeah, in those early days, it was really exciting, really challenging. I personally had severe imposter syndrome. I had to review Izaak's code and you know, Izzy... The way that his brain works, it's very mathematical. He was working on a PhD in cryptography, which he stopped to work on this project. But even in his software that didn't touch the SNARKs, there was all this algebraic geometry and all these weird... Like, very foreign concepts for me. And I had to work really hard to do what I thought was a good enough job.
+
+
+05:11: Anna Rose:
+
+
+Wow.
+
+
+05:12: Brandon Kase:
+
+
+And yeah, for many months. So if anyone else is just getting into ZK, getting into crypto, starting to work on really challenging projects, I would recommend just try and work through it, work really hard and then...
+
+
+05:25: Anna Rose:
+
+
+Bite the bullet, accept the imposter syndrome and just keep going.
+
+
+05:29: Brandon Kase:
+
+
+Just keep going. Yeah. And yeah, eventually I got more sort of confident. So anyway, I started as one of the founding engineers and I did so many different roles throughout the lifetime of the company and now I'm CTO.
+
+
+05:44: Anna Rose:
+
+
+That's amazing. And actually when we met... Or when I first started coming on calls with you guys, I always got the impression that you had a bit more of a DevRel or like a community focused role because you had done those educational videos, you were at the events, evangelizing, helping developers. And so yeah, I kind of wonder how did you end up doing that for a period of time?
+
+
+06:06: Brandon Kase:
+
+
+Yeah. So as I said, I started an engineering position, very focused on protocol engineering. All of us were focused on protocol engineering in the beginning. And it was really fun, really challenging. We quickly hired a bunch of extremely brilliant protocol engineers, and my role switched initially to ramping those folks up. I felt that was the best way that I could add value to the project. And then once they were ramped up, I realized we need to be doing product engineering, or we need to think about product anyway. So we started looking for product management and I started doing more as what you would call product engineering. We sort of grew that team, we grew a product engineering team, I became an engineering manager. Then we hired an engineering manager, who was much better than me at managing engineers. And I realized...
+
+
+06:51: Anna Rose:
+
+
+It's like, Brandon, you keep creating jobs and then hire, but that's the dream, right? You hire... You create the job and then you hire someone to do it instead of you. So you can do another thing. Okay.
+
+
+07:03: Brandon Kase:
+
+
+Exactly.
+
+
+07:03: Anna Rose:
+
+
+Cool.
+
+
+07:03: Brandon Kase:
+
+
+Yeah. And so DevRel or this kind of... You can think of it, I guess you would call it DevRel, but I always really enjoyed and felt passionate about teaching. I still feel passionate about teaching. And teaching both to super advanced technical audience. I love that. And I love trying to come up with ways to translate that technical information into a more consumable form for beginners, for technical and non-technical beginners. And you may have seen me on YouTube videos about Mina, people always like Kat. You know, they put me out on the street.
+
+
+07:35: Anna Rose:
+
+
+They know you?
+
+
+07:36: Brandon Kase:
+
+
+About that, yeah. And of course like the...
+
+
+07:37: Anna Rose:
+
+
+You're the Mina guy.
+
+
+07:38: Brandon Kase:
+
+
+Yeah, yeah. The marketing team really helped me cut that script. I was going on crazy rants when I was filming those. Yeah. So anyway, I went through that and I wore many different hats. And finally to the hat that I am now currently wearing.
+
+
+07:53: Anna Rose:
+
+
+Very cool. Steve, let's move on to you. You joined more recently and you're head of product. Tell us a little bit about what you were doing before this.
+
+
+08:06: Steve Pack:
+
+
+At the start of my career, I was a software engineer. So 12 years writing code, mostly in finance, high-frequency trading. Loved it, but always wanted to sort of scratch the entrepreneurial itch. And so after that, I started a company. It was funny hearing Brandon talk about university and school friends. So I started a company with a mate from high school. I'm Australian, by the way, if anyone was wondering about the accent. And yeah, we made Wi-Fi routers that let parents limit screen time for kids. And super successful, super fun, shipped 10,000 units, got onto the shelves of Target, but also learned hardware is hard and grinding out hardware margins is hard. And at this time I was living in Silicon Valley and that entrepreneurial experience sort of taught me that as much as I love coding, like to be able to sort of bring a team together and build a product was even more exciting to me. And so when the company went down, I was set on product as my future career and was fortunate enough to join Cloudflare in the very start of 2018. And yeah, really got to cut my teeth on Web2 product management and building software at a fast growing company and learnt everything imaginable about the infrastructure of the internet and all that cool stuff.
+
+
+09:27:
+
+
+And like many, I've since learned that this is a common story in Web3. It's like during the day you're doing your day job and during the night you're like, yeah, on Crypto Twitter or you're deploying Solidity apps or you're testing out DeFi things, and that was my experience too. I just was drawn to this technology and I dipped my toe in a few times actually over the years, but always came away sort of feeling like this stuff's really interesting, but it hasn't really got adoption yet. And it hasn't really proven the use cases yet. And each time I came back, I was like, okay, it's getting there. It was like, firstly, Bitcoin is a store of value, and then, okay, Ethereum is this global consensus layer where people can deploy smart contracts and then DeFi, then NFTs and it just kept going. And so at some point I was like, okay, I want my passion to be my full-time job, and started looking around and the position was available at O(1) Labs and I really loved sort of the mission and the differentiating aspects of Mina, which I'm sure we'll dive into. And so yeah, six months ago, joined head of product, and I guess my hope is to bring some of those lessons learned from Web2 and being in a sort of hyper-scaling company and bring them to Web3 and help us get crypto into the hands of the next billion users.
+
+
+10:49: Anna Rose:
+
+
+Yeah. Question about working at Cloudflare, like didn't they use ZK actually on some product? Like there was some ZK thing, I remember reading about this years ago.
+
+
+10:57: Steve Pack:
+
+
+Yeah, it's kind of esoteric. So the actual Cloudflare has a research team that has a lot of crypto research. Yeah, that one you're talking about, I think that was zero knowledge proof that you had a hardware key from a certain set of manufacturers. And I can't remember exactly what that was, whether it was improving the score for bot mitigation, but it was sort of Cloudflare's first use of ZK. They also run an Ethereum gateway and an IPFS gateway. So there are some crypto folks, yeah.
+
+
+11:31: Anna Rose:
+
+
+Interesting. Actually, I remember I went to the office in 2019 and I saw that wall of lava lamps to create perfect randomness, and I had been doing it, like, I think an episode on VDFs right around then. So I remember that connection. I always thought... I was always actually hoping that a company like Cloudflare would jump into ZK or something more substantially. Do you think there's still a chance? I realize you're not there anymore, but I thought I'd ask.
+
+
+11:59: Steve Pack:
+
+
+Yeah, I don't have any inside info, but I think Cloudflare for all of the interesting technology, they are rightly relentless and ruthless at building what customers want. And they'll take some risks, but there needs to be, especially as a public company, a pretty high level of conviction to really invest heavily in something. So I don't doubt each new paper that comes out, each new technology comes out, it's being looked at, especially by this research team and prototypes are being built. But to get that into the hands of the entire customer base, there's a few gates to clear there.
+
+
+12:37: Anna Rose:
+
+
+Makes sense. So you joined O(1) Labs, but I think now would be a really good moment to introduce Mina to the audience. I feel like a lot of folks who are listening, given that we've done these previous episodes, may be familiar with it. But why don't you just, for those who aren't, just share with us in short form, what is Mina?
+
+
+12:57: Steve Pack:
+
+
+Yeah, I'll give it a crack and I'm sure Brandon will follow up. But Mina is a ZK native blockchain. So what does that mean? It means that any interaction that happens on the blockchain, be it a transfer of Mina, be it staking, delegation, and then in the upcoming smart contract platform, any state change, instead of those things being executed in a VM, they are represented as a zero-knowledge proof. And that's what the Mina validators are doing. They're verifying these proofs incredibly efficiently and also representing that in this famously succinct 22 kilobyte proof with which you're able to prove the entire Mina blockchain. So It's very certainly novel in being mainnet when ZK was really just getting started. And we'll talk more about why it's going to be such a solid foundation for zkApps. But that's how I would describe Mina today.
+
+
+13:53: Anna Rose:
+
+
+Cool.
+
+
+13:54: Steve Pack:
+
+
+Brandon?
+
+
+13:54: Brandon Kase:
+
+
+Yeah. I think you hit the nail on the head. The one thing that I would expand on, I suppose, is the succinctness, it's powered by recursive proofs. And this kind of recursive proof power is what makes Mina special. This recursion power is a very important component in the tools that we build, both in Mina and surrounding it.
+
+
+14:15: Steve Pack:
+
+
+Yeah, because we led into this with why Mina like, that was part of when I was looking out there in the crypto world, like why Mina? There's actually a very compelling reason from my perspective, who was wanting to take their passion and make it their full-time role. And one of those things... Often when we talk about Mina, it's like, okay, the succinctness is cool and it's super cool technology, but what does it enable? And this is one thing that I get so excited about. I don't know if it's always obvious, but you've heard of Vitalik talking about the sci-fi future of Ethereum, where it's download a couple of SNARKs and you know you're on the canonical chain. That's Mina today. And so that's why when I was getting excited about, okay, what's my little piece of the crypto world? Where am I going to join in? This idea that you could have a blockchain that you can verify in the browser, that you can send proofs to without an API owned by some company, without everything being in the clear, like Mina is a lot about what Web3 can really be. And so yeah, it's not just the coolness of the technology.
+
+
+15:18: Anna Rose:
+
+
+So you were just saying that it was like it is that sort of future. That's cool. Sort of moving on from Mina as the underlying infrastructure, I want to start talking a little bit more about zkApps, or what used to be called Snapps. And one of the reasons for this is I want to just kind of check to see if I understand them as the same thing. And what are they today? What kind of do you imagine it being? So, Brandon, can you tell us a little bit the history of zkApps and what they are?
+
+
+15:47: Brandon Kase:
+
+
+So zkApps are what we call dApps on Mina. And yes, they used to be called Snapps. What they are, they're in some ways a superset of what you can do with typical dApps. So you can do the sorts of things you can do with dApps, but you can also leverage privacy. And the way this works, or sort of what is at the core of the smart contract platform, and this idea that execution of the application happens client-side. So execution happens client-side, typically on the user's machine in their web browser. And so private data never leaves their custody. And then a proof that certifies that such execution happened properly. That's what gets sent to Mina and that gets recursively composed, recursively folded in, recursively proven into that one tiny Mina succinct proof.
+
+
+16:47: Anna Rose:
+
+
+So the word sort of Snapps or zkApps both sound like a plural of something, but what it actually is, is like a platform, right? It's like an environment where one can deploy these things? Or do you have a different name for that?
+
+
+17:02: Brandon Kase:
+
+
+Yeah, yeah, I suppose nomenclature and Steve can jump in if he disagree with anything. But I think sometimes we say like the zkApp platform, and then the zkApp is one such instance of an application kind of similar to how you would say in the EVM, I don't know, do you say the dApp platform or something?
+
+
+17:23: Anna Rose:
+
+
+Or the smart contract environment?
+
+
+17:25: Steve Pack:
+
+
+Yeah. I think you got it, Brandon, with it's a ZK-enabled smart contract platform, right? We build zkApps using o1js, which is... We'll talk about that as the SDK, and you build smart contracts, and then instead of them executing in a VM, like in the EVM, they execute in your browser, you generate a proof, and it's that proof that gets settled to the blockchain. So it's a smart contract platform with the secret sauce of ZK, meaning, privacy. You can choose what inputs are private. Like Brandon said, data stays on the machine. It's really, I think, realizing the vision of Web3, smart contracts.
+
+
+18:03: Brandon Kase:
+
+
+And there is this confusion, I think, with nomenclature here that I want to contribute to. I think there's a distinction between smart contracts and dApp that, in some ways, I guess, we inherit. So there's the smart contract, which is the actual thing that is running either on the chain in a typical platform or in the user's browser, in this case, in a zero knowledge proof, but the actual application that surrounds it has a user interface and is like the full package. So in that sense, I think what we've built is not just a smart contract platform, but the surrounding package, I think serves this greater purpose of building these applications in a web context.
+
+
+18:47: Anna Rose:
+
+
+I want to sort of understand if, like Steve, what you had said is you can have sort of an application running and then just does that last proof. But what this makes me think is that there's sort of a separate execution environment that's then tied into the Mina blockchain. This is what I want to kind of understand if my thinking is correct there. So like, and what is that environment then?
+
+
+19:10: Steve Pack:
+
+
+Yeah, let's compare. Maybe we'll compare with what people know today. So say you build a dApp on Ethereum and you have some React front-end, you click a button, that button builds an HTTPS request that goes to some centralized gateway that turns it into an Ethereum transaction. It goes into the mempool on the blockchain, some validator sees it, executes it in the EVM. So there's the execution context in that case, right? It's a validator. And then there's some state change there. So that's the flow most of us are sort of familiar with. Okay, so what's the zkApp version? So, again, you might have a React front-end, nothing changes, you got a button, right? But now when you click the button, what executes is the proving function. So literally some JavaScript code in the browser. So the browser is the execution environment. All of the inputs to that, the user's private data, whatever else stayed on their machine, ran this... Well, I said JavaScript, but WASM code generates the proof and it's that proof that then goes to the blockchain to be verified. So it's not executed by the validators, it's just verified by the validators. And that's where so many of the... So much of the goodness comes from, right? That it's cheaper. Like it's very cheap to verify a proof compared to executing. The data didn't have to leave the machine. Yeah, it's fundamentally different and it's kind of exciting, because if you think about it now, every single browser in the world becomes a potential execution client for zkApps.
+
+
+20:49: Anna Rose:
+
+
+Is the ZKP or the proof in this case then a proof of validity that what's happened in the browser is what they've said happened in the browser in some way?
+
+
+20:58: Steve Pack:
+
+
+That's a good question. When you say proof of validity, I think what I'm hearing is validity proof, and that has a kind of specific meaning in the optimistic and ZK-rollup sort of world. So, but I would say in a general sense, the answer is yes. Like you are able to prove that this state transition is valid, that you had knowledge of a private key, and you executed a function faithfully, correctly, nothing was changed. You couldn't possibly have produced this proof of the state transition without this knowledge. And so in that sense, yes, you're proving that this state change is valid. 
+
+
+21:35: Anna Rose:
+
+
+Another question though, if your execution environment is your browser, then is there no global execution environment? Like is there no shared execution?
+
+
+21:44: Brandon Kase:
+
+
+Well, one way to think about it is it's the only global execution environment because the execution actually happens on, or is capable of happening on sort of the vast array of consumer machines that exist in the world. But the second part, yeah, there's a very interesting relationship with sharing computation, sharing state and applications in this platform. And there's a lot of different ways you can do it that solve different problems. It's an interesting challenge in this environment, for sure.
+
+
+22:14: Anna Rose:
+
+
+Is it something that you would decide as an app developer how shared it is and where it's shared somehow? Is that sort of what you mean?
+
+
+22:24: Brandon Kase:
+
+
+Yeah, so for example, if you want to share computation, then you can use recursion. You can use recursive proofs. So you can have one user do one sort of step of a game, another user doing the next step of the game, and then a third user that takes the recursive combination of that and sends it to the chain, for example. If you wanna share state, you can use Mina. So you can write something to Mina, and then another later contract can read that information. There's this issue that comes up when you do client-side computation of the data races or this problem where if two users are trying to access the same state at the same time and change it in different ways, then there might be some sort of conflict. And one mechanism we have for managing that is something called the action and reducer system, which is very similar to a similar state management system in React. I guess to answer your question, yes, the developer decides and the developer decides amongst a lot of really interesting mechanisms that are unique and different from what developers are used to. So we definitely spend a lot of effort on education around those pieces.
+
+
+23:37: Steve Pack:
+
+
+Yeah. Can I add to that? Because I think the reason you're asking for the right reason, Anna, because it's a different mental model, right? It's like, oh, well, if the execution is happening over here, so what then? And this is one of the things when developers first come to ZK, there's this sort of mind shift that has to happen in terms of how you do things. And so we try to reduce that as much as possible. And I'm sure we'll talk a bunch about o1js, but that's why being able to write zkApps in TypeScript, right? It means, okay, at least I'm not having to learn a new language. But in this specific example as well, like Brandon said, there's actions and reducer's framework. So that's something that a lot of web developers are familiar with if they've used React. And that's what we try to do with o1js is actually provide useful abstractions, right? Not just say, okay, you can build a circuit when the obvious next question sometimes is what's a circuit? When people are just starting out, right? So having these sort of abstractions is super critical. I think to ZK as an industry, I think the industry has a ways to go, but it's something that we definitely spend a lot of time on.
+
+
+24:43: Brandon Kase:
+
+
+And we've even changed most of the references to circuit, to provable in our tools, because the term circuit is... We believe is like an unnecessary implementation detail of the thing that you're trying to do, which is to prove something.
+
+
+25:01: Anna Rose:
+
+
+And it also has a certain mental model when you say it, when you say circuit, like something at least for the layman, but I also think for people who aren't deep in it, right? There's an electric circuit, there's like a circuit tree, there's like something... Some connotation that it has in how you'd interface with it.
+
+
+25:19: Steve Pack:
+
+
+Yeah, it goes further than that. That's what I have. I have this mental model of a PCB board, right? Like with lines and transistors and stuff.
+
+
+25:24: Anna Rose:
+
+
+Yeah, me too.
+
+
+25:25: Steve Pack:
+
+
+And when you use some of the lower level ZK languages, it's kind of not that different. Like it's pretty low level.
+
+
+25:33: Anna Rose:
+
+
+They're all like that.
+
+
+25:34: Steve Pack:
+
+
+Yeah, whereas when you're writing zkApps, it's more like Merkle tree(dot)add or like, I'll embarrass myself if I go too far in, but it's like abstractions and data structures that most developers are a little more familiar with.
+
+
+25:50: Anna Rose:
+
+
+Yeah.
+
+
+25:51: Brandon Kase:
+
+
+And circuits are the implementation detail that is true today. But maybe someday we're going to change our proof systems to have some other strange way of executing under the hood. How we think about computation at the level of designing applications shouldn't change. And so coupling ourselves to the terminology of circuit there is perhaps a mistake. 
+
+
+26:15: Anna Rose:
+
+
+So I mean, just to paraphrase what we just talked about, but it's the idea that to interface with this, you will have to think a little bit different on how you design the architecture of an app, almost, and the things that are possible, how you maybe deploy it, or some of the decision making that goes as you do it. You kind of coupled that with o1js, which we want to talk about, I think we should talk about right after this, which is meant to simplify that language part. Which I know a lot of teams have designed their own languages that create that extra learning curve, that extra step. First, you have to learn the language, then you have to potentially learn the new architectures. Let's talk about o1js. That used to also have another name, which we might have mentioned on a previous episode. So everything used to have SNARK or SN at the beginning of it. So it was Snapps, SNARKitecture. I think there was like a SNARKasaurus or something at some point. There was a FrankenSNARK. There's a lot of things that Izaak and I back in the day on previous episodes chatted about. So we just mentioned Snapps has been rebranded to zkApps and snarkyjs has been rebranded to o1js. But let's talk about what that is.
+
+
+27:29: Steve Pack:
+
+
+Yeah. So o1js, it's a TypeScript library and embedded DSL for writing zero knowledge enabled smart contracts based on SNARKs. There's a fair bit packed in there, but I think it covers the main things and I'll maybe just break it down a little. So it's a TypeScript library. And so literally to get started with o1js and writing zkApps is npm install O(1) Labs/o1js, The embedded DSL part, I think is kind of important because like we talked about, some projects require you to learn a new language. And so you sort of one, have the mental load of a new language and you're taking a bet, I guess, on a project's longevity. We've really gone to great efforts to stick with TypeScript as the language. But I think it's important to acknowledge you still need to call out when you write a zero knowledge enabled smart contract, which parts of the code are the provable parts, right? Like, which is the part that is going to represent the state chain on the blockchain. And so there is a DSL for that, but instead of it being some weird and wonderful thing, like Brandon said, it's provable(dot)add or provable(dot)check. It's a very natural sort of TypeScript language. And then yeah, at the end, what do you get? You get a SNARK, and that's what settles to the blockchain. 
+
+
+28:52: Brandon Kase:
+
+
+And I think it's important to call out, there's a lot of dimensions upon which you can categorize different ZK, DSLs, and programming languages, and I could talk about it for hours, so I'll have to force myself to be concise. But I think one important dimension here that makes o1js sort of different from a lot of other ZK languages and tools these days is when you're describing a proof with o1js, you're not describing a program that runs then later in a zkVM of either like Miden or RISC Zero's VM or any of that. You're actually describing the circuit, that's the implementation detail, but you're describing the proof. And so you need some DSL features as Steve was talking about. But yeah, we've gone to great lengths to ensure that it's... Well, it's as smooth as possible to interact with. And importantly, the DSL being embedded is a big thing.
+
+
+29:57: Anna Rose:
+
+
+I actually don't know what you mean by embedded DSL. What is that?
+
+
+30:01: Brandon Kase:
+
+
+Let's talk about it. So a DSL is embedded inside a host language, if it is basically represented as a library in that host.
+
+
+30:11: Anna Rose:
+
+
+I see.
+
+
+30:11: Brandon Kase:
+
+
+So I'll give an example. ReactJS. Well, that's a complicated example. jQuery for those that are familiar, jQuery is this old web framework from the early 2000s. jQuery is an embedded DSL in JavaScript. So it's a JavaScript library that it feels like a different language, but it's JavaScript. It's defined in JavaScript, you're writing JavaScript when you write jQuery. And then in contrast, an external DSL or DSL that is not embedded inside of a host language, for example, is HTML. So when you write HTML, like you're in the HTML language, but it's a DSL, it's a domain specific language for describing the content of a webpage, for example. But the issue with external DSLs in general, and in my opinion, always, is that when you're focused on one specific domain, you end up missing important general purpose language features that developers actually need to do things, to do anything productively. So you end up having loops, conditionals, functions, abstraction, modules, all these things end up being shitty. Can I say that?
+
+
+31:22:
+
+
+They end up being annoying, very, very annoying, very frustrating. As a developer, I can't stand  when I'm forced to use an external DSL, I literally struggle to think of a time in any context, not just ZK, literally in any context where I say to myself, oh, thank God I have this external DSL instead of a DSL embedded in a host language that is general purpose, that can do useful things. So in this case, like o1js is embedded in TypeScript because these days developers like to build applications in the web platform. In o1js, we have function abstraction, we have types, we have structures. You're able to go down to the specific lowest level pieces when you need to optimize something, but you're able to hide that, building up different kinds of abstractions. But the most important thing about that, about the way that we do it in o1js, and the most important thing that every DSL author should be thinking about when they're deciding to build these kinds of systems, is you wanna leverage the knowledge of the developer and the hundreds of millions of... Maybe that's an exaggeration, but the hundreds of millions of hours that developers have put into these general purpose tools, like God knows how much effort has been put into TypeScript and JavaScript and the ecosystem.
+
+
+32:43:
+
+
+And why would you throw that out? It's crazy. It's crazy to me. Everyone who's building a new language from scratch, they not only have to solve their problem of building this ZK DSL in a way that's usable for developers, like just making them understand ZK, that's already hard. But then they also need to build package managers, abstraction systems...
+
+
+33:04: Steve Pack:
+
+
+Build systems.
+
+
+33:06: Brandon Kase:
+
+
+Build systems, package managers. Did I say that? It's just inevitable that you'll end up with a system that's more cumbersome to use. So that's my rant.
+
+
+33:16: Steve Pack:
+
+
+I would just say from a product point of view, it comes... Like, I agree with everything Brandon said. It's that you want to have a great developer experience, which means like, yeah, for us, not learning a new language, right? That you can use TypeScript. That you've got all of your tools set up, you work in Visual Studio Code, right? So you just want to npm install, like choose your UI framework, React, Vue.js, right? Like write your zkApp, start calling functions on it. That's the experience you want. You don't want the like, yeah, what's this new language? And how do I design a circuit, and like these things that should be implementation details. That's one thing I love about o1js, as is the privacy part. I'm sure we'll dive into sort of the magic of ZK as being able to have these private inputs and being able to just declare that when you're writing TypeScript. I think that's the sort of magical developer experience that's going to actually unlock ZK to the masses. Because I don't think we're there yet.
+
+
+34:10: Anna Rose:
+
+
+Yeah. I mean, I think that's been like a big topic actually in our community recently. I mean, for a while, but really recently I'm seeing more and more talks focus on this more and more. Kind of thinkers in the space highlighting it, which is where are the use cases? Where are these builds? Where are these uses for the cool properties that zero knowledge offers? But my rebuttal to that so far has been a little bit, it's so hard to build these things that that level of experimentation could only be theoretic. Like you could imagine use cases, but you couldn't actually create usable versions of those use cases for a long while.
+
+
+34:46: Brandon Kase:
+
+
+Before we go into the use cases, I just want to sort of address one thing that you just said, Anna, about how it's been difficult. Perhaps it's been difficult to leverage the features. And I just wanna sort of say my take on this, what we see a lot of is two different, really far away iterations on ZK. So there's deep on the proof system side, there's all this interesting stuff with proof systems that can do all these wild and crazy things, but they're so hard... It's so hard to actually leverage that because you have to have a PhD to tinker with that stuff. And then on the other side, there are some nice tools that work with zkVMs, but then the VM sucks up all the interesting parts of the proof system and you're left with this interface where you can build the normal application that you can do on any platform. So what we're building is this thing in between where we take the deep, awesome, intense proof system stuff, we package it up in this context that lets you use it with recursion, and we take this important, very important, focus on building a usable developer environment, and we put those things together. And so we hope that with these tools, perhaps, we'll see some really interesting use cases, which Steve is about to go deep into, I think.
+
+
+36:01: Anna Rose:
+
+
+Cool:
+
+
+36:02: Steve Pack:
+
+
+Yeah. So yeah, you were saying, Anna, it's this topic of where are the use cases, and especially ones that leverage privacy, given that's part of the magic of ZK. And I think about this a lot, and I think it's a good question, because I would argue that at the moment, definitely the majority of time and capital and coverage that's being deployed in ZK isn't leveraging privacy, it's in the verifiable compute part. And so here I'm thinking ZK-rollups, basically scaling execution, especially on Ethereum, but increasingly other types of execution as well. And even we see this at O(1) Labs, like we're working with Optimism to provide zero knowledge proofs of their fault-proof program. So even us, the sort of like ZK OGs who are all into the privacy aspects as well, it's irrefutable, I think, that just the verifiable compute aspect of ZK is powerful on its own, even without privacy. But with privacy, it sort of then it feels like it should go from compelling and important to magical. So where is it?
+
+
+37:07:
+
+
+And I think this is where I agree with Brandon, some of it is just that the developer experience has been so difficult to architect an application that really maintains privacy. And again, one good thing, o1js, and the private execution environment we're talking about. But I am, I spend all day on use cases, right? And I see them coming now. And I'll share a couple if you want to hear.
+
+
+37:31: Anna Rose:
+
+
+Sure, yeah.
+
+
+37:32: Steve Pack:
+
+
+So one team I've worked with a lot is Snickerdoodle, and they're a Web3 advertising platform. And it's funny because you'd think, what, like advertising? No, that's so Web2. But it's advertising in the Web3 way, which is that you can consent to being advertised to, and you can consent to sharing some details about yourself. And so that could be something like, my wallet regularly trades DeFi. Or I have owned Ethereum since 2015, right? And those are attributes that a Web3 advertiser would really wanna know. But instead of giving up your email address, your phone number, or being tracked all over the web, you just provide a zero-knowledge proof of those things, and the advertiser can verify like, okay, I have cryptographic proof that, this wallet has these attributes and that's valuable enough to me to advertise to and maybe even share rewards with. But it's put into a sort of pool that means that I'm not individually trackable, right? So it's this sort of beautiful symbiotic relationship of like, I will share some amount of data that is useful to an advertiser to get like something in return, but I don't get tracked all over the internet. And so this is actually the privacy part, right? And I love that one.
+
+
+38:47: Anna Rose:
+
+
+That's cool. Although I don't really understand how you advertise to an address.
+
+
+38:51: Steve Pack:
+
+
+Yeah.
+
+
+38:53: Anna Rose:
+
+
+You can airdrop the address, I guess, but like...
+
+
+38:56: Steve Pack:
+
+
+So the team... Yeah, that team is still working out what the best rewards sort of models are. Like, is it that if you share a certain amount of data, you get sort of digital rewards or I think that part there's still some work to do, but it's cool. And it's actually privacy with the sort of verification aspects. I'll give you another one. I just learned about this one the other day. I can be a bit skeptical of grand claims with use cases sometimes. And while I'm watching zkML space with a lot of interest, the sort of that we will prove every influence or we'll prove every training data of the largest models. Yeah, like not so into that. But there is a team that's in the zkIgnite program, which is Mina's builder program called  BioSNARK, and they do drug development.
+
+
+39:44:
+
+
+And this is one of those ones where it's specific enough to be useful, but really good fit for the technology, which is when you build a drug, you wanna prove that with some sort of input, this molecular structure that you've developed has some attribute at the end. And that's like whatever, whether it's defending against something, attacking something, like whatever else. You could have spent hundreds of millions of dollars to develop that model. And so, if you're trying to sell it to a big drug company, what do you do? Do you just hand it over and hope they don't take it? Do you give it to a broker? And these things exist, but there are data brokers, there are platforms, but it's ad hoc, it's expensive, it's risky. And so this team have built a, they call it a scoring function to be able to represent this molecular structure in zero knowledge to prove that when a given input comes in, you get some output that gives you confidence it can have this desired effect.
+
+
+40:38: Anna Rose:
+
+
+Cool.
+
+
+40:38: Steve Pack:
+
+
+Yeah. So they're coming. I just want to say that like the privacy use cases are coming.
+
+
+40:42: Anna Rose:
+
+
+I mean, that one's very, very, very like domain specific, but I think the concept that it's outlining, just the proving something under the hood. I mean, we've heard that about code. We've heard... That's one of the use cases we've heard a lot about, being able to prove that something's happening in a private environment correctly. Yeah, that's really cool.
+
+
+41:03: Steve Pack:
+
+
+I love domain specific ones. I think those are the ones where the technology gets its foothold, right? And then people start to latch onto that and be like, how can I apply that to my industry? Right? Rather than the other way around where it's this everything can be private, everything can be verifiable. It's like, oh, what do I do with that?
+
+
+41:18: Anna Rose:
+
+
+Solutions without a problem. That felt a little bit like... Or tools without a place to use them. Like, look at this cool thing, it does this. I think this is where we're at right now as an industry, right? We're just getting into that moment where we can start to apply these things to real world things, to real world cases. I think in the past it was like you said, Brandon and actually Steve, just the fact that it was so hard to build anything. The product people tended to be the applied cryptographers who are not necessarily thinking about products as much as they're thinking about implementing efficiently. And yet they were the ones coming up with products because they were the only ones who could really use the tools. Like right now, as we speak, I think the door is kind of opening to a lot more product folks like yourself, Steve, actually, to get in and start thinking about this stuff. 
+
+
+42:09: Steve Pack:
+
+
+
+
+Yeah. And an example with that Snickerdoodle one, part of that system is like, besides what I described, there's also like making sure you don't get double counting, which is a common thing in ZK. You want to prove that you haven't already, because you don't know who, like the individual is providing the data, you need to make sure that you're not getting double submissions, like a bot, for example, clicking on a webpage, right? So one of the things they had to do was like... They call it a nullifier, but it was basically like checking something exists in a Merkle tree. Let's just say that. And they tried a couple of different frameworks to implement that. And it was sort of 30 to 100 lines in the other frameworks, 3 lines in o1js. Because it's literally, there's the right data structure and you're just checking. And so, yeah, when that's the developer experience of working with abstract data types, just writing code versus designing circuits by hand that, hundreds of lines, that's why I think these use cases are starting to emerge now.
+
+
+43:06: Anna Rose:
+
+
+So I want to bring it back to o1js and zkApps and the zkApps platform. Where are we at with that? Can people already use it? I know there's been a lot of testnets. I sort of want to understand the state of both of those things and is there anything left to build?
+
+
+43:23: Steve Pack:
+
+
+Yeah. Great question. I'll start. So o1js is in production today. You can npm install, start building applications that generate zero-knowledge proofs in the browser. You can even build production like off-chain applications where apps interact peer-to-peer, verifying proofs. So usable today. That's the first one. For zkApps, yeah, that relies on the next hard fork of the Mina protocol. Should the community vote for it, which we're very confident they will, they're certainly excited about it. Yeah, you asked about testnet, so there's been multiple testnets running for over two years now, right, Brandon? Is that..
+
+
+44:01: Brandon Kase:
+
+
+Yes.
+
+
+44:02: Steve Pack:
+
+
+Over two years testnet for zkApps? Yeah, but what's just changed and what's exciting is, yeah, the incentivized testnet has just kicked off. So we have a Bunch of ecosystem partners running validators, running tools, load testing, performance testing, trying to break it. This is the sort of candidate release for the zkApps release of the Mina protocol. So yeah, it's a good time to be talking about it.
+
+
+44:29: Anna Rose:
+
+
+Exciting. The reason I actually ask this is, I think last time when I talked to Izzy about this, it was two years ago. And on that show, he was like, it's coming, it's coming really soon. And then when I was listening to that, I was like, wait, what came? But it sounds like the testnets did come. It's just that you stayed in sort of testnet phase for a pretty long time. Can you say why?
+
+
+44:52: Brandon Kase:
+
+
+Yeah, I think it's safe to say we underestimated the effort it would take to stabilize such a large change. I think it has been very hard for us to estimate how long large pieces of work like this in the ZK space take. But yes, we did get our testnet out. We had a lot of bugs. We fixed a lot of bugs. We believe we have something very stable, much more stable than when we did the incentivized testnet for Mina mainnet. We're in a much better place comparatively.
+
+
+45:24: Anna Rose:
+
+
+Nice.
+
+
+45:24: B
+
+
+But yeah, as things go in this space, it took a little longer than we expected.
+
+
+45:28: Steve Pack:
+
+
+Yeah, I think too, like it's clearly an industry thing, right? Most ZK platforms have sort of taken longer than you'd expect. And the reality is too, even in those two years and the amount of economic value that blockchains secure, all blockchains has increased a lot. And so the sort of level of internal scrutiny, external scrutiny, the level of confidence, I think required just goes up and up. So I'm definitely glad the team took the time that they did.
+
+
+45:56: Anna Rose:
+
+
+I don't think anyone's annoyed that you're not yoloing into zkApps. I think it's really good if they're good, if the platform is stable. I do feel like you've had a bit of a head start because you were sort of deploying this stuff quite early, you had people already building on it earlier than anyone else. At the same time, there are some other teams coming out with stuff. So do you see a mainnet... I don't even know if I should ask, but do you see a mainnet in the next few months? Or do you think it's going to remain in sort of this testnet land for a little longer? It's almost like how should people approach it? Should they think about it like, this is a great playground? Or should they be like, this is where I could build my company.
+
+
+46:38: Steve Pack:
+
+
+This is where I could build my company. It's coming in hot. The incentivized testnet work is the last testnet before the community will vote on hard forking in zkApps. Yeah, as we discussed, you talked two years ago about when the date is, so like, yeah, is it this month or that month, it's hard to get down to the month, but if you had asked me the question in the next few months, yes, it's coming.
+
+
+47:02:  Anna Rose:
+
+
+Cool. Okay. Well, this is very exciting. I feel like in the ZK space, there's a lot of very interesting new architecture ideas or almost ways that ZK will enable new environments to lock into other environments. I know in the past you've done work on bridging. Brandon, I know you and I have had a chat about DA and how Mina has it or not. How it's kind of understood in the Mina context. There's an increasing group of teams that are looking at this coprocessor role. And I do wonder how does Mina fit into that world?
+
+
+47:43: Steve Pack:
+
+
+So I first heard about ZK processors on this show. I think it was Axiom describing their ability to provide proofs of historical Ethereum data for applications, which I thought was cool. But I thought what even was cooler was the introduction of this term, the ZK coprocessor. And that got me thinking, and while it's cool, it's extremely limiting. If you think about what coprocessor meant historically, it's offloading execution from a CPU to some other chip. So a million years ago, like an ALU, something optimized for arithmetic circuits. And that was a huge step change in CPU design to be able to offload these things. And now we see it in GPUs, etc. And so I think calling a coprocessor something that proves historical data is kind of limiting. Whereas in the Mina context, we've just made... In the o1js context, we've just made every browser in the world a ZK coprocessor because now the computing power of every device is available to generate these proofs and it's those proofs that are gonna settle to Mina. So if you think about Mina as the global computer, then every single browser in the world out there is a ZK processor and that's cool.
+
+
+48:53: Anna Rose:
+
+
+Oh wow.
+
+
+48:54: Brandon Kase:
+
+
+So when I think about sort of interesting ZK architecture concepts that maybe haven't been explored enough, especially when applied to Mina, I really just keep going back to recursion. Recursion is at the heart of everything. So I guess we did talk about a few specific interesting use cases. I think, more generally, all these use case categories that people talk about with ZK, like identity, voting, games, zkML even. Like identity, when you add recursion, you can compose attestations together. With voting, when you add recursion, you get interesting forms of scaling. With gaming, when you add recursion, you get multiplayer, peer-to-peer, trustless communication with sort of anti-cheat filters built in. With zkML, when you add recursion, you get incremental updating of datasets if you lay out your data in recursive proof trees. I'm just so excited to see what people do with recursion.
+
+
+49:48: Anna Rose:
+
+
+So, I think we've reached basically the end of the episode, but I do think we're in this, and we've already said it a little bit before, I think we're in this really interesting moment where these new platforms are going to come online, there's going to be more developers actually able to experiment. If people are interested today, what do they do? How do they get involved? Yeah, and is there anything maybe you want to tell folks who might be like, just on the cusp of jumping in, but are still kind of nervous?
+
+
+50:17: Steve Pack:
+
+
+Yeah, I start with the code, Google o1js, npm install, get started. There's lots of docs, lots of examples, super active and super supportive Discord community. There's Q&A, there's folks just hanging out. You can run ideas by, there's folks from both O(1) Labs there, there's folks from the Mina Foundation there. And yeah, if you've been intimidated maybe by the technology and this idea of what on earth is ZK and how do I write a circuit, but the concept of decentralized apps with privacy that you can build using TypeScript and all the libraries you know, all the tooling you know, in Visual Studio Code, like yeah, install and get building.
+
+
+51:02: Anna Rose:
+
+
+Nice.
+
+
+51:03: Brandon Kase:
+
+
+And there are also programs run by Mina Foundation to sort of help developers get started and to give some structured grant programs and things like this. There's zkIgnite, which is a builder program that runs in cohorts where members of the community vote on projects to get funding, so you can work through that. There's a new Mina Navigators program, where you can work on sort of larger projects and get perpetual funding through that as well. And I'm sure there's others.
+
+
+51:30: Anna Rose:
+
+
+And actually, there's more and more hackathons focused on ZK.
+
+
+51:35: Brandon Kase:
+
+
+Yes.
+
+
+51:35: Anna Rose:
+
+
+I might be doing some of those as well. So hopefully we'll be seeing O(1) Labs and the Mina team over there for those future events.
+
+
+51:43: Steve Pack:
+
+
+Absolutely.
+
+
+51:44: Anna Rose:
+
+
+So thank you to both of you for coming on the show and sharing with us all of this info and the updates about zkApps and o1js and kind of where the project's at. Yeah, thanks so much.
+
+
+51:56: Steve Pack:
+
+
+Thanks for having us, Anna. Big fan of the show. So, really enjoyed jumping on.
+
+
+52:00: Anna Rose:
+
+
+Cool.
+
+
+52:00: Brandon Kase:
+
+
+Yeah, thank you so much.
+
+
+52:01: Anna Rose:
+
+
+I want to say a big thank you to the podcast team, Henrik, Rachel and Tanya, and to our listeners, thanks for listening.

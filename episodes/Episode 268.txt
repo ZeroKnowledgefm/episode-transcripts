@@ -1,0 +1,846 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week I chat with Mustafa Al-Bassam, co-founder at Celestia. We chat about where Celestia as an idea emerged from and explore how their rollup centric data availability system compares to that of Ethereum. We also touch on what concepts have emerged in the last year within their ecosystem, things like sovereign chains and what we can expect from their upcoming launch. Now, before we kick off, I just want to direct you towards the ZK Jobs board. There you can find job posts from top teams working in ZK. Check it out and maybe find your next job opportunity working with the best in the field. Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:06):
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non-cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated Stablecoins and more. Visit developer.aleo.org to learn more. You can also participate in Aleo's incentivized testnet3 by downloading and running a snarkOS node. No signup is necessary to participate for questions. Join their Discord at aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose (00:01:51):
+Today I'm here with Mustafa Al-Bassam, co-founder at Celestia. Welcome to the show, Mustafa.
+
+Mustafa Al-Bassam (00:01:56):
+Hi, thanks for having me on.
+
+Anna Rose (00:01:58):
+So Mustafa, in preparation for this interview, I went back and listened to an earlier episode I did with your co-founder Ismail Khoffi in that we described Celestia and what it was, data availability but I think I really want in this episode to kind of like revisit it because I know you guys are much closer to launching. I feel like you're going to have more insights into what it actually looks like in production. I think I'd also like to explore a little bit more what's happened since and what does a project look like going forward. Now, before we do that though, I think we should get to know you. So when I talked to Ismail, he had said that he was coming more from like a Cosmos ecosystem and that you and John Adler, the other two co-founders had come more from Ethereum. So yeah, tell me, were you an Ethereum person? What was your sort of start?
+
+Mustafa Al-Bassam (00:02:51):
+Yeah, I mean I definitely started using Ethereum, you know, when it first came out but I actually first got into kind of blockchain networks and technology in around 2011-2010 when Bitcoin was 1 or 2 years old and I got into Bitcoin because even before Bitcoin I was naturally interested in peer-to-peer networks, like including like peer-to-peer file sharing systems like BitTorrent were really interesting to me. So I was generally kind of very interested in the concept of like peer-to peer-technology and I kind of got into the Bitcoin scaling debate and the general area of Bitcoin scaling through the Bitcoin Blocksize War back in around, you know, 2013 to 2016 and when Bitcoiners were arguing about how to scale Bitcoin, should we use lightning or should we increase the block size? And when the Bitcoin cash fork happened, the reason why I found Ethereum very interesting is because it was obviously a general purpose smart contract platform, but the innovation in Bitcoin has started to die down. The Bitcoin community started to become very technologically conservative and they were more interested in Bitcoin as sound money, which is very interesting and a good goal but for people like me, I was also interested in the technological aspects of decentralization and peer-to-peer networks and so a lot of researchers and innovation moved to Ethereum and that's kind of like how I naturally ended up in the Ethereum space and also eventually ended up in Cosmos.
+
+Anna Rose (00:04:26):
+What year was that that you kind of switched over to Ethereum? Was that 2016 then, kind of at the end of that block space kind of conversation in Bitcoin?
+
+Mustafa Al-Bassam (00:04:36):
+Yeah. This was around 2016 or 2015 when I think this was just after Ethereum had released Mainnet. I was doing my last year undergraduate computer science project on developing Ethereum application. At the time it was like a decentralized sort of identity service.
+
+Anna Rose (00:04:57):
+Oh. Very ahead of its time. There's like a lot of those now that are kind of coming into the forefront, but so you were doing an ID, like a digital ID thing.
+
+Mustafa Al-Bassam (00:05:06):
+Yeah but actually, even though it may see ahead of his time when Ethereum was a few months old, there was like 10 of those projects already.
+
+Anna Rose (00:05:12):
+Oh.
+
+Mustafa Al-Bassam (00:05:13):
+Because it was like a very kind of like obvious or obvious idea for building something on Ethereum and I remember going to Ethereum's Devcon 1 in London, I think. Yeah, I think it was Devcon 1 and that's kind of like when I realized that, you know, this thing was becoming real and people were actually building stuff.
+
+Anna Rose (00:05:31):
+Cool. You had sort of explored this decentralized ID thing, but like did you build anything else in Ethereum? Were you involved in any other projects that we might know?
+
+Mustafa Al-Bassam (00:05:39):
+So I didn't really build anything else, you know, that went into production, anything at that time but after 2016, I started a PhD on the topic of Layer 1 scalability. In 2016 at UCL in London and over there I was looking at sharding specifically or like Layer 1 sharding and I became, you know, somewhat involved Ethereum research community around then, because Ethereum at the time had a very complicated Ethereum 2.0 spec that also revolved around execution sharding.
+
+Anna Rose (00:06:14):
+Yeah.
+
+Mustafa Al-Bassam (00:06:14):
+And so there was a lot of interesting questions around how to do sharding things like how do you do cross-shard transaction calls and how do you make sharding secure? And I was hanging around a lot on the Ethereum research forums and as part of my PhD research, we created an academic project called Chain Space, which was the first kind of like proposal to create a sharded smart contract platform and that was later commercialized into a company that was later acquired by Facebook.
+
+Anna Rose (00:06:48):
+Oh. Yeah.
+
+Mustafa Al-Bassam (00:06:48):
+But I didn't join Facebook and I ended up working on Celestia instead, which was formally known as Lazy Ledger.
+
+Anna Rose (00:06:55):
+Yes and I think, so like I actually have had John Adler your third co-founder also on the show long while ago when it was called Lazy Ledger. He was talking about Fuel and Lazy Ledger. I haven't listened to that episode in a long time, but we can dig it up if listeners want to go back and sort of see the trajectory of this project. So that idea of separating execution from consensus, was that what you were doing? Like had you sort of formulated that or did that idea already exist?
+
+Mustafa Al-Bassam (00:07:22):
+I think there were some like general, like early ideas, like technically speaking, the idea of separating a consensus from execution actually existed before blockchains themselves. Okay. Like there's this paper from I think the early 2000's that proposed a BFT Byzantine Fault Tolerant protocol that was only responsible for ordering, but execution happened in a different committee. But in terms of the idea of separating consensus from execution in blockchains, there were some early discussions about it, but no one really kind of formulated a system like Lazy Ledger where the only purpose of system was ordering. Like people had always talked about it actually and even before Ethereum if you think about before Ethereum existed, we had Mastercoin and Mastercoin, which is the system that Tether uses on Bitcoin. That's basically a rollup on Bitcoin, technically.
+
+Anna Rose (00:08:20):
+Interesting
+
+Mustafa Al-Bassam (00:08:20):
+That uses Bitcoin for ordering but not for execution
+
+Anna Rose (00:08:23):
+In that case, this is sort of a side question, but like what part of the Bitcoin architecture is it using to actually do that? Is it like the memo field? Like what can you use in Bitcoin to create a rollup?
+
+Mustafa Al-Bassam (00:08:36):
+Yeah, so it uses this Bitcoin Opcode called OP_RETURN and so like in, I think in the Opcode you can basically have 40 bytes, or I think it used to be 80 bytes of arbitrary data but there's many different ways of including random, arbitrary data in Bitcoin transactions. I think actually the way that Mastercoin did it was you send it to a fake address and that address encodes the data that you want to include. Nowadays, it's completely different. Nowadays you have something called Taproot input scripts.
+
+Anna Rose (00:09:06):
+Oh yeah.
+
+Mustafa Al-Bassam (00:09:06):
+And you can include extremely big files like entire JPEGs on the Bitcoin blockchain now.
+
+Anna Rose (00:09:11):
+Cool. So then you were kind of working on that, the sharding, like basically what Ethereum became. Do you feel like it, was it influenced by your work at all? Or do you think that they kind of continued on their path and you just sort of like split off to form Celestia? Or do you think there was yeah, was there some sort of takeaway?
+
+Mustafa Al-Bassam (00:09:29):
+It's hard to say if it was directly influenced, but what I do know is that the Ethereum role, eccentric as it is now was basically what we were building at Lazy Ledger a year before Ethereum switched to a rollup centric roadmap.
+
+Anna Rose (00:09:41):
+Got it. Because, yeah, originally there was this idea, there was gonna be a consensus part, there was going to be execution sharded, but it was like in the actual client software all run by the exact same validators and the rollup concept was introduced. I mean, actually don't remember exactly the year 2019 maybe
+
+Mustafa Al-Bassam (00:10:02):
+I think 2019 or maybe late 2018.
+
+Anna Rose (00:10:04):
+Yeah and I do remember that blog post from Vitalik when he kind of laid out the like rollup centric future. I know in my last episode with Ismail we talked about how Celestia is this purposely made blockchain kind of L1. It's made very much for that rollup world. So it kind of cuts out a lot of the other stuff that maybe Ethereum or other Ethereum-like blockchains have and just focuses on being kind of the perfect center for that rollup like, I guess you, do you call it like a Hub-and-Spoke? It's kind of like a Hub-and-Spoke, right?
+
+Mustafa Al-Bassam (00:10:41):
+Well, we don't say it's a hub because we don't have a settlement layer. So like the rollups don't bridge to it, but they all use it as a, we call it a shared DA layer. So it's like all the rollups use it as a shared DA layer. You can call it a hub in that sense, but it's not a hub in the sense of it, like the Cosmos hub for example.
+
+Anna Rose (00:10:57):
+I see. I see. So yeah, so, but then let's think about that. Let's maybe explore it for our listeners. So are you thinking about the other blockchains as rollups or are they actually standalone blockchains? What do they have and what do they not have in order to actually work with Celestia?
+
+Mustafa Al-Bassam (00:11:11):
+So they are rollups, but they're not L2s
+
+Anna Rose (00:11:13):
+I see
+
+Mustafa Al-Bassam (00:11:14):
+of Celestia.
+
+Anna Rose (00:11:15):
+Why not? Tell me why
+
+Mustafa Al-Bassam (00:11:16):
+Because they don't have a bridge in Celestia, but you can't transfer assets from the Celestia chain itself.
+
+Anna Rose (00:11:22):
+I see.
+
+Mustafa Al-Bassam (00:11:23):
+In a trust minimized way to the rollups. So in that sense, like we don't call them L2s because they're not really like baby chains. They're not, they don't really extend the L1.
+
+Anna Rose (00:11:32):
+I got it
+
+Mustafa Al-Bassam (00:11:33):
+They inherit security from the L1, but they don't necessarily extend the old ones functionality.
+
+Anna Rose (00:11:38):
+Are they just outsourcing consensus then? Like they are just pure execution and Celestia's pure consensus?
+
+Mustafa Al-Bassam (00:11:45):
+Yeah, they outsource, they basically outsource consensus and data availability to Celestia, they have very similar properties to normal Layer 1 blockchains. The only reference is that they outsource their consensus and data availability to Celestia.
+
+Anna Rose (00:11:59):
+And you did just say that like you're actually working on kind of ordering, does Celestia then act a little bit like the sequencer of rollups?
+
+Mustafa Al-Bassam (00:12:07):
+It can do in the sense that Celestia definitely orders the rollups blocks, but it does not mean that rollups can't also have their own sequencer.
+
+Anna Rose (00:12:17):
+I see.
+
+Mustafa Al-Bassam (00:12:17):
+If the rollup wants to capture its own MEV, but you can the rollup can choose Celestia to order the transactions inside the blocks, but then that means Celestia will capture the MEV
+
+Anna Rose (00:12:28):
+Oh, would there be like a searcher community in something like Celestia? Or is this the validators it automatically kind of built into the system.
+
+Mustafa Al-Bassam (00:12:37):
+I mean, there's a lot of interesting questions around how MEV load would look like in the modular stack and it depends on where the MEV is captured. I think it's most likely that rollups will want to capture the own MEV and not leak the MEV to Celestia. So it's likely that there's going to be MEV within each roll up and the sequencer of their rollup will capture its MEV. But there could also be, you know, some MEV on the actual data layer itself if you constructed the rollup so that it has like a decentralized set of sequencers and the rollup could order the blocks, for example, within the data layer.
+
+Anna Rose (00:13:15):
+So I'm sort of picturing like, so Celestia is there, it's doing the consensus and data availability for these different chains. They are standalone chains, they look like regular blockchains, but then how are they connected to each other? Would they be connected to each other? Like is that something that's kind of encouraged? Do you have any tooling that helps that or is that sort of up to them? They can use any bridging that they want.
+
+Mustafa Al-Bassam (00:13:38):
+Yeah, so when we talk about interoperability and bridging, that's usually something that is usually a concern of the execution environment and so it is the rollups that can decide how they want to bridge with each other. But what's Celestia enables them at least to do, is to have some guarantee of shared security. So like for example, if you had 2 rollups and they wanted to communicate with each other in a trust minimalized way and verify each other's fraud proofs or ZKProofs, they would also need to verify the data availability of the respective rollup. And in order to do that, they need ideally they need a shared data availability layer. And so that's what Celestia allows them to do if they wanted to, they provide shared security and that shared security would enable more seamless bridging if the rollups wanted to do that.
+
+Anna Rose (00:14:32):
+But like in the case of Ethereum, you are kind of doing the same action. Let's kind of dive even deeper into like the differences here. Like, so what does Ethereum actually provide that maybe Celestia doesn't and vice versa?
+
+Mustafa Al-Bassam (00:14:45):
+The main difference between Ethereum and Celestia is that Ethereum kind of started out with a non-rollup centric roadmap where they already had the Ethereum virtual machine enshrined into the chain itself. So they already had like a smart contract environment on the chain and now that they want to go to a rollup centric roadmap map, you have the kind of existing baggage of all of the state of the Ethereum virtual machine. Whereas with Celestia, we don't have any smart contract platform enshrined into the data availability layer itself. So what that allows is if you want to create a sovereign rollup, for example, which we can discuss later, it allows rollups to be more overhead minimized because the rollups no longer have to take an interest in their validity of everyone else's smart contract on this enshrined execution environment and that makes it more overhead minimized. But also the other big difference is that Celestia does not have what we call a settlement layer because in Ethereum rollups, Ethereum, rollups post their fraud or validity proofs and the headers to the Ethereum chain and that allows for the rollups to transfer assets to each other through the Ethereum chain. But in Celestia we don't have that, we don't have that enshrined into the layer. Instead what we expect is that we expect people to create their own settlement layers or networks even as rollups potentially on Celestia.
+
+Anna Rose (00:16:16):
+This I need to understand. So in the previous example, in the Ethereum example, you have rollups who are like, I'm gonna use the ZK one because we talked about that more on the show, but like, so you've created a proof, you have a verifier on chain as a smart contract that in a lot of ways ensures that like the data in the rollup is also accurate. But you're sort of saying that you wouldn't necessarily have, you're like, you don't have an execution layer where you can deploy a verifier, but can they put some sort of verifier into it? Like yeah, I want to explore this a little more.
+
+Mustafa Al-Bassam (00:16:47):
+Yeah. So the key thing to realize is that an Ethereum rollup contract or an Ethereum rollup bridge, fundamentally it's just a blockchain light client because what it does, it receives block headers for that rollup chain and it can verify ZKProofs that assert to the validity of that rollup header. But you don't have to run that light client as a smart contract on chain. You can just run it as a normal light client locally on your machine. Like if you consider, let's take Mina for example. Mina is a ZK chain, it's not a ZK rollup. It's just a ZK chain and it has light clients that are actual nodes that people can run on the devices.
+
+Anna Rose (00:17:29):
+Yeah.
+
+Mustafa Al-Bassam (00:17:30):
+And the same thing could work with a zk-rollup on Celestia. The ZKProofs could be distributed peer to peer through the actual nodes or that are run by the users of the rollup and they can be verified directly by those nodes rather than necessarily by an on-chain contract.
+
+Anna Rose (00:17:48):
+I'm trying to picture this. So like you're saying they don't need this verifier as contract, but rather the light client sort of the compressed version and it's like, where is the SNARK if you're using ZK in this case? Like, are we using SNARK for recursion and compression and so that's what you, the output is sort of like this nice thing that can sit in a light client and then it's never verified, it's just sort of assumed to be correct.
+
+Mustafa Al-Bassam (00:18:15):
+I mean, the SNARK is distributed with the block header of that rollup.
+
+Anna Rose (00:18:20):
+Yeah.
+
+Mustafa Al-Bassam (00:18:20):
+And then when any node receives a block header, they have to first of all verify that SNARK before they accept that header as valid.
+
+Anna Rose (00:18:28):
+But who's looking at the light client? Maybe this is gonna help me. Like is it the chain itself checking its own light client or is it like external like chains checking those light clients?
+
+Mustafa Al-Bassam (00:18:39):
+The light clients are run by the users of the chain. Anyone, for example, running a wallet or for example, service providers like exchanges or shops or payment merchants and so on and so forth.
+
+Anna Rose (00:18:51):
+All right. So it would be like a DAP user would basically be doing that, or like a DAP
+
+Mustafa Al-Bassam (00:18:55):
+Exactly.
+
+Anna Rose (00:18:55):
+Developer. Okay.
+
+Mustafa Al-Bassam (00:18:56):
+So it's just like how in Ethereum, who's running the nodes for Ethereum is the same answer as like, who's running these light clients for zk-rollups?
+
+Anna Rose (00:19:04):
+Okay. But do the different chains that have like locked in and used this, did they ever verify other chains light clients?
+
+Mustafa Al-Bassam (00:19:12):
+Yeah, they can do, if they want to have a trust minimized bridge with each other.
+
+Anna Rose (00:19:17):
+Do you still call these rollups zk-rollups though in this case?
+
+Mustafa Al-Bassam (00:19:21):
+Yeah. Why wouldn't they be zk-rollups?
+
+Anna Rose (00:19:23):
+zk-rollup to me always had this Ethereum context of proof-verifier, verifier-contract. But I guess it still uses SNARKs.
+
+Mustafa Al-Bassam (00:19:31):
+So I guess this is a good segue into sovereign rollups or the different types of rollups.
+
+Anna Rose (00:19:36):
+Okay.
+
+Mustafa Al-Bassam (00:19:37):
+So that's why as I said earlier, we don't call these rollups L2s of Celestia because they're not bridging with Celestia. We call them just rollups or rollup chains, but specifically sovereign rollup chains because they are not, they're not L2s. And what that means is that if you consider a Ethereum rollup, an Ethereum rollup enshrines Ethereum as its canonical bridge or enshrines Ethereum as like a hard-coded settlement layer or bridge to it. And what that means is that effectively it's the Ethereum chain that defines what is the valid rollup chain. It defines what is the valid fork choice rule of that rollup chain based on what that contract says. But in Celestia, we created this idea of sovereign rollups and a sovereign rollup is sovereign in the sense that it's not some on chain smart contract that defines the correct chain, but it's the community of that rollup that defines the correct chain. Similar to how an L1 would work, like when you bootstrap a L1 or when you hard fork L1, it's that community that defines the protocol rules or the correct chain of that L1. And so it's similar with a rollup, you can imagine a sovereign rollup to be just like a L1 chain. The protocol rules are defined by the community and it's enforced by the nodes of that rollup, not by a smart contract and so that's why the fraud and ZKProofs are distributed peer-to-peer.
+
+Anna Rose (00:21:12):
+When you talk about that, like in the case, can we kind of walk through what an example of one of these fork choice rules would look like on Ethereum and then what it would look like on Celestia? So like, and I think I've, I think in the past we have covered this once where it's like, say you have one of these applications that are so important to the ecosystem and they have a lot of collateral and they have like, they have everything that lives on it. Say those live on a rollup and there's some sort of problem or fork that needs to happen. What would happen today? How would they not have control today?
+
+Mustafa Al-Bassam (00:21:44):
+Yeah. So it will kind of boils down to what we consider the upgradeability of a rollup to be like in this traditional thinking for an Ethereum rollup, it was considered that, well, if a rollup has upgrade keys, then it's not really a true rollup from a security model perspective because the whole point of a Ethereum rollup is that you have a trust minimized bridge between Ethereum and the rollup. And that means that there's no party or set of parties that could steal people's funds. Then you have the very difficult question, which is well how do you upgrade a rollup if there's a bug or if you want to add new features or something like that. If that rollup did not have any upgrade mechanism, then the only way to upgrade it would be if you hard forked Ethereum itself.
+
+Anna Rose (00:22:31):
+Whoa. So like if totally impossible. Okay.
+
+Mustafa Al-Bassam (00:22:35):
+Yeah, but of course that's not, like, that's not practical. So even Ethereum rollups today have some kind of upgrade path.
+
+Anna Rose (00:22:40):
+Yeah.
+
+Mustafa Al-Bassam (00:22:41):
+The current thinking if I understand correctly is that some rollups on Ethereum, what they want to do is they want to have like some upgrade committee like upgrade MultiSig that can upgrade the chain. But I think that what they plan to do is that the upgrade only happens after a month or something and that gives users a chance to exit the chain into the L1
+
+Anna Rose (00:23:05):
+Like bridge their funds back off it, I guess?
+
+Mustafa Al-Bassam (00:23:08):
+Exactly. And so what we've said is you might as well just be a sovereign rollup if you want your upgrade path to be community-led. Because I guess the difference is that many people, including myself, we don't believe in token holder governance or token holder voting, especially for upgrades. Like if you consider Ethereum for example, how are EIPs approved or how is Ethereum upgraded? It's not some MultiSig or token holder governments. It's the community or it's the ecosystem. Like if the Ethereum developers or some way or try to push some controversial EIP that stole everyone's money, even if the developer of Geth wanted to do that, it's very likely that exchanges, for example, would not download or use that patch.
+
+Anna Rose (00:23:56):
+Yeah. Yeah.
+
+Mustafa Al-Bassam (00:23:57):
+And so you can apply a similar kind of upgrade mechanism for rollups if it's a sovereign rollup. You don't rely on token holder governance, you don't rely on on-chain governance or MultiSig, you just rely on hard forks as an upgrade mechanism.
+
+Anna Rose (00:24:10):
+And yet the hard fork here in this case, like consensus of Celestia is not altered. It's not like the chain is changed and like, so tell me how you would actually hard fork in this case. Right? Or I mean, I'm assuming Celestia like the validator set of Celestia is not like obeying one of these rollups fork changes.
+
+Mustafa Al-Bassam (00:24:33):
+Yeah. So that's kind of like the beauty of sovereign rollups. You don't have to hard fork Celestia or the DA layer to hard fork your rollup. To hard fork your rollup, you just need your roll up community to agree, we're going to change the protocol rules in this way and then everyone has to download the same patch and upgrade their node software to change their protocol rules in the same way.
+
+Anna Rose (00:24:58):
+Would you then have to create new light clients on, would you just sort of like wipe the old one and make a new one?
+
+Mustafa Al-Bassam (00:25:04):
+It would just make an upgrade to the code. Like let's say you wanted to introduce a new transaction type, for example, that would basically be changing the kind of state machine of the rollup and then that would just be like a, you know, it could be like a few lines of code that change in the consensus critical part of the rollup.
+
+Anna Rose (00:25:21):
+Interesting.
+
+Mustafa Al-Bassam (00:25:22):
+And a good example is The DAO Hack like it, like back a few years ago when Ethereum was starting out, there was this project called The DAO, and people invested $150 million into it, which at the time was 5% of the Ethereum supply and then it got hacked and some hackers stole all that money. And then the Ethereum community decided that they're going to, they want a hard fork to undo the hack.
+
+Anna Rose (00:25:47):
+Yeah.
+
+Mustafa Al-Bassam (00:25:48):
+Because 5% is way too much to be stolen in the one go.
+
+Anna Rose (00:25:53):
+It's enough to wreck a new network.
+
+Mustafa Al-Bassam (00:25:55):
+Exactly. And the way they they did that is they hard forked Ethereum chain and they said the hard fork basically said at certain height, we're gonna move all the stolen funds into this new contract. And so like, my question is like, why should, like, I think rollups or rollup chains should have the same power to do the same thing
+
+Anna Rose (00:26:15):
+Because they could also deploy things that have bugs or there could also be some sort of like
+
+Mustafa Al-Bassam (00:26:19):
+Yeah.
+
+Anna Rose (00:26:19):
+Application on top of that that's gathered so much of the wealth and value of that rollup that gets wrecked and needs to be upgraded.
+
+Mustafa Al-Bassam (00:26:29):
+Yeah.
+
+Anna Rose (00:26:29):
+I mean, it sounds like though the rollups do have mitigations, you said most of them are upgradeable or they have committees. When you say community, like how would the community of a sovereign chain look different from the community of a rollup?
+
+Mustafa Al-Bassam (00:26:41):
+The main difference is between do you want the rollup to have a token holder base or MultiSig upgrade mechanism, or do you want the upgrade mechanism to be based on more ad-hoc social consensus? There's many people, including myself, that are not in favor of token holder governance or consensus, because to me, the whole point of blockchains is that it's a trust minimized protocol where given a certain set of rules, no one can violate their rules, even if there's a dishonest majority of people in that ecosystem. In other words, like the only way that you could change the rules or steal someone's money or seize assets is if everyone in the system agrees or if the vast majority of people in the ecosystem agrees to those new rules. But if you have a system where that's based on token holder governance or MultiSig, you're basically saying that actually the state transition function of that chain is not the some specific rules, but the state transition function of this chain is what the committee says is fine, or what those these whales say is fine. Where to me, the most important part of a blockchain is actually it's social consensus. Like Layer 0 of a blockchain is social consensus. What gives a blockchain authority why the Bitcoin chain has a BTC shaker and why the Ethereum chain has the ETA shaker is due to social consensus about the social community of that chain agrees. That is the rules of that chain.
+
+Anna Rose (00:28:09):
+What happens though, in the example you gave of a sovereign chain to the other part, like the, what do they call it? The, like the orphan chain, the one that's left behind like, does that still exist? Does that, can that still interact with Celestia?
+
+Mustafa Al-Bassam (00:28:25):
+It can do like Ethereum Classic for example.
+
+Anna Rose (00:28:27):
+Yeah.
+
+Mustafa Al-Bassam (00:28:28):
+Like Ethereum Classic still existed after Ethereum hard forked
+
+Anna Rose (00:28:32):
+But it was completely separated. So it was just like its own thing. But in this case, because they're still using the Celestia consensus, what happens to it?
+
+Mustafa Al-Bassam (00:28:39):
+Pretty much it becomes its own kind of hard fork or chain. But like it is the same thing as Ethereum Classic. Like the chain still exists, or at least the social consensus of the new chain does not recognize the old chain as the source of truth. The source of truth becomes the new chain.
+
+Anna Rose (00:28:56):
+Or you actually just get two chains.
+
+Mustafa Al-Bassam (00:28:58):
+Yeah, you definitely get two chains, but what chain do all the exchanges use? What changes do all the wallets used? What chain gets the same ticker and so on and so forth.
+
+Anna Rose (00:29:07):
+I see, I see. I want to explore a little bit the, not only the data availability part of this, but also sort of the querying for data. Because this was something where I understand there's like a very specific architecture. So these sovereign chains or rollup chains actually do you call all the rollup sovereign chains on Celestia?
+
+Mustafa Al-Bassam (00:29:28):
+So all the chains that are on Celestia are sovereign chains.
+
+Anna Rose (00:29:31):
+Okay.
+
+Mustafa Al-Bassam (00:29:31):
+But you can, you can have non-sovereign chains on top of sovereign chains, like L3s kind of thing.
+
+Anna Rose (00:29:37):
+Oh, okay.
+
+Mustafa Al-Bassam (00:29:38):
+Like you can create a sovereign settlement rollup on Celestia has a non-sovereign chain that intransits.
+
+Anna Rose (00:29:44):
+I see. Okay. But let's talk about like what, like, let's go a little further into what the data availability side of things are. Like, one of the things I understand about Celestia as being unique is this ability to kind of query faster or easier or something. So like yeah, tell us a little bit about that. How does that work?
+
+Mustafa Al-Bassam (00:30:02):
+Yeah, so that relates to the sort of data application model of Celestia. The whole point of Celestia is that it's supposed to be a very simplified data layer. Like the only thing it does is it lets developers post arbitrary data to it that Celestia orders and includes in a block and Celestia commits that data in a Merkle tree and then you get a Merkle root and developers can use that Merkle root to authenticate certain data in Celestia. But the way that we do that is we have this concept of name spaces.
+
+Anna Rose (00:30:33):
+Yeah.
+
+Mustafa Al-Bassam (00:30:34):
+And name spaces are kind of like, you can kind of think of them as like, like radio channels. Like if you have, if you've got like a walkie-talkie for example, you might have like different channels in that walkie-talkie or you can also think of them as like Twitter hashtags. So once you, so when you create a rollup or you create an application, you give the application a certain name space.
+
+Anna Rose (00:30:55):
+Is it like a field? Is it sort of like a field and you give that particular roll up that a number or something that's like an identifier?
+
+Mustafa Al-Bassam (00:31:05):
+Yeah, it's just an 8 byte integer right now. Okay. The developer just chooses an arbitrary integer and they can post arbitrary data to that name space. And then other people can query this Celestia blockchain to say, Hey, can you please give me all the data? Can you stream to me all the data that has been posted to this name space?
+
+Anna Rose (00:31:26):
+And this is sort of a way to like identify this particular chain versus other chains. Does this just make searching for data faster? Because you can still kind of do this on Ethereum, right? It's just that it's like clunky and it's mixed up with everything else.
+
+Mustafa Al-Bassam (00:31:40):
+So what allows you to do is, because we use what's called a name spaced Merkle tree, it allows you to query a node in Celestia for a specific name space. And then that node can give you a Merkle proof to say, here's the data and name space. And you will know that response is sound and complete in the sense that you will know that because it's a name space Merkle tree, you will know that that is all the data in that block. Like they haven't emitted any data in that name space.
+
+Anna Rose (00:32:12):
+Ah, I see. Okay.
+
+Mustafa Al-Bassam (00:32:13):
+And so it's kind of like a authenticated or trust minimized way of querying other nodes to give you all the data in the name space in a trust minimized way without you having to download the entire chain yourself. Like you can run a light node, your roll up sequencer can just be a selection light node.
+
+Anna Rose (00:32:30):
+So does that mean that it's faster or more efficient? Like what's the comparison then?
+
+Mustafa Al-Bassam (00:32:35):
+The main difference that it's more trust minimized in the sense that if you were to do this on Ethereum and you were running Ethereum an light client and you just asked another full node to give you all the data, and for this smart contract, for example, you would have to trust that full node
+
+Anna Rose (00:32:51):
+Okay.
+
+Mustafa Al-Bassam (00:32:51):
+To give you the complete set of the data, or at least you would have to trust the valid asset Ethereum to give you that complete set of data. It's not like the main big thing of Celestia, but it's like a little nice feature to make it easier for developers.
+
+Anna Rose (00:33:04):
+Is it possible for the node to give you the wrong data? Like on back on the Ethereum case? Like would that be?
+
+Mustafa Al-Bassam (00:33:09):
+It can't give you the wrong data, but it might not give you the full set of data. It might omit data.
+
+Anna Rose (00:33:15):
+Does it also help with like looking at history of data the way that you've built this, like name space Merkle trees? Like does it have, this is the thing I'm trying to figure out is like, does it actually enable something new or does it just make for more efficient, like query like does it just make it easier for, for light clients to do it?
+
+Mustafa Al-Bassam (00:33:33):
+It's more of a just like a nice developer UX type of thing.
+
+Anna Rose (00:33:37):
+Okay. And I guess that means like building applications that rely on it all of a sudden become simpler because you're not trying to parse through all this stuff and trust all of these nodes and
+
+Mustafa Al-Bassam (00:33:47):
+Yeah, like if you go on our docs, we have a very straightforward data availability API. You can submit data to the namespace and you can receive data from a namespace, you can search for data namespace and there's those are just like two basic API endpoints, but behind the scenes, the developer does not have to worry about what's happening behind the scenes, but behind the scenes that you know that it's happening in a trust minimized way. It's not connecting to Infura or something like that. It's not connecting to some centralized like index or something like that.
+
+Anna Rose (00:34:17):
+Yeah. Yeah.
+
+Mustafa Al-Bassam (00:34:17):
+It's connecting directly to the Celestia peer-to-peer network. And that's kind of like a very big aspect of what Celestia is about. it's like a very big value of Celestia that users should be first class citizens of the network. They shouldn't have to connect Infura or some centralized API to get data out of the blockchain. They should be able to just connect directly to the peer to peer network, work off that blockchain and get data about it in a trust minimized, authenticated way.
+
+Anna Rose (00:34:44):
+When you mention sort of these light client constructions, it definitely makes me think a little bit about some of these new projects that have emerged. They're sometimes acting is like, I know they don't, they don't call themselves bridging projects. They're not really bridge projects, but they are like the light client that could connect two chains to one another. And like the projects that come to mind here, like Succinct or Heredotus zkIBC, Axiom, there's a bunch of them. So they're like, they've found ways to create these light client constructions. Do you see yourselves working with projects like that? Are they competing at all with you?
+
+Mustafa Al-Bassam (00:35:22):
+So these projects are generally operating under a slightly different security model because if I understand correctly what people typically mean by a ZK-IBC or ZK Bridge, is that what they're proving in from in ZK, what they're proving is not the state validity of the counterparty chain, but what they're proving is that the consensus of the counterparty chain, they're proving that some counterparty chain was signed, the headers of it was signed by 2/3 of the validators, for example. That's kind like a very helpful thing to do, but it's not as secure or as trusted minimized as a, like a normal ZK rollout bridge because a typical, like a normal ZK rollup bridge, like a bridge between let's say zkSync and Ethereum, it verifies not just that the header was signed by the correct sequencer, it also is that every single transaction in that rollup was actually correct inside the ZK proving system.
+
+(00:36:23):
+But when people talk about things like ZK-IBC, they don't mean that they typically mean proving the headers book signed by the correct validator set that's very different thing and it's helpful, but it's not what we're trying to build because we don't consider committee-based bridging to be scalable or secure. Because the way that kind of like Celestia started out as being in a Cosmo ecosystem is that Cosmos is a very interesting idea because the idea of it is that everyone has their own chain with their own value set and everyone communicates with each other using IBC and that's great, but it's, it's not scalably secure because there's no shared security. So like if we imagine a world where there's millions of Cosmos chains, which is very possible, if you have billions of app chains, it's very unlikely that all of the chains will have a secure validator asset.
+
+(00:37:18):
+And IBC assumes that the chains that you're bridging to have an honest majority in their validator set because the validator set could lie and insert in the invalid state transitions. So that's not a scalable kind of shared security me mechanism. It's not shared security at all. So what Celestia tries to do is it tries to kind of scale all the Cosmos vision of having millions of chains. But the key insight of Celestia is to imagine a world that does not rely on committee-based bridging assumptions or committee-based security assumptions because we don't think that committees are scalable to billions of or even thousands of chains. And instead we try to replace committee-based assumptions with ZK or fraud proof based assumptions instead of relying on a committee to tell you that the state is correct, you haven't actually check that the state is correct yourself using fraud proofs or ZKProofs.
+
+Anna Rose (00:38:13):
+Well I do think some of these are actually doing, aren't they doing something like that? Basically taking one chain's full node and then compressing it into a light client on another chain?
+
+Mustafa Al-Bassam (00:38:23):
+Yeah, I think at least some projects are definitely looking at that. I know like RISC Zero, there's a lot of like projects that are associated or adjacent to RISC Zero that are looking at that. I think there's people trying to create a Bitcoin full node as a ZK program, for example, in Starkware for example, actually using Cairo.
+
+Anna Rose (00:38:44):
+Interesting. And do you think you could actually use like one of those projects that I said before where they're like using, they're taking like a full node trying, you know, creating a light client out of it. Would they be able to use you as the data availability side? Like would that be sort of complimentary in some way?
+
+Mustafa Al-Bassam (00:39:02):
+Yeah, definitely. And that's something that we're actually looking at ourselves. Like the idea that you could compile like any chain into let's say RISC Zero or Cairo in the future, you could like turn any chain into a ZK-rollup in theory. And yeah, like one thing I was, I was looking at for particularly for example, is there's like a lot of efforts or some effort in the Bitcoin community to try to ZK-ify the Bitcoin state machine. And then I think it was something like they wanted to, if you had the ZK Opcode to Bitcoin, you could have like Bitcoin L2s for example and I was also interested to see like how you would see Celestia could be used as an off-chain data of bit layer to Bitcoin L2s for example.
+
+Anna Rose (00:39:44):
+Wild. But would that ever happen?
+
+Mustafa Al-Bassam (00:39:47):
+I mean it's hard to say. As I said, like the Bitcoin community or the Bitcoin developers are very conservative in terms of what they add. But actually I do think they're becoming kind of recently more liberal. Like the fact that you can add JPEGs to Bitcoin blockchain now is kind of wild that was like, that was like back in 2013 people were discussing using Bitcoin for non-financial applications like DNS and the Bitcoin developers like Gregory Maxwell were extremely pissed off at that kind of idea. Like they were kind of like very
+
+Anna Rose (00:40:21):
+Sort of philosophically against it almost
+
+Mustafa Al-Bassam (00:40:24):
+Yeah. It was like, it was very much like you should only use Bitcoin for financial transactions, like don't and some developers are still like that like Luke Jr. But there's developers like Roasbeef who are looking at, you know, Bitcoin L2s. So I I do think there's a potential feature where Bitcoin would add a ZK Opcode. Oh I definitely, it's possible, but not like in the next year, maybe in the next few years.
+
+Anna Rose (00:40:47):
+Cool. Do you kind of imagine the case where like Celestia is the data availability hub? I know you're not like there's no token settlement, but there's the data availability and the ability to query history of state transitions, stuff like that. Could you also imagine a separate hub that would be for settlement instead of this current like mesh of bridges that would maybe even like work in tandem with Celestia?
+
+Mustafa Al-Bassam (00:41:15):
+Yeah, definitely. And I see people potentially creating settlement layers on top of Celestia because as I said, we don't enshrine a settlement layer. We don't enshrine a bridging hub to Celestia.
+
+Anna Rose (00:41:27):
+Yeah.
+
+Mustafa Al-Bassam (00:41:28):
+We try to make Celestia as minimal as possible. But that doesn't mean that someone could create a bridging hub on top of Celestia that other rollups bridge to, and for example, there's one project doing that, for example, called Dimension and they're a kind of like a Cosmos based settlement layer for Cosmos rollups that uses Celestia as a data availability layer.
+
+Anna Rose (00:41:49):
+Cool. So it's sort of like in the works.
+
+Mustafa Al-Bassam (00:41:53):
+Yeah, for sure. And there's kind of a lot of debate about whether Celestia should enshrine a solid material or not. But I think my current thinking is that it's nice to have a data availability layer that's neutral to settle material so that people can innovate with their own solid materials. So that, that's kind of my current thinking is that Celestia should be credibly neutral, but that doesn't mean that in the future the Celestia community could decide to enshrine a settlement layer, for example, by using interchain security. That you could have like a shared security layer as a consumer chain to Celestia chain.
+
+Anna Rose (00:42:30):
+Cool. That I was actually gonna ask you a little bit about IBC and then interchain security because in a way the interchain security model, which I don't think we've talked about that much on the show, but it's the idea of like the hub-validator set being almost like loaned out to these sort of child chains. I guess these are really kind of very much connected. What did you just call them? You had a name for them
+
+Mustafa Al-Bassam (00:42:50):
+Consumer chains.
+
+Anna Rose (00:42:51):
+Consumer chains. So you could sort of see those consumer chains then using Celestia. But would they still be using the hub in that case as the settlement? Actually don't know if the settlement happens through the hub? I'm assuming so, but
+
+Mustafa Al-Bassam (00:43:04):
+Yeah. So I'm not saying that consumer chains should use Celestia. I'm just saying like in the future, like if the community of Celestia wanted to enshrine a settlement layer in Celestia that settlement layer could be implemented as a consumer chain in Celestia
+
+Anna Rose (00:43:17):
+I see. It would look like that. It would sort of follow that model. Okay.
+
+Mustafa Al-Bassam (00:43:21):
+Yeah. But in terms of like whether consumer chains should use Celestia, I would say that's not something that we want to do because the whole point of rollups is to provide an alternative, a more scalable shared security mechanism than interchain security.
+
+Anna Rose (00:43:37):
+So like in this case, the hub is acting as a consensus layer anyway, so you don't really need this.
+
+Mustafa Al-Bassam (00:43:41):
+Yeah, exactly.
+
+Anna Rose (00:43:42):
+I have a little bit of a question on this is actually, I should have probably asked this earlier, but light clients right now, I'm only hearing it going one way, but is there like a Celestia light client on each of the chains on the chains that are hooked up to it?
+
+Mustafa Al-Bassam (00:43:57):
+Yeah, so if you're a rollup light node, you also need to run a Celestia light node.
+
+Anna Rose (00:44:02):
+Okay.
+
+Mustafa Al-Bassam (00:44:02):
+And that's why, that's a big reason why we care a lot about light nodes because we don't want everyone to have to run a Celestia full node and follow every single other rollup even though they only care about one rollup or a few rollups.
+
+Anna Rose (00:44:13):
+Ah
+
+Mustafa Al-Bassam (00:44:14):
+But in terms of select like nodes, we actually recently just announced Rollkit, which is a modular rollup framework. And it used to be formally known as Optiment enrolment, but what Rollkit does, it's basically a modular rollup framework that can be used as a replacement for Tendermint to launch new Cosmo chains. So let's say you want you to launch a new Cosmo chain, but you don't want to bootstrap your own validator network. You want to launch your Cosmo chain as a rollup, you can swap out Tendermint for Rollkit and Rollkit provides you a modular sequencing software for your rollup. And it also naturally integrates with Celestia as a DA and the Celestia light client software. But the kind of like bigger vision for Rollkit is that it's supposed to be a kind of public good that's neutral from Celestia. And that's why even though we started working on Rollkit from 2021, because at the time there was no general purpose rollup software.
+
+(00:45:21):
+So we had to build it like if you wanted to realize the Celestia vision, we had to build something like Rollkit because at the time the only rollup software that existed was, you know, software that was specific that was extremely like, specific to that rollup team. Like zkSync for example, or Optimism's old stack and so we and then the whole point of Celestia is that you can create your own train. The whole point of Celestia is that you don't use someone else's rollup, but you create your own rollup. So that's why we created Rollkit. But now more recently now there's other people creating general purpose rollup software like, like Optimism's new Bedrock infrastructure for example. So for that reason we decided to kind of like split out Rollkit into its own project that is neutral and independent from Celestia.
+
+Anna Rose (00:46:08):
+Interesting.
+
+Mustafa Al-Bassam (00:46:08):
+Because Celestia has actually be a neutral DA layer to all rollup software. And on the flip side, that also means that Rollkit is neutral to what DA layer supports. So you can actually add other DA layers to Rollkit, not just Celestia.
+
+Anna Rose (00:46:23):
+Cool.
+
+Mustafa Al-Bassam (00:46:23):
+Because we have like a, like a modular DA interface.
+
+Anna Rose (00:46:27):
+Was it built together with sort of EVM-centric rollups as well? So like, is it easy to work with an EVM as well as other systems?
+
+Mustafa Al-Bassam (00:46:34):
+It was kind of like built very specific to the ABCI interface.
+
+Anna Rose (00:46:39):
+Okay.
+
+Mustafa Al-Bassam (00:46:39):
+That Tendermint exposes. So it's like very Cosmos-centric. But that being said, that's not the end vision. The end vision is that it should be able to support any kind of execution environment. So like for example, we have Ethermint running on Rollkit, so you, there is some EVM you can get an EVM change running on Rollkit.
+
+Anna Rose (00:46:57):
+I see, I see.
+
+Mustafa Al-Bassam (00:46:58):
+But that's also like, that's not ideal either. Like ideally we want to even more abstract than that. Like we want it possible to run like execution layer like Geth for example, without the Cosmo CSK directly on Rollkit
+
+Anna Rose (00:47:13):
+And I guess in that Rollkit, going back to that earlier question, do you actually have the Celestia light client or light client and when you say DA, I think you're saying data availability level layer, right?
+
+Mustafa Al-Bassam (00:47:24):
+Yeah.
+
+Anna Rose (00:47:25):
+So do you have that light client already kind of built into this Rollkit or to this like is it an SDK? Like what it's framework?
+
+Mustafa Al-Bassam (00:47:33):
+Yeah, we describe it as a framework.
+
+Anna Rose (00:47:34):
+Okay.
+
+Mustafa Al-Bassam (00:47:35):
+Like we were debating actually what should we, what is it really? Is it SDK is a framework? Is it like no one knows really.
+
+Anna Rose (00:47:41):
+Okay.
+
+Mustafa Al-Bassam (00:47:41):
+We just decided to settle on a framework
+
+Anna Rose (00:47:43):
+Template?
+
+Mustafa Al-Bassam (00:47:44):
+Yeah. Template. Yeah. I mean Optimism calls Bedrock a template or blueprint.
+
+Anna Rose (00:47:48):
+Okay.
+
+Mustafa Al-Bassam (00:47:50):
+But Rollkit doesn't embed the Celestia light client directly, but it can interface with the API endpoint of a local Celestia light client. So the idea is that you run a Celestia light client locally and then you run a Rollkit, light client locally and Rollkit can communicate with that Celestia light client via its API or RPC endpoint. And you can also actually add other DA layers to Rollkit, as I said, it's not like it's supposed to be neutral from Celestia, but you can add other DA layers to Rollkit via its interface like that you can add Bitcoin for example.
+
+Anna Rose (00:48:25):
+Cool. I want to kind of just explore even a bit deeper that like that two-way light client situation in the context of the name spaces. So like if you have the sovereign chain, the light client on Celestia, the sovereign chain itself is also running a light client of Celestia. Is it only pulling into that light client things that match the name space that they've chosen? Like does that mean it's even like more sort of streamlined and you have none of the other junk?
+
+Mustafa Al-Bassam (00:48:53):
+Yeah, exactly. So when you launch your own Rollkit rollup, you define a name space, identify it for your rollup.
+
+Anna Rose (00:49:00):
+Okay.
+
+Mustafa Al-Bassam (00:49:01):
+And then the Rollkit light client will query what's called like the API endpoint on the Celestia light node where what the API endpoint does is you can request some light node to get what's called get data by name space for a specific block height. So you can query block heights for data for this specific namespace and behind the scenes the Celestia light node will connect to the PHP network and will query the nodes that are around it for only the data for your rollup.
+
+Anna Rose (00:49:32):
+Nice.
+
+Mustafa Al-Bassam (00:49:32):
+And it doesn't have to connect to Infura or any kind of centralized service or anything like that. It all happens in a decentralized way, peer-to-peer.
+
+Anna Rose (00:49:41):
+And I know I keep asking this, but does this mean that it, that it does it faster or is it just like, is the actual light client itself even smaller?
+
+Mustafa Al-Bassam (00:49:52):
+Oh, depends, it depends what you mean by faster.I wouldn't say it's necessarily faster than a centralized service. It's not so much about the speed, it's more about the fact that it's more decentralized.
+
+Anna Rose (00:50:01):
+Okay.
+
+Mustafa Al-Bassam (00:50:01):
+And more trust minimized. Like you don't have to rely on a trusted third party to tell you what your data is. You can just ask the network directly.
+
+Anna Rose (00:50:10):
+Cool. Cool.
+
+Mustafa Al-Bassam (00:50:10):
+And that's actually kind of like one of my biggest like pet peeves about the blockchain ecosystem post Ethereum. Like actually, like people think light clients are really hard, but Bitcoin has extremely good light client support and I think that's something that people miss. Like if you download a Bitcoin light client on Android, the most popular Bitcoin wallet on the Android is called Bitcoin Wallet. It has like 5 million installs and it doesn't connect to a centralized endpoint. It actually connects directly to the Bitcoin peer-to-peer network.
+
+Anna Rose (00:50:42):
+Yeah.
+
+Mustafa Al-Bassam (00:50:42):
+And it has a light client embedded and it works beautifully that you can actually see the blockheaders on your phone and stuff and so on and so forth.
+
+Anna Rose (00:50:49):
+And that's better than, like if you look at what's the most popular, what are the most popular Ethereum wallets, I'm guessing something like MetaMask, which is I'm guessing always querying from Infura.
+
+Mustafa Al-Bassam (00:50:58):
+Yeah
+
+Anna Rose (00:50:58):
+Yeah
+
+Mustafa Al-Bassam (00:51:00):
+And to me like that's like one of my biggest pet peeves about the current blockchain ecosystem and that's also something that Moxie Marlinspike mentioned in his blog post critiquing Web3. Moxie Marlinspike is the creator of Signal messaging app and that's something that we want to solve because like one of our, I think one of the key values of blockchain network should be that users should be first class citizens of a network. Because if you're just querying a centralized database and kind of like erodes at that value a little bit
+
+Anna Rose (00:51:31):
+Yeah. We'll try to dig that up and add that article or that post to the show notes. So I want to hear where Celestia is at today. How close are you to launch? What kind of projects maybe have already emerged in your community? I'm guessing most of them are sovereign chains or existing chains that want to use the data availability.
+
+Mustafa Al-Bassam (00:51:53):
+Yeah. So yeah, it's been kind of like a wild past year. In the past year, like before a year ago there wasn't really a rollup ecosystem outside of Ethereum. And we were really trying to bootstrap a kind of like a modular blockchain ecosystem that was just, that wasn't just Ethereum-centric, but was also in like, for example, the Cosmos ecosystem. And over the past year there's been many projects that have emerged in the kind of Celestia ecosystem and also the broader modular ecosystem. Just to name a few, as I mentioned earlier. One of them is called Dimension, which are building Cosmos based rollups that can connect to the Cosmo settlement materials. Another project is Sovereign Labs, which are building sovereign zk-rollups using RISC Zero architecture.
+
+Anna Rose (00:52:42):
+Cool.
+
+Mustafa Al-Bassam (00:52:42):
+They also support Celestia last year as a DA layer and another project is called Eclipse, which are building customizable rollups, starting with supporting the Solana virtual machine and allowing people to deploy Solana virtual machine rollups.
+
+Anna Rose (00:52:58):
+Interesting.
+
+Mustafa Al-Bassam (00:52:58):
+That support Celestia as a data available layer.
+
+Anna Rose (00:53:01):
+Would these be in any way connected to the original Solana or is this like Solana mirrored, but like using Celestia for DA?
+
+Mustafa Al-Bassam (00:53:09):
+So it's not connected to Solana mainnet chain itself.
+
+Anna Rose (00:53:13):
+Okay.
+
+Mustafa Al-Bassam (00:53:13):
+It's just using the Solana virtual machine. So it's not, it's not like a Solana Layer 2
+
+Anna Rose (00:53:16):
+Okay.
+
+Mustafa Al-Bassam (00:53:17):
+It's just like Solana virtual machine.
+
+Anna Rose (00:53:19):
+But can it interact, like, say you made a bridge, would it make like any sort of application running over both of them easier to build?
+
+Mustafa Al-Bassam (00:53:26):
+I mean possibly I guess I don't know if, I haven't really thought about that but I guess yeah. I mean, it could be possible to verify Solana fraud proofs more easily inside of it you are using Solana as a virtual machine, that could potentially be the case for sure. And yeah, so there's definitely a really widely expanding modular ecosystem. One of the most interesting trends is that we're seeing a massive emergence of sequencer as a service providers, and more specifically like rollup as a service providers. And what that means is that in the future, and this was like kind of like my original like end vision of Celestia, what I want to see in the modular stack is that in the future, you'll just be able to, as a developer, define the code for your application and go to a rollup as a service provider and deploy your application as a rollup in one click. And that service provider will provide the first sequencer for you and it'll be completely trust minimized because the whole point of rollups is that you don't have to trust a sequencer. You remember like Amazon AWS managed blockchains, this is like AWS managed blockchains, but it's actually makes sense and it's actually trust minimized.
+
+Anna Rose (00:54:35):
+Why does the sequencer become decentralized though, in what you just described? Like why would it be more be why would it be more decentralized than an existing rollup?
+
+Mustafa Al-Bassam (00:54:43):
+Because if the rollup is constructed in the most secure way possible, then the rollup should inherit liveness and sensitive resistance from the DA layer. It's like if the sequencer goes down, you should be able to force transactions to be included if the users submit them directly to the DA layer or should be able to elect the new sequencer, for example.
+
+Anna Rose (00:55:04):
+Ah, interesting.
+
+Mustafa Al-Bassam (00:55:06):
+The most important point is that you don't have to trust a sequencer to not steal your money because of the fraud proofs or ZK proofs or just running a full node, if you're what's called a pessimistic roll up
+
+Anna Rose (00:55:18):
+The opposite of an optimistic roll up
+
+Mustafa Al-Bassam (00:55:21):
+Yeah. Like people think pessimistic rollups are a joke. Like I know like Optimism did April Fool's joke about it, but actually
+
+Anna Rose (00:55:27):
+It's a thing
+
+Mustafa Al-Bassam (00:55:28):
+Yeah, pessimistic rollups were a thing before optimistic and zk-rollups. Like Tether is a pessimistic rollup on Bitcoin.
+
+Anna Rose (00:55:35):
+Is plasma a pessimistic rollup?
+
+Mustafa Al-Bassam (00:55:38):
+No, because plasma has fraud proofs
+
+Anna Rose (00:55:40):
+Okay.
+
+Mustafa Al-Bassam (00:55:40):
+But a pessimistic rollup is just a rollup that doesn't have either fraud or zk-proofs, which means that you have to run a full node
+
+Anna Rose (00:55:47):
+Oh okay
+
+Mustafa Al-Bassam (00:55:48):
+For the rollup. That's what we mean by it's pessimistic because you have to run the transactions yourself basically to verify that roll up.
+
+Anna Rose (00:55:54):
+I see, I see
+
+Mustafa Al-Bassam (00:55:55):
+But in terms of like launch yeah, we plan to launch Celestia as a mainnet sometime around Q2 or Q3 of this year.
+
+Anna Rose (00:56:05):
+Exciting.
+
+Mustafa Al-Bassam (00:56:06):
+And we are launching an incentivized testnet next month and it's gonna be like the biggest and I guess first and only pretty much test of data availability sampling light clients on a real network. We're gonna have around 900 light clients that are doing data availability sampling. So it's gonna be like the, the largest scale test of a data availability layer with trust minimized light clients.
+
+Anna Rose (00:56:34):
+Very exciting. I know that the ZK Validator is going to try to be in that. We don't know the future, but I know it's going to be a real competitive space, but we're, we're definitely going to at least try it out. We didn't actually get a chance to talk about the data availability sampling. Maybe we should actually for a minute. Can you share a little bit about what that is?
+
+Mustafa Al-Bassam (00:56:52):
+Sure. So data availability sampling is basically, in a nutshell, it's a technique that allows a light client to have a very high guarantee, like almost a 100% guarantee that the entire block was made available and was published by only sampling a very small portion of that block.
+
+Anna Rose (00:57:15):
+And the probability is that if the samples come back as accurate, then your assumption is the rest of the node is also accurate. But is it the validator? The validators are doing that, right?
+
+Mustafa Al-Bassam (00:57:27):
+Well it's the end clients, like the light nodes are doing that.
+
+Anna Rose (00:57:30):
+Okay. Yeah. So it's the light nodes that are doing that, are they all sampling differently? Like is it sort of like every single light client's gonna sample a small subset all at the same time, but always different, therefore, like a lot of ground is actually covered?
+
+Mustafa Al-Bassam (00:57:45):
+Yeah, exactly. So the idea is that each light node samples a random, a different random set of that block and the idea is that if you have enough light nodes in network and any data is withheld or then the light nodes can collectively reconstruct that block by sharing samples with each other.
+
+Anna Rose (00:58:04):
+Cool.
+
+Mustafa Al-Bassam (00:58:05):
+So it's kind of like a self healing network in a sense.
+
+Anna Rose (00:58:07):
+Is it the whole thing then, like, so all of those, so by the way, you keep saying light nodes, I say light clients. Is it okay to use those interchangeably?
+
+Mustafa Al-Bassam (00:58:15):
+Yeah, it's okay. I'm actually meant to be using light nodes.
+
+Anna Rose (00:58:18):
+Okay.
+
+Mustafa Al-Bassam (00:58:18):
+Because like they might not just be clients, they might actually be like sequences.
+
+Anna Rose (00:58:22):
+Ah.
+
+Mustafa Al-Bassam (00:58:23):
+So yeah.
+
+Anna Rose (00:58:23):
+Okay. Okay. I'll use that from like from now on, but, so if you were to add up every single sample that all of the light nodes have done, it fully covers the whole thing. Is there overlap though? Like, would you also have a little bit of overlap between them or are they like always sampling different things from one another?
+
+Mustafa Al-Bassam (00:58:39):
+Yeah, you can have some overlap because the clients, or as I say, the nodes, they don't communicate with each other about what they're going to sample. So if there will be some overlap, but the general idea is like probabilistically speaking, once you hit a minimum threshold of light nodes, then you know that for sure you have enough light nodes that they've collectively have the whole block.
+
+Anna Rose (00:59:04):
+But why would you not overlap though?
+
+Mustafa Al-Bassam (00:59:06):
+Well, you do overlap.
+
+Anna Rose (00:59:08):
+Oh, you do? You do have them sampling the same pieces, for example, like you'd have, okay, okay
+
+Mustafa Al-Bassam (00:59:13):
+Yeah, you do overlap because they don't share with each other. They don't coordinate with each other.
+
+Anna Rose (00:59:17):
+Ah, yeah.
+
+Mustafa Al-Bassam (00:59:18):
+About what they sampled.
+
+Anna Rose (00:59:19):
+I see.
+
+Mustafa Al-Bassam (00:59:20):
+So they just, they choose a random number or a random set of chunks in that block.
+
+Anna Rose (00:59:25):
+Interesting.
+
+Mustafa Al-Bassam (00:59:26):
+So, so you might end up with overlap.
+
+Anna Rose (00:59:28):
+Cool. So I think we've covered like the community as it is right now, but looking forward, do you see, sort of like in your ecosystem, would there be applications specifically or do you see those always as existing only on the sovereign chains or on the rollups that live on top of Celestia?
+
+Mustafa Al-Bassam (00:59:47):
+Yeah. So I mean, Celestia is kind of a weird L1 in the sense that we're kind of like more B2B than B2C.
+
+Anna Rose (00:59:53):
+Okay.
+
+Mustafa Al-Bassam (00:59:54):
+And by B2B, I mean blockchain to blockchain like
+
+Anna Rose (00:59:57):
+Yeah. Blockchain. Yeah.
+
+Mustafa Al-Bassam (00:59:59):
+So kind of like in many circumstances, like we're one step removed from the end developer, because last year as a DA is usually used in conjunction with the execution environment and so it's like the execution environment is where the applications live.
+
+Anna Rose (01:00:14):
+Got it.
+
+Mustafa Al-Bassam (01:00:15):
+And so that's like where Rollkit, what Rollkit does. So Rollkit is more B2C because Rollkit directly interacts with the actual application developers and that's why we needed, we needed to build Rollkit because it was necessarily to achieve the full vision. But Celestia as a DA, I think in many cases what, like ideally it should be abstracted the way because like, it should be like magic at the end of the day.
+
+(01:00:37):
+Like if you're application developer there was a quote about this on Twitter or someone said it, but like Jimmy Hendrix does not need to understand how to build a guitar to play the guitar, right. So it's kind of the same thing, like rollup application developers should not have to be protocol developers to create the application. The end goal should be like magic. Like you should just develop your own application and have it deployed without understanding how the lower ends of the stack work. And like part of the goal is like we want it to be possible to make it that deploying a new blockchain is as easy as deploying a new smart contract.
+
+Anna Rose (01:01:14):
+Very cool. Well, on that note I want to say a big thank you Mustafa for coming on the show and giving us an update on Celestia kind of revisiting it and also letting me ask a lot of these open questions that you can see. I understood parts of this stack, but not exactly. So yeah, thank you so much for walking through it with me.
+
+Mustafa Al-Bassam (01:01:32):
+Thanks for having me.
+
+Anna Rose (01:01:33):
+So I want to say a big thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners, thanks for listening.
+

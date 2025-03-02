@@ -1,0 +1,874 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:27
+
+
+This week, Kobi and I chat with Gal Arnon from the Weizmann Institute of Science and Giacomo Fenzi from EPFL. They are co-authors of the paper entitled STIR: Reed–Solomon Proximity Testing with Fewer Queries. We discuss how they came to work on these topics and how the work came about. We then dive into the history of FRI. We tease out some of the nuances of FRI and then introduce STIR as a replacement to FRI that include multiple optimizations drawing on previous work that improve the performance.
+
+
+Now, before we kick off, I just want to let you know about an upcoming hackathon we are getting very excited about. ZK Hack Kraków is now set to happen from May 17th to 19th in Kraków. In the spirit of ZK Hack Lisbon and ZK Hack Istanbul, we will be hosting hackers from all over the world to join us for a weekend of building and experimenting with ZK tech. We already have some amazing sponsors confirmed, like Mina, O(1) Labs, Polygon, Aleph Zero, Scroll, Avail, Nethermind, and more. If you're interested in participating, apply as a hacker. There will be prizes and bounties to be won, new friends and collaborators to meet, and great workshops to get you up to date on ZK tooling. Hope to see you there. I've added the link in the show notes, and you can also visit zkhackkrakow.com to learn more. Now, Tanya will share a little bit about this week's sponsor.
+
+
+01:50: Tanya:
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. And now, here's our episode.
+
+
+02:34: Anna Rose:
+
+
+Today, we're here with Gal Arnon from the Weizmann Institute of Science and Giacomo Fenzi from École Polytechnique Fédérale de Lausanne, or EPFL. They are two of the co-authors on the new STIR work, STIR: Reed-Solomon Proximity Testing with Fewer Queries. Welcome to the show, both of you.
+
+
+02:53: Gal Arnon:
+
+
+Thanks for having us.
+
+
+02:54: Giacomo Fenzi:
+
+
+Thank you for having us.
+
+
+02:55: Anna Rose:
+
+
+We have Kobi as the co-host for this one. Hey, Kobi.
+
+
+02:57: Kobi Gurkan:
+
+
+Hello.
+
+
+02:58: Anna Rose:
+
+
+So I think to start off, we should get to know both of you. What are you studying, and why are you studying and working on the work you're doing?
+
+
+03:06: Giacomo Fenzi:
+
+
+Okay, maybe I can start on this. So yeah, I'm Giacomo. I'm a second year PhD student at EPFL. And I'm working with Alessandro Chiesa and my research is basically everything that's zero knowledge. Like interactive proof, or interactive oracle proofs, cryptography, lattices, anything that hopefully ends up in making efficient proof systems at large. Maybe my kind of background is that I like cryptography, I like having this kind of intersection between math and computer science and then there's only very few places where you're able to do things which are mathematically interesting and also end up having some practical impact. So I just kind of continued going this path and I ended up starting my PhD and I'm pretty happy with how things have been going.
+
+
+03:52: Anna Rose:
+
+
+Interesting. Were you specifically interested in zero-knowledge type things or would you say your general field is somewhat outside of that?
+
+
+04:00: Giacomo Fenzi:
+
+
+Well, so originally I was very much into pure mathematics, category theory, which kind of leads directly to elliptic curves and kind of stuff. So that kind of was my overall introduction into cryptography. And then originally I was introduced by, to zero knowledge proof during my bachelor, this seemed like a very cool concept, like very counterintuitive. And so I kind of started looking into it. And then it was a bit of a marriage of convenience. A part of it was like the fact that it was very cool, I really enjoyed the math. And a part was that a lot of the work that I had been doing during my masters was on like, I thought it was based on cryptography which turned out to be less than ideal. So at the end I ended up working on zero knowledge proofs and those are not broken yet at the moment. So this kind of like all tied in very well together.
+
+
+04:52: Anna Rose:
+
+
+Nice. What about you, Gal? What are you studying and why?
+
+
+04:57: Gal Arnon:
+
+
+So I'm a fourth year PhD student at the Weizmann Institute with Moni Naor and I'm also co-advised by Eylon Yogev at Bar-Ilan. I work on proof systems. My background is mostly in theoretical computer science, complexity theory. And I tended towards the proof systems on the theory side, and that somehow led me towards more and more practical things to some degree, at least. Yeah, I was interested in complexity and cryptography basically from my bachelor's and I just kept going in that direction.
+
+
+05:36: Anna Rose:
+
+
+Cool. Like the work we're going to talk about today, STIR, is STIR specific to ZK or could it be used in other contexts as well?
+
+
+05:46: Giacomo Fenzi:
+
+
+So I guess there are different ways to answer this. So one of them is like, so we have  this pet peeve between us in the theory community that whatever ends up being called ZK in practice is not really ZK really. Like we have... There's this whole like ZK for scalability versus ZK for real zero knowledge that is kind of like a pet peeve. So we can kind of answer the question in a sense like, yes, it can be used for a lot of other things that are not zero knowledge. In fact, the thing that we do is not really in zero knowledge. So that's one part. But I don't think that's the interesting direction to answer that. So from the more practical thing, we think so. There's... So zero knowledge proofs is interesting. It's a key building block that you can get good improvement concretely and efficiency things. There are other things that end up being very friendly to Reed-Solomon encodings and they're like... So for example, there is this work by Mark Simkin and other people on data availability using FRI, which is very, very interesting. I have not really fully grasped it yet, but that's a way in which you can use this proximity test, which like FRI, in order to actually get something which is not directly to the way of constructing zero knowledge proofs or SNARKs in general. So that's a very interesting direction for me. And then, of course, the theory side, which I think Gal is much more qualified to answer about.
+
+
+07:19: Gal Arnon:
+
+
+Yeah, on the theory side, low degree tests like STIR are very influential and very important in theory to achieve the PCP theorems, IOP theorems, things like that. I would say that in some sense, because STIR is mostly for concrete efficiency, it doesn't necessarily do anything It does improve on some things theoretically that we don't know how to achieve, but these things are not necessarily the things that interest theory people the most, but this entire field is very important for theory people.
+
+
+07:55: Anna Rose:
+
+
+Okay, cool. The authors of the work STIR, it's yourselves plus Alessandro Chiesa and Eylon Yogev. And actually, you're both at different universities as well. I'm kind of curious how work like this happens. Like, is there one person has an idea? Had you been working on things before together that this kind of idea came out of? Yeah, where does it come from? And why are you all working together?
+
+
+08:22: Gal Arnon:
+
+
+Alessandro and Eylon have been working together for a while.
+
+
+08:24: Anna Rose:
+
+
+I see, okay.
+
+
+08:25: Gal Arnon:
+
+
+And at some point I joined, I started working with them as well as Eylon's student. So I think this specific project starts from a previous paper of ours, of Eylon and Alessandro's, which achieves... What we're really interested in these things, in these protocols is the query complexity. So it achieves theoretically the best query complexity that we know. It's not practical at all. And so the question was, can you make this practical? And first of all, Eylon and I have no real practical experience. So we definitely needed someone who knew what they were doing. So we added Giacomo to the project to try to bring that project to make that practically viable. And it turned out pretty difficult. Like we tried to do a lot of things, and it didn't really work out. But then somehow the ideas from there, we sort of shifted to something that's not necessarily theoretically as good as that protocol.
+
+
+09:36: Anna Rose:
+
+
+Had been, yeah, yeah.
+
+
+09:37: Gal Arnon:
+
+
+Practically. Yeah, practically it was suddenly, like we just took those ideas and put it in a different protocol.
+
+
+09:45: Anna Rose:
+
+
+Cool.
+
+
+09:46: Giacomo Fenzi:
+
+
+We tried very hard to get the previous protocol working, especially because we had a very cool name for it. We had worked very hard, we had the acronym there. And then from the hash of the protocol, STIR rose, which I still think we made a very good job with the naming. I still think that it came out quite nicely, but the previous name was great. I'm not going to spoil it because we might eventually reuse it, but we were very happy with that.
+
+
+10:14: Anna Rose:
+
+
+You're talking about STIR, like you're excited about the name STIR.
+
+
+10:18: Giacomo Fenzi:
+
+
+So the name STIR is great. I love the name STIR.
+
+
+10:21: Anna Rose:
+
+
+Okay. 
+
+
+10:21: Giacomo Fenzi:
+
+
+Did it actually, I think it was your idea, Gal, right?
+
+
+10:25: Gal Arnon:
+
+
+I think so. It might've been Eylon's, but I think it was mine. We had some, we were throwing around ideas for how to improve it, and then we got bored. So we started just throwing out random names and I think this one just stuck.
+
+
+10:43: Giacomo Fenzi:
+
+
+Which is by far the most worthwhile part of any research project, by the way. But the previous protocol with an even better name, incredibly belabored acronym. You know, long, complicated, it made no sense. It was... But it had a nice flavor to it. So I was very happy, and then we ended up having to scrap it, which I still lose sleep over.
+
+
+11:04: Anna Rose:
+
+
+But it sounds like you might bring this back someday if you can.
+
+
+11:10: Giacomo Fenzi:
+
+
+Look, all I can say is that names like that were hard to come by, and I'm not willing to give up without a fight.
+
+
+11:18: Anna Rose:
+
+
+Okay. That's nice.
+
+
+11:20: Gal Arnon:
+
+
+Giacomo, correct me if I'm wrong, but I think that's part of why you joined the project. I think I said that name originally, and...
+
+
+11:29: Giacomo Fenzi:
+
+
+Yes, yes. So it was kind of funny because we went... During the summer, we did this summer school together on zero knowledge proofs at…. And so we were both TAs of the course, and I was familiar with the work, and then Gal floated to me the idea of trying to get in completely efficient, but the name was really what sold me. The ideas were cool, everything was pretty, but the name was the thing that really got me going. 
+
+
+11:57: Anna Rose:
+
+
+Giacomo, now I'm curious, the kind of work you were doing before. Because Gal just kind of highlighted you came in to make something practical. What had you been doing just before this?
+
+
+12:09: Giacomo Fenzi:
+
+
+So it's kind of funny because I was watching this talk of Mir Belara like two days ago, and he said this kind of thing, like he feels like when he's with a theoretician, he feel like a practical person. While when he's with practitioners, they feel like a theoretician. He's a bit of a misfit in both camps, and I kind of am in the same camp. So during my master's, I was doing very applied attacks on hydrogen-based protocol, this kind of stuff. And during my PhD, I've been doing a little bit of this kind of work, which I like to think sits between the theoretical and the concrete. So for example, some of the work that we've been doing is this line of work with Khanh Nguyen, which essentially is on efficient polynomial commitment from lattice schemes, and trying to get something which kind of resembles a lattice-based KZG. So trying to get both a theoretical and a concrete component.
+
+
+So, a part of that is that I have this kind of interest in like, I don't like to just be completely theory, I really like to see some sizes at the end of a project. Then I also have a bunch of programming experience. I've been working a lot on this kind of things. And I think I have a relatively good understanding of what are the bottlenecks in proving systems and the likes. So I end up being like the concrete guy in this kind of project, which is kind of funny, because in my old lab, I used to be the theory guy. So it's very funny to me.
+
+
+13:40: Kobi Gurkan:
+
+
+All right, so we came here today to explore STIR, but as we know, it comes as a replacement or, let's say, an improvement to something that a lot of people use today, which is FRI. So what I was thinking is that we can start with some background on how FRI works, and basically show the history of the evolution of FRI, because the FRI that is used today, or at least the systems that deployed FRI, are not exactly what existed in the original paper. So yeah, could you tell us a bit about that kind of evolution?
+
+
+14:20: Giacomo Fenzi:
+
+
+Okay, yeah, so maybe at a high level it's kind of an interesting part to consider is the anatomy of a STARK or any of these kind of IOP-based SNARKs. So the overall goal is to try to build efficient SNARKs. At an high level, we want to build a SNARK, and the SNARks that we consider for which STIR and FRI are important are STARKs, which in my mind, morally, they are just a SNARK which are obtained by compiling an IOP used in a BCS transformation. So doing everything in the pure random oracle model. So what usually ends up happening is that the STARKs are obtained by taking a polynomial IOP, which may be tailored to some arithmetization or whatever, and then compiling it from a polynomial IOP into an IOP. And there are some different ways to do it. Like the strategy we described is not universal. So for example, breakdown does different things, but one way that people end up doing it is that the polynomials in the polynomial IOP actually end up being encoded as Reed-Solomon codewords. And then the soundness of the resulting IOP is dependent on the verifier being able to correctly check the claim that the prover sent are actually really Reed-Solomon codewords or close to them. And these are where like FRI and STIR come in.
+
+
+15:42: Gal Arnon:
+
+
+So Reed-Solomon codeword is the evaluation of some low degree polynomial over some evaluation domain. So the prover sends a function and it claims that it's some low degree polynomial, and we want the verifier to be able to test this. Test that at least that it's close to a low degree polynomial and do that with the aid of the prover. So both STIR and FRI, they're trying to solve this problem. So because these protocols are used later, they're compiled using the BCS transformation into an actual SNARK or STARK. So maybe a point to note about these transformations is when we compile the IOP into a SNARK, a lot of the parameters from the IOP, like the query complexity, they affect the efficiency of the SNARK. Yeah, so the main parameter that we cared about for STIR was improving the query complexity, because that improves the overall size of the resulting SNARK and also the number of hashes that the verifier needs to do, which is very important, especially in recursive SNARKs and things like that.
+
+
+16:54: Kobi Gurkan:
+
+
+Okay, cool. So in terms of query complexity, we know already that today these proofs that are based on FRI are pretty large, and that's why you usually batch, let's say, a lot of transactions in a rollup before you verify them. And the verified time, in the very practical sense, it affects the gas cost you have on Ethereum, for example, to verify proofs. So those are definitely very, very important. And my thinking is that in order to understand the improvement that was made in STIR, we actually need to go much deeper into FRI and understand its structure and how the BCS transformation works. So it would be really great to try to make somewhat very high level step by step of what are the different components in FRI and how they come together, and then we can see how we improve them using STIR. 
+
+
+17:59 Giacomo Fenzi:
+
+
+Sure. Maybe I can start by talking a little bit about how the IOP and the BCS transformation translate to concrete efficiency. And then we can talk about FRI and see how the different components are, the commit phase, the query phase, and how they translate into the sizes. So the BCS transformation basically is a very lightweight way to take an IOP and turn it into a SNARK. The main idea is that these IOPs are interactive protocols in which the prover and the verifier interact for a certain number of rounds. And each round, the prover sends an oracle. The verifier sends some random challenges, some public coin randomness, that he samples, and then at the end of this interaction, the verifier makes some queries to these oracles. And depending on the result of these queries, it will end up actually accepting or rejecting the claim. The way that we end up translating this into a SNARK is that instead of sending these oracles, which we cannot really do in the real world, the prover ends up committing to them using a Merkle tree.
+
+
+Later on, when the verifier wants to query them, then he will actually ask the prover for the authentication path associated to the index of the proof that was queried, and then verify the authentication path and use the value that was sent by this. So in a certain sense, the Merkle tree allows you to get this virtual oracle access. Further, to make things very interactive, we also do a Fiat-Shamir transform. And basically this combination of Merkle trees plus Fiat-Shamir transform are the core of the BCS transformation. So if you think about the parameters of the IOP, this is essentially how we translate into the resulting SNARK. So the prover time of the resulting SNARK is basically the prover time of the IOP plus the cost of committing to these Merkle oracles. The verifier time is basically the verifier time of the IOP plus the cost of verification on the path plus the Fiat-Shamir hashes. Queries in the IOP translate to authentication path which the prover has to send. And also, of course, if you have an authentication path, you also have to verify it. So queries also translate in a higher number of hashes that the verifier has to compute. So basically, the parameters of the IOP, and in particular, the queries, really affect what the sizes are. Because in practical deployment, these kind of Merkle trees end up being what the authentication path and to be the majority of the proof size that eventually appears in the resulting SNARK. So this is like BCS at an high level and now where you pay the costs. And then with FRI, I think I can let Gal take lead on that.
+
+
+20:38: Gal Arnon:
+
+
+Yes. FRI is an IOP, which will later be compiled into STARK using, in the way that Giacomo said. So the way it works is you start off with this function that's claimed to be a Reed-Solomon codeword. You start off with an interaction phase. You go for multiple iterations. In one FRI iteration, you start off with a codeword over some domain of some size, and then you fold this codeword or this function claimed to be a codeword into a smaller domain. So usually when FRI is presented, you think of a domain that's half the size. It's actually going to be important for STIR later, but not really for FRI. So you fold it into something that's half the size, but this somehow preserves the distance from the code. So you keep doing that over and over again, a logarithmic number of times, until you get something that's supposed to be basically a constant function. And then this is supposed to be very easy to test. But this is just interaction. This folding doesn't actually verify that the functions are sort of connected in any way. So afterwards, you have a query phase in which the verifier makes a bunch of queries and queries all of the oracles that were sent in this entire protocol in a correlated way and verify some consistency between each one of the functions. So it actually tests that the function that we had at the beginning and the folded function are consistent in some way. And then this together, this tells us that the function is actually, or the original function was actually close to low degree.
+
+
+22:21: Kobi Gurkan:
+
+
+Nice.
+
+
+22:22: Anna Rose:
+
+
+Can I ask a very quick clarification? Because you're using the term folding, and I just want to know if it's folding like we've been hearing about with like folding scheme, folding, or if it's a different kind of folding.
+
+
+22:35: Giacomo Fenzi:
+
+
+No, no, it is a different one. Like in this sense, you can think... This is kind of like a fast Fourier folding. So imagine you take your polynomial, you split it into even and half coefficients, and then you kind of take a random linear combination of the two halves.
+
+
+22:48: Anna Rose:
+
+
+I see.
+
+
+22:49: Giacomo Fenzi:
+
+
+And then you keep doing this.
+
+
+22:50: Anna Rose:
+
+
+It's in a different part of the entire construction, right? It's not in the same place, it sounds like.
+
+
+22:56: Giacomo Fenzi:
+
+
+Exactly, exactly. Like the folding, these accumulation-based foldings, they view the same terms, which is unfortunate because the nomenclature is the same, but yes, it is a different kind of folding in this case.
+
+
+23:09: Anna Rose:
+
+
+Got it.
+
+
+23:10: Giacomo Fenzi:
+
+
+Yeah.
+
+
+23:10: Gal Arnon:
+
+
+Yeah, and unfortunately in this field, things tend to fold. So we all just use that word. 
+
+
+23:18: Kobi Gurkan:
+
+
+Yeah, and now when you talk about folding in FRI, you basically, let's say, do it on the polynomial that you're working on, and then by folding it, you reduce its degree. But you also move from one evaluation domain to the other. And if I remember correctly, in FRI, you basically do the same reduction in size. And for example, like you said, in the evaluation domain, you go to be the half the size, and the degree goes to be half the degree, and so on. And that probably also relates to the concept of rate that might be useful to introduce.
+
+
+24:02: Gal Arnon:
+
+
+Yeah. So maybe I'll just say, first of all, what is the rate of a code? So the rate of a code is, it's the inverse of the amount of redundancy in the codeword. So at least on an intuitive level, the more redundancy you have, the more errors you can...
+
+
+24:21: Anna Rose:
+
+
+Handle.
+
+
+24:22 Gal Arnon:
+
+
+You can have and still be able to decode. So it should intuitively be easier to test proximity or decode or things like that. So the smaller your rate, the easier it is to test basically. So with the Reed-Solomon codewords, the rate is going to be the degree over the size of the evaluation domain in this case.
+
+
+24:43: Giacomo Fenzi:
+
+
+Yeah. Maybe to give some numbers,think of these rates or something like one half, one quarter, one eight,  one 16th, usually. So there's a trade-off on how you choose this, but you can basically think that you're taking your polynomial of, say, degree 2 to the 20, and then you write it down as evaluation over a domain, which is twice or four times or eight times as big. And basically, if you think about it, the size of the polynomial related to the domain kind of encodes like is the rate, and it is the amount of... So the rest is just redundant information that allows you to then do testing easier. In normal coding theory, you really want this rate to be as close to 1 as possible, because that means that you have to send less information to the code. But in our case, this is also important for practical efficiency, because it relates to the size of the initial FFT that you need to do to encode the oracle. So you don't want to have a rate which is absolutely large, especially at the start, because then that means you have to do a very large FFT. But the main idea of STIR is that this added redundancy really helps you a lot in order to test things in a more efficient way. 
+
+
+26:01: Kobi Gurkan:
+
+
+So as far as I remember, the original papers for FRI and STARK, they used this kind of two-wise folding, where they reduced the degree by half each time. And the result that they got is that because you fold it by the same manner, both the evaluation domain and the polynomials, you somehow get to keep the same rate. Is that right?
+
+
+26:25: Gal Arnon:
+
+
+Yeah, yeah. So with FRI, whenever you do folding, whether it's folding with a factor of 2, which is the original paper, or some general factor k, which is what's actually used in practice, the evaluation domain becomes smaller in a factor of k, and also the degree. So if you have a domain of size n, you get n over k, and you have the degree. The degree is d, to d over k for the next level of FRI. So in the next level, this ratio between the evaluation domain and the degree always stays the same. And so the rate, which is the ratio between these two, always remains the same in FRI no matter what iteration you're in. 
+
+
+27:12: Kobi Gurkan:
+
+
+Cool. Thanks. And so I think that, again, what we're describing is what is the original FRI construction, I guess. And a lot of happenstance, and I think in order to understand STIR, we probably want to understand these new additions that came to FRI in the recent years, like the DEEP papers and other recent papers, because as you mentioned in your paper, the version that is used is not the original one. There have been many, many different additions that people are using today. So what has been added besides the original folding construction and so on and what do they optimize as well?
+
+
+27:56: Giacomo Fenzi:
+
+
+Yeah, maybe like... So, there are like two main like so... And, pardon me because my... I've come in still kind of late so maybe my historical knowledge is not as good but there was the original FRI paper then it was followed by the DEEP-FRI paper and then after that the proximity gaps paper came out which is possibly the most important line of work. So the DEEP-FRI paper essentially introduced, as far as I know, this idea of out of domain sampling, which was used as a way to boost the soundness of FRI. And this is something that we actually use in this work. And effectively, it relates to finding, using quotients in order to amplify distance in the iteration of FRI. So this was one way to boost the FRI soundness. Then this proximity gap paper came out, and this is also a very important workhorse in our paper. And it relates to this kind of notion of proximity gaps, which, at a certain sense, allow you to conduct a much sharper analysis of the original FRI protocol. So the proximity gaps paper basically improved the analysis of FRI protocol by enabling it to essentially getting much tighter bounds. So as far as I understand, the FRI that is actually used in practice is mainly the normal FRI protocol but with analysis from the proximity gaps paper, plus possibly stuff about extension fields, while the contribution of the DEEP paper ends up at an higher level of the stack. So for example, in STARKs, there is this concept of DEEP-ALI, which I think stands for DEEP Algebraic Linking, or something like this, which uses techniques from these DEEP-FRI paper. But this is at an higher level of the stack. The test that is actually run is just FRI.
+
+
+29:46: Kobi Gurkan:
+
+
+OK, cool.
+
+
+29:47: Giacomo Fenzi:
+
+
+And correct me if I'm wrong, like this is my understanding of what's the kind of state of the things.
+
+
+29:52: Gal Arnon:
+
+
+Yeah, the original DEEP-FRI was, just like you said, made to improve the soundness analysis, but with the Proximity Gaps paper, they managed to analyze FRI, the original protocol to have better soundness than DEEP-FRI and also DEEP-FRI doesn't seem to, at least the protocol they gave there, doesn't seem to give anything with this new analysis. So they both just have the same soundness, but the DEEP-FRI has extra steps, so it's not needed.
+
+
+30:25: Kobi Gurkan:
+
+
+Cool. 
+
+
+30:26: Anna Rose:
+
+
+I'm curious, there's also this DEEP-ALI work. Is that not related to any of this? Is that sort of like its own track?
+
+
+30:34: Giacomo Fenzi:
+
+
+Yeah, so it's kind of funny. So this is at an higher level of the stack. So from my understanding, what happens is that when you do this compilation to an IOP, something that you, from a polynomial IOP to an IOP, what you need to do is effectively be able to create these polynomials outside of the evaluation domain in order to get better soundness and test things. So what you end up doing is instead of testing the codeword that you've been sent, you test some appropriate quotient of it. And this essentially is a trick that we also use in this work, enables you to basically ensure the evaluation of the committed codeword on things which are outside of the domain. And this is where the DEEP-ALI line of work from my understanding, which might be incorrect, comes in. So this is kind of like, if you remember the kind of roadmap we talked about, this kind of goes in the compilation from an IOP to, let's call it a Reed-Solomon encoded... From a polynomial IOP to a Reed-Solomon encoded IOP, in which to do this compilation, you end up doing this kind of quotient out of domain sampling kind of things, while the low-degree test, which is FRI at the moment and hopefully STIR in the future, is kind of independent from this DEEP-ALI step. That's kind of my understanding, but again, it's taking it with a grain of salt.
+
+
+32:02: Kobi Gurkan:
+
+
+OK, cool. So in terms of let's say what we try to get to, like what is our target when we use FRI, we try to get to something that is sound enough for us to be confident in. So let's say we're aiming that our eventual totally compiled protocol has, let's say, something like 128-bit security. So what would be the parameter that we would play with? So for example, if we do many more queries and we increase the query complexity, that's one way. But what would be the different parameters that we could use? What we could increase and then decrease the other and so on?
+
+
+32:38: Gal Arnon:
+
+
+So you basically have, for FRI, I guess there's two parameters. Either the rate or the query complexity. So if you have a really, really good rate right at the beginning, so a very, very small rate, so a lot of redundancy, then you get a lot of security by even making one or two queries. Obviously not one or two in the real world, but you get a lot of security for every query that you do. But the problem with having a large rate is that the prover is going to have to work very hard for this. So the smaller the rate, the more the prover has to compute and the more memory it needs, and this just collapses for a very small rate. Or not so small. Like you go to rate 1 over 32, it already starts for large enough degrees, it sort of starts to blow up your RAM completely. And this is just unmanageable. So you get stuck at some point, at least for if you want to work with reasonable parameters. And so you'd have to increase the query complexity. So once you have a fixed rate, so this is how much I will let the prover work. I'll just need to do enough queries in order to get this amount of security, this 128 bits of securities, for example. Once I have the rate fixed, I sort of have to. 
+
+
+34:02: Giacomo Fenzi:
+
+
+There's only one little other thing that you can kind of play around to get some extra soundness. And this is what is also done in practice, and it is by doing some proof of work at the end of the proof. So that is also a way that you can actually end up by boosting the soundness. Of course, this is also trade-off between the prover like cost and the soundness. So you can think about, for example, to add 20 bits of security to your proof, the prover has to do one additional work of that order, basically. So there's also a trade-off between prover time and soundness that you get.
+
+
+34:37: Kobi Gurkan:
+
+
+So yeah, and we do know in practice that FFTs over these large domains is going to be really heavy on RAM, like you said, and that's a real problem in practice especially when we're talking about these huge circuits that are used in rollups, let's say. So yeah, definitely you want to be very conservative with rate. And yeah, I guess this is probably a good time to talk about STIR and what you guys introduced, right? So let's see how you affected all of these parameters.
+
+
+35:09: Giacomo Fenzi:
+
+
+Yeah, so maybe let's start. So the main thing that's kind of inherent in FRI is that you end up actually recursively reducing between codes of the same rate. So if you start with a large rate, then all the codewords that you test end up being of the same rate. So what we notice is that if you can actually change rates during the various stages of the recursion and move between codes of different rate, your steps of testing of the latter codewords actually become easier. So you can think about it like, in STIR, the family of codes that you test end up having a smaller and smaller rate. And so they are easier and easier to test. So this is kind of the main intuition between STIR. Of course, when you try to do these kind of things, some issues arise. It's not all roses. Otherwise, people would have done it already. So the way I like to think of it is this. You start with a FRI or DEEP-FRI, for example. And then you de-correlate the queries. So now instead of testing them all at the end, you test them at each round. And now when you do this folding step, instead of writing down just the fold, you write down the evaluation of the fold over some larger domain. So imagine that you have a folding factor like 16. So what FRI would do is write down the evaluation of the function, the fold of the function over a degree of size... If the original domain was of size n, the new domain would be of size n over 16. What we instead do is we write down these on a domain which is much larger, like n over 2, for example. Now the kind of like crux of what STIR does and the way that we're able to make this work is that now you have to kind of test consistency between what the prover wrote down and what the fold should do. And the way that we do this is by a combination of quotient, as in DEEP-FRI, and out of domain sampling, again, as in DEEP-FRI. So this is kind of like the main high-level idea of STIR. The code word that you write down is a Reed-Solomon code word, where the degree is now d over k, while the size of the evaluation domain is n over 2. So basically, the new rate of this code is 2 over k times the original rate. So if k is bigger than 2, as it tends to be indicated in practice, so think of k like 8 or 16 or 32, then the rate goes smaller and smaller at each folding step. And that's kind of where you really get the magic of being able to then do less queries later on.
+
+
+38:08: Kobi Gurkan:
+
+
+Cool. And from my understanding, from reading this STIR paper, now, in order to do that, you actually need to move from one domain to the other, like you mentioned. And that's a technique that you've taken from another paper that's called domain shifting.
+
+
+38:26: Gal Arnon:
+
+
+Yeah, so this technique is basically from the previous paper that I mentioned that was the starting point of this entire project. We also developed these ideas of quotients and out of domain samples that were, I think, originally shown in DEEP-FRI, that we sort of use them in a way that's a bit different from what they did there, which is also what we do in STIR. And there we sort of saw there was this nice… not that we had like, oh, you could if you have a codeword over some domain and you only have a test over some other domain, then you can sort of shift the domains. And we just thought it was quite nice in that paper, we didn't really realize what we could do with it. It's actually like a simple byproduct of other stuff we did there.
+
+
+39:15: Anna Rose:
+
+
+Can I just ask you though, that query complexity paper that you keep talking about, is that published? Is that something we could actually link to?
+
+
+39:21: Gal Arnon:
+
+
+Yeah, yeah.
+
+
+39:22: Anna Rose:
+
+
+Okay, perfect.
+
+
+39:23: Kobi Gurkan:
+
+
+Another thing that I've seen you spend quite a bit of time on is your new method of degree correction. So what happens there?
+
+
+39:33: Gal Arnon:
+
+
+So the problem with using quotients in general, and these kinds of protocols is that your degree changes. So if you quotient by a point or by some amount of points, your degree is lowered by that amount of points. And the problem is that our low degree tests tend to work only with degrees that are like really nice, that are like powers of two. The math doesn't work out if they're not powers of two. You're now a power of two minus four. So what do you do? You have to somehow correct the degree either down or up, but up makes more sense because it's going to be the closer power of two. And the previous techniques did this with basically worse error than we have. So you used to basically pay per... So if you want to correct 4 in the degree, you pay some factor of 4 somewhere. 4 is not that bad, but if you have to do correct from d over 2 to the way to d, then you pay a factor of d over 2, which is terrible. So we have this technique that you pay sort of like as if you were correcting only 1 instead of d over 2.
+
+
+40:50: Kobi Gurkan:
+
+
+Okay, cool. And does the new technique that you developed, can it be applied to existing constructions as well? Would it be competitive or useful there?
+
+
+41:00: Gal Arnon:
+
+
+I'm not sure. 
+
+
+41:01: Kobi Gurkan:
+
+
+Okay.
+
+
+41:02: Anna Rose:
+
+
+Do you mean STIR or do you mean this particular part?
+
+
+41:07: Kobi Gurkan:
+
+
+I mean, just specifically the degree correction.
+
+
+41:10: Anna Rose:
+
+
+Oh, OK, OK.
+
+
+41:10: Gal Arnon:
+
+
+A lot of different systems, they try to get around it in other ways. Like DEEP-FRI had quotients, but they got around it by assuming the degree is not a power of 2, but like some other function that sort of worked with their specific way of doing quotienting. There are some projects that use quotienting, they don't really need this.
+
+
+41:29: Anna Rose:
+
+
+Oh, I see. Instead of quotienting. 
+
+
+41:32: Gal Arnon:
+
+
+No, well, they get around the degree issues in other ways, usually.
+
+
+41:35: Anna Rose:
+
+
+OK, I see.
+
+
+41:36: Gal Arnon:
+
+
+But if they can't get around it, then they can use this. There's also other ways to get around it that don't have, or not this technique, but you could, for example, do quotienting pair by pair instead of... We do sort of like a monolithic quotient, and this lowers the degree by a lot. You could do quotient pair by pair, and then you have a lot of functions that you have to test instead of one, and you have to merge those. So there's a lot of different options there.
+
+
+42:06: Anna Rose:
+
+
+It sounds like, I mean, just going back on the story we've just told, there was all of these lines of work, you kind of picked great things from a number of them. And the domain shift was coming from your previous work. Is there any other techniques or anything in this work that's also kind of new to folks?
+
+
+42:25: Giacomo Fenzi:
+
+
+You know, so one part of this work combines a lot of pre-existing tools, which is kind of very nice. It also gives you a bit more confidence that what we're doing is correct. Another thing that we have, which is also kind of like present, is present in the previous work by Ale, Gal and Eylon, is this compiler for polynomial IOPs that was made for the high soundness regime. So it actually has some improved guarantees compared to a previous compiler of the sort. So in this work, we kind of extended it. We made sure it was completely efficient. We gave our round-by-round knowledge soundness analysis, which is also very important for actually compiling to a non-interactive argument. We think that if you have a polynomial IOP that you are trying to turn into a STARK in this sense, you should try to see whether our compiler is a good fit for you. So I think this is also something that I think people should be interested in, because we haven't highlighted it as much as we wanted to. There is still some code that I need to write, and I eventually will get to, that we'll show you, but we really think that this compiler is also a very important tool for people who are trying to build the STARKs in this setting. Should also give some nice boost to soundness and to argument size and query complexity, in my opinion.
+
+
+43:48: Kobi Gurkan:
+
+
+Cool.
+
+
+43:49: Gal Arnon:
+
+
+And I'll maybe say that the... While I think a lot of the tools have existed, especially were developed in this previous paper of ours, this paper is very theoretical and I think that using them in practice is also new. The more practical researchers haven't seen these because they were just in this paper.
+
+
+44:15: Kobi Gurkan:
+
+
+Yeah, that makes a lot of sense. And if you look at the paper, then you look at the benchmarks, and you see that it's pretty compelling. You see the verifier time being reduced in all situations, proof size as well. But you do notice another thing, which is that the proof time is larger. And why does that happen?
+
+
+44:38: Giacomo Fenzi:
+
+
+Yeah, so the main difference in the proof size is that, so if you look at FRI, basically what happens when you do this kind of folding, so you take your polynomial that you split in two, for example, and then you combine it into a new one. And if you do this with the same domain, what ends up happening is that basically constructing the new evaluation from the old one can be basically done in a linear pass. So in fact, the F in FRI stands for fast for this reason, because it is like once you have the initial evaluations, which would anyways require an FFT, which will then be able to do it in linear time. In our case, since you actually need to write down the evaluation of the fold over a different domain, we cannot combine the evaluation in this way. So what you end up doing is that at every round, you have to do a small FFT. Especially if you're testing a single polynomial, what happens is that STIR does a bit more work on the prover. Not that much more work, but a bit more work. The nice thing is that in general, as you said at the start, when people use FRI in practice, they usually use it in an heavily batch context, which you're trying to test proximity of very many codewords at once. So what ends up being the dominant cost in practice is the cost of performing this initial large FFT. And this cost is shared and is exactly the same between STIR and FRI. So you can think about it as bottleneck is the same between FRI and STIR, then in the tail end, you actually spend a little bit more prover time. But we haven't done the benchmark for the batch case, but we do believe that this should be a negligible amount of time compared to the cost of the initial FFT in this heavily batched context. So we think this additional time should really be worth it.
+
+
+46:26: Anna Rose:
+
+
+You just mentioned that this needs to be implemented before we completely know how it gets used in all these different ways. But for the developers who are working with things like FRI, should they be trying to use it as a drop-in replacement? Or there are certain ways in which it should never be used in some constructions. I'm just kind of curious if there's like ideal cases where you'd switch to something like this.
+
+
+46:50: Giacomo Fenzi:
+
+
+So for me.... Let me put my marketing hat on, I believe that like you should, wherever you're using FRI, you should put STIR in.
+
+
+47:00: Anna Rose:
+
+
+Bold. 
+
+
+47:01: Giacomo Fenzi:
+
+
+Like, I'll make it very hard and bold statement, like, STIR was meant to be a drop-in replacement as FRI. It does the same job as FRI. It has improved like asymptotics, it has better parameters in both argument size, verifier query complexity, verifier time. So unless you really, really, really care about prover time in the sense that a very slight, I think I don't have the number on top of my head, but imagine maybe a 15% slowdown in the non-bottleneck part of your prover computation is really a deal breaker, then I think you should use STIR.
+
+
+47:38: Kobi Gurkan:
+
+
+Nice.
+
+
+47:39: Giacomo Fenzi:
+
+
+Especially in a recursive context. Like for me, it's not like there are some places where you should ideally use STIR, but instead of STIR, it's not a choice of like we should figure out whether, where it makes sense to switch from STIR to FRI. So from FRI to STIR. But I think that there are some places in which it is more ideal and other places in which it's still better, but not as ideal.
+
+
+48:01: Anna Rose:
+
+
+That's bold.
+
+
+48:02: Giacomo Fenzi:
+
+
+So that's my kind of very hard message that I unapologetically and very strongly make. 
+
+
+48:09: Kobi Gurkan:
+
+
+Nice.
+
+
+48:10: Anna Rose:
+
+
+OK, what about the security and battle-testedness of this system? You guys just released it. Does this need to go through more of a process, do you think, before people are actually using it in the wild?
+
+
+48:21: Giacomo Fenzi:
+
+
+So sure, I think there are some rough edges to iron out. So people should implement it, make sure they do not fall into pitfalls. But the cool thing is that, as you mentioned before, all of the tools that we see in STIR were in one way or another being seen before. So the Proximity Gaps paper has been battle tested, it's been deployed, it's what started for you this quotients, they were seen in DEEP-FRI, they're still, they're using DEEP-ALI, so this is also something that we know about. Like the degree correction, this is new, but it's also similar to other techniques that were seen before. So all the components there are battle tested.
+
+
+48:59: Anna Rose:
+
+
+They come from legacy, it sounds like. Like they have some precedence from previous works. But it isn't a new construction. 
+
+
+49:07: Giacomo Fenzi:
+
+
+Yes. 
+
+
+49:07: Anna Rose:
+
+
+Like, when you add all these things together... Yeah. I'm actually just curious, the paper just came out, but what would you do next to kind of get it into a more battle-hardened state? Would you write it again? Would you see people implement it and then take their feedback? Yeah, how do you even kind of move it into that state?
+
+
+49:29: Giacomo Fenzi:
+
+
+Yeah, for me, it's just like, I want to see people implement it and try it.
+
+
+49:33: Anna Rose:
+
+
+Break it?
+
+
+49:35: Giacomo Fenzi:
+
+
+You know, like also, yeah, that would be great. I think that that's the most worthwhile feedback you can get. Like if people can break your protocol, that's amazing. But I really believe that while there's a lot of rough testing, the tools that we use there are all battle tested, the way in which they are composed might be novel, but for me at the moment, maybe Gal has a different opinion to it, maybe he's a bit more cautious. I'm not, really. I believe that it would be very surprising if things went wrong. So of course, it's a new protocol, so when people implement it, it is easy to make mistakes. We've seen many times construction that were theoretically being broken by bad implementations or by other things, but my impression is that the tools that we use are battle tested. The analysis was complex, but we think it's sound and we think it's not like the proximity gaps paper, which was beautiful, but very hard to actually pass and understand. So we think that if you sit down with a cup of coffee for maybe two or three days, you can really read the paper end to end. And I really hope that the transition time from FRI to STIR is not too long and that they're hopefully... If things go wrong, I would be very surprised. Not pleasantly surprised, but like I would make a strong statement that I would be surprised.
+
+
+51:03: Anna Rose:
+
+
+Okay.
+
+
+51:05: Gal Arnon:
+
+
+I will maybe add, I mean, more on the theory side. So...
+
+
+51:10: Anna Rose:
+
+
+So you're cautious, cautiously optimistic. 
+
+
+51:14: Gal Arnon:
+
+
+Well, I don't know about breaking implementations, but the.. So we work quite hard to make the proof of soundness be, I think relatively simple, relatively easy to read. And also, I think Giacomo will mention this earlier, that we did an analysis for round-by-round soundness, which is really important in practice, and people sort of tend to forget about it, and they just do regular soundness. And we tried to also work relatively generically. So I think in my very biased opinion, I think this is an easier paper to read and understand than FRI. So this is also, I guess, a plus for STIR and also why I'm quite positive about it, that I think that the analysis is relatively easy to understand. Of course, you need the background, you need to read it carefully, but I think we did quite a good job on the theory side and making sure that everything is easy to verify.
+
+
+52:24: Anna Rose:
+
+
+Cool.
+
+
+52:24: Gal Arnon:
+
+
+Hopefully. I mean, I don't know how many people have actually read it.
+
+
+52:28: Anna Rose:
+
+
+Well that story of the FRI paper, like I know that there's been work since the original FRI paper and FRI papers trying to do what you just described to like simplifying it, making sure that the security analysis is a little bit more clear. I did an episode with the folks from Nethermind who had written exactly that. I know some other folks have also done kind
+
+
+of an attempt to just break it down. But you're starting from that place. You've written it for people to already get that sense. That's really cool.
+
+
+52:56: Kobi Gurkan:
+
+
+Yeah. So I just want to remind the listeners that what we did in ZK Hack IV was exactly combining battle-tested sub-protocols in a way that when you combine them, they're broken. But yeah, in ZK Hack IV, the different thing was they didn't write the proofs, but here, you guys did. So you guys are good. But yeah, like when you combine stuff, it might break after you combine it. So that's interesting to see. Yeah, and I think I have a couple of questions that actually came up from Nico, which is from my team at Geometry Research, but also a frequent co-host of the podcast. And we were wondering, is it compatible with the recent works around Circle STARK and the M31 Prime, which is non-smooth? How does that get affected here?
+
+
+53:54: Giacomo Fenzi:
+
+
+Yeah, so I've been in touch with Ulrich a lot, and I think either you, Gal or Eylon, I can't remember, we're also in touch with Shahar. Yeah, I think the belief that me and Ulrich share is that all the things from Circle STARK,  so from Circle STARKs can be brought to STIR. So it should be possible to get Circle STIR or STIR-co. There's a... We're working on that. Like that's the part. So, the way like... 
+
+
+54:24: Kobi Gurkan:
+
+
+Say it fast three times, yeah.
+
+
+54:26: Giacomo Fenzi:
+
+
+Exactly. STIR-co, STIR-co, STIR-co. Like my only research goal is to have terrible paper names. Yeah, or great ones, depending on your thing. But yes, so the bottom line is that you should be able to do STIR over M31 in the same way that you're doing FRI over the circle. And so the performance benefits from that should also translate.
+
+
+54:52: Kobi Gurkan:
+
+
+Nice.
+
+
+54:53: Anna Rose:
+
+
+I think one of you just highlighted for me in a group the Binius FRI work that just got released. I mean, it got released today as we're recording it. It sounds like you could also be... If you feel it's like a drop-in replacement, I guess you could also do Binius STIR. 
+
+
+55:08: Giacomo Fenzi:
+
+
+Yes. OK. In that, we actually, I was speaking with Ben and Jim when I was in New York some time back. So we talked a little bit about it. There's a difference. So that work on, let's call it Binary FRI for the moment, really relates to the base fold paper that was released last year, I believe, which basically showed that you can think of FRI as a more general IOPP for foldable codes. That means that instead of just testing Reed-Solomon, you can do it for a different family of codes. And you've got some benefits, like the number of fields you can choose and stuff like this. Crucially, this really relates about the fact that FRI doesn't use too much of the polynomial structure. Instead, while we're using in STIR, so we're using a lot more. We're using these out of domain samples, we're using the quotients. So when we started working out at the board, me, Jim, and Ben got stuck. We couldn't really get Binary STIR. So that's something that's true. But that's for the inner structure of FRI. So STIR is a drop-in replacement in terms of interface, but what it does inside is slightly different. So I haven't lost hope. I'm still thinking about this, but yes, we...
+
+
+56:22: Anna Rose:
+
+
+So it's harder than you thought.
+
+
+56:24: Giacomo Fenzi:
+
+
+Harder than we thought, yes. 
+
+
+56:25: Anna Rose:
+
+
+Is there additional kind of combinations or works that you're looking at past that? So the STIR-co STARK. God, I really like that. The Binius STIR, not yet. But is there anything else that you're currently working on in that regard?
+
+
+56:42: Giacomo Fenzi:
+
+
+So I maybe mentioned at the start of the podcast, this FRIDA work for data availability. And we do also believe... I do believe I haven't like double checked yet that STIR can also use that for with all the benefits that it brings. So I need still to figure that a little bit out. But these have been some of the things that we looked at. There hasn't been much time, we had to write the paper, get the presentation and all of these kinds of things. I'm not sure if... We have some ideas and some other terrible names. I don't think Gal wants to share them for now. But there's like... I think my marketing tagline is that we think that there's a bright future ahead for IOP based SNARKs.
+
+
+57:26: Anna Rose:
+
+
+Nice. Okay. So before we sign off, the question about DA, it sort of made me realize something like... Because I always understood FRI as sort of like sampling. Is it doing something like sampling or error correcting codes or something? Is that where you see it being used for DA or no? I might be completely off.
+
+
+57:46: Giacomo Fenzi:
+
+
+And it's kind of hard for me to like, I've skimmed that paper. I don't really understand it too much. But basically, the kind of idea of the data availability schemes that you want to have like... You basically want to make sure that there is some data availability. And you want clients to be able to interact with some data provider, and then from the transcript of this interaction, you should be able to then reconstruct the data that was available. That's kind of the high-level understanding that I have. And from what I've understood, the way that you can do this is through actually error-correcting the code and then committing to it in a Merkle tree. And then using things like FRI to test actually proximity to the code. So you end up kind of showing that the data that you committed to was actually encoded in the right way. And then the error correcting like properties of Reed-Solomon end up carrying you some of the way towards data availability goal.
+
+
+58:43: Anna Rose:
+
+
+Interesting.
+
+
+58:43: Giacomo Fenzi:
+
+
+That's kind of like my high level intuition, but you should get Mark on the podcast, he can probably explain much better than me. 
+
+
+58:50: Anna Rose:
+
+
+Who? 
+
+
+58:51: Gal Arnon:
+
+
+Yeah, my understanding is that they basically encode their message, the data that you want to have available, and then they somehow prove to every one of the many light nodes, like these weak verifiers, that there's actually a codeword in there. And then they will each sort of test some random location and see that it's sort of consistent with this thing that's underneath. And this consistency and this is... They used FRI for this consistency, basically.
+
+
+59:24: Anna Rose:
+
+
+Yeah, that's kind of what I meant when I used the term sampling, but maybe that's wrong. But sort of that testing at different places, but not looking at the entire picture, that's the part that FRI can do, and I guess STIR can do as well. All right, well, thank you so much, Gal and Giacomo. Thank you so much for coming on the show and sharing with us the history of FRI, a lot of the developments along the way, what you used in constructing STIR, how it can be used instead of FRI, potentially, and what you're working on now. Thanks so much.
+
+
+59:56: Kobi Gurkan:
+
+
+Yeah, I'm really looking forward to see if STIR is in production.
+
+
+59:59: Giacomo Fenzi:
+
+
+So are we. Thank you so much for having us.
+
+
+1:00:01: Gal Arnon:
+
+
+Thank you for having us.
+
+
+1:00:02: Anna Rose:
+
+
+Cool. I want to say thank you to the podcast team, Rachel, Henrik, Jonas, and Tanya, and to our listeners, thanks for listening.

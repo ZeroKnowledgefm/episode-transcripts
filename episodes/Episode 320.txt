@@ -1,0 +1,799 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:27:
+
+
+This week, guest co-host Brendan and I interview Ben Fisch from Espresso Systems. We dive into the world of L2 sequencing, shared sequencing, MEV in the new system, the marketplace Espresso is building, and so much more. Quick disclosure, I'm an investor in Espresso Systems through ZKV, and ZKV is also exploring working with the system. And yet, I feel I had so much to learn from this interview about what they're building and how different actors can get involved in it. Hope this helps to shed a little bit of light on the shared sequencing concept for you too.
+
+
+Now before we kick off, I just want to let you know about an upcoming hackathon we are getting very excited about. ZK Hack Kraków is now set to happen from May 17th to 19th in Kraków. In the spirit of ZK Hack Lisbon and ZK Hack Istanbul, we will be hosting hackers from all over the world to join us for a weekend of building and experimenting with ZK Tech. We already have some amazing sponsors confirmed, like Mina, O(1) Labs, Polygon, Aleph Zero, Scroll, Avail, Nethermind, and more. If you're interested in participating, apply as a hacker. There will be prizes and bounties to be won, new friends and collaborators to meet, and great workshops to get you up to date on ZK tooling. Hope to see you there. I've added the link in the show notes and you can also visit zkhackkrakkow.com to learn more. Now Tanya will share a little bit about this week's sponsors.
+
+
+01:51: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain asset-agnostic privacy via a unified set. Namada is natively interoperable, with fast finality chains via IBC and with Ethereum using a trust-minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia, that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada, for more information, and join the community on Discord, discord.gg/namada.
+
+
+Aleo is a new layer-1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. Driven by a mission for a truly secure internet, Aleo has interwoven zero-knowledge proofs into every facet of their stack, resulting in a vertically integrated layer-1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. This is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleio.org. And now, here's our episode.
+
+
+03:31: Anna Rose:
+
+
+Today we are here with Ben Fisch, co-founder and CEO of Espresso Systems. Welcome to the show, Ben.
+
+
+03:37: Ben Fisch:
+
+
+Thank you. It's good to be back, Anna.
+
+
+03:39: Anna Rose:
+
+
+And we have Brendan today as the guest co-host. Welcome, Brendan.
+
+
+03:43: Brendan Farmer:
+
+
+Thanks, Anna.
+
+
+03:44: Anna Rose:
+
+
+So Ben, I was looking back at our last episode. It was over two years ago that you came on the show and you did introduce Espresso. But what we talked about back then and the product and everything, it's changed so much. I'm very excited to get a chance to kind of catch up and learn about what's changed, what's happening. I also am very excited to get a chance to dive into shared sequencers. This is something that I think Tarun and I, especially those episodes, we've mentioned it a bunch of times, but we've never actually covered it on the show.
+
+
+04:12: Ben Fisch:
+
+
+Yeah, let's go.
+
+
+04:13: Anna Rose:
+
+
+So the first part, I really do want to understand the shift from what we talked about last time to working on shared sequencers. What was it in your journey with this project that caused that pivot?
+
+
+04:27: Ben Fisch:
+
+
+When we started out working on Espresso Systems, we were building a privacy product, so it was quite different. We started out with... The system that we were developing that was called CAPE, Configurable Asset Privacy, and it was all about balancing the need for regulatory oversight and disclosures with the need for privacy. And so that was what CAPE was about. And we found that it was a compelling product, but it was very difficult to find product market fit, at least at the time. I don't know if the times have shifted by now, but we found it to be quite difficult, and at the same time as we were working on this privacy product, we were also building infrastructure that would increase efficiency and CAPE was actually supposed to be deployed as a layer 2 application. So we were getting familiar with the layer 2 landscape and what it meant to run applications on the layer 2. 
+
+
+And something that was very top of mind for us was the fact that if we ran CAPE as a payment platform on top of other layer 2s, it would be quite isolated from the rest of the ecosystem. And so we were quite worried about that, because if we ran CAPE as a smart contract on Ethereum, then people could use it in any DeFi protocol, et cetera. Whereas if you deployed it on a layer 2, whether it was an app chain or on top of a specific layer 2, we would have to make a choice about which subset of applications we were integrating with, and it would feel a lot more like we're deploying on a specific layer 2 ecosystem rather than on Ethereum. And so that's actually what kickstarted this whole thinking about how do we increase interoperability between layer 2s on top of Ethereum. And that's what ultimately led us down to completely repurposing a lot of the infrastructure that we were building to actually facilitate an interoperability layer for layer 2s. And that's what brought us to shared sequencing.
+
+
+06:21: Anna Rose:
+
+
+For me, it was like, I think the Espresso project and team, like that was the first time I even heard of the concept of shared sequencers. Was it your idea? Or was there some work happening anywhere else in the ecosystem that you were kind of like drawing on?
+
+
+06:37: Ben Fisch:
+
+
+It was our idea, at least independently. We came up with this idea after Bogota. So it was DevCon in Bogota. And we were talking to a lot of teams there. And that's where we came up with the idea. But I think that there were other teams talking about this too. We ultimately realized that teams like Optimism with the Superchain were also using similar language to describe shared sequencing around the time that we actually announced the new direction. It was in March 2022, I think. 
+
+
+07:15: Anna Rose:
+
+
+It must have been '23, because you were on the show in '22.
+
+
+07:18: Ben Fisch:
+
+
+Yes, no, it was March 2023. It was not this past March, but the March before. Wow, I can't believe how long time flies. It was March '23, and at that time, Astria also started talking about shared sequencing already as well.
+
+
+07:31: Anna Rose:
+
+
+Okay.
+
+
+07:33: Ben Fisch:
+
+
+And Flashbots with SUAVE also was using similar language to describe what is a little bit different from what we're doing with shared sequencing, but the term shared sequencing was certainly floating around. And that's actually to some degree what led to a little bit of confusion around the term because people were using it in different ways to describe different things.
+
+
+07:51: Anna Rose:
+
+
+So why don't we kind of define how you see shared sequencers or how the term is now used.
+
+
+07:56: Ben Fisch:
+
+
+Yes.
+
+
+07:57: Anna Rose:
+
+
+And basically what you guys are building.
+
+
+07:59: Ben Fisch:
+
+
+Well, the way that I see it, a shared sequencer describes an ephemeral role of some server node, whatever we want to call it, that for a given time window determines or proposes the next sequence of transactions for two different chains. So that's what I call a shared sequencer for two different chains. This doesn't need to be a fixed role. It doesn't mean that there's one party that, or protocol that's always producing the next sequence of transactions for these two different chains, but simply that there's one party that's playing what we would generally call the role of a leader in a consensus protocol. And so that's also different from the process of actually finalizing or agreeing on what was proposed, that is what I call a shared finality gadget or a consensus protocol. I use the term shared sequencer specifically to describe the role of a leader that gets to actually have autonomy over proposing during a certain time window for multiple chains at once.
+
+
+09:06: Brendan Farmer:
+
+
+Yeah, I think one of the things that I didn't understand when the discussion around shared sequencing first emerged was like that privilege to have a proposer that's shared between multiple rollups. It's revocable, it doesn't need to... You're not sort of as a rollup, perpetually giving up sequencing rights to a proposer. This is something that exists for a discrete period of time. And then, I think like... Yeah, so I'll leave it at that.
+
+
+09:35: Ben Fisch:
+
+
+And it's a lot more like the interaction between proposers and builders on Ethereum, whereas the relationship between a builder and a proposer is a little bit different because the proposer ultimately has the right to propose whatever it wants for Ethereum. And there's this out of band, a fair exchange protocol that's happening between a builder and a proposer, and maybe it's facilitated by a relay that is not part of the core infrastructure of Ethereum. But a proposer will, at the very last minute, basically auction off the block and is essentially looking for suggestions from a builder market and make some kind of credible commitment to builders that whatever they propose, it will actually respect. The shared sequencer idea is to auction off the rights to actually be the proposer in the first place. And if you have some party that ends up with the right to be the proposer for multiple chains for a given period of time, that party can then do things an individual proposer for a chain might not be able to do.
+
+
+10:41: Anna Rose:
+
+
+Wow, this is so... I've been actually wondering about the connection between MEV and shared sequencers because I mean, I think I saw you guys at this event focused on MEV and you're speaking there. And this is really helpful actually to see where it's really tapping into kind of that space. Before we dive even deeper into this though, I realized that we should probably define what is sequencing today. What is the current landscape? How is this currently being done? Because then I think we'll understand even better what this change looks like.
+
+
+11:12: Ben Fisch:
+
+
+The sequencer is layer 2 is today mostly a centralized  node that plays several different roles. It collects transactions. Those transactions in most rollups aren't posted immediately to Ethereum. This helps with compression. So it collects transactions and builds up a buffer of transactions. And so it's acting as a temporary DA layer in fact, because it's persisting those transactions. It's persisting the data before it's ultimately posted to Ethereum. And it then compresses those transactions. Either if it's a ZK proof system, sometimes the sequencer role is sort of combined with the prover role, but those are logically separate. So it could outsource the job of constructing a proof to a prover. And at some point it then posts the transaction data to Ethereum compressed. Usually that's before the proof is posted, if it's a ZK roll up.
+
+
+And the second role that it does in addition to persisting this transaction data is it acts as... Well, first of all, it gets to determine the order in which these transactions actually appear by virtue of playing that role. It of course may outsource that job to a builder market, that doesn't happen so much today on layer 2s, but it totally could. And finally, the last thing that it does is it acts as a certain trusted finality gadget for the rollup pre-Ethereum finality. So this is sometimes called pre-confirmations or soft confirmations. If you as a user trust the sequencer for your rollup, then once you send your transaction to the sequencer, you can feel like your transaction is done and confirmed and you don't have to wait for Ethereum to finalize the transaction, which would be another 13 minutes conservatively. Nor do you necessarily have to wait for a proof to appear on Ethereum if you trust the sequencer for the L2.
+
+
+13:04: Anna Rose:
+
+
+Who runs the sequencer today?
+
+
+13:07: Ben Fisch:
+
+
+Generally speaking, the foundations or projects behind various L2s have some default sequencer. I think every project out there has a long-term plan to decentralize that, whether through external infrastructure or infrastructure that they're building in-house. But typically it's run by the foundation or by the company behind the project. There are also Rollup-as-a-Service companies where this is more relevant not for the main chains of the various L2 stacks, but rather the app chains of those stacks. There are companies like Conduit that actually run sequencers for projects.
+
+
+13:49: Anna Rose:
+
+
+When you talk about running a sequencer, a centralized sequencer, is it on one machine? Are they also decentralized? Is it at least redundant or something? I'm assuming so.
+
+
+14:01: Ben Fisch:
+
+
+This is it. Yeah. I like this question because I think it touches on something about decentralization that is often glossed over. We think of Web2 as centralized infrastructure, but Web2 infrastructure is still very much distributed. It's just the term that we use there is distributed rather than decentralized. And the reason is that usually for decentralization, it's more of a distinction between who's logically participating. If you, Google, were to run a fault-tolerant distributed system on a thousand machines, we wouldn't call that a decentralized system. Decentralization is connected to more of a permissionless concept, but even in a permission system, any permission blockchain is going out and trying to find many different entities that are contributing. And those entities are logically separated. They're run by different organizations, different people. And that's what distinguishes decentralized systems from just a fault-tolerant distributed system. If you're going to run a centralized sequencer, of course, the state of the art thing to do is to run some kind of fault-tolerant distributed system.
+
+
+15:06: Brendan Farmer:
+
+
+I think that's a really important point because I think that people mistake the fact that you can have something that's fault-tolerant and has very, very high uptime and reliability guarantees without it being decentralized. And decentralization, at least in my mind, is much more about avoiding rent-seeking and creating a market structure where you don't have the possibility of capture by a single entity. But I think that mistake gets made a lot when people talk about sequencers.
+
+
+15:34: Anna Rose:
+
+
+I want to also understand the economics of the sequencer. Like fees are somehow being incurred by the sequencers. I understand it, but what are those? Are they from the protocol? Are they actually like gas? Like where are they coming from?
+
+
+15:48: Ben Fisch:
+
+
+Great question. So today when we talk about sequencer revenue, so to say, it encapsulates a lot of different types of revenue streams that will ultimately be separated when we move away from single sequencers or centralized sequencers. So the first stream of revenue for a rollup ecosystem is the gas fees that are being paid, but those are being paid inside the protocol. Today that might be encoded as a payment to an address that happens to be owned by the same entity that's running the sequencer, but there's no fundamental reason why that needs to be the case. So even if we were to do away with a sequencer run by the foundation of a rollup ecosystem, and this was a more distributed or outsourced role, the primary source of revenue for the rollup, which is the gas fees being paid, those are a being logically paid as a part of every transaction inside the rollup, and it could go to a DAO address, it could be burned, it could be distributed to token holders in that rollup ecosystem, it could go to an address that is controlled by the foundation and then used for whatever the foundation might use it for. I mean, some communities are excited about talking about public goods funding, others are talking about it in a different way. Whatever is the case, the sequencing revenue that's generated or the execution revenue, so the execution fees are, in my view, separate from any additional revenue that comes from the right to sequence itself.
+
+
+17:21: Anna Rose:
+
+
+Because of the way that's set up, is there a motivation for these entities that are running the sequencer to actually give that to a more decentralized pot? Like, is there any motivation for them to switch?
+
+
+17:37: Ben Fisch:
+
+
+Right, so what I was just saying is that the fees that are coming from the gas fees that are being paid, that's going to... If a rollup were to outsource sequencing somewhere else, it would still collect the revenue from gas fees. So then we come to the next question, which is, well, what additional revenue does a sequencer and only a sequencer make? And that has entirely to do with what is colloquially called MEV, right? So anything that goes beyond the execution fees, the gas fees that people are paying, any other revenue stream is generally thrown under this umbrella term ‘MEV’. And that could be from people paying priority fees to order the transactions in a certain way, it could be from selling... It's a special case of that, it could be from selling arbitrage opportunities. It could also be for things that people don't classically associate with MEV, but is really under the term MEV, which is any form of pre-confirmation.
+
+
+So if a sequencer says to a user, the next time that I have the opportunity to sequence, I promise you that I'll do this for you. The user won't pay for failed transactions. It could be promising that the user... If this sequencer controls multiple chains, it could be promising that the sequencer will try to do some kind of atomic interaction across multiple chains. Let's say the user wants to attempt to do a bridge transaction to buy an NFT, but doesn't want to do anything unless it actually successfully purchases the NFT. That's another type of promise it could make. All these promises, users may pay tips for and that again becomes additional revenue that's outside of the just the gas fee that are being paid and that is all under a sequencing, intrinsic sequencing revenue. So then you ask if the rollup ecosystems are running their own sequencers today and this additional revenue could be quite significant, why would they give it away? And I don't think they would give it away, which is why Espresso is building a marketplace through which they can sell it.
+
+
+19:36: Anna Rose:
+
+
+Cool. Okay. So let's come back to the shared sequencer. I think this has been really helpful to understand how it is today. The shared sequencer lives, as far as I understand, sort of as this like middle layer, kind of between the rollup and the main chain. Is that correct in thinking of it that way?
+
+
+19:55: Ben Fisch:
+
+
+It's hard to say. It's hard to put it into... Because the rollup itself, it's a virtual machine similar to how the EVM is a virtual machine. I mean, some of these rollups actually run the EVM. Others run special-purpose VMs. And the layers that we use to describe things, so layers are generally used to describe infrastructure that's actually processing and persisting data and it's not generally used to describe the VM itself, although application layer is something that we describe on top of Ethereum. So the way that I look at it, the layer 2 is sort of synonymous with the application layer. It is a very much enriched application layer on top of Ethereum, and so sequencing is more of a layer on top of Ethereum or now with based sequencing, it sort of blurs the lines between those. But I would say that it is infrastructure. It is a layer above Ethereum in the cases that it's used today, similar to external DA layers, external DA systems. I wouldn't necessarily say that it's a layer in between the L1 and the L2, but I have in the past described it as layer 1.5. I'm sort of going back on that description. I'm not sure it's appropriate.
+
+
+21:16: Anna Rose:
+
+
+Okay.
+
+
+21:16: Brendan Farmer:
+
+
+Well, we overload the term layer, right? Because we use it to refer to things like the DA layer and the execution layer and the application layer, and those don't really have a hierarchical relationship to one another.
+
+
+21:27: Ben Fisch:
+
+
+Exactly. I think that's a good way to describe it. Right?
+
+
+21:30: Brendan Farmer:
+
+
+Yeah. But like the L1 and the L2, we relate those hierarchically because the L2 settles to the L1. My understanding is that shared sequencing is much more in the former category because... Like there's no settlement relationship between L2 to L1.5 to L1.
+
+
+21:47: Ben Fisch:
+
+
+That's right. It is a layer, it is an infrastructural layer, just like an execution layer or a DA layer, but it's not necessarily hierarchically situated between what we generally refer to as layer 1 and layer 2.
+
+
+21:58: Anna Rose:
+
+
+You mentioned that the sequencer in the current state does hold DA in a way, like it holds that place for I guess a shorter period of time. Would a shared sequencer then have some sort of DA component or are you kind of ignoring that for now, like leaving that to the DA layers?
+
+
+22:16: Ben Fisch:
+
+
+Yeah. So sort of fundamentally, one of the roles of a sequencer today is to persist data before it gets posted to the L1. Now, some sequencers in the future may not operate like that, and they would just ingest data that's already been posted to the L1, but rollups that are looking to take advantage of the ability to compress data before it's posted to the L1 for DA, primarily driven by, the reason for this is cost. And the fact that Ethereum DA is even post-4844 is still more expensive than what external systems can do, that of course may change. But I do see DA, at least temporary DA, as an important job of a sequencer. And so at Espresso, that is a DA system is a part of our infrastructure. So we do provide a DA system that's very similar in nature to EigenDA.
+
+
+23:12: Anna Rose:
+
+
+Okay.
+
+
+23:13: Ben Fisch:
+
+
+But rollups may choose to use alternative DA systems if they so choose.
+
+
+23:18: Anna Rose:
+
+
+The connection to MEV, I know you just described it before, but can you actually cover that again because I think I feel I have a little bit more context now. Yeah, like the builder proposer, I mean, we've done episodes on this in the past, so we do have material we can link to and stuff, but it might be good to kind of revisit that idea and say exactly what they're doing in the case of a shared sequencer.
+
+
+23:43: Ben Fisch:
+
+
+Yeah. So the builder's job typically is, it comes through a just-in-time auction that the proposers run right before they build a block. And typically at this point, all the information is known, although builders may have private order flow of transactions as well that is not known to the proposer. But typically the job of the builder is to figure out optimal orderings of transactions, and it does this and whoever is able to bid the most because, by virtue of finding the optimal ordering, they can make the most surplus value, typically wins this builder auction. I mean, that's how it works with proposer builder separation on Ethereum today.
+
+
+24:22: Anna Rose:
+
+
+And this is all on the L1. So this is like on Ethereum proper, right?
+
+
+24:26: Ben Fisch:
+
+
+Well, that's how it works on the L1. But the same exact thing could happen on the L2 with sequencers. So sequencers propose blocks, and sequencers could, right before they propose a block, use the same type of interaction, right? Run MEV-Boost or something like that, where they would outsource the job of building this block to a builder market. Now some sequencers prefer to have a sort of a first-come first-serve experience and so that leaves less room for this kind of interaction and so that may not actually happen. All of this is related to shared sequencing but quite different because with shared sequencing, sequencing marketplaces as I like to call it, the rollups are selling future rights to occupy time slots, right? So they're selling off the right to be the proposer, and the proposer can always just in time before it actually builds a block during that time slide, it could choose to work with a builder market as well. Whether it could effectively do that or not may be determined by features of that rollup. So rollups that have a very fast block time, it may not leave enough time for a proposer to really outsource that job. Rollups that prefer to threshold encrypt transactions and then have some threshold decryption also may not leave as much room for a proposer to outsource that job.
+
+
+There are other ways that occupying this proposer time slot may bring you additional revenue beyond the gas fees that are being paid in the rollup, which is why I would say that MEV goes beyond the classical ways in which we think. MEV is generated today in builder auctions, and I gave an example. So one example would be if I'm the proposer for some time slot in the future, I could make a promise to a user that I'll do something when it's my turn. I'll do something like ensure that their transaction goes through, I'll try to do some kind of atomic interaction across different chains for them and ensure that they don't pay for failed transactions unless the whole thing goes through atomically. Those are not typical examples that we give with proposers and builders on Ethereum today because it doesn't make so much sense. But it is something that would be potentially a significant stream of revenue for shared sequencers that are sequencing for multiple chains on top of the L1.
+
+
+26:49: Anna Rose:
+
+
+And when you say multiple chains, these are multiple L2s.
+
+
+26:52: Ben Fisch:
+
+
+Multiple rollups, yeah. 
+
+
+26:53: Anna Rose:
+
+
+Yeah, okay.
+
+
+26:54: Brendan Farmer:
+
+
+Ben, do you think it's fair to say that like PBS, especially for rollups, allows us to kind of have our cake and eat it too, in the sense that we can have like a decentralized proposer selection mechanism and decentralized consensus where hardware requirements are very low, but builders actually can be heavily centralized. They can be extremely sophisticated actors that are able to run execution clients across a bunch of different rollups. Is that like a fair characterization of the relationship?
+
+
+27:22: Ben Fisch:
+
+
+Yeah, I think that's a fair characterization. I would break it down one more step, which is that you can first determine who is going to actually act as the leader in. So any type of decentralization ends up looking like a consensus protocol. And in consensus protocols, there may be thousands of nodes participating, but at any given time, there's some node that actually has the job of proposing the list of transactions. This is called the leader. In Ethereum L1, we just rotate randomly among the nodes participating, and that's how we determine a leader. That may not be the best way to determine a leader, because if you just select a random node to be the leader, that node may not be very powerful. And that's why a proposal builder separation is so important on Ethereum today, because these weak nodes end up outsourcing the job to much more sophisticated actors of actually proposing the list of transactions.
+
+
+The idea here is to say, let's not select a leader at random. We have other mechanisms for achieving censorship resistance and neutrality, which is the main reason to select a leader at random. But let's actually involve some kind of market mechanism in determining who is going to be the leader. It could be an auction, it could be a lottery, we're actually running it as a lottery. The Ethereum Foundation is exploring similar ideas with execution tickets, so we may actually see the L1 transition in this direction as well, sometime in the future. And so, this ensures that you keep the node requirements very low for like the 12,000 or more nodes that are participating and contributing to security. The nodes that actually end up acting as leaders are more sophisticated actors that have acquired that right through some kind of auction mechanism. They may still choose at the very last minute to re-auction that right to builders because the sophistication that's required to act as a leader, to act as a just in time builder may be different. But with that additional sort of color, I do agree though with your characterization, Brendan.
+
+
+29:27: Brendan Farmer:
+
+
+I think it raises a really interesting point because, so the builder ecosystem, like participating as a builder is permissionless, right? So anyone can join and start building and submitting block, and if they're able to do so competitively, then they can make money. And I think from conversations with others in the rollup ecosystem, there's sort of like maybe a discomfort with this. Because people look at the builder ecosystem and they say, well, there might be thousands of nodes that are providing security for the L1, but there are fairly few builders. And so, what are we doing if we end up with this relatively centralized builder ecosystem? But it sort of misses the point, because we need a lot of nodes at the L1 for security, like exactly as you said. So it's really important to have a very diverse set of nodes. But if we have ‘permissionlessness’ at the builder level, and builders are able to give us really, really good UX, I'm sure we'll talk later about cross-rollup transactions and atomicity and these really cool guarantees that we're able to get from builders.
+
+
+Given as you said that we have censorship resistance elsewhere in the protocol, do you think that it's necessarily a problem if we have relatively few... I guess to put another way, do we need a thousand builders that are actively participating at any one time? Or is it fine to have still a diverse set of builders, but a much smaller set than the total number of nodes that are providing consensus security on L1?
+
+
+31:02: Ben Fisch:
+
+
+Yeah, I think the latter. I tend to look at this problem by looking at what are we trying to solve for. I don't see decentralization as the end goal. Decentralization is a means to some other set of goals, and one of those is higher security, making sure that once things are finalized, they can't be unfinalized or it would require the mass collusion of many, many actors and a lot of economic value that would be lost to do so. So that's the security piece. Then there are other goals like avoiding censorship or making things as credibly neutral as possible and anti-monopolization, so trying to make sure that prices remain low. And those can be achieved even if we have only a few builders participating, but they're sufficiently competitive with each other, and if we have additional mechanisms for achieving censorship resistance. So one thing that you might consider is, well, there doesn't necessarily need to be one proposer. You could have one randomly elected proposer that's in charge for just making sure that certain things get included, and then other proposers that are actually in charge of how things get ordered.
+
+
+32:21: Anna Rose:
+
+
+I want to understand though, and when you talk about the proposers and the builders, those are outside of the shared sequencer itself, right? Or are they... 
+
+
+32:31: Ben Fisch:
+
+
+A shared sequencer is a proposer.
+
+
+32:32: Anna Rose:
+
+
+Oh, it is a proposer. Okay.
+
+
+32:33: Ben Fisch:
+
+
+It's a proposer, yeah. So the role of sequencers today in rollups is to act as a proposer, it's to act as a temporary DA system, and it's to act as a temporary finality gadget. So when we move towards this world of more decentralized open sequencing, those roles get separated. And the shared sequencer is specifically a node that ends up proposing, acting as a leader for multiple rollups at once. And rollups can sell this time slot right. So a rollup could provide a default proposer that will act as the sequencer for that rollup. Or it can sell this right for future time slots using some open market mechanism. And that market mechanism is what Espresso is building.
+
+
+33:20: Anna Rose:
+
+
+Interesting. This actually follows... There was another question that I had going back to... Like the leader creating the list of transactions. I sort of wondered, like the L2 rollup itself has a list of transactions. But then if you're shared sequencing, you actually have these lists from different rollups. When you push them through, when they go through the shared sequencer, does it stay... Is it like you assign one proposer to do one rollup's transactions, or is there any sort of mixing?
+
+
+33:51: Ben Fisch:
+
+
+So first of all, we don't assign anything. But when many rollups participate in an open market mechanism for selling time slots to propose, then organically we predict that we will end up in a situation where there are a few proposers that are acting simultaneously as proposers for multiple chains. And the reason is that if you are the proposer for two chains at once, two rollups at once, you can create some surplus value and that's going to make... Put you in a better position to win the right because you'll be able to pay more than other people will for that right. So something that we haven't touched on yet is actually, so I've given examples of facilitating atomic interaction. So I think it would be great to get into this conversation because we have Brendan here, but AggLayer... So AggLayer is a great example of this because it is something that enables fast message passing between rollups that are ZK enabled, and yet there needs to be some coordinator that's actually constructing the blocks for the two rollups and proposing these blocks at the same time and coordinating the message passing.
+
+
+And while that could be done asynchronously, there's a lot of advantages to having some nodes synchronously build the two blocks at the same time and pass these messages between them, giving them the feel as being part of one chain, at least for a time slot. So the opportunity to play that role is yet another reason to bid for the right to be the sequencer for several rollups at once.
+
+
+35:29: Brendan Farmer:
+
+
+Yeah, I think this is a really interesting point. And I really like the way that you framed it, where, like if you're a single sequencer for a single rollup, no matter how sophisticated you are, no matter how good you are at building blocks, you will only be able to capture a certain amount of value, and it will necessarily be less than someone that's able to propose blocks across multiple rollups, because for users, there will always be surplus value that's gained by the ability to do things across chains and to do arbs, and like.... I mean, even from a UX perspective, users will have a better experience if they're able to interact across multiple chains. And so I think, for me, when I first heard the shared sequencing concept and didn't really get it, it was difficult, but it clicked when I sort of grasped this, that what you're fundamentally doing is achieving surplus value for users. 
+
+
+36:20: Anna Rose:
+
+
+Interesting.
+
+
+36:21: Brendan Farmer:
+
+
+That wasn't really like a question, but I don't know.
+
+
+36:24: Anna Rose:
+
+
+It's okay.
+
+
+36:24: Brendan Farmer:
+
+
+Is that like the right way to look at it?
+
+
+36:25: Ben Fisch:
+
+
+No, definitely, yeah.
+
+
+36:27: Brendan Farmer:
+
+
+Okay, yeah.
+
+
+36:28: Anna Rose:
+
+
+In that example, Ben, where you had the proposer actually having two lists, I'm assuming that they stay as like a concrete thing. What I'm trying to figure out is like, could you have individual transactions on different rollups being mixed together in that list? Like I envision rollup, list of transactions, sequencer proposes that list to the main chain. I don't actually know what that looks like, so maybe I'm mixing it up because I think of it as like a list that's compressed and then written on-chain. But if you have two lists, could you mix those lists of things and then write them to chain?
+
+
+37:06: Ben Fisch:
+
+
+Yeah, so think about like two different applications on Ethereum. Think about Uniswap and I don't know, think about Aave or something, okay? Then there's a list of transactions that are affecting the state of Uniswap. So a list of transactions that are affecting the state of Aave. If these were L2s, which are just applications, super applications that may host other applications, they still have independent lists and there's no advantage of interleaving those lists. But on the other hand, if what's happening is like a user does a deposit into Uniswap and then takes something out of Uniswap and then does some interaction and gets a loan from Aave or something like that, then there is something that's happening on a level beyond just independently Aave and Uniswap that has to do with what's happening on the two of them together and then on the L1 as well.
+
+
+So it's not that these like transactions for the different rollups are being interleaved, but what's actually happening on one and the other, I can make sure that something happens here and something happens here at the same time.
+
+
+38:08: Anna Rose:
+
+
+At the same time, kind of.
+
+
+38:10: Ben Fisch:
+
+
+Yeah.
+
+
+38:10: Brendan Farmer:
+
+
+But, and this isn't really practical if those two rollups don't share a builder for that time slot. I guess to go back into the historical sharding literature, part of what didn't work was, if you have two shards or two distinct execution environments, you could create a system where you're taking a lock, like part of a state on one shard, and then you're submitting that in a decentralized way to the consensus set of another shard. And it turns out that, like my understanding is that this is actually very, very expensive, because locking that state, it's risky because you're not able to accept transactions or confirm transactions for a certain period of time. And I think that if you want to do synchronous composability, like Ben, do you think that... In my mind, sharing a builder is really the only way to do that in a practical way. Is that like a fair characterization?
+
+
+39:03: Ben Fisch:
+
+
+For synchronous composability, yes, definitely. I think even from an asynchronous perspective, just making interactions happen faster or making sure that things are atomic, which isn't quite synchronous composability, but just ensuring atomicity of actions across two different rollups and having a shared, not even a shared builder, but like a shared proposer that can pass on those requirements and restrictions to whoever is involved in building the block is important. I think it might be helpful, Anna, so with this question about the two lists, it might be helpful to talk about like an example. Imagine that you had USDC deployed to both of these rollups, okay? And so USDC has something called cross-chain transfer protocol, where if you burn USDC in a contract on one chain, then you can mint USDC natively on the other chain.
+
+
+39:59: Anna Rose:
+
+
+Cool.
+
+
+40:00: Ben Fisch:
+
+
+And so this is a great example of a bridge. But so imagine if there's a... The blocks on these two different rollups are being constructed at the same time. So if you were to also have something like AggLayer, which allows for message passing between chains so that a chain on one side can verify that something happened on the other side as well, then now you still have an independent list of transactions for this chain 1, I'm calling chains / rollups using synonymously because even though it's an imprecise term, that's what the industry uses. So this chain 1, it has a list of transactions. There's some USDC burn transactions along with other things that are being done.
+
+
+Now there's this chain 2 that also has its own independent list of transactions, including a USDC mint transaction. But this USDC mint transaction is happening at the same time in the same time period as this USDC burn transaction, and it's only valid because of the fact that this burned transaction happened on the other chain. So it's receiving some evidence on the side that this it's aware that this burned transaction happened on chain 1. These transaction lists are still independent. They don't need to be... There's no advantage of mixing them together and compressing them together or anything like that. But the fact that they're happening at the same time and that this chain 2 is sort of aware that something happened on chain 1, namely that the USDC was burned and therefore this mint transaction is valid. That's the point here. And the shared... The proposer that we're calling shared sequencer is what is enabling all this to happen at the same time.
+
+
+41:32: Anna Rose:
+
+
+Interesting. We've now mentioned the AggLayer a couple times. Maybe we should define what that is. Brendan, maybe you can take the lead on that one.
+
+
+41:40: Brendan Farmer:
+
+
+Yeah, so I would call it a decentralized protocol that provides cryptographic guarantees of safety for the type of cross-chain interaction that Ben's describing. And it also allows chains to share, to safely share a native bridge. So if you have two chains that share a proposer and they're doing a bunch of stuff that's happening cross-chain, you can think about just like moving native, L1 native assets or L2 native assets seamlessly between those chains instead of having to like mint a wrapped synthetic and then swap back into the native representation of that asset.
+
+
+42:16: Anna Rose:
+
+
+So with the AggLayer, would you call it like a settlement kind of cross-chain thing, like you're actually moving tokens?
+
+
+42:22: Brendan Farmer:
+
+
+No, so the problem which Ben alluded to earlier is that if you want to do things cross-chain and you want to route those cross-chain interactions through Ethereum, then you have to wait for Ethereum to finalize. And so that takes a long time. It's like 12 to 19 minutes to finalize blocks on Ethereum. And so part of the motivation with the AggLayer is like, okay, we're not going to wait for that. It's just totally impractical from UX perspective. So given that we want to do things across chains in a much, much lower latency way, like how do we do that safely? And how do we guarantee that chains can't settle to Ethereum with inconsistent state? Or chains can't rug each other on the native bridge, or even an unsound prover on one chain can't drain the shared bridge of funds. That's sort of the motivation. But as Ben said, it's not a shared sequencer, it's not a coordination layer or coordination infrastructure protocol and so it can only work in conjunction with chains coordinating via shared sequencers or yeah, I mean, I think shared sequencers are probably like the best candidate for making this kind of vision work in a very good UX way.
+
+
+43:36: Anna Rose:
+
+
+Cool. When I first heard about it, I actually thought it was competition. I thought it was like the Polygon shared sequencer proposal, but it's quite different. It's like a different layer, it sounds like.
+
+
+43:48: Brendan Farmer:
+
+
+Yeah. So I think at various iterations, it might have seemed more like a shared sequencer, but it was sort of liberating, I think, in conversations with Ben and with Justin Drake to understand where the concept for shared sequencing was and to understand that we actually had zero interest in building or competing with shared sequencers. And in fact, it was much, much better that Polygon was not a shared sequencer and the realization that it could be fully complementary with kind of the vision for Espresso and for shared sequencing in general was like, I think, a really powerful thing. 
+
+
+44:23: Anna Rose:
+
+
+Are some of the other networks like zkSync or Optimism, like are they looking to build their own kind of shared sequencers? Because in a way they have now lots of rollups built on their stack that will need to kind of interact and they currently, I guess, all have these centralized sequencers. Do you know of any work there? I mean, I know Ben you'd probably recommend they use the Espresso shared sequencer instead, but are they sometimes thinking of building their own that sort of really just caters to their ecosystem or federation as we've been referring to it?
+
+
+44:57: Ben Fisch:
+
+
+Yeah, on the contrary, and I actually don't view what Espresso is doing as at all competitive with what zkSync or Optimism might be doing within their own ecosystems. And this sort of comes back to the understanding of Espresso as a marketplace. So if you view Espresso as a marketplace, the clusters may form where certain rollups always choose to be sequenced together. Right? So the idea of a marketplace where everyone has their own sovereignty to sell their sequencing rights, that may be on a level outside of rollup ecosystems, but rollup ecosystems like the Optimism Superchain may not necessarily have individual chains within the Superchain selling independently their sequencing rights through a market mechanism like Espresso. But the Superchain as a whole could participate, of course.
+
+
+45:52: Anna Rose:
+
+
+Could use it. Wow.
+
+
+45:53: Ben Fisch:
+
+
+And so there's value in sort of imposing infrastructure on a marketplace where you're not allowing every individual free for all like sell your... Because there's advantages to making sure that into having the confidence that you'll always be sequenced together. And that's the way that I view things like Superchain or Hyperchains, although to be honest, I really can't tell you because I don't know specifically what the Superchain is going to do or Hyperchains are going to do. These are sort of more concepts that are described at a high level right now, but I don't think there's a ton of concrete detail on them yet. What I can say is that if the Superchain were to be a collection of rollups that are all being sequenced together, then it could still participate as a unit in a marketplace mechanism like Espresso.
+
+
+46:46: Anna Rose:
+
+
+Interesting.
+
+
+46:47: Brendan Farmer:
+
+
+Ben, can I ask a spicier question?
+
+
+46:49: Ben Fisch:
+
+
+Yeah.
+
+
+46:51: Brendan Farmer:
+
+
+So, given what we were discussing earlier around sort of surplus value in shared sequencing, and in particular, I think network effects that will grow among ecosystems that can interoperate and that can share proposers and can share builders. Do you think that there will be this dynamic where, if you're using a shared sequencer, you will always be able to deliver more value to your users than if you were to not use a shared sequencer? And so it might be the case that like fight it, run from it, like shared sequencing will come inevitably or will come all the same. Do you think that's like maybe in the end state, like a fair characterization or is that too spicy?
+
+
+47:40: Ben Fisch:
+
+
+I don't think it's spicy. I think in general, it's hard to argue with the idea of allowing yourself to participate in a marketplace, right? I think that the vision of this as a marketplace sort of highlights this that, okay, the market will determine whether this is valuable or not. If you are a rollup, why wouldn't you integrate with a marketplace where you have the option to sell the rights to sequence rollups to third parties if they're able to clear whatever price you set? And this applies to even Superchains as well. Why wouldn't the Superchain as a whole sell? I mean, my understanding as well from Superchain is it's not necessarily a shared sequencer in the sense that there's one sequencer for the whole Superchain. And we can make this more general since it's not specific to Optimism.
+
+
+I think as a general paradigm, a lot of rollup ecosystems may want to have some form of a Superchain as a meta concept. And that doesn't necessarily look like having one sequencer. It's actually a nice selling point to say to rollups within your ecosystem that they can have their own sequencers and that they can have their own sovereignty over block space, over sequencing rights, and they can participate individually in external mechanisms like Espresso if they so choose. The super chain may be something more about some kind of shared bridge infrastructure or something else that facilitates greater unity among chains within that ecosystem.
+
+
+So anyway, sorry, that's not the most direct answer to your somewhat spicy question, Brendan. But I think that to summarize, looking at this as an open market mechanism that chains can decide to participate in, it very much highlights the fact that if it's valuable, then it's inevitable. There's no downside to integrating an open market mechanism. It only expands your opportunities.
+
+
+49:28: Anna Rose:
+
+
+Cool.
+
+
+49:28: Brendan Farmer:
+
+
+Well, especially, I'm not sure if you've mentioned it explicitly, but there's an implied reserve set for every auction from every rollup for its proposal rights, which is the value that rollup would gain from just sequencing transactions itself. Like literally, it's very difficult to find a downside in that.
+
+
+49:50: Anna Rose:
+
+
+I really like talking about these different layers and how they're interacting, AggLayer, these Hyperchains, but I know Ethereum itself is doing something around sequencers. I think it's called this based sequencer concept. Can you explain what that is and how Espresso would work with that?
+
+
+50:08: Ben Fisch:
+
+
+Yes. So Ethereum itself is not doing anything. But based sequencing is this idea that the Ethereum L1 can function as a shared sequencer. So maybe let me first describe the original version of based sequencing, which was actually the original concept of rollups, like in the original ideas that were described, which was that there is no external sequencer. You just use a smart contract on the L1 to implement some kind of inbox that collects transactions if it doesn't execute them, right? And then periodically, the nodes that are on the layer 2, whether it's optimistic or it's ZK, we'll execute the transactions that are in the inbox and we'll sort of post the result of what the state is. And if it's a zk-rollup, it will be a proof. That is the original concept of a rollup. There's no external sequencers. External sequencers were introduced for various advantages. One being the ability to compress data before it gets posted to the L1. Another being soft finality confirmation. So if you trust the external sequencer, then it can give you a confirmation about what the state is before it's actually finalized on Ethereum.
+
+
+And Justin Drake sort of resurfaced the idea of based sequencing after people started talking about shared sequencing and was pointing out, well, the original concept of rollups actually had Ethereum as a shared sequencer implicitly. So we could move back to that if there are advantages to shared sequencing. The problem is that people have gotten very accustomed to these advantages that external sequencers have, which is data compression, faster finality. So the idea of based sequencing has sort of evolved to look a little bit less like based sequencing was originally described, where it's more about... And what I love about this is that it's focusing on what is the core advantage of involving Ethereum? Well, the core advantage of involving Ethereum is that the proposers that are building blocks for Ethereum can also act as the proposers for layer 2 chains, right?
+
+
+Well, that's possible without just giving away, completely giving away the right to L1 proposers, which has all kinds of downsides, like leaking sequencing revenue to the L1 and not capturing it at the L2, which most rollups, I think, are sort of uncomfortable with. And the realization is that, well, market mechanisms like Espresso actually capture this too, because they allow rollups to sell sequencing rights to L1 proposers. L1 proposers can participate in this market mechanism if you're going to be the proposer, and you find this out about 32 slots in advance on Ethereum. If you're going to be the proposer for the next Ethereum block, you could also bid for the right to be the proposer for multiple L2 chains at the same time. 
+
+
+Now, this becomes particularly advantageous from an economic perspective for rollups that choose to be synchronous with the L1, meaning that their blocks are sort of synchronized with the L1, and they're building off the very latest L1 state. A lot of rollups choose not to do that because it impacts their finality. So some rollups delay any transaction that happens on Ethereum, like a bridge transaction to the rollup, for a long period of time to make sure that that transaction on Ethereum is final before it's recognized in the rollup. But rollups that choose to just allow whatever happens on Ethereum to immediately be recognized in the rollup, they by selling the right to be the sequencer to L1 proposers will now get sort of greater synchronous interoperability with the L1. And that's the concept of based sequencing. It has some caveats, but it has some clear economic advantages, and so some rollups may choose to do this.
+
+
+54:02: Anna Rose:
+
+
+If you are selling the right through this marketplace, does the proposer who's participating in that, do they have to be running something in the Espresso format? Is it just exactly what they're doing right now and they can just participate in this marketplace, or do they have to actually be running something else to participate?
+
+
+54:21: Ben Fisch:
+
+
+L1 proposers that decide to sequence for layer 2s through a mechanism like this will have to run additional software. In general, that's a feature rather than a bug because even with the original concept of based sequencing, if you just have some L1 proposer that is unknowingly sequencing L2 transactions, because it's including it in its block, but it's not really aware of it and it's not doing anything special to support it, what will end up happening is then those L1 proposers, by virtue of not sort of being sophisticated to what's happening on the L2, will need to outsource the job of actually figuring out what transactions should be proposed on the L2 to some kind of builder market. And so you kind of push the problem there. Otherwise you will sort of miss out on a lot of the advantages of more sophisticated, what more sophisticated proposers can do for L2s.
+
+
+55:24: Anna Rose:
+
+
+Somehow I still don't fully get what the based sequencer is though.
+
+
+55:29: Ben Fisch:
+
+
+Based sequencing just means that the proposer for Ethereum is also acting as the proposer for the rollup at the same time.
+
+
+55:39: Anna Rose:
+
+
+Okay. Okay, that's that part. I see.
+
+
+55:41: Brendan Farmer:
+
+
+Yeah. So rather than some like proposer that's participating in the Espresso marketplace, you're just including the L1 proposer, which is known ahead of time. on Ethereum, that's sort of the proposer that can bid on L2 proposer rates.
+
+
+55:57: Anna Rose:
+
+
+Would that be implemented into the L1 in some way? Or isn't that more like the Flashbots team would build this?
+
+
+56:05: Ben Fisch:
+
+
+No, neither, actually.
+
+
+56:06: Anna Rose:
+
+
+Okay.
+
+
+56:06: Ben Fisch:
+
+
+Vanilla-based sequencing is just you can use the L1 proposer on Ethereum today, and you give away the right to sequence to the L1 proposer by just implementing some inbox in the smart contract that's running on Ethereum. That's vanilla-based sequencing, or what I like to call original rollup design. And the idea that I'm describing here gets back a lot of the advantages that we have gotten from moving away from original rollup design, while still involving the L1 proposer, or a L1 proposer that is sophisticated in choosing to participate, by allowing the L1 proposer to bid for the right to sequence for rollups. So this would be an L1 proposer that is also running additional software. Okay, just like MEV-Boost is additional software, right? So it's also running additional software, and just like proposers choose to participate in MEV-Boost auctions, they can choose to participate in rollup sequencer auctions and they will be in a position to create even more surplus value because of the fact that they are the sequencer for Ethereum, right? They're the proposer for Ethereum.
+
+
+57:16: Anna Rose:
+
+
+Okay, I see.
+
+
+57:16: Ben Fisch:
+
+
+So now they can do shared sequencing between Ethereum and L2 rollups.
+
+
+57:21: Anna Rose:
+
+
+Right. So in this case, the based sequencer, it's a concept. It's like an action. It's not like a product.
+
+
+57:27: Ben Fisch:
+
+
+It's a concept, and it's a label that could be bestowed upon rollups that make certain choices when deciding how to integrate with a market mechanism like Espresso.
+
+
+57:40: Anna Rose:
+
+
+I see, I see. Cool. I have one more question about the list of transactions. This is sort of throwing back to earlier in the episode itself, but I realized as we were speaking that, where we kind of left it with the shared sequencer is like, it's a marketplace and you're the proposer. But I've always had this idea of the sequencer as really the thing that makes the list, not that's proposing the list. In the shared sequencer model, is the proposer creating that list as well, or is it relying on some other agent that's actually putting together the list and then bidding to propose it?
+
+
+58:20: Ben Fisch:
+
+
+Proposers are making a list, whether they choose to outsource that job to builders or not is sort of their own prerogative, but proposers are making a list and unless something goes horribly wrong that list will be finalized.
+
+
+58:36: Anna Rose:
+
+
+I'm talking about the list of transactions on the L2.
+
+
+58:39: Ben Fisch:
+
+
+I am too.
+
+
+58:40: Anna Rose:
+
+
+Oh, you are too, okay.
+
+
+58:41: Ben Fisch:
+
+
+So the reason why we're using these terms proposer is to highlight the fact that what a sequencer does is really the job of a proposer within a consensus protocol. So we're unifying the terminology that's used on Ethereum L1 with the terminology that's been introduced by the Ethereum L2. And so when we look at decentralized sequencing or more open market mechanisms for giving sequencing rights, then we highlight the separation between what is finalizing the list of transactions on the L2, which is some form of shared finality and Ethereum provides that shared finality ultimately, from the act of actually proposing what is the list of transactions to be executed on the L2. That's a job that sequencers play today, but that could be opened up through market mechanism to involve other proposers.
+
+
+59:36: Anna Rose:
+
+
+I see. The entire flow though, because you talk about the proposers kind of on both sides, like on the L1 and the L2, is it almost like proposer on the rollup, builder on the rollup, shared sequencer proposer, builder?
+
+
+59:49: Ben Fisch:
+
+
+Okay, yeah, I mean, I regret that maybe I used the terms, proposers and sequencers are the same thing. I sort of regret the fact that I introduced this additional term. I think what's causing the confusion is that, so when I started out, I was saying that basically, if the centralized sequencer for a rollup is playing several different roles, it's proposing the list of transactions, it's also finalizing the list of transactions based on trust in that centralized sequencer. So it's providing this soft finality, and it's also acting as a DA system. And so the reason why I introduced these separate terms, finality gadget, proposer, DA separately, is that when we look at opening up this centralized role, then now these three different actions that sequencers do today can be separated.
+
+
+So Espresso as a marketplace is sort of auctioning off the right to be the proposer, but then there's also some form of shared finality that once some shared proposer proposes two lists of transactions for two different chains, then all the other nodes that are participating in the sort of Espresso finality gadget, which is sort of a decentralized consensus protocol, and it's being run through Ethereum, that can provide some shared finality. Rollups could choose not to use that shared finality, of course, and just wait for Ethereum finality or introduce their own mechanisms, whatever may be the case. I just wanted to separate out this action of actually proposing lists of transactions, which is where the shared sequencing is really coming in, versus the act of finalizing and agreeing on what was proposed.
+
+
+1:01:26: Anna Rose:
+
+
+That's really helpful. Thank you so much for letting me ask that last one.
+
+
+1:01:30: Ben Fisch:
+
+
+And we should have asked it earlier, unfortunately. 
+
+
+1:01:34: Anna Rose:
+
+
+Yeah, I feel like I've been obsessed with this list of transactions and who does what to this list of transactions. But yeah, I think that really helps to clarify it. So that wraps up our episode. Thank you so much, Ben, for coming on the show and sharing with us the work that Espresso has been doing on shared sequencing, what exactly a shared sequencer is. This has been so helpful. Thanks.
+
+
+1:01:58: Ben Fisch:
+
+
+Thank you. It was really fun being here.
+
+
+1:02:00: Anna Rose:
+
+
+And thanks, Brendan, for co-hosting.
+
+
+1:02:02: Brendan Farmer:
+
+
+Yeah, of course. Thanks, Anna.
+
+
+1:02:04: Anna Rose:
+
+
+All right. I wanna say thank you to the podcast team, Rachel, Henrik, Jonas, and Tanya, and to our listeners, thanks for listening.

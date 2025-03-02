@@ -1,0 +1,1120 @@
+[00:00:05]: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week I catch up with Zac Williamson and Ariel Gabizon. So last year in spring 2023, I did an episode with Zac discussing the history of PLONK, a work that he and Ariel co-authored. And in a separate episode around the same time, I had an interview with Ariel where we covered the SNARK trilogy as he saw it at the time. Now, in this episode, I catch up with both of them and pick up each of their stories from where we left off to understand what has happened since. We discuss Zac's work over the last year in bringing Aztec to life and how it has taken a combination of different proving systems and advanced cryptographic techniques to build this general purpose private compute environment.
+
+
+We also discuss Ariel's work in the last year, starting with his work on lookup tables and how this gave way to more research on an adjacent but different area called IVC. It was this work on IVC that brought Ariel and Zac's paths together once again and prompted them to work together, with Ariel rejoining Aztec earlier this year. Now, these are two of my favorite guests, and I had a blast discussing all things from the details of IVC and how it works, as well as the fate of pairing-based SNARKs. We cover a lot of ground, so I hope you like it.
+
+
+Now, before we kick off, I just want to point you towards the ZK Jobs Board. There you can find job opportunities to work with top talent in ZK. I also want to encourage teams looking to fill roles to post your jobs there as well. We've been hearing from more and more teams that use the ZK Jobs Board that they have found excellent talent through this channel. So be sure to check out the ZK Jobs Board. We've added the link in the show notes.
+
+
+Now Tanya will share a little bit about this week's sponsors.
+
+
+[00:02:06]: Tanya:
+
+
+Attention! All projects in need of server-side proving, kickstart your rollup with Gevulot's ZkCloud, the first ZK-optimized decentralized cloud. Its flexibility and customization supports any proof system such as SP1, Polygon, RISC Zero, or ZKsync at rates 5.8 times cheaper than AWS with two times the performance. Get started with a free trial plus extended grant opportunities for premier customers until Q1 2025. In addition, Gevulot is currently onboarding institutional prover node operators. Register at gevulot.com. So thanks again, Gevulot.
+
+
+Today's episode is sponsored by Aleo. A new era of decentralized, privacy-preserving computing is here. Aleo, a Layer 1 blockchain powered by zero-knowledge cryptography recently announced their mainnet launch. Now developers can build applications that take advantage of Aleo's unique combination of permissionlessness, programmability, and privacy. Start by learning their domain specific programming language, Leo. Write and deploy your first ZK application at leo-lang.org or head on over to aleo.org to learn more about their technology and what you can build. Aleo, this is zero knowledge without compromises. So thanks again, Aleo.
+
+
+And now here's our episode.
+
+
+[00:03:29]: Anna Rose:
+
+
+Today I'm here with Ariel and Zac. Welcome back to both of you.
+
+
+[00:03:34]: Ariel Gabizon:
+
+
+Hey.
+
+
+[00:03:34]: Zac Williamson:
+
+
+Hello.
+
+
+[00:03:36]: Anna Rose:
+
+
+So I wanted to have you both on the show because last year we did two episodes with each of you. But we did it right around the same time. It was in April when we recorded it. And today I want to do a catch up with both of you, but also, I know that you're now working together again, so we can talk a little bit about how your histories over the last year have also intertwined. So, Zac, last time you were on the show, you shared a history of Plonk, Noir and introduced, or kind of announced the building of Aztec 3.
+
+
+[00:04:08]: Zac Williamson:
+
+
+Yes.
+
+
+[00:04:09]: Anna Rose:
+
+
+And Ariel, last time you were on the show, we did this episode all about the SNARK trilogy. This is really your construction, actually your idea to break down SNARK history into these like three parts. And we ended our talk where you basically admitted to have been Nova pilled by Justin Drake. And actually, I was there when that happened at a dinner, and you had also just been sumcheck pilled by Zac. So those were sort of the last two data points that we had that you had gotten excited about IVC, and you'd also kind of been excited about how sumcheck and IVC could be used together. So in this episode, I want to catch up with you. I think we're going to start, though, with Zac.
+
+
+[00:04:51]: Zac Williamson:
+
+
+If the last episode was all about the SNARK trilogy, is this like the fourth episode in the trilogy? Is this the reboot that nobody asked for?
+
+
+[00:05:00]: Anna Rose:
+
+
+Yeah, maybe.
+
+
+[00:05:00]: Zac Williamson:
+
+
+That we're rehashing, but I'm down with it. Let's go.
+
+
+[00:05:05]: Ariel Gabizon:
+
+
+Just so people don't get mad, it was a trilogy just of pairing-based SNARKs for all the parts that were not there. And it was more HyperNova's idea to incorporate sumcheck and folding together.
+
+
+[00:05:19]: Zac Williamson:
+
+
+And if you haven't listened to it, do that now and then come back because it's a really good episode.
+
+
+[00:05:23]: Anna Rose:
+
+
+Yeah. So is yours, though, Zac. So I wanna hear -- because in your episode, we actually did the history of Plonk, which was the work that the two of you wrote together back in 2019. Oh, actually, Zac, I had a question for you before we kick this off.
+
+
+[00:05:36]: Zac Williamson:
+
+
+Go for it.
+
+
+[00:05:37]: Anna Rose:
+
+
+Do you remember the first time you ever presented Plonk?
+
+
+[00:05:40]: Zac Williamson:
+
+
+Do I remember the first time I ever presented Plonk? So --
+
+
+[00:05:43]: Anna Rose:
+
+
+Was it ZK Summit 4? This is what I'm hoping.
+
+
+[00:05:47]: Zac Williamson:
+
+
+It was ZK Summit in San Francisco, I believe. You were hosting it. It was a milestone presentation.
+
+
+[00:05:51]: Anna Rose:
+
+
+ZK Summit 4.
+
+
+[00:05:52]: Zac Williamson:
+
+
+Yes.
+
+
+[00:05:52]: Anna Rose:
+
+
+Yeah, going back. So you had talked in that last episode about the history of Plonk, about Noir, the zkDSL, and you were building Aztec 3. What has happened since then?
+
+
+[00:06:03]: Zac Williamson:
+
+
+What has happened since then? So, well, we've rebranded Aztec 3 to Aztec, so we don't have to explain to people what Aztec 1 and Aztec 2 are. But, okay, so a lot has happened on kind of the development side of it, because back then, I think it was more of an idea. We were still architecting it, designing it, figuring out how the heck it will work. And nowadays we are close to cutting the pre-release. So we have the developer network version of Aztec out today and live. So this is a fully programmable, feature-rich Layer 2 for the Ethereum Network. But unlike your typical Layer 2, we have strong privacy guarantees by default.
+
+
+So you can write a smart contract and it can have private shield as state in it. So you can have hidden identities, you can do things like link identities and credentials in the real world to what's happening on-chain and have that link secure so that people can't -- observers can't stoop into it, all backed up by ZK STARKs. Some of the mad stuff that Ariel, me, my team, and many, many other people in the industry have been working on. And we are very ambitiously building towards our public testnet, which we are hoping to release soon. We don't have a firm release date yet, but very soon.
+
+
+[00:07:30]: Anna Rose:
+
+
+Cool.
+
+
+[00:07:31]: Zac Williamson:
+
+
+It's not going to be some kind of marketing or PR testnet that doesn't really work properly. It's going to be fully decentralized from day one. And this is all backed up by our programming language called Noir, which is the programming language if you want to write privacy-preserving ZK SNARKs. And so yeah, basically, development is really powered ahead. We've solved a lot of extraordinarily hard problems to get to this stage. Something we discovered very early on was that when it comes to building privacy-preserving Layer 2s, there was an enormous number of open problems that hadn't really been solved or tackled yet that we had to solve, all with the help of the community. So it's been a monumental engineering and research effort. But, yeah, basically we think we've solved all the hard existential research problems, the hard critical problems. So we have reduced the complexity of building this network to a mere trivial execution problem that we are executing on.
+
+
+[00:08:28]: Anna Rose:
+
+
+You are in the engineering, like almost end stage engineering of this production line, it sounds like.
+
+
+[00:08:34]: Zac Williamson:
+
+
+Yes.
+
+
+[00:08:34]: Anna Rose:
+
+
+You mentioned that it's going to be decentralized from day one. Can you talk a little bit about what that means?
+
+
+[00:08:39]: Zac Williamson:
+
+
+Yeah, certainly. So the normal playbook for Layer 2 is you have some Layer 2 network that's posting blocks into Layer 1. And in order to produce those blocks, you need an entity that decides which transactions are going in your network. That is your sequencer, sometimes called a validator, and that's drawn from some kind of validator or sequencer network in a permissionless and decentralized way to ensure censorship resistance. So that's what we mean by decentralized? By decentralized, we mean that any participant in the network, in theory, can earn the right to produce blocks. It's not restricted to a permission set.
+
+
+[00:09:14]: Anna Rose:
+
+
+When you say decentralized here, though, do you mean like the sequencer? Because I think we're kind of familiar with the concept of a sequencer for L2s. Is that the part that's going to be decentralized? Will it be like a decentralized sequencer right off the bat?
+
+
+[00:09:28]: Zac Williamson:
+
+
+Right off the bat, anybody will be able to be a sequencer as long as you can post a bond and you have the hardware requirements, which shouldn't be too difficult. But yes, you can produce Aztec transactions.
+
+
+[00:09:40]: Anna Rose:
+
+
+Nice. Yeah. Actually, I know ZKV is experimenting with the testnet. We don't know yet if we're going to be a permanent operator, but we are kind of playing with it because it's the first time, I think, that we get that chance to be in a decentralized sequencer pool. So it's fun to try that.
+
+
+[00:09:58]: Zac Williamson:
+
+
+If Aztec is the first decentralized Ethereum Layer 2, we are going to gloat about that till the cows come home because we're about two years late to the party compared to some others.
+
+
+[00:10:05]: Anna Rose:
+
+
+Yeah, it's not -- I don't know if you are the first, but you're the first one that we've had access to somehow. So maybe there are some other decentralized sequencers networks that are more closed.
+
+
+[00:10:19]: Zac Williamson:
+
+
+Maybe.
+
+
+[00:10:19]: Anna Rose:
+
+
+Or they're very far away from ZK rollups, so we aren't participating in them. But, yeah. Interesting.
+
+
+[00:10:25]: Zac Williamson:
+
+
+I mean, if you want to find them, just announce on Twitter that there aren't any, and then they'll all come out of the woodwork and go --
+
+
+[00:10:31]: Anna Rose:
+
+
+That's true. Fair. Something that you shared back at ZK10 was this, I think, proving system called Honk. Is that what's underpinning the Aztec system? Like what is the cryptography under in Aztec today?
+
+
+[00:10:49]: Zac Williamson:
+
+
+Right. So the complexity is relatively high in terms of, what do you mean by proving system anymore? Because you have your fundamental zero-knowledge proving system that you use to prove correctness of transactions, but then nowadays, you have these things called incrementally verifiable computation schemes or accumulation schemes. And so on top of our proving system, we accumulate our Honk proofs with something called Protogalaxy, which Ariel was a brainchild of Ariel and Liam. But then with Protogalaxy, there are some issues with all accumulation schemes where there were very expensive components to them. So we accelerate those expensive operations using something we call Goblin Plonk. And then Goblin --
+
+
+[00:11:24]: Anna Rose:
+
+
+Oh yes, Goblin Plonk.
+
+
+[00:11:24]: Zac Williamson:
+
+
+Yes. And then also as part of the IVC scheme, in order to transmit information efficiently between different instances of the IVC, we have this quasi-independent scheme called the Data Bus. So we have this, basically this weird Frankenstein's monster of sub-protocols that are all being assembled together in some kind of terrifying monstrosity. And to wrap it all together in a bow and pretend that it's a nice, elegant, clean proving system, we call the whole thing together, we call it MegaPlonk.
+
+
+[00:11:56]: Anna Rose:
+
+
+Oh, MegaPlonk. Okay, so wait, what happened to Honk then, Zac? I didn't hear Honk in that mix.
+
+
+[00:12:00]: Zac Williamson:
+
+
+It's a components of MegaPlonk. Honk is the fundamental ZK proving system. Yes.
+
+
+[00:12:02]: Anna Rose:
+
+
+It's a components of MegaPlonk. Okay.
+
+
+[00:12:05]: Zac Williamson:
+
+
+Yes.
+
+
+[00:12:06]: Anna Rose:
+
+
+Very nice. Like in the Transformers, isn't there, like a Mega Truck that they all form into…
+
+
+[00:12:13]: Ariel Gabizon:
+
+
+Megatron.
+
+
+[00:12:14]: Anna Rose:
+
+
+Megatron.
+
+
+[00:12:15]: Ariel Gabizon:
+
+
+Megatron.
+
+
+[00:12:15]: Zac Williamson:
+
+
+Honestly, we were just thinking, what are hype names for large things? And because we're all millennials and boomers in Aztec, our minds drifted to 90s TV shows. So that's where Mega comes from.
+
+
+[00:12:28]: Anna Rose:
+
+
+Very cool. I want to loop in Ariel in this conversation. Maybe the way we can do it is, Ariel, you were working at Aztec a few years ago. You left, worked on cq, like a lot of lookup stuff. When we were talking last year, I think you were coming off of a period of just releasing a lot on the lookup front. Let's pick up from our last episode, and maybe you can share a bit of the trajectory to rejoining Aztec. Like what kind of work and ideas brought you back to the fold?
+
+
+[00:13:01]: Ariel Gabizon:
+
+
+Well, on that note, we can sort of recap the end of our episode, which was me in Zuzalu quoting Zac saying, well, sumcheck is better than folding. So that's why folding is not that great. And you asked, well, maybe you can combine them. And just at that time, there were rumors of this paper called HyperNova that exactly combines the advantages of Nova and sumcheck. So just a few days after we recorded the episode, the rumors on HyperNova were confirmed. It's a paper by Kothapalli and Setty that merges sort of the -- combines the advantages of Nova style of folding and sumcheck. And that started a sequence of interesting works. So, broadly, you could say what Hypernova is saying, well, we can sort of, instead of committing to these error terms, which was the expensive part in this Sangria work, that generalized Nova to Plonk, we can use sumcheck instead of committing to the error terms.
+
+
+And then this really interesting paper came out, Protostar, which said, we don't even sort of have to do the sumcheck. We can sort of just fold the claim about the sumcheck being correct. And I think one of the -- still, I tried to plug this, but one of the -- still underappreciated elements of Protostar is that we usually have some relatively structured constraint format, R1CS, Plonkish is more flexible. But the cool thing about Protostar is that the constraints are totally -- except there's some degree bound on the degree of the constraint. The constraints are totally arbitrary. They can be anything. You can take any variables from anywhere in the witness and put them in some constraint. And there's need to be -- the I constraint and the (i + 1)th constraint can be totally different. So I was -- really like, this Protostar work.
+
+
+[00:15:19]: Zac Williamson:
+
+
+Just to add to that, we're starting to explore how to leverage this internally, because it's a very powerful property. You can do whatever you want with your constraints. They can be structured, they can be unstructured. At a bare minimum, one of the things it does is it means that this so called folding verifier, when you actually want to accumulate instances of a single proving system, the accumulation work that the verifier does is not at all affected by the complexity of the constraint system, which for us has massively crushed down the cost of accumulation versus more traditional ways of doing it.
+
+
+[00:15:53]: Anna Rose:
+
+
+Just to still set the stage, though, Ariel, the reason that you got Nova pilled was because before that, you had actually doubted it, right? And it sounds like, Zac, you still sort of doubted it back in April of last year. At what point do you feel you got IVC interested? When did that switch for you? Was it Ariel who got you to think of it differently?
+
+
+[00:16:15]: Zac Williamson:
+
+
+When it comes to ZK, what I'm interested in is stuff that is useful for Aztec and like achieving Aztec goals. And Nova wasn't useful for what we wanted to do, which was general purpose programmable smart contracts. And if anybody wants to argue that, come talk to me. You're wrong. Really, it wasn't useful because we wanted -- we needed to accumulate arbitrary circuits from a set of a million different contracts. And Nova wasn't helpful with that. So this is why I wasn't interested in it. HyperNova, at least in the form of -- in the paper, wasn't helpful with that because all of these folding schemes, they were folding one circuit over and over and over again, under the assumption that that circuit is some kind of virtual machine circuit. It wasn't useful for Aztec. It's not how we could do things. What we needed was we wanted to fold or accumulate completely arbitrary circuits that could come from a set of a million, a billion different circuits. I got pilled with folding when Protostar and Protogalaxy came out.
+
+
+[00:17:09]: Anna Rose:
+
+
+I see.
+
+
+[00:17:09]: Zac Williamson:
+
+
+That's when I got pilled. Because that's when that was possible. And until then, I didn't -- I wasn't interested, to be blunt.
+
+
+[00:17:16]: Anna Rose:
+
+
+But now it sounds like this stuff is throughout the system. Right? You're using IVC-based systems or techniques everywhere.
+
+
+[00:17:23]: Ariel Gabizon:
+
+
+Yeah. Another crucial element of Protostar that we, Liam and I use in Protogalaxy is that they don't fold sort of a fixed circuit. They fold a protocol, sort of, rather than a circuit. And that can sort of -- you can translate that very easily to, okay, so now we can get any circuit, because if we're folding a protocol, we can have, say, the selectors of a specific Plonk circuit be the first message in that protocol.
+
+
+[00:17:54]: Anna Rose:
+
+
+I don't know if I get this. Like a protocol -- you're folding a protocol. What's the difference between a protocol and a system?
+
+
+[00:18:00]: Ariel Gabizon:
+
+
+Yeah. I realized when I said it. So the Protostar, rather than a fixed set of constraints, it allows you to fold a protocol where, crucially, as in all protocols we know, there's randomness. The verifier sends randomness during random challenges during this protocol.
+
+
+[00:18:20]: Anna Rose:
+
+
+Okay.
+
+
+[00:18:21]: Ariel Gabizon:
+
+
+And that is crucial to allowing the folding to work with different circuits, because officially, the folding does need to work with a fixed protocol. Well, this is maybe a bit of a rabbit hole, but when you allow randomness, you can sort of get a universal circuit without the usual overhead.
+
+
+[00:18:42]: Anna Rose:
+
+
+Weird, wild. But why?
+
+
+[00:18:45]: Zac Williamson:
+
+
+Maybe a way of generalizing it is like Protostar and Protogalaxy, they fold these black box protocols, where basically, you're proving some kind of relation. And the manner in which you prove it, it's very, very loosely defined in \Protogalaxy, unlike the previous works that came before it, where you had this very fixed concept of a function that you had to fold. And so your black box protocol, basically, the idea is here with something like Plonk or Honk or MegaPlonk or whatever the hell we're using these days. Plonk is a single protocol, but it encodes an arbitrary numbers of circuits. Because you can, by changing Plonk's selector polynomial values, you're configuring different circuits. And so through that, with something like Protostar, Protogalaxy, you can fold an arbitrary number of arbitrary Plonk circuits together because they're all the same fundamental relation.
+
+
+[00:19:37]: Anna Rose:
+
+
+Does this have anything to do with -- because I've always understood IVC is like, everything that's folded has to be identical. Right? Like everything -- are these identical folding steps? Are you actually saying that in these new IVCs, they could be different, or are they still that sort of parallel of the same thing?
+
+
+[00:19:55]: Ariel Gabizon:
+
+
+Okay. Let me give it another shot. I think emphasizing protocol versus circuit was a distraction. Protostar allows you to fold a randomized circuit. It is true that all folding schemes, at the end of the day, need to work with a fixed circuit. So, but say you say, okay, but my circuit is not fixed, I want to fold something else at every step.
+
+
+[00:20:22]: Anna Rose:
+
+
+Yeah.
+
+
+[00:20:23]: Ariel Gabizon:
+
+
+So I'll say to you, okay, no problem. We have this concept of a universal circuit that by fixing some of it, you can get any circuit you want. The problem with universal circuits is for them to simulate all circuits of size n, they need to be of size -- there's a big overhead. They need to be of size O(nlogn). Protostar allows you to fold, you can call it protocols or randomized circuit. And basically, the idea is, this is what Plonk leverages, for example. When your circuit has randomness, it can be universal without this increase in circuit size. That's one way to think about it.
+
+
+[00:21:09]: Anna Rose:
+
+
+That was one of the breakthroughs at Plonk back in the day.
+
+
+[00:21:13]: Ariel Gabizon:
+
+
+Well, so I wanted to emphasize that that's another advantage of Protostar versus the previous folding schemes that it allowed to fold -- rather than a deterministic circuit, it allowed you to fold a protocol, or you could think of it as a randomized circuit. A circuit where the verifier can inject randomness.
+
+
+[00:21:35]: Zac Williamson:
+
+
+Yeah. And I mean, to kind of add to this, I think one of the -- maybe this highlights one of the difficulties I had, which is when I was talking about these folding schemes, particularly before Protostar, even describing what I was wanted to achieve with researchers was very hard. Because I'm like, I want to fold up these circuits. And they're like, there's no such thing. And I'm like, I'm pretty sure there is. And then Protostar comes out and I'm like, let's see, you can use it to fold up your circuits. And they were like, I don't understand what you mean. It's like, from a researcher's point of view, you can't fold up these circuits. From an engineer's point of view, you bloody well can. And the difference is because of what I was talking about with this concept of a randomized circuit, which is, in theory, it's the same circuit. In practice, when you actually look at practically what's being realized and achieved, it's not the same circuit.
+
+
+[00:22:22]: Anna Rose:
+
+
+I see. Can I try to paraphrase at least what I think I've understood? I think what you've said is like, and this is where maybe I'm not getting this right, but I've always understood IVC as having in its folding, in that the folding is almost like a parallelization of equal activities happening under the hood. And they all have to be homogeneous, they have to be the same. Like it's the same action over and over again. When you talk about randomness, I start to think that what's actually in those folding pieces wouldn't all be the same. But I think for IVC, it still has to be the same. So do you almost emulate it being the same by this universal SNARK?
+
+
+[00:23:01]: Zac Williamson:
+
+
+Well, yes. It's kind of like a trick, as in you're folding Plonk circuits. The Plonk circuits need to be uniform in a certain way. They need to have the same number of columns, they need to have the same number of selector polynomials. But the values of the selected polynomials can be completely arbitrary in theory, sort of. And so in practice, it means you can fold different Plonk circuits.
+
+
+[00:23:21]: Anna Rose:
+
+
+So, Ariel, you are looking at me like I maybe didn't get it correct. So correct me.
+
+
+[00:23:26]: Ariel Gabizon:
+
+
+Yes. So the repetitive part is the protocol. For example, say what you're folding is a Plonk protocol so that -- but you're thinking of it as like if in a regular Plonk protocol, the selector polynomials are just given in advance. You're thinking of -- no, no, no. Round one is I send you, prover sends you the selector polynomials. And also in the same round, he sends the witness polynomials. Then the verifier sends a random challenge. Prover sends back a message, verifier sends a random challenge. So that's the fixed thing that you're folding. Say you would in Protostar, Protogalaxy fold this protocol.
+
+
+[00:24:09]: Anna Rose:
+
+
+I see.
+
+
+[00:24:09]: Ariel Gabizon:
+
+
+And so what's going to vary in the different steps, it's going to be the prover messages. Like, in one round, in one iteration, the prover will send certain values of selectors. In another round, you'll send different values. And sort of the point that Zac was saying is the protocol is fixed, but by sending different selector values in each iteration, you are, in fact, having a different circuit in each iteration of the IVC. Because the only -- if you look at different Plonk circuits, what's different? It's the selector values.
+
+
+[00:24:43]: Anna Rose:
+
+
+Okay. In regular IVC, in the Nova IVC, you don't have protocols. What is actually usually happening there?
+
+
+[00:24:52]: Ariel Gabizon:
+
+
+You have a fixed set of R1CS constraints.
+
+
+[00:24:57]: Anna Rose:
+
+
+Okay. So I'm sort of picturing a lot of folding steps next to each other, all sort of folding into a single thing up at the top. This is sort of the visual that I have, but each one of those would be the same R1CS constraint system, I guess. It would always be the same. Right?
+
+
+[00:25:13]: Ariel Gabizon:
+
+
+Right.
+
+
+[00:25:13]: Anna Rose:
+
+
+And here you're incorporating Plonk into it.
+
+
+[00:25:17]: Zac Williamson:
+
+
+Yeah. Instead of saying you're folding a fixed set of R1CS constraints, you're saying you're folding arbitrary Plonk constraints.
+
+
+[00:25:24]: Anna Rose:
+
+
+And this added more flexibility, it sounds like. All of a sudden, it became more useful for something like the Aztec system.
+
+
+[00:25:30]: Zac Williamson:
+
+
+Yeah. Because with Aztec, what's happening is if you're writing a smart contract in Noir that gets compiled down to a collection of SNARK circuits. So you've got one SNARK circuit per function. And so in Aztec, when you're executing a transaction, basically say, okay, well, I'm calling a function, so here's the circuit for the function, you know, here's a proof. And then that function calls more functions, then you need to provide proofs of those functions. And so, basically, at each step of the IVC in Aztec, when you're processing an Aztec transaction, at each step, you're verifying a function circuit from a smart contract. And so that function circuit can be anything.
+
+
+[00:26:07]: Anna Rose:
+
+
+Cool. All right. So, Ariel, I want to just ask you, though. So, in that last episode when we did the SNARK trilogy, you had these sort of stages of the pairing-based SNARKs. Where does this new work fall in that trilogy? Is it still in the third trilogy? Or would you say there's, like are we in on the dawn of a fourth.
+
+
+[00:26:29]: Ariel Gabizon:
+
+
+I think the folding work is sort of independent from what I called the third sort of chapter. I don't know. I think in that episode, I called it part of Episode 2, or a side story. Maybe I more realized it's significant, so I would be more hesitant to call it a side story. But in terms of leveraging the pairing, that sort of orthogonal to this whole folding development. So yeah, so I'd say it's like a spinoff show. It's like Obi-Wan Kenobi or something.
+
+
+[00:27:08]: Anna Rose:
+
+
+Nice. Can you share a little bit more? I mean, you've just mentioned some work that you actually published in Protogalaxy.
+
+
+[00:27:16]: Ariel Gabizon:
+
+
+Yes.
+
+
+[00:27:16]: Anna Rose:
+
+
+That was you and Liam. So that was some work that came out. Maybe you can just share a little bit about when that came out. What else have you been working on around that time?
+
+
+[00:27:24]: Ariel Gabizon:
+
+
+Right, so, like,  I -- you know, I've made pretty clear I was pretty excited and interested in the Protostar paper, and at least in the original version of that paper, there was this sort of redundant logarithmic overhead. So that sort of motivated Liam and me to tweak it a bit and I think simplified a bit, though it's maybe subjective, and that's what led to the Protogalaxy protocol. To be honest, sort of, after the Protogalaxy paper -- well, really, after the cq and cqn papers, I sort of shifted gears a bit and I was more in a mode -- less in a research mode and more in a mode of, I want to bring these third generation pairing protocols into production. And I feel a little like a band that had a big hit, although they weren't sure it was going to be a hit, and then they have all the confidence and it's a new song coming out. The song was cq. And you're sure it's going to be a big hit and nobody or not to offend the people who -- there have been some nice works building on cq, so not to offend people, calling them nobody, but oversimplifying, nobody cared.
+
+
+So, yeah. So it was sort of, to a degree, a year and a half of seeing that nobody cared. At the very least, not enough people cared enough to sort of overcome the hurdles required to sort of bring cq into beneficial use. And there are a few factors here. One factor is the exciting work on hash-based SNARGs, including the ECFFT work, the Circle STARKs work. And another element is I. Initially, when we recorded that episode on the trilogy, I thought that cq is like a hammer that you can use on any nail and make it five times better. But it turned out -- and this is very related to the whole table decomposability thing that was very much emphasized in Lasso, that, sure, cq can let you work with tables that, say, are a million times bigger. So does that mean a million times better? And sort of the answer is, not if your table is decomposable.
+
+
+[00:30:01]: Zac Williamson:
+
+
+And it's a log a million. It's a log on million times better, which is far less impressive.
+
+
+[00:30:08]: Ariel Gabizon:
+
+
+Yeah. So --
+
+
+[00:30:10]: Zac Williamson:
+
+
+Yeah. So that sounded savage. I didn't mean like that -- I didn't mean to put it down. It's also research. I think another problem with cq is just that, basically, for a team to build with cq, you're making a really big bet, because cq is not compatible with all of the new fancy hash-based research coming out. You're basically tying yourself to the pairing-based cryptography ship for 5 or so years if you're using cq. And I think for a lot of teams, that was a very scary proposition, particularly teams that are purely focused on kind of scaling. So ZKVM teams. Just because the narrative was all about hash-based cryptography at the time, that was the sexy thing.
+
+
+[00:30:53]: Anna Rose:
+
+
+Ariel, I really liked the way you put this, where it's like you were working on this thread of research, you were very excited about it. I remember last year, and you feel like you kind of -- you put it out into the world. This was going to be your second hit or a third hit, and it wasn't picked up. At the same time, you got Nova pilled and sumcheck pilled and combo pilled, and then found a way to incorporate protocols into it. So, yeah, what was your pivot? Where did you go?
+
+
+[00:31:25]: Ariel Gabizon:
+
+
+Well, you could say that sort of fast forwarding a bit, Zac Protogalaxy pilled me, even though it's my own paper. Because I even, I think, was one of those people Zac mentioned that didn't understand that -- didn't fully understand that it could be used very conveniently for what we can call non-uniform IVC, in the sense that the circuit is different in every iteration.
+
+
+[00:31:55]: Zac Williamson:
+
+
+I remember it was at Zuzalu. Right? Where -- was it at Zuzalu, I just -- I went up to you and I'm like, yo, this thing is really -- protogalaxy is amazing. We're going to use it. And you were like, huh, what's this about?
+
+
+[00:32:07]: Anna Rose:
+
+
+It must have been after that, though, right? It must have been after that.
+
+
+[00:32:08]: Zac Williamson:
+
+
+Maybe afterwards.
+
+
+[00:32:09]: Ariel Gabizon:
+
+
+That was -- yeah, it was in Barcelona. There was this really cool thing in Barcelona.
+
+
+[00:32:15]: Anna Rose:
+
+
+Oh, yeah. The summer, July.
+
+
+[00:32:16]: Zac Williamson:
+
+
+Yeah, yeah.
+
+
+[00:32:17]: Ariel Gabizon:
+
+
+There was this -- what was it called?
+
+
+[00:32:19]: Anna Rose:
+
+
+ZCon.
+
+
+[00:32:20]: Ariel Gabizon:
+
+
+ZCon was there. But we --
+
+
+[00:32:23]: Anna Rose:
+
+
+Oh, yeah.
+
+
+[00:32:23]: Ariel Gabizon:
+
+
+This was a chat --
+
+
+[00:32:23]: Anna Rose:
+
+
+Inversed Tech. Daniel did it.
+
+
+[00:32:25]: Ariel Gabizon:
+
+
+Yeah. Yeah, that -- yeah, it was a really cool --
+
+
+[00:32:27]: Anna Rose:
+
+
+What was it called? I wish I had gone to that. It looked so cool. It was like --
+
+
+[00:32:31]: Ariel Gabizon:
+
+
+A crypto launch experience.
+
+
+[00:32:34]: Zac Williamson:
+
+
+Yeah, yeah. It was kind of shamanistic zero knowledge spiritual thing.
+
+
+[00:32:37]: Anna Rose:
+
+
+Yeah.
+
+
+[00:32:38]: Zac Williamson:
+
+
+It was brilliant. I loved it.
+
+
+[00:32:39]: Anna Rose:
+
+
+There were like crystals and like magic.
+
+
+[00:32:43]: Ariel Gabizon:
+
+
+Yeah. There was --
+
+
+[00:32:43]: Anna Rose:
+
+
+From what I could see from the branding.
+
+
+[00:32:46]: Zac Williamson:
+
+
+Yeah. Like he predicted something I wrote on a piece of paper, and I'm still not entirely sure how he did it. But, yeah, I thought you were just being a -- I thought you were just being a cool cat, Ariel, when I was talking to you about it, because you were like, oh, yeah, yeah, yeah. You know, like Protogalaxy. And I'm like, you know, it was pretty cool. We're gonna use it for like an Aztec and folding in your life.
+
+
+[00:33:05]: Ariel Gabizon:
+
+
+No. I thought you didn't understand the paper. I was like, what do you mean? Fold the different circuits in every -- but it turns out, I --
+
+
+[00:33:11]: Zac Williamson:
+
+
+Oh, yes, I remember. Yeah. You were saying, you can't do it, and I'm like, I'm pretty sure you can. And I remember trying to scribble down how you can do it, and you were like, nah, this isn't working. Yeah. I'm like -- yeah, I remember getting a bit annoyed. I'm like, I have to show Ariel how you -- you can fold arbitrary circuits, because that's exactly what we're trying to do in Aztec.
+
+
+[00:33:28]: Anna Rose:
+
+
+Wow. So, Ariel, you had basically done this work without realizing fully that -- that's funny. Like the potential.
+
+
+[00:33:35]: Ariel Gabizon:
+
+
+I just don't realize how good -- yeah. My own potential, I don't -- yeah.
+
+
+[00:33:40]: Zac Williamson:
+
+
+Yeah, basically. Yeah.
+
+
+[00:33:42]: Anna Rose:
+
+
+Nice.
+
+
+[00:33:43]: Zac Williamson:
+
+
+Yeah. So, I mean, that's kind of the context of our dynamic, right? You know, Ariel does groundbreaking research. Then I explained to Ariel, like --
+
+
+[00:33:49]: Anna Rose:
+
+
+How it works.
+
+
+[00:33:50]: Zac Williamson:
+
+
+No, not how it works, but why it's groundbreaking. I mean, even right back in the day, where I was trying to explain to you this problem I had of trying to do the cyclic shift thing, and then you were like, oh, yeah, by the way, yes. It's trivial how you do it. Here's how you do it. And I'm like, oh, my God, do you know what this means?
+
+
+[00:34:08]: Ariel Gabizon:
+
+
+I mean, go on a tangent. One of my favorite sayings is luck is when preparation meets opportunity. And a lot of my papers are like someone else needs a little piece to be completed for them. And since I've spent all this time learning these different pieces from everywhere, I can sometimes end up being that person and you know, and I'm up on these papers.
+
+
+[00:34:34]: Anna Rose:
+
+
+So are you the preparation in that?
+
+
+[00:34:36]: Ariel Gabizon:
+
+
+I was the preparation and like, yeah, me having that discussion with Zac, running into Zac, where like he had this little chunk missing.
+
+
+[00:34:47]: Zac Williamson:
+
+
+Well, I mean, I think, it's not like I had a little chunk missing from a protocol. I didn't have a clue what I was doing. I think you're underselling your contributions there.
+
+
+[00:34:54]: Ariel Gabizon:
+
+
+I think Plonk is -- I mean, it's putting together, in the simplest way, a lot of pieces that were already there. And one of those pieces is really arithmetization based on selectors. It already -- which would seem novel to people that were so much working with R1CS. It already appears in the GKR paper that is, I think, from the 90s, and now sort of has remade its, I guess, through the Lasso paper, sort of became popular again.
+
+
+[00:35:26]: Zac Williamson:
+
+
+It was also present in the Sonic paper. You know, like I mean, in the most basic way, I mean, Plonk is basically -- you take Sonic in its unhelped form, and you turn the polynomial, the vector representation from univariate polynomials in the monomial basis to univariate polynomials in the Lagrange basis, and Presto Blaster, you have Plonk, more or less. So, yes, it is very much about -- sometimes very small iterative changes can create a massive step change in the practicality and usability of a protocol.
+
+
+[00:35:55]: Ariel Gabizon:
+
+
+Well, here there's this interesting thing that you have these communities doing similar things but not talking to each other so much. And in the sort of, you could say STARK -- it wasn't STARKs then, but like, say, LE, the ecosystem, everything was in Lagrange base. And in this, I guess, team, maybe -- team, it's correlated with Jens Groth's team at UCL, everything was in monomial base.
+
+
+[00:36:21]: Zac Williamson:
+
+
+Yeah.
+
+
+[00:36:22]: Anna Rose:
+
+
+This was pre-Plonk that you're talking about, though, right?
+
+
+[00:36:25]: Zac Williamson:
+
+
+It is pre-Plonk, yeah.
+
+
+[00:36:26]: Anna Rose:
+
+
+Yeah. I want to come back to the present day in our story, which is you'd shown Ariel how you would use Protogalaxy, I guess. What happened from there?
+
+
+[00:36:36]: Ariel Gabizon:
+
+
+Well, after I got -- to simplify a bit, after I got a protogalaxy pilled, I went back to Aztec. A lot of this, for me, this last half year has been thinking how to present, in a simplified way, what's going on in the Aztec system. What they're doing with Protogalaxy, which is in the Stackproofs paper that came out recently.
+
+
+[00:37:05]: Anna Rose:
+
+
+What is stack proofs? Is that the MegaPlonk? Are you describing that or are you describing something else?
+
+
+[00:37:09]: Ariel Gabizon:
+
+
+Well, it's sort of what Aztec does with a SNARK. So you could say, in a sense, it's like more one level above in the stack. So STARK proofs is about -- so when you think of it, usually when we prove things in SNARKs, it's like a linear thing. It's one circuit, it's one program that goes forward. But really, programs are very cyclical because you have inner calls. So you start with a function a, it calls a function b. You go into b, you finish b, you go back to a. But so far, we haven't sort of dealt with that scenario in SNARKs too much, because either we sort of make it all this going into b going out, we make it all just one big circuit of everything, or we use a ZKVM. And in a sense, then you can think of it as just running one command after the other in the ZKVM. And one of the commands happens to me, will go to the memory where b's code starts.
+
+
+But sort of the thing that comes up in Aztec, in the sort of proofs of the private contracts in Aztec, is so you have these contracts like Ethereum, the contracts have functions, and now every function -- the point here I'm emphasizing is every function is already tied to a verification key. So this sort of -- the point in the paper is this creates a situation where the order of the proving has to be different than the order of the executing. Right? If in the execution, we do part of a, go into b, go out of b, back to a, and we can still sort of do that if we used a ZKVM, we could also prove it like that. But when the functions have been individually SNARKified, during proving, you have to first do all the proof for a and then do all the proof for b, because they already have their separate verification keys, which you're expected to use. So that is what the sort of the paper and the Aztec system sort of describe how to deal with.
+
+
+One thing I like about the paper is, so we all know this -- we've been talking about this notion of incrementally verifiable computation. We introduced in the paper a slightly different notion called RCG, repeated computation with global state, that I feel better represents what are the actual use cases of IVC in many cases. And the simplest difference in IVC, if you look at Paul Valiant's original paper, he's talking about a computation that humanity is going to be doing for centuries. But in the actual use cases, we usually have -- we know the end point. So this is one difference between IVC and RCG. That RCG we are assuming, sort of, we know the endpoint. And that's already -- that's appeared implicitly in some works, ongoing work of Nexus and this Mangrove paper work of Lev Sukhanov from PSC. But the  Stackproofs paper is the first to sort of formally introduce a notion that captures this.
+
+
+[00:40:33]: Anna Rose:
+
+
+Is RCG different, though? Is it a different system similar to IVC, or is it a continuation on IVC? Does it use the same technique?
+
+
+[00:40:41]: Zac Williamson:
+
+
+More of a simplification. Right? Like the assumption is that you need a weaker, because you don't need to assume that it's an unbounded infinite computation.
+
+
+[00:40:53]: Ariel Gabizon:
+
+
+You could view it as a relaxation. So the first thing is indeed that we're assuming we know when it's going to end, and we can leverage that. And the second thing -- so the important thing in IVC is the prover complexity should depend on the complexity of -- for example, the prover memory complexity should depend on the complexity of one step. Even if you're doing a million steps, the space -- the memory complexity should be only related to the -- what is this -- of complexity of one step. In RCG, yeah, we relax that and we say, well, that's mostly true. Your complexity should be tied mostly to the complexity of one step. But we have this global state -- for example, it could be the memory access calls in the different iterations of some program. Right? You have different functions, but they have some global variables they're all referring to. So we relax a bit, the IVC requirement, space requirement. You say, well,  you're allowed to -- your space is allowed to be dependent on the size of this global state.
+
+
+[00:42:07]: Zac Williamson:
+
+
+Yeah. So it's one of these things where -- can I just -- this is a bit of a tangent, but I think it shows how these days, cooperation between industry and academia is so much more closely knit than back in the day, because with what Ariel is talking about, the asymptotics of -- is it RGC?
+
+
+[00:42:21]: Ariel Gabizon:
+
+
+RCG.
+
+
+[00:42:22]: Zac Williamson:
+
+
+RCG. The asymptotics aren't great because you have this global state property where, in theory, the computational complexity of each step could be proportional to the global state. So if this was five, six years ago, something like RCG, there'd be very few people, I think, very few experts in the field that would be interested in something like that, because it doesn't improve concrete asymptotics. But if you want to engineer a protocol in practical terms, it's way better, because being able to have this global memory map that you can access in your cursor system, and it being relatively cheap is a huge deal. But maybe if the year was 2018 and not 2024, maybe that kind of paper wouldn't get you invitations to conferences. It wouldn't get people excited about it, and so people wouldn't care that much. But nowadays things are very different. And yeah, I think it shows that there's much more cooperation now between academia and industry, and that the whole community is benefiting immensely from that.
+
+
+[00:43:22]: Anna Rose:
+
+
+I want to sort of discuss something else that's been happening just generally. I think we started with some of the throwbacks to previous episodes. And, Ariel, your throwback was to the pairing-based SNARK trilogy. I want to talk a little bit about the hash-based SNARKs and their rise and how that is coming into conflict, or maybe collaboration with the pairing-based SNARKs. So I think pairing-based SNARKs, elliptic curve based Plonk, I think a lot of the systems that we know, a lot of the earlier work has been in that category, and also new work. But this new -- like newer work, like Plonky3, Plonky2, Binius, these are all in the hash-based SNARK category. Hash-based meaning they're often using something like FRI, or variations of, and STARKs were kind of the original on that track. Can we talk a little bit about those two different styles of SNARKs and how you see the future of the space developing with those two?
+
+
+[00:44:20]: Ariel Gabizon:
+
+
+Yeah. So there's these two categories. For simplicity, yeah, let's call them hash-based SNARKs and pairing-based SNARKs. There's a very different bag of tricks in each one. Where things will end up in terms of efficiency, which side will "win", it's hard to say. I'm not picking a side. In terms of mathematical taste, I prefer the elliptic curve side. Definitely the narrative now is that the hash-based SNARKs are dominating.
+
+
+[00:44:57]: Anna Rose:
+
+
+That they're more efficient somehow. Right? They're faster.
+
+
+[00:45:00]: Ariel Gabizon:
+
+
+They're just much faster. And there's been --
+
+
+[00:45:01]: Anna Rose:
+
+
+Yeah. They're more hardware compatible.
+
+
+[00:45:04]: Ariel Gabizon:
+
+
+This is also an interesting point that the hardware companies who are into the EC stuff pivoted to working on hash-based. And actually, Jim from Irreducible, he told me that initially they thought multiscaler multiplication would be more hardware friendly, but when you go into the details, because the memory -- it doesn't use a lot of memory, but the memory access patterns are more irregular, and that's one thing that made them sort of pivot more to that.
+
+
+[00:45:37]: Zac Williamson:
+
+
+It's completely randomized for the best algorithms. I've been -- sorry to be annoying. I've been telling people that for, like, four years, five years, the ECC is deceptively simple on the surface, but, yeah, if you want to make it fast, it's bloody awful.
+
+
+[00:45:52]: Ariel Gabizon:
+
+
+Well, that's what it seems like. Both Ingonyama and Irreducible, Ulvetanna back then was --
+
+
+[00:45:59]: Anna Rose:
+
+
+Previously, Ulvetanna, yeah.
+
+
+[00:46:00]: Ariel Gabizon:
+
+
+Previously. And actually, this is also -- you know, I thought they'd be thrilled to work on a setup for cq, because that's a huge multiscaler multiplication. But I guess they discovered what Zac said. So I think one thing to say, sort of in favor of the EC-based side, is that there's much more firepower right now leveraging the bag of tricks in the hash-based side.
+
+
+[00:46:27]: Anna Rose:
+
+
+Okay.
+
+
+[00:46:28]: Ariel Gabizon:
+
+
+And coming up with new tricks like the new papers like Circle STARKs. Very nice. So that's why I think this race is undetermined. You could say it's not random. Maybe they tried to work with the other bag of tricks on the elliptic curve side and ran into problems.
+
+
+[00:46:47]: Zac Williamson:
+
+
+I think I have a slightly different take. So, Aztec uses elliptic curve based SNARKs. We are going to be using elliptic curve stuff for the foreseeable future. But I think that if there is a battle between these techniques, elliptic curve cryptography is going to lose. It's losing because of a couple of things. One of them is that more and more, as the field advances, this is becoming an engineer's game and not a cryptographer's game. And what do I mean by that? There's a stampede of expertise and knowledge and skill coming into this sector, but it's coming very much from an engineering side these days. And the very nice thing about these hash-based proving systems is that the protocol complexity of them is relatively low. The number of cryptographic primitives is relatively low, which means that the complexity surface of the cryptography is small, and it makes it easier to layer on top of that abstraction layers. And engineers bloody love abstraction layers. 
+
+
+How do you break down something complicated? You form abstraction layers and abstraction layers and abstraction layers, and you build on top of those abstraction layers, and you focus at refinements and optimizations at each layer. What does this mean in practice? It means that things like people focus really hardcore on parallelizing 32 bit primary field multiplication across vectorized computing platforms, or things like that. With elliptic curve-based SNARKs, it's very different. There's an enormous amount of protocol complexity. I was talking earlier about MegaPlonk, where we have the Honk proving system, which itself, it's a multilinear polynomial commitment scheme, which is based off of a univariate polynomial commitment scheme and some isomorphisms, iframe walls, some transformation. And then we have the sumcheck protocol, and then on top of that, we have this incrementally verifiable computation scheme, which utilizes Goblin Plonk, which is itself composed of three independent cryptography sub protocols. And then we have this Data Bus, and then you wrap it all together and you have MegaPlonk.
+
+
+This is way much, this is way more complexity than some hash-based system that you just brute force recurse through. So why are elliptic curve SNARKs useful? It's because the stampede of knowledge and expertise coming into the ZK space, in my opinion, they've got blinders on, because everyone's focusing on scalability, as in, they're not using the zero knowledge property of zero-knowledge proofs. They're using the computation compression part. And so people are used to talking about -- they make zero knowledge Ethereum virtual machines. They're creating zero-knowledge proofs of Risc V. And with these kinds of architectures, you can leverage centralized compute to a massive degree. So you can have a bunch of GPUs churning through computations. You can have loads of memory. The trade-off space there is quite unique. 
+
+
+Now let's think about what Aztec's doing. Aztec is privacy-preserving computation. So when you're sending an Aztec transaction, a user is constructing a proof of correctness client side. And there, the trade-off space is radically different because you are very resource constrained. You're not just resource constrained in terms of computation, but more importantly, you're resource constrained in terms of memory, which is not something that -- literally nobody gives a damn. You look at these papers, these research papers coming out, like no one's going, oh, we need to focus on memory consumption. You know, you have these abstract concepts of trade -- like space and time, trade-off complexities. That's abstract nonsense when it comes to actually building an actual real world system. You need concrete specifics. Nobody cares. Like, literally nobody cares, because when you're building a ZKVM or you're raising 100 million to build a RISC V virtual machine, you can throw terabytes of memory at your problem. You don't care. We do. We have one gigabyte of memory because that's what -- that's the memory you have in a phone, in a browser tab before Safari will shut you down. And so in our very resource-constrained world right now, elliptic curve-based cryptography is not just better, it's not a question of better or worse. It's the only game in town, because --
+
+
+[00:50:30]: Anna Rose:
+
+
+It's the only one.
+
+
+[00:50:30]: Zac Williamson:
+
+
+It's the only game in town because that's the only one where you can create an IVC scheme where the memory footprint is low enough. Like, both the memory and the recursion footprints are low enough that you can have -- you can do practical amounts of compute client side. And we'll see this shake out, because if I'm wrong, then alternate privacy-based Layer 2s and Layer 1s are going to come online that use hash-based SNARKs. I don't think they're going to work for a while. I think they all have critical weaknesses because of these resource constraints, which means that they need some centralized actor in the mix. And that, for a private transaction network, I think is fatal.
+
+
+[00:51:03]: Anna Rose:
+
+
+So in that battle, the hash-based versus pairing-based or elliptic curve-based SNARKs, what you're saying, and I have heard this actually before, is that the more focus you have on client-side proving, the more, at least currently, you'd want to use the pairing-based SNARKs with all of the techniques that have been developed to make those more efficient. When you're looking at client side, so this is like the ZKVM types there, there seems to be a trend towards ever more powerful hash-based.
+
+
+[00:51:32]: Zac Williamson:
+
+
+Yeah. Which, I mean, I'm biased. I don't care about that, because in that world, ZK is just a commodity. You know, it's just pick your solution off the shelf.
+
+
+[00:51:42]: Anna Rose:
+
+
+Well, ZK is not ZK. Right?
+
+
+[00:51:44]: Zac Williamson:
+
+
+It's not ZK. But --
+
+
+[00:51:45]: Anna Rose:
+
+
+It's a different kind of thing.
+
+
+[00:51:45]: Zac Williamson:
+
+
+I think what we're seeing here is basically -- I think this is the swansong of elliptic curve-based cryptography, as in, if you want to build a network like Aztec today, you ain't got a choice. If you think you got a choice, you're -- I'm sorry, I'm sorry. You have my condolences, but you know, you'll find out.
+
+
+[00:52:01]: Anna Rose:
+
+
+But what about the -- do you see a future where hash-based SNARKs could become small enough, efficient enough? Could the hardware of your phone be so good that actually you can do this kind of thing, client-side?
+
+
+[00:52:16]: Zac Williamson:
+
+
+Yes, absolutely. I think the more vectorized compute becomes available on a phone, the more that these techniques get improved, the more practical it becomes. The real difficulty right now is because your memory footprint is so small, the amount of computation you can do in a single IVC step is quite limited for you to recurse. Right now, in hash-based systems, the recursion cost is very high relative to folding, which means that if you want to do client-side computation with a hash-based SNARK, you have this giant overhead of having to do all these folding steps, these folding computations, because the amount of steps in your IVC is very large. If that can get resolved, then we will switch to hash-based SNARKs. I suspect it will get resolved soon-ish, but not soon enough for Aztec.
+
+
+[00:53:04]: Anna Rose:
+
+
+Yeah. And Ariel, I want to go back to what you were saying, because you were saying just intellectually, you're more into pairings-based. It's more fun for you, I think. But you've said you don't want to pick a winner, but are you also exploring the hash-based stuff, or could you take techniques you've developed, maybe in the pairing-based, and try to apply them in the hash-based? Would that be interesting?
+
+
+[00:53:25]: Ariel Gabizon:
+
+
+One thing on that side that I like is the techniques, the mathematical techniques I like from elliptic curves and what's called algebraic function fields that are traditionally more on the EC side. They have made recent appearances on the hash-based side. So in the hash-based world, they want to use as small as convenient fields as possible. And then sometimes the question is, how can you still do a fast FFT in these fields? And it turns out in these two very nice papers, the ECFFT paper of, I think a group of people from Starkware, I don't remember the names and the Circle STARK paper, they do end up using techniques of the math I like indirectly for the hash-based SNARKs. So I actually have spent a good amount of time with those papers.
+
+
+[00:54:23]: Anna Rose:
+
+
+I see. You just mentioned I used the example of IVC as not being possible in a hash-based system, but you're saying that there is work in that direction.
+
+
+[00:54:32]: Ariel Gabizon:
+
+
+I'm glad you mentioned that. There is recent work, a paper called Accumulation without Homomorphism by Bünz, Mishra, Nguyen and Wang on bringing the IVC and folding stuff into the hash-based world. I would say, to oversimplify, it's a little messy. There's bounds  on the -- you have to do a little extra work. There's bounds on the number of IVC steps you can do. But yeah, it's interesting how far that will go in practice.
+
+
+[00:55:04]: Anna Rose:
+
+
+Cool. I want to say thank you to both of you for coming on the show and sharing an update on everything that's happened in the last year. Also to hear a little bit about your work together and also kind of covering that pairing-based versus hash-based SNARK landscape for all of us. Is there anything that we should touch on before we sign off?
+
+
+[00:55:24]: Zac Williamson:
+
+
+Thanks for having us on, Anna. Anything to touch on. Just, you know, I feel I'm contractually obliged, as the director of Aztec Labs to say, head over to aztec.network. Check out the latest no matter what time you're listening to this podcast at, there's going to be something relevant. Check out Noir, our ZK programming language. If you want to get involved with doing cool privacy-preserving stuff, don't need to be a cryptographer to use it. It's Rust-based, really simple. Check out the Aztec Network. It's the next big thing for blockchain.
+
+
+[00:55:55]: Anna Rose:
+
+
+And Ariel, I want to say thank you for coming on as well. I feel like this wasn't quite part four of the trilogy. I'm actually waiting for that. And maybe by then you've had some time to, like, are we doing the prequels? Are we doing the postquels? Like how does it work? So, yeah, I'd be curious to hear that for our next episode.
+
+
+[00:56:16]: Ariel Gabizon:
+
+
+Yeah, yeah. I'll think of plots for that.
+
+
+[00:56:20]: Anna Rose:
+
+
+Sounds good. Cool. All right, thank you to both of you. And I want to say thank you to the podcast team, Rachel, Henrik, and Tanya. And to our listeners, thanks for listening.

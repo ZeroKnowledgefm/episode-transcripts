@@ -1,0 +1,1492 @@
+00:00: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:26:
+
+
+This week, Nico and I chat with Or Sattath and revisit the topic of pre-quantum, post-quantum, and quantum cryptography. This is the second episode I've done with Or, and I will be adding the link to the previous episode in the show notes if you want to check that out before listening to this one. In this conversation, we cover how we can transition from a pre-quantum environment to a post-quantum environment, looking at existing systems like Bitcoin and Ethereum. We also talk about the challenges in these designs and the complications that can arise when moving between these two states.
+
+
+00:59:
+
+
+We then discuss the history of quantum money and the more recent work on this topic. Before we kick off, I want to let you know a little bit about ZK Hack Istanbul, our IRL hackathon happening November 10th through 12th. Just want to remind you that if you haven't already, be sure to get your application in and if you have been accepted, be sure to RSVP. Only those at RSVP will be admitted. We've added the link in the show notes and we hope to see you there. Now Tanya will share a little bit about this week's sponsor.
+
+
+01:26: Tanya:
+
+
+Aleo is a new Layer 1 blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a roll-up. Driven by a mission of a truly secure internet, Aleo has interwoven ZK proofs into every facet of their stack, resulting in a vertically integrated Layer 1 blockchain that's unparalleled in its approach. Aleo is ZK by design. Dive into their programming language, Leo, and see what permissionless development looks like, offering boundless opportunities for developers and innovators to build ZK apps. As Aleo is gearing up for their mainnet launch in Q4, this is an invitation to be part of a transformational ZK journey. Dive deeper and discover more about Aleo at aleo.org. So thanks again, Aleo. And now, here's our episode.
+
+
+02:15: Anna Rose:
+
+
+So today we're here with Or Sattath, Assistant Professor at the Ben-Gurion University in the Computer Science Department. His research is focused on quantum cryptography. Welcome back to the show, Or. 
+
+
+02:25: Or Sattath:
+
+
+Thank you for having me.
+
+
+02:26: Anna Rose:
+
+
+So this is our second time doing an episode on quantum cryptography with you. Nico is joining this one as the co-host. Hey, Nico.
+
+
+02:34: Nico:
+
+
+Hello, hello. Super happy to be here.
+
+
+02:35: Anna Rose:
+
+
+Yeah. So in our last episode, we did get a chance to cover quite a lot of ground. We explored the concept of quantum cryptography, that is, cryptography built for a quantum computer environment. We also looked at some of the breakthroughs in the space, the Grover's algorithm, Shor's algorithm, and the difficulties of Bitcoin mining in the presence of multiple quantum adversaries. But at the end of the episode, we sort of went through all these other topics that we could have covered. And this is what we're going to get a chance to dive into today. And I will add the link to that in the show notes for anyone who hasn't heard that episode, I definitely recommend listening to that one first, because I think it lays quite a lot of foundation for this one.
+
+
+03:17:
+
+
+I wanted to pick up from where we actually ended the last episode. One of the topics that we didn't get a chance to really cover was this idea of the migration from a pre-quantum to a post-quantum environment. You mentioned it like in two sentences, but yeah, can we talk a little bit about what that entails? What would it even mean to make that migration? 
+
+
+03:39: Or Sattath:
+
+
+Sure. So just to give the terms involved, so we talked about quantum cryptography, which is the field of protecting against adversaries using quantum computing, meaning you need a quantum computer and maybe a quantum network to use these tools. Post-quantum cryptography, on the other hand, is classical cryptography, which is secure against quantum adversaries. And pre-quantum cryptography, usually means, cryptography which is secure against classical adversaries, but not against quantum adversaries.
+
+
+04:16: Anna Rose:
+
+
+So maybe I should reword even that question. So it's not really pre-quantum to post-quantum. That would just be the same type of cryptography, potentially. It's pre-quantum to quantum cryptography.
+
+
+04:29: Or Sattath:
+
+
+So I guess we'll talk about both of these options during this episode today. I hope we'll get to the second one, like purely quantum cryptography, but this would be in the second part if we'll get there.
+
+
+04:41: Anna Rose:
+
+
+Okay, got it.
+
+
+04:42: Or Sattath:
+
+
+As we mentioned in the previous episode, cryptography is based on the idea of turning a lemon into a lemonade. In what sense? We have a hard computational problem, which sounds like a lemon, right? You can't factor numbers efficiently. You can't find the discrete log, right? Efficiently. Which sounds like a lemon, and you turn it into a lemonade. Why is that important in cryptography? Because you want to find something that the adversary cannot do. So here is the thing that the adversary cannot do, right? The adversary cannot factorize integers, et cetera, et cetera. Now, what's the problem? As was mentioned in the previous episode, some of the problems which are hard for classical computers, such as factoring and discrete log, are in fact easy for quantum computing because of Shor's algorithm and some of its variants.
+
+
+05:35:
+
+
+So what does that mean? It means that some of our protocols, at least, are not quantum secure. Right? If you have a quantum adversary, he could break your scheme. And in particular, almost all of the asymmetric cryptography, which is used in practice, is pre-quantum, meaning a quantum computer could break it. And specifically, the digital signature is used in most cryptocurrencies. So what that means is once quantum adversary or quantum computer is built, our system is not secure anymore. And although this is relevant for almost all modern systems that use cryptography, which is basically everything used in practice, I won't touch upon all the various aspects and try to concentrate this meeting discussing only the context of cryptocurrencies.
+
+
+06:31:
+
+
+So, how do we deal with this challenge? So one approach or the main approach is to switch to a different hardness assumption. And there are quite a few such assumptions and indeed there is an ongoing standardization process for post-quantum agreement and digital signatures done by the NIST, National Institute of Standards, and we already have several candidates for both of these primitives, but unfortunately, these candidates are not as well-rounded as the classical counterparts. So one of the top candidates, which is most suitable for cryptocurrencies, is called Falcon, and the parameters which are relevant for cryptocurrencies are quite interesting, right? What are you interested in terms of the performance of digital signatures in the area of cryptocurrencies?
+
+
+07:31:
+
+
+So there's actually several things you could look at. You could look at the public key size, you could look at the signature size, and you could look at the CPU time for signing and verification and maybe also on memory constraints. And for example, if you look at the public key size and signature size together, in Falcon, it's roughly one and a half kilobytes, if you look only at that size compared to roughly 100 bytes in most cryptocurrencies such as Bitcoin and Ethereum. So you're already an order of magnitude above. Why is that important? Even if we only look at the signature size. So imagine a system such as Bitcoin, whereas the block size is kept fixed. If the signature size goes 10 times bigger, it means that your throughput goes down by a factor of 10.
+
+
+08:37:
+
+
+So it's not only of the computational resources by the user that we are concerned by the system as a whole. And unfortunately, the throughput in a cryptocurrency drops by a factor of 10. That's a big deal, I would say. Another secondary interesting aspect is kind of more in the periphery of these questions. For example, these days we have hardware wallets, right? These hardware wallets use really tiny CPUs and maybe they won't be able to use some of these candidates. I don't think anyone even tried to do that, as far as I know, right? Because they are much heavier to use. Maybe that you need lots of memory, et cetera. So that's another kind of interesting aspect.
+
+
+09:27: Nico:
+
+
+I almost want to take a quick break there and sort of ask you about these new signature schemes and all these new standards. So as you said, like, we start from lemons and we want to make lemonade. What kind of lemons are we using here? And are all the candidates using the same lemons?
+
+
+09:41: Or Sattath:
+
+
+Oh, that's a good question. So first of all, I would say that I'm not an expert in that area. There are several lemons. One of them is the learning with errors problem, which is tightly related to questions related to lattices, such as the shortest vector problem, et cetera. There are others as well, but unfortunately, all the candidates for signatures that were kept as the finalists use the same family. And that's why they made another attempt to look for more candidates, because that's a kind of a bummer, right? We want to have a...
+
+
+10:20: Nico:
+
+
+Some diversity there.
+
+
+10:21: Or Sattath:
+
+
+Yeah, diversity so that if something breaks, et cetera. That's the main point. Another important relevant approach is called hybrid cryptography, which will hopefully get to in the rest of the episode.
+
+
+10:37: Anna Rose:
+
+
+Sounds good.
+
+
+10:37: Or Sattath:
+
+
+So in most cryptocurrencies, there is already a risk in some sense, right? There's something which we call unsafe coins. What are unsafe coins? These are Bitcoins, ETH, whatever, that once there is a quantum computer, they are at risk. The adversary could loot those coins. Specifically in Bitcoin, roughly one third of the Bitcoins are unsafe. I'll share the link for the paper that studied that question. And there are two main reasons for that. And I guess we even need to understand how most cryptocurrencies are used and why aren't all of them unsafe.
+
+
+11:20: Anna Rose:
+
+
+Yeah. When you say one third, that sounds so counterintuitive.
+
+
+11:25: Or Sattath:
+
+
+Yeah. So, interestingly, if you get ECDSA public key, you could get the secret key using a quantum computer, right? So at this point, the adversary could forge messages on your behalf. So that sounds really bad. Interestingly, in Bitcoin, the standard approach to use an address is actually not to post your public key. Instead, you post something like the hash of your public key. And as you may remember, for that, quantum computers are not so good. For these types of questions, you need to use Grover's algorithm, which was discussed previously, and that only gives you a quadratic advantage. That's not such a big deal.
+
+
+12:12:
+
+
+So addresses in which the public key is hashed, these are safe. Now, when do you reveal the public key? When you spend it, right? When you spend it, instead of saying just, okay, this is my signature, you basically say, okay, this was my public key. You could check it by hashing it and see that they agree. And then you attach the signature. And if you haven't ever signed a message using your signing key, your Bitcoins are safe.
+
+
+12:44: Anna Rose:
+
+
+Does this then mean that like two thirds of Bitcoin addresses have never signed?
+
+
+12:49: Or Sattath:
+
+
+Exactly.
+
+
+12:50: Anna Rose:
+
+
+Really?
+
+
+12:50: Or Sattath:
+
+
+Yeah.
+
+
+12:51: Anna Rose:
+
+
+Oh, I didn't know that. Okay.
+
+
+12:52: Or Sattath: 
+
+
+Sorry, let me be more precise, it's not two thirds of the addresses, it's two thirds of the coins.
+
+
+12:57: Anna Rose:
+
+
+Okay.
+
+
+12:58: Or Sattath:
+
+
+Right? These are not exactly the same things. If you want to know the number of transactions, this is like 70 million, roughly, that are unsafe.
+
+
+13:06: Anna Rose:
+
+
+I see.
+
+
+13:06: Or Sattath:
+
+
+This is the number. Interestingly, the ones which are unsafe usually, or at least the biggest ones in terms of volume in some sense, are the ones by Satoshi. So there are very few, but they are worth lots and lots of Bitcoins. So the mismatch here is quite large. So as long as you use something which is called P2PKH, Pay-to-Public-Key-Hash, as long as you haven't reused an address, which is the best practice, your Bitcoins are safe. Interestingly, this is not the best practice in Ethereum, right? So different cryptocurrencies have different approaches to these questions and therefore Ethereum is more prone to these attacks. But under that assumption, your coins are safe.
+
+
+13:57:
+
+
+Interestingly, as I mentioned, Satoshi used a different standard in the very early stages, which is called P2PK, and therefore most... Well, we don't really know, et cetera. et cetera., but we believe that most of his coins were unsafe for this weird technical reason. Okay? So you might think that, okay, maybe for the safe coins we are okay, because their public key has not been revealed and therefore, okay, we'll simply switch to post-quantum cryptography before the quantum adversary takes our money. So what's the problem there? Suppose, now there is a quantum adversary, and you have money that you want to spend. How do you switch to use the post-quantum cryptography? How do you prove that you're the owner?
+
+
+14:48: Nico:
+
+
+So as soon as I do...
+
+
+14:49: Or Sattath:
+
+
+As soon as you do...
+
+
+14:50: Nico:
+
+
+I get targeted by the quantum adversary, right?
+
+
+14:52: Or Sattath:
+
+
+Exactly. In order to spend that money, you need to post the transaction to the mempool. Right?
+
+
+14:57: Anna Rose:
+
+
+Thus revealing your public key, or public address.
+
+
+14:58: Or Sattath:
+
+
+Once it's in the mempool... Which reveals your public key. Once it's in the mempool, the adversary could break it and post an alternative transaction which steals all your money. Interestingly this question was raised, I think in 2013 already, by Vitalik Buterin and he kind of gave a first shot, I guess, that's a way to describe it, at solving this issue. So what he suggested was to use a very simple approach to get around this issue. Instead of simply posting your transaction, we'll use something which is called a commitment scheme.
+
+
+15:37:
+
+
+In a commitment scheme, you first commit to a message and then reveal it. Now, if you committed to something, there is a way to do it in a way which is secure against quantum adversaries. Basically, you hash the message. So instead of just revealing your transaction, you post commitment or the hash of that message to the blockchain. Then you wait a few confirmations so that things wouldn't be turned around against you and then reveal the transaction. So that's the approach that he kind of suggested as a way to get around this problem. You see, because at the second step after you reveal, in order to steal your money, the adversary has to do this commitment a few blocks behind. So that's too late for the adversary to do that. I hope that makes sense.
+
+
+16:23: Nico:
+
+
+That does, yeah.
+
+
+16:24: Or Sattath:
+
+
+Okay. But there's a gap here in this argument, which I don't know if he spotted already or it wasn't mentioned definitely in his proposal. It was mentioned, by the way, by others, but I think that in his blog post, it wasn't mentioned. Can you think about it? It's kind of interesting. I want to give the audience as well a minute to think about it. Where's the problem here? And I already mentioned that it's related to the commitment.
+
+
+16:47: Anna Rose:
+
+
+Just to go over it again, though. So do you put forward your key towards the commitment scheme or do you create a commitment scheme that includes...
+
+
+16:56: Or Sattath:
+
+
+So basically you just think about it as you, instead of posting the transaction itself, at the first stage you only post the hash of the transaction and wait, say, 10 blocks and then reveal the transaction itself. And everyone agrees that in order for a transaction to be valid, it first has to be committed to and then revealed 10 blocks or more after. As long as there is no commitment, it's invalid. You know, after the reveal phase, the adversary could break it, right? He could reveal your secret key. But he has lost the race because it's too late, right? It's already published on the blockchain now, and there's no way for him to post a competing transaction.
+
+
+17:41: Anna Rose:
+
+
+Okay, but you're looking for the hole in this, Is it that just by posting the commitment scheme or the hash you're already revealing?
+
+
+17:47: Or Sattath:
+
+
+No, because one computer cannot like undo the hash. They cannot break the properties of the hash function efficiently.
+
+
+17:56: Nico:
+
+
+Is it a case that we need very strong censorship resistance? Because at the point where I'm going to reveal the stuff I committed to, if you censor me?
+
+
+18:03: Or Sattath:
+
+
+Then suppose, you know, that's actually not so much the issue. Interesting, right?
+
+
+18:10: Nico:
+
+
+Yeah.
+
+
+18:10: Or Sattath:
+
+
+How do you post the commitment? Who pays for the commitment?
+
+
+18:16: Anna Rose:
+
+
+The gas.
+
+
+18:16: Or Sattath:
+
+
+The gas. That's the issue.
+
+
+18:19: Anna Rose:
+
+
+The gas reveals it?
+
+
+18:20: Or Sattath:
+
+
+The gas... There is no way for you to prove that you're the owner and therefore you have no way of paying gas. So the fee turns out to be a really important loophole in this argument. You see?
+
+
+18:34: Anna Rose:
+
+
+This is why the proposal he made wouldn't satisfy this problem.
+
+
+18:39: Or Sattath:
+
+
+It's not fully... Yeah, it doesn't solve this issue of gas.
+
+
+18:42: Anna Rose:
+
+
+Would by having gas, like you create the hash, would it cause the reveal or it just, you couldn't do it?
+
+
+18:48: Or Sattath:
+
+
+If I'm allowed to simply post hashes on the blockchain, that would be a nightmare. And at that point when I'm posting them, maybe I'm not the owner. There's no way for me... There's no way for anyone to be sure that I'm really the owner. Right? So that's the gap that we kind of need to solve.
+
+
+19:09: Nico:
+
+
+Do we need a separate quantum secure chain or post-quantum secure chain, I guess, to be precise? To which we can post commitments with its own fee and then go back to that? 
+
+
+19:22: Or Sattath:
+
+
+So let me take it in two steps. So first of all, this idea of using a commit and reveal scheme was also presented in a paper by Miller and Bonneau called Fawkescoin, which had also interesting other ideas, but they kind of addressed this question directly about the fees and they were suggesting, okay, either we have a direct side payment between the user and the miner, for example, use paper to pay for the fee, or maybe if you have another post-quantum address, you could use that. If you already have a few Bitcoins, which are quantum secure, to pay for the fees, then you could use that address. So these are the two kinds of... But what do we do with users who didn't... This on-ramping, right? They need to get their first post-quantum coins. How do they do that?
+
+
+20:17:
+
+
+So in a joint work with my student Shai Wyborski, we showed a different mechanism to resolve the issue of fees. And this approach is based on a general technique, which we call the Signature Lifting. And the idea there is the following. Suppose you have an existing quantum unsafe signature scheme or a pre-quantum signature scheme with a signing key SK and the public key PK. A signature lifting scheme is post-quantum signature scheme, which uses the old keys. Okay? So you use the same keys, but with a different signing and verification algorithm. Kind of weird.
+
+
+20:57: Nico:
+
+
+It sounds very... So where my intuition is now failing is with discrete log-based schemes, the problem was as soon as I see the public key, I can find the private key. How do we get around that?
+
+
+21:10: Or Sattath:
+
+
+Great. Okay. So the important ingredient which we need is that there is something which we call a post-quantum step that there's something post-quantum taking you from the secret key to the public key. So if you simply use ECDSA there is no such post-quantum step. So as you mentioned, Nico, indeed the ECDSA scheme which is used in Bitcoin and Ethereum, if the public key is not hashed then there is no such post-quantum step, because you could simply recover the secret key from the public key. Okay, so you need something else. So our approach, before getting into the details, is based on one of the post-quantum signature schemes that was submitted to NIST, called Picnic. And this scheme has an interesting idea. It's based on any post-quantum one-way function.
+
+
+22:04:
+
+
+So let me remind you a one-way function is a function which you could evaluate... Given x you could evaluate f of x efficiently but given y, which is f of x, you can't find any preimage of y such as x or anything else that evaluates to f of x.
+
+
+22:21: Nico:
+
+
+Hash functions are a good example for people who want something more concrete.
+
+
+22:23: Or Sattath:
+
+
+Such as hash functions... Yeah, exactly. So definitely hash functions are such a one-way function, they have even more properties. So in Picnic, the signing key is simply a random x, and the public key is simply f of x. That's it. So if you want, you could think of it as a transformation. It takes a one-way function and gives you a signature scheme. So the transformation needs to be post-quantum, right? But as I mentioned again, and Nico kind of is already troubled, right? The transformation that we are discussing is not post-quantum. So what on earth am I talking about? So the point is that for example, if it's not that the public key here is simply the ECDSA public key, but the hash of it, then we're golden, right? So that solves the first issue.
+
+
+23:21: Anna Rose:
+
+
+This deals with then that gas issue, like the gas issue is taken care of.
+
+
+23:26: Or Sattath:
+
+
+Exactly.
+
+
+23:26: Anna Rose:
+
+
+How is it taken care of?
+
+
+23:28: Or Sattath:
+
+
+Exactly.
+
+
+23:28: Anna Rose:
+
+
+I don't really get it.
+
+
+23:29: Or Sattath:
+
+
+Because you could already sign messages using your old keys.
+
+
+23:35: Anna Rose:
+
+
+Oh, yeah, okay.
+
+
+23:35: Or Sattath:
+
+
+Everyone knows the hash of your public key. The only one that knows the secret key is you. And now you have a signature scheme, which is post-quantum secure. Okay?
+
+
+23:46: Anna Rose:
+
+
+To even make that change though, like, where's the change happening? Is this happening like on the client software side? Like I don't...
+
+
+23:55: Or Sattath:
+
+
+Definitely. Definitely, you need to upgrade all...
+
+
+23:56: Anna Rose:
+
+
+Yeah, it's like the developers... Okay.
+
+
+23:59: Or Sattath:
+
+
+Yeah, yeah, yeah, yeah, yeah. You need to switch to some kind of a fork, probably a soft fork or hard fork. It kind of needs to be determined. We didn't get into those questions. At least if you do it naively, definitely a hard fork. And everyone agrees that the old schemes are gone. And then you use the Picnic scheme with that specific one-way function as your new verification and signing algorithms. So everything needs to be changed. Definitely, it's not a minor thing.
+
+
+24:32: Anna Rose:
+
+
+This is a practical point, but I just... Given the rate of change in the Bitcoin example, I can imagine it being very difficult to get that change through.
+
+
+24:42: Or Sattath:
+
+
+Sure.
+
+
+24:43: Anna Rose:
+
+
+Right? Like there's a lot of resistance to this.
+
+
+24:45: Or Sattath:
+
+
+Sure. So in the previous episode, we discussed the timelines that people are considering as realistic. So we definitely have some time, at least a few years, but it isn't clear how long do we really have. Do we have 10 years, 5 years, 15 years? That's clearly the fastest we do it is the better, right? And it will require quite a drastic change. Okay, so again, the idea would be that you could use your old keys and sign your messages instead of using ECDSA, you'd use this Picnic scheme. Okay, so now there are various questions. One is, okay, this is a theoretical construction. How good is it? Okay? And this is the bad news. The numbers are terrible. Okay. The...
+
+
+25:42: Anna Rose:
+
+
+Like the speed? Or like the...
+
+
+25:44: Or Sattath:
+
+
+The size of the signatures is roughly, for SHA-256, it's 600 kilobytes. You remember that in the Bitcoin, it was something like 100 bytes? It's three orders of... More than three orders of magnitude, longer signatures. So that's terrible. And it's not even precisely what we need. That's for SHA-256 here, we need to use a slightly different one-way function. So I guess the bottom line is, that's pretty bad. So we'll discuss how to kind of...
+
+
+26:16: Anna Rose:
+
+
+Optimize it or...
+
+
+26:18: Or Sattath:
+
+
+Optimize it in some sense and maybe pay within other terms, but at least we don't need to kind of use half a megabyte per signature. So that's the first thing. The second thing is, well, what do we do with the others coins, right? Coins which are not quantum safe.
+
+
+26:36: Anna Rose:
+
+
+This is because we're still talking about the two thirds of the Bitcoin network or number of coins that have not been made, where their public keys are still not used.
+
+
+26:46: Or Sattath:
+
+
+And in Ethereum, I don't even have the numbers, but probably, the vast majority is unsafe. So you can't even use them.
+
+
+26:55: Anna Rose:
+
+
+Wow, so now we're trying to tackle that one third that has used their public key.
+
+
+26:59: Or Sattath:
+
+
+Exactly, and Ethereum addresses which were used for... You know, you spent part of your ETH and bought some ice cream, I don't know. What do we do with that? I want to give the audience a second to think about it. The challenge here is that the public key is already revealed, which means you already know the secret key. Is there something still that the adversary does not know? Note that at this point, if you have a quantum adversary, he knows your secret key. It sounds like game over, but I'm arguing this is not the case. There is a way to fix that, and you still have an advantage over the adversary. And I'll give you a hint. What you should think about is how do you start using Bitcoin, Ethereum, whatever? What's the first thing that you do? And how does that process begin?
+
+
+27:55: Anna Rose:
+
+
+The wallet? 
+
+
+27:55: Nico:
+
+
+The seed phrase. No?
+
+
+27:57: Or Sattath:
+
+
+Yes.
+
+
+27:58: Nico:
+
+
+Seed phrase. Okay.
+
+
+27:59: Or Sattath:
+
+
+Yes. You have the seed. How is the secret key generated from that seed? It uses a hash function. And again, you have the seed, there's a post-quantum step here which you could use. And again, the same idea holds. Now it's way more complicated. Whoever is interested can read the paper. Unfortunately, it's really tedious. If you want, I can try to explain why it's not so trivial.
+
+
+28:25: Nico:
+
+
+So wait, your ECDSA private key now becomes your public key and the seed becomes your private key?
+
+
+28:32: Or Sattath:
+
+
+Exactly.
+
+
+28:32: Nico:
+
+
+Wow.
+
+
+28:34: Or Sattath:
+
+
+Kind of weird.
+
+
+28:34: Nico:
+
+
+Yeah.
+
+
+28:35: Anna Rose:
+
+
+But like, would it not make sense then to do that just for the entire network? Like why do the two different techniques for the safe and unsafe?
+
+
+28:43: Or Sattath:
+
+
+That's a great question. Honestly, we don't know the numbers. I suspect that the one based on the seed is way more complicated because to the very least the proofs are way nastier. Way, way, way nastier. But I'm not sure how the numbers will turn out. Yeah, it's called the derivation path, right? How do you derive your secret key from your seed? It's kind of complicated and it's not... Formally, it's not simply a one-way function. There are several technical things that need to be addressed, I'm not sure how they'll turn out, but this is definitely an option, I mean, for most people. I'll give you one example where it's not. Suppose you created a P2PKH, a Pay-to-Public-Key-Hash address, in 2011 there were no HD wallets at the time. Right? So you can't use the other approach because the user doesn't have the seed. So for those users, you definitely need to have the first approach that we discussed. And probably it would be more efficient, so probably that's another advantage.
+
+
+29:56: Anna Rose:
+
+
+I wanted to just do one clarification. This is just making me realize something that I hadn't really thought of, but there is no way to, from the secret key, derive the seed, I guess. That's one way, always. Okay.
+
+
+30:09: Or Sattath:
+
+
+Because that's the post-quantum step. There is a hash function there.
+
+
+30:12: Anna Rose:
+
+
+I see.
+
+
+30:12: Or Sattath:
+
+
+The adversary cannot break that hash. Okay, so that's again, that's Grover's algorithm, only a quadratic speedup for things involved in that post-quantum step. And that's kind of a miracle, right? There was no real reason that the derivation should have been post-quantum, but people chose a post-quantum procedure for really orthogonal reasons, which has nothing to do with that. They definitely didn't think about a Picnic when they derived it because the Picnic was invented later. Right? So no one could have guessed that this is going to be turned... This is going to turn out so useful. But yeah, we can definitely take advantage of it.
+
+
+30:54: Nico:
+
+
+Another quick question about this quadratic speedup. Does this actually mean like having the number of bits of security?
+
+
+31:00: Or Sattath:
+
+
+Yes.
+
+
+31:01: Nico:
+
+
+And is that not still quite significant?
+
+
+31:03: Or Sattath:
+
+
+Sure. But still, you know, for hash, reducing the number of security bits by half is okay. You cannot parallelize it. So that's another kind of big advantage that cannot be. So the last issue that we need to address is related to the signature sizes. Right? Remember these are turned out to be one and a half megabytes at least instead of 100 bytes. So actually what do we do is kind of construct a way to do to enjoy both worlds. The user sends a commitment but also the post-quantum signature using this signature lifting technique which we discussed. The miner posts this commitment and keeps the signature just in case the user tries to cheat. And only if the user fails to reveal, the miner posts it on the blockchain.
+
+
+32:05:
+
+
+And there are many, many kinds of things that you need to consider. And I won't do it here, if you want, go ahead and read a paper. And we try to deal with all the questions that arise because of these things like a denial-of-service attacks and many other questions, but I think we don't need to get into that in this discussion.
+
+
+32:24: Nico:
+
+
+Okay. So this sort of fixes our problem. I guess the next question is how do we know if computers are around? I think you mentioned canaries last time. What do those look like?
+
+
+32:34: Or Sattath:
+
+
+Sure. So one of the challenges is when do we make these adjustments, right? When do we switch to this post-quantum signature schemes? You don't want to do it too early because from that point onwards some money will get lost for reasons which I won't get into. Some money will get burned. So you definitely don't want to do it too early and we lose efficiency and we lose lots of things. So you don't want to do it too early. And on the other hand, you don't want to do it too late. So what are the ways to get around this issue? What we propose is to use an idea which was first proposed by Justin Drake called Cryptographic Canaries. These are challenges that are put on the blockchain with a bounty.
+
+
+33:18:
+
+
+So imagine you could put a bounty for breaking ECDSA or SHA-256 or whatever and maybe even with easier hardness. And for example, for our purposes, we want to have something which is, say you could break it with a quantum computer, say, six months before the one which could break the rule blown scheme.
+
+
+33:41: Anna Rose:
+
+
+Ah, it's like a slightly easier...
+
+
+33:43: Or Sattath:
+
+
+Exactly. So you want to publish these challenges on the blockchain, which are slightly easier, and change the policy according to that. For example, after this quantum canary dies, say three months later, everyone has to switch to use post-quantum cryptography. Right? And you cannot use the old one because the adversary could use that. Right? So that's where the quantum canaries are used.
+
+
+34:13 :Nico:
+
+
+Is there an incentive issue here? 'Cause say I'm trying to build a quantum computer, I realized that I beat the canary, I don't tell anyone, and I know like, okay, I'm about like six months away from doing something big here.
+
+
+34:25: Or Sattath:
+
+
+Yeah. So actually we have a game theoretic analysis. As long as there is a competition and you're afraid that maybe, ah, and you know, I'm six months ahead, but if someone comes in one month and take the bounty before me, then I'm screwed, right? So now there's a game theoretic question and you kind of need to analyze it. And of course, I'm not so sure how good this is, right? It might be a good idea if there's a single entity, not so good. So it really builds on the competition between different quantum computing manufacturers.
+
+
+35:04: Anna Rose:
+
+
+It's a little bit like, it's good that it's there, but it's somewhat optimistic, right? Like it's sort of assuming that there will be like a fair balanced competition that they kind of know about each other.
+
+
+35:16: Or Sattath:
+
+
+If people will be willing to agree to switch to that way before or find another way to kind of figure out when this happens, I'll be perfectly happy.
+
+
+35:27: Anna Rose:
+
+
+So far we've been talking mostly about using existing cryptography in a post-quantum computer world. And like all these techniques are just to add something post-quantum that we already know will work. But are you ever looking at actually making adjustments or these sort of like conversions to quantum cryptography?
+
+
+35:47: Or Sattath:
+
+
+So this is kind of very interesting because it takes an even historic perspective. So historically there were two main routes to construct money. Right? Mostly old money used physical objects that are hard to copy, such as commodity money, cash, et cetera. Modern money, or the other approach, uses some kind of a ledger that records all the transactions, such as bank accounts, credit cards, cryptocurrencies, et cetera. All of them use this second approach. Now, interestingly, one of the peculiarities of quantum mechanics is something called the no-cloning theorem.
+
+
+36:28: Anna Rose:
+
+
+Oh yeah.
+
+
+36:29: Or Sattath:
+
+
+It says that if I give you a quantum state and you don't know what that state is or how I prepared it, there is no way for you to create another copy of it.
+
+
+36:39: Anna Rose:
+
+
+I think in the last episode you started with that example of this, that you could use it for running a program that one could share if there's a connection between those two entities, but someone outside of it would not be able to actually access this program.
+
+
+36:55: Or Sattath:
+
+
+Yes, yes, yes.
+
+
+36:55: Anna Rose:
+
+
+Cool.
+
+
+36:56: Or Sattath:
+
+
+And why is it relevant for us? Again, more broadly, cryptographers are interested in things which are impossible or hard, right? Why? Because, well, that gives you a handle on something that the adversary cannot do. So this is just another example of that instantiation, right? No cloning, there's a no in it. Good for cryptographers, right? So quantum money was first invented by Stephen Wiesner in 1969.
+
+
+37:26: Nico:
+
+
+Wow.
+
+
+37:27: Or Sattath:
+
+
+You have to understand this is before classical modern cryptography, right? So this goes way back. And he proposed to use this idea of the no-cloning theorem. And this was actually the first paper that thought about quantum mechanics in the context of quantum information. So in some sense, you could make the argument that he's the father of quantum information in a broader sense, right? That uses qubits to do computation or manipulate information in arbitrary ways. And he invented the first quantum money scheme, which is somewhat similar to credit card, in what sense? Unlike the cash we use today, in Wiesner's money, you needed to go to the bank to verify your money. So you have to communicate with the bank in order to spend it. But unlike a credit card, the money itself is not associated with any particular entity.
+
+
+38:20: Anna Rose:
+
+
+Okay. Who's the third party in that though? What's the third party like? Who's the bank kind of?
+
+
+38:27: Or Sattath:
+
+
+The central bank, the private bank.
+
+
+38:30: Anna Rose:
+
+
+It would actually be an entity still.
+
+
+38:31: Nico:
+
+
+An actual bank.
+
+
+38:32: Or Sattath:
+
+
+Yeah. It would be...
+
+
+38:33: Anna Rose: 
+
+
+Like it's interactive in a way.
+
+
+38:35: Or Sattath:
+
+
+Think of it as like most of the money that people use today, that there is a trusted third party.
+
+
+38:40: Anna Rose:
+
+
+Yeah, okay.
+
+
+38:41: Or Sattath:
+
+
+Just like that, it was 1969.
+
+
+38:43 :Anna Rose:
+
+
+Yeah, they didn't have any other ideas. Okay.
+
+
+38:45: Or Sattath:
+
+
+Exactly. Exactly. Okay, what are the advantages of Wiesner's money? The two most important advantages over cash is the fact that you could digitally move it from one place on earth to the other, if you have a quantum communication channel, unlike cash we use today. And the second one is about the security guarantees. What stops you from forging the money that we have in our pockets? There's no really formal guarantees about it. If you have a good enough machine and people that are willing to take the risk, most likely they'll be able to do it, right? It's security by obscurity. There are no formal guarantees about it. Whereas in his quantum money scheme he had a security proof, or maybe, actually, let me be more precise.
+
+
+39:40:
+
+
+In 2009 there was, appeared the first, I would say, full security proof of Wiesner scheme. So even though he didn't have the terminology and even the language, right? Because look, it was 1969, the notion of a qubit was not invented. The notion of the no-cloning theorem was not invented. He was essentially walking on air. His arguments were really shaky, and it's kind of an interesting example because it took 15 years for the paper to get published. And it was circulated between some of the more eccentric people or computer scientists around. It was barely known by the wider community, but still he managed to talk with others about it, such as Charlie Bennet and Brassard and others that invented many important cryptographic primitives based on his ideas and are actually now way more important in some sense because these were practical inventions, unlike his.
+
+
+40:45:
+
+
+I guess one more point about quantum money is that this is almost science fiction. As I mentioned, we don't have quantum computers and in order to have a functioning money system, not only you need to have a good quantum computer, you need to keep it, right, for a long period of time. So current quantum computers run for something between a microsecond and a millisecond, okay? This is the time in which the qubits wouldn't be destroyed in some sense by noise. Now, if I told you that here, take your money for the next millisecond, you would be kind of frustrated, right? One of the functions of money is store of value, right? Which means you want to store it for the next year or your children, right? So for that purpose, it's horrible, and it's unclear when this will take place.
+
+
+41:44: Anna Rose:
+
+
+I didn't actually realize this that you just said that the quantum computer, the issue is it's just totally unstable. It sounds like it won't last long. And when you say last long, like you're saying you need the computer to last like a couple months or a year or something, right? Like so that it could actually do something more than the millisecond worth of computation or whatever it's doing.
+
+
+42:07: Or Sattath:
+
+
+Exactly.
+
+
+42:07: Anna Rose:
+
+
+Okay.
+
+
+42:07: Or Sattath:
+
+
+We expect a Shor's algorithm to take something like a second or a few seconds. So, for that you need the noise level to be reduced, but okay, only by a few orders of magnitude and use some fancy error correcting codes, et cetera. For something like quantum money you need a completely different approach. I guess the upside is that you don't need all the fancy computation involved. So I'm not sure when exactly it's going to happen, but I don't expect that to take a few years. Another aspect is that unlike the risks that we talked about. For these risks, you need a single quantum computer. To have a useful quantum money system, you need that to be cheap and...
+
+
+42:52: Anna Rose:
+
+
+Ideally decentralized? Maybe that's even too crazy to wish for.
+
+
+42:56: Or Sattath:
+
+
+You want users to have that, right? You want the user's cell phone to have quantum capabilities. This is decades away. That would be my guess. Of course, I'm not a physicist, this is outside my area of expertise, but I suspect this will take time. That's my personal guess.
+
+
+43:13: Nico:
+
+
+Another practical question, you mentioned quantum communication channels.
+
+
+43:17: Or Sattath:
+
+
+Sure.
+
+
+43:18: Nico:
+
+
+Because I'm guessing we have to exchange qubits. How does that happen? What does that look like? Can we do that? What kind of wires do we use, right?
+
+
+43:26: Or Sattath:
+
+
+So they basically look like the channels we use today. They use fiber optics, but they're way noisier. You need a completely different approach to handle noise. Unlike the fiber optics we use today, where the signal is repeated many times, here a single photon encodes a qubit, right?
+
+
+43:50: Anna Rose:
+
+
+Wow.
+
+
+43:51: Or Sattath:
+
+
+So things need to be done quite differently and the rates are lower, et cetera, et cetera. And especially dealing with hops, between different nodes in the network, that's a really big challenge. But we definitely know how to do that for short ranges, like a few kilometers, et cetera. There is already...
+
+
+44:09: Nico:
+
+
+Can we reuse the existing fiber optics infrastructure?
+
+
+44:13: Or Sattath:
+
+
+I don't know enough to tell you. I think that the answer is yes, but I'm not 100% sure.
+
+
+44:19: Nico:
+
+
+Wow.
+
+
+44:19: Or Sattath:
+
+
+And definitely, again, there is a huge loss in efficiency. So that has to be taken into account.
+
+
+44:25: Anna Rose:
+
+
+I want to keep going on the quantum money topic. So I feel like you've given a really good history of it and that this idea was brought up. But  that is still like very much the central model. And it was based on, like you said, walking on air, like it was sort of making assumptions that I guess turned out to be true, but has there been any other work on that? Has there been progress on quantum money?
+
+
+44:47: Or Sattath:
+
+
+Definitely, definitely. So I guess from around 2010, there were huge developments. The main one was the idea of public quantum money. So public quantum money is we still have central bank but the bank publishes the bank's public key and there's an algorithm that uses the bank's public key to verify money. So this is now way more similar to the cash we use today where when Nico and I make a transaction, it's actually between Nico and I. The bank is not involved at all. Okay? So that was the idea that came up in 2010, roughly. The constructions, unfortunately, to this day, are, I would say, not based on standard assumptions. We still don't have provably secure quantum money scheme, which is public under standard assumptions. I can get into the details of what's the state of the art, but I would say that there's still lots to hope for.
+
+
+45:56: Anna Rose:
+
+
+Is there any sort of decentralized model even being proposed or is it so far off and too complicated?
+
+
+46:02: Or Sattath:
+
+
+No, no, no.
+
+
+46:03: Anna Rose:
+
+
+No, no? Okay.
+
+
+46:04: Or Sattath:
+
+
+No it's... Actually, it has been proposed. There are several variants. One of them is called quantum lightning and the other is called one-shot signatures. I think it's easier to explain the second one, even though it's even fancier. In one-shot signatures, we use something which is called a Common Reference String or a Common Random String, which is often used in cryptography. Say in the common random string, we need to have a string that was generated in a way which was honest and no one kept any secrets. And once we have this random string, everyone agrees that this is the random string to be used. And then we have an algorithm that people could use to generate a one-shot signature state. Okay? The bad news about one-shot signatures is that we don't really have a candidate construction. I mentioned the common reference string, but another assumption that we need is that this is only true relative to an oracle.
+
+
+47:03:
+
+
+Now, I don't want to get into what exactly does that mean, but we need to assume that there is a functionality that everyone has access to. It's tailor made for that purpose. It's not like the random oracle model for those that know what that is and the scheme is secure only relative to that oracle. And we don't know how to construct it from any assumptions in the standard model. Right? Even standard assumptions or non-standard one, there aren't even candidates for that. So, I guess, I want to emphasize that this is a science fiction now, not only in terms of experimental setup, but also from a theoretical setup. We don't know how to instantiate it
+
+
+47:44: Nico:
+
+
+How does this oracle differ from a trusted third party?
+
+
+47:47: Or Sattath:
+
+
+One way to think about it is a trusted third party. But we prefer not to think about it that way because for example, if you could obfuscate it maybe you could give it to everyone.
+
+
+47:55: Nico:
+
+
+I see.
+
+
+47:55: Or Sattath:
+
+
+Right? So the fact that there's something that is only a functionality, it doesn't need to keep a state or anything like that, that's a nice advantage because maybe, for example, indistinguishability obfuscation could allow you to turn it into something more practical. But that's kind of more for the experts, et cetera. I guess for the layman, it basically means that there are definitely bad news in terms of practicality of that scheme.
+
+
+48:22: Anna Rose:
+
+
+Is this kind of like the ZKP and the Trusted setup?
+
+
+48:25: Or Sattath:
+
+
+Yes, similarly, very similar to that.
+
+
+48:28: Anna Rose:
+
+
+Got it.
+
+
+48:29: Or Sattath:
+
+
+But again, the goal is very, very different from that, right?
+
+
+48:32: Anna Rose:
+
+
+Okay.
+
+
+48:32: Or Sattath:
+
+
+Right? Even though the setup is the same. Once we have that random string, we can use it to issue one-shot signature states, or one-shot tokens if you wish. What do they provide? Given that state, you could sign any message you want. So you generated the state, the state has a public key, and you could use the state that you have along with this public key and generate a signature. An adversary cannot generate two signatures that are verified with the same public key. Kind of weird. So again, I could take that... Take the random string, generate the quantum state and the public key. Use the quantum state to sign any message I want. That's the thing that I can do. What's the thing that I cannot do or any efficient adversary cannot do?
+
+
+49:25:
+
+
+The adversary cannot prepare a public key and two signatures that pass the verification. Why is that? The signing algorithm destroys the state. So you have one shot to create your signature. Okay, that sounds kind of weird. How is that all related to the question that you ask, right, Anna?
+
+
+49:48: Anna Rose:
+
+
+Yeah, going back to this, like, sort of makes... Like the pre-quantum to quantum, right? 
+
+
+49:53: Or Sattath:
+
+
+Yeah.
+
+
+49:54: Anna Rose:
+
+
+Or no?
+
+
+49:54: Or Sattath:
+
+
+I would say, look, let me even propose a more, I think, interesting idea. As a way to transform a system such as Bitcoin to use quantum money. So the first thing we need is a random string. What random string will we use? Something from the first Bitcoin headers, right? There's lots of randomness in there, use randomness extractors. That question was studied, we have good ways to generate random strings from that. Now suppose we want to switch to quantum money. A user will attach a message to the blockchain. The blockchain, it will have something along this the next format, right? I, Or, who has the secret key associated with my Bitcoins, want to transform my Bitcoin to quantum money and here is my public key. Here is the one-shot signature public key, right?
+
+
+50:52:
+
+
+The first thing I'll do is I'll create the one-shot signature state and the public key and post a message saying look, the money isn't associated with my Bitcoin secret key, instead it's associated with my one-shot signatures public key. Right? Now when I want to send it to Nico, I'll simply hand over the quantum state to Nico. Nico could use the verification algorithm and he knows that it's valid. That's one way. Another is even more interesting. Instead Nico will generate another state. Right? And now when I want to spend it, I'll sign Nico's public key. And now we have... it's interesting, right? We have a chain that goes from my public key to Nico's public key. And Nico could go send his money to Anna, et cetera, et cetera., et cetera. And since we have this chain and we know that there was no split, there were no double spend simply because you could not use your one-shot signature state to sign two messages. So it really looks like a chain.
+
+
+51:58:
+
+
+And that's something we proposed in a work with Andrea Coladangelo using the Quantum Lightning and it can also be done with the one-shot signature state and get even more advantages, mainly ones related to smart contracts. You don't necessarily have to use... I don't have to spend my coin to Nico only, I can do various other things like multi-sig, et cetera. 
+
+
+52:24: Nico:
+
+
+Just a quick question. In a way, what you've explained here of we have this chain of signature and we know that there's no fork because of the properties of this one-shot signature, does this mean that we no longer need consensus?
+
+
+52:35: Or Sattath:
+
+
+Exactly. 
+
+
+52:36: Nico:
+
+
+Wow.
+
+
+52:37: Or Sattath:
+
+
+You no longer need consensus. Yeah, I should have said that.
+
+
+52:41: Anna Rose:
+
+
+It's just the properties.
+
+
+52:42: Or Sattath:
+
+
+You could stop the blockchain. Imagine that everyone transitions to quantum money, you don't need the blockchain anymore. You just need to make sure that you do need to know what are the final public keys. Right? Because that's the issued money. But other than that, you don't need. The downside if you do that is that there are certain things that cannot be done. Right? There are certain things that quantum money does not allow, but things like Ethereum do such as Ethereum Name Service, et cetera, et cetera. And we don't have an alternative for that.
+
+
+53:18: Anna Rose:
+
+
+Is it almost like the state of the quantum money is a little bit like Bitcoin, like just the level of activity that you could do with it.
+
+
+53:26: Or Sattath:
+
+
+Exactly.
+
+
+53:27: Anna Rose:
+
+
+Okay.
+
+
+53:28: Or Sattath:
+
+
+Exactly. So I definitely recommend such a transition for a system such as a Bitcoin, but not for a system such as Ethereum. Okay? Although there are some examples of functions which I don't know, but I don't think possible to achieve which are, which is done in Bitcoin. I'll just give one example, which is one out of three multi-sig. This is something that you cannot do because the no-cloning property doesn't hold for that in some sense. You could do two out of three, but there's no way to do one out of three. So there are some functionality that you cannot do. Another interesting example is timestamping. Bitcoin creates a block every few minutes and you could create interesting applications based on this fact. And indeed, open timestamps is one such example which allows you to timestamp documents very easily and cheaply. And these types of things cannot be done without the blockchain.
+
+
+54:26: Anna Rose:
+
+
+What about things like the way that Ethereum works, the fact that you can do smart contracts and stuff. Everything you've described sounds like a relatively one use case type money transferring system.
+
+
+54:39: Or Sattath:
+
+
+Sure.
+
+
+54:40: Anna Rose:
+
+
+But yet has there been thinking around trying to recreate some sort of smart contract platform using quantum computing?
+
+
+54:48: Or Sattath:
+
+
+There have been little work on that question, and we definitely don't know the boundary. What are the things that can and cannot be done? That's I guess the bad news. The bad news is we don't know where the boundary is. What things require consensus? Or on the other hand, what are the things that can be done only using unclonability properties? Okay? So I would say the following. We do have lots of examples for things that can be done based on no-cloning or quantum money primitives alone. This includes things like Colored Coins. This is, I think, the most interesting example. Colored Coins can even be used for things like stocks. You could... A company could issue stocks using this one-shot signature state. This would represent a share. The share could be traded just like cash. And payments could be made to that stock by the company, similarly to the way it's done with Colored Coins.
+
+
+55:56: Anna Rose:
+
+
+Dividends.
+
+
+55:57: Or Sattath:
+
+
+There are voting rights that this state allows you to use because you can sign messages, right? So if there's a question that needs to be answered, you could use your voting rights to sign the message that you prefer or the vote that you prefer. And there are various other things. Again, multisig with things like two out of three, there are things like saving accounts, permanent addresses, there's a long list of things that can be done, but also a long list of things that cannot be done, I guess. Think about all the NFTs or other things that are done in Ethereum, some of them cannot be done, you cannot play a game on such a system.
+
+
+56:38: Anna Rose:
+
+
+Not yet.
+
+
+56:38: Or Sattath:
+
+
+Not yet. At least...
+
+
+56:41: Anna Rose:
+
+
+Theoretically, not yet.
+
+
+56:42: Or Sattath:
+
+
+Even theoretically, you wouldn't be able to do that. And I'll post the, I guess I'll send the link to the paper that suggests this line of research.
+
+
+56:52: Anna Rose:
+
+
+Sounds good. And we'll add that to the show notes.
+
+
+56:54: Nico:
+
+
+So since we are on ZK podcast, I have to ask, can we do arguments of knowledge, succinct arguments of knowledge, zero-knowledge arguments, where the soundness guarantees are quantum secure?
+
+
+57:08: Or Sattath:
+
+
+Yeah. So, I know very little about these questions, but as far as I understand, first of all, the Picnic scheme uses this approach, this exact approach as you mentioned, right? Essentially you use the secret key and give a zero-knowledge proof of some statement, okay? So it definitely uses that approach. But unfortunately, unlike the ZK proof techniques that we have today, which are really have been optimized and are quite efficient, et cetera., that's not the case here. And as you've seen, the signature sizes are one half megabytes. And I'm not talking about aggregation or any of the fancier questions that are addressed in the ZK literature, right? So it's worth in every aspect you could think of in terms of practicality.
+
+
+57:59: Nico:
+
+
+I should add, though, we do know of like plausibly post-quantum ZK schemes, like stuff that is FRI-based, I think our listeners probably have heard those words, relies only on hash functions and so are assumed to be post-quantum secure.
+
+
+58:14: Or Sattath:
+
+
+Sure, but are they as efficient as the other alternatives?
+
+
+58:19: Anna Rose:
+
+
+They're getting there.
+
+
+58:20: Nico:
+
+
+Yeah. Yeah.
+
+
+58:21: Or Sattath:
+
+
+So I don't know, if they are getting there, then maybe, I wasn't aware that they are getting there. 
+
+
+58:27: Anna Rose:
+
+
+In a show I did about FHE, we talked about lattice-based ZKPs. Would those be post-quantum?
+
+
+58:35: Or Sattath:
+
+
+Yes, absolutely. Unless there's something, you could combine it with other things and then it would not but if that's the only type of assumption then yeah, usually you can. Lattice-based questions such as shortest vector problem or other variants are hard even for quantum computers.
+
+
+58:53: Anna Rose:
+
+
+Just to check though, the type of underlying concepts that are not post-quantum secure, is that like pairing or elliptic curve cryptography? Is that what is not secure post-quantum? 
+
+
+59:07: Or Sattath:
+
+
+Yeah, I guess the vast majority of elliptic curve cryptography is not quantum secure. The exception is something called isogenies. And that's...
+
+
+59:17: Anna Rose:
+
+
+Oh yeah, but I think that had a problem, didn't it?
+
+
+59:20: Or Sattath:
+
+
+It's awfully complicated. Some of the proposals have been broken. It's kind of complicated, but I think it's still, if you wish, alive. There's still hope that it's not dead end, but it's definitely extremely complicated. And I guess one of the reasons why it didn't work in the NIST challenge, right? The proposals which did use that were not chosen. Some of them were broken, and others were simply inefficient or not secure enough compared to the alternatives.
+
+
+59:55: Nico:
+
+
+One more thing. Do you know if anyone is looking at using the unclonability property for ZK and argument type stuff? Because I think the ones we did mention, the lattice-based stuff that I've seen, the hash-based stuff, doesn't bring in this new element of unclonability. 
+
+
+1:00:11: Or Sattath:
+
+
+So there are definitely other related questions which we kind of mentioned before, which is called Unclonable Cryptography. And some of these primitives do use ZK proofs for their security analysis. I wouldn't say that it's directly related to the questions related to SNARKs or anything like that as a technique. It constructs different things using ZK techniques. You see what I'm saying? I'm not aware of any unclonability arguments being used simply for the sake of vanilla ZK proof.
+
+
+1:00:54: Nico:
+
+
+So another interesting crossover moment between ZK and quantum cryptography. You've mentioned the common reference string model and you've mentioned proofs of destruction. In ZKPs, like we have this thing of a trusted setup, like someone comes up with a seed, generates a big string and the proofs are only secure if this person deleted the original seed. Are these proofs something we could use here?
+
+
+1:01:18: Or Sattath:
+
+
+So there is something which is called proof of deletion and proof of destruction, which appears in various different concepts in quantum cryptography. I'll give you one such example. It's called quantum encryption with certified deletion. So what does that mean? So usually, if I give you the ciphertext and then later give you the secret key you could decipher it and reveal the message, right? In some cases you want to make sure that I gave you the cipher and I want to make sure that you gave it back to me, right? Classically there is no way to know. In the quantum setting there is. Instead of encrypting it using a classical message, I could take my message and encrypt it using a quantum cipher and I give you a quantum state. Then I'll ask you to give it back to me, or do a test to check that you destroyed it. This is called a proof of deletion.
+
+
+1:02:20:
+
+
+I give you a challenge and I'll tell you, look, please measure the state in this and that basis. And you will tell me, ah, I did and the outcomes were this and that, and now I know that you destroyed my message, okay? And even if later on I'll give you the secret key, the original message is gone. You could not recover it even after I give you the secret key. And this is the type of thing that you cannot achieve in the classical setting, right? If I give you the classical cipher, there is no way for me to be sure that you have destroyed it.
+
+
+1:02:52:
+
+
+Another interesting use case is the GDPR, where services are supposed to delete the information if the user chooses to. Sorry, but how do we know that they deleted the information? There's no way for them to prove that they have deleted it, right? So this is another interesting use case where they could prove that, yeah, I'll do a check and make sure that they really have deleted it.
+
+
+1:03:17: Anna Rose:
+
+
+We're almost at time, but I just wanted to quickly check back on something that you had mentioned earlier, and said you might be able to give a bit of context on later. And I know this is a bit of a switch of topic, but it would be the hybrid cryptography.
+
+
+1:03:31: Or Sattath:
+
+
+Sure.
+
+
+1:03:31: Anna Rose:
+
+
+What is that actually?
+
+
+Or Sattath:
+
+
+So one of the, with post-quantum cryptography, or actually any mix of cryptography, is that sometimes we don't really know how secure it is. So imagine that we switch to post-quantum cryptography and it turns out that it wasn't secure. Maybe even classical computers could break it, right? Unlike the hardness assumptions which are used in classical cryptography, which have been tested for decades, these ones are kind of new. So, simply switching to it might be risky. So how do we deal with that risk? So one approach is called hybrid cryptography in which you use both in a way that in order to break it, you need to break both.
+
+
+1:04:18:
+
+
+So think of an encryption scheme. Imagine that you, in order to encrypt a message, now you use two schemes. So think of it like an onion, right? In the first level you use the pre-quantum scheme and in the second layer you use the post-quantum scheme. Now in order to open it up, you need to break both of them. And this is nice, because that allows you to kind of enjoy the benefits of both worlds. On the other thing, what you lose, for example, the length, right? Each one doubles the length and now you pay the factor of four instead of just two. But for some cases this is really important, definitely in the early stages where we won't really know for sure how secure things are.
+
+
+1:04:59: Anna Rose:
+
+
+You sort of mentioned though the security challenge, like if you combine these cryptographies, could you ever create a new security vulnerability somehow? Or do you feel like it's always additive? Like security plus security.
+
+
+1:05:12: Or Sattath:
+
+
+Yeah, you definitely need to be careful about these things. This is a great point. There are generic ways to do these things, but you need to be careful and prove that things are secure, et cetera. There are ways that are known to do that in a secure way. But yeah, as usual, don't... How is it called? This...
+
+
+1:05:30: Anna Rose:
+
+
+Roll your own crypto? I don't know.
+
+
+1:05:32: Or Sattath:
+
+
+Sorry, don't run your own cryptography, or don't...
+
+
+1:05:35: Anna Rose:
+
+
+Roll your own crypto. Yeah.
+
+
+1:05:36: Nico:
+
+
+Don't roll your own crypto.
+
+
+1:05:37: Or Sattath:
+
+
+Don't roll your own crypto. Exactly.
+
+
+1:05:40: Anna Rose:
+
+
+Nice. This reminds me a little bit of an earlier conversation where it was about FRI's security, Fiat-Shamir security. But when you combine the two, you can sometimes actually interrupt, like you can create problems in that combination. This idea just sort of popped into my head. Or, I want to say thank you so much for coming back on the show and...
+
+
+1:05:59: Or Sattath:
+
+
+Thank you. It was wonderful.
+
+
+1:06:00: Anna Rose:
+
+
+Covering with us all of this great additional info. I feel like, I mean, I'm really glad we did a second one. This was an episode in its own right. We talked about completely different things. So thanks so much for sharing all this with us.
+
+
+1:06:13: Or Sattath:
+
+
+It was wonderful. Thank you so much.
+
+
+1:06:14: Nico:
+
+
+Thanks so much.
+
+
+1:06:14: Anna Rose:
+
+
+Thanks, Nico too.
+
+
+1:06:15: Nico:
+
+
+Pleasure. This was fascinating from the beginning to the end.
+
+
+1:06:18: Anna Rose:
+
+
+Cool. All right. I want to say thank you to the podcast team, Henrik, Rachel and Tanya, and to our listeners, thanks for listening.

@@ -1,0 +1,1281 @@
+Anna Rose (00:00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:00:27):
+This week I chat with Zac Williamson from Aztec. We cover the history of Plonk from the start of the idea all the way up to his recent work, Goblin Plonk. We chat about Noir, the zkDSL, as well as other advancements in the field, all of which have made a path for Aztec to release Aztec 3, their planned private programmable L2. We also do a quick catch up on the state of ZK applications, folding schemes, and what's on the horizon in our space. Now, before we kick off, I do want to direct you to the ZK Jobs board. There you'll find jobs from top teams working in ZK. So if you're looking to jump into the field professionally, be sure to check it out. And if you're a team looking to find great talent, be sure to add your job to the ZK Jobs board as well. I've added the link in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+Tanya (00:01:16):
+Aleo is a new layer one blockchain that achieves the programmability of Ethereum, the privacy of Zcash, and the scalability of a rollup. If you're interested in building private applications, then check out Aleo's programming language called Leo. Leo enables non-cryptographers to harness the power of ZKPs to deploy decentralized exchanges, hidden information games, regulated stablecoin and more. Visit developer.aleo.org to learn more for questions, join their discord at aleo.org/discord. So thanks again, Aleo. And now here's our episode.
+
+Anna Rose (00:01:54):
+I want to welcome you back to the show, Zac.
+
+Zac Williamson (00:01:57):
+Hey there.
+
+Anna Rose (00:01:58):
+This is your 4th time on the show. And in prep for this, I was digging through the archives to figure out like, when did we first meet? What were you talking about then, what were the other episodes? So I'm going to give a little roundup.
+
+Zac Williamson (00:02:14):
+Awesome.
+
+Anna Rose (00:02:15):
+In May, 2019, you came on to talk about Aztec, which you are still doing, and we will talk about today. In January, 2020, you introduced Plonk with Ariel, which we will also be talking about today. In April 2021, you introduced this concept of the Zk-zk-rollup. Because I was doing a series at the time all about rollups and yours was the ZK ZK one. Would you say, is Aztec still a Zk-zk-rollup?
+
+Zac Williamson (00:02:45):
+Oh, absolutely. Yeah.
+
+Anna Rose (00:02:47):
+Okay.
+
+Zac Williamson (00:02:47):
+I mean, we are definitely zk-zk-rollup with the option of supporting zkRollups within our zk-zk-rollup. So possibly multiple ZKs. We'll see.
+
+Anna Rose (00:03:00):
+Wow. And yeah. And then in June or July, 2022, so last year I actually had some of your teammates on the show, Joe and Charlie came on to talk about Aztec Connect zk.money, and then told they, they sort of teased this idea of Aztec 3. And I think that's what we're going to be talking about today.
+
+Zac Williamson (00:03:20):
+Yeah. Very happy to, to shill Aztec 3 for as long as I can.
+
+Anna Rose (00:03:23):
+Cool. Cool. There's a bunch of things I want to talk about, but I know that I want to start on the Aztec front and get a catch up from you. Especially because, like even since that interview last year, I mean zk.money; I don't know if that's still a focus? So I think we should share what's going on with Aztec Connect, what's going on with zk.money.
+
+Zac Williamson (00:03:42):
+Very happy to talk about that, but I'm wondering, should we go back to the start? Because we first met and started talking about this back when, you know, the world was in black and white and it was a long time ago. Because yeah, it's been several years. But there is a narrative here, which is basically like when I got started with Zero Knowledge cryptography, the goal was always to try and create like private smart contracts basically. You know, take a solidity-like language and add private stake to it as a first class primitive, and then just have an ability to just hack around with building DeFi, building gaps where you can hide information. Originally this came out because we needed that for a very specific application. So I think maybe when we first met, I was the co-founder of a company called Creditmint because we we minted credit.
+
+Anna Rose (00:04:32):
+Whoa.
+
+Zac Williamson (00:04:34):
+Yeah. Times have changed
+
+Anna Rose (00:04:36):
+Actually question here, because I know you spoke at like zkSummit4.
+
+Zac Williamson (00:04:39):
+Yeah.
+
+Anna Rose (00:04:40):
+But had you been
+
+Zac Williamson (00:04:41):
+I was at zkSummit2.
+
+Anna Rose (00:04:43):
+You were at zkSummit 2. Well, did you also speak at the early ones in Berlin? I think you did actually.
+
+Zac Williamson (00:04:47):
+I don't think I spoke at zk2
+
+Anna Rose (00:04:49):
+But you might have spoken at zk3. Yeah, I remember that you were the only person in one of, in the breakout rooms who'd used the flip chart. I remember this.
+
+Zac Williamson (00:04:57):
+That was Plonk, that was me trying to explain the permutation argument with Plonk and failing.
+
+Anna Rose (00:05:01):
+Wow no! Okay. So yeah, we did know each other even before that episode then.
+
+Zac Williamson (00:05:08):
+ 'BP' - 'before Plonk'.
+
+Anna Rose (00:05:09):
+Before Plonk, I think you make a good point. Let's go even further back. Let's do a little bit of the story from the start.
+
+Zac Williamson (00:05:16):
+So, originally I got into Web3 because I met my co-founder Tom and he wanted to do private, like corporate debt, basically Stratified on Ethereum. You know, bring real world assets to Ethereum. And I thought, wow. This is 2017. And I thought this is the like the only actual meaningful use of blockchain that at the time I was aware of. Because 2017 was all just junky tokens and memes and not a lot of actual useful stuff, at least from the outside. so that's what I started working on with him. But then we realized very quickly, well if you're going to try and do, you know, bring real world assets on chain, you need privacy. Otherwise you're leaking quite a lot of information about, about people and about what they own.
+
+Anna Rose (00:05:59):
+And actually it makes sense that it was like sort of the business use case that was the first to like be made clear. Yeah. I mean that was always very clear to me as well, the fact that like, how could you run a business if everything is transparent? Like every salary, every supplier's deal and stuff like that.
+
+Zac Williamson (00:06:15):
+Yeah. Well, I mean, turns out that you can also just do it if you are some 16 year old anon on Twitter that also works. But for some parts of the economy, you do need proper privacy. So I came to this from, from a very commercial perspective, and I guess I basically got zk pilled later on.
+
+Anna Rose (00:06:32):
+Whoa.
+
+Zac Williamson (00:06:34):
+Because we needed privacy for what we were doing. And at the time, 2017/2018, the only private tech out there really was Zcash which, whilst incredible, was also not programmable and there wasn't any privacy on a theory more similar programmable chains.
+
+Anna Rose (00:06:50):
+Yeah.
+
+Zac Williamson (00:06:50):
+So I started looking into ZKProofs because I'm like, well, we need this for the business. I don't want to go back to my boring old job. This is too much fun. So I started reading about cryptography and learning about it, trying to figure out if we, could port the Zcash protocol to Ethereum.
+
+Anna Rose (00:07:06):
+Wait, I'm just, I just realized what were you doing? What was your background actually?
+
+Zac Williamson (00:07:09):
+My background?
+
+Anna Rose (00:07:10):
+I always thought you were a cryptographer.
+
+Zac Williamson (00:07:12):
+Oh hell no.
+
+Anna Rose (00:07:12):
+What!
+
+(00:07:13):
+I feel like you might have even told me this on an earlier episode, but I completely have like
+
+Zac Williamson (00:07:19):
+I'm very much yeah self-taught when it comes to cryptography. My background is as a failed particle physicist.
+
+Anna Rose (00:07:26):
+Oh.
+
+Zac Williamson (00:07:26):
+So I did a PhD in Experimental Neutrino Physics because back in the day I had delusions of grandeur about wanting to be a scientist, you know, spending all my time sketching out equations on whiteboards.
+
+Anna Rose (00:07:36):
+Which you kind of do now.
+
+Zac Williamson (00:07:37):
+Yeah. You can take the academic out of academia, but you can't take out academia out of the academic.
+
+Anna Rose (00:07:44):
+Ah, I see.
+
+Zac Williamson (00:07:45):
+But yeah, I, I figured that didn't work out. I realized actually I didn't really like research because it was a bit too ephemeral, you know, trying to measure the existence of particles that last for a billions of billions of a second. It's interesting for a time, but I felt like I was, I was basically speed running a midlife crisis and I wanted to do something more real with my life. So I became a programmer for a couple of years to kind of sort my life out, finish my thesis, and then that's, then I met Tom and he's like, I'm doing a startup. Do you want to join? And I'm like, well, yeah, I'm not doing anything interesting. Let's do this.
+
+Anna Rose (00:08:19):
+Cool.
+
+Zac Williamson (00:08:20):
+Then that segued into needing privacy, which segued into me reading about cryptography.
+
+Anna Rose (00:08:24):
+Yes.
+
+Zac Williamson (00:08:24):
+Which then segued into falling down a crypto rabbit hole
+
+Anna Rose (00:08:26):
+And early on though, you were using a different kind of ZKP.
+
+Zac Williamson (00:08:32):
+Yes.
+
+Anna Rose (00:08:33):
+What was it again?
+
+Zac Williamson (00:08:34):
+A Sigma protocol. Okay. so, so before Plonk to get privacy we put together like a Frankenstein cryptography protocol using older perimeters than ZK SNARKs. Because basically we wanted programmable business logic, and we didn't want to have to do trusted setups for every circuit we were writing because we wanted it to be programmable. And so at the time, all SNARKs required trusted setups per circuit. So given the lack of other options, I knocked together this very primitive cryptography protocol, which sort of did what we needed, but it was very expensive in terms of computational costs in today's figures, probably a cost about a hundred dollars to do a transaction on Ethereum in terms of gas. But originally I became fascinated by ZK cryptography because it was a new area to me.
+
+(00:09:24):
+I didn't know it existed. The idea that you can prove statements about encrypted data was just radical.
+
+Anna Rose (00:09:30):
+Yeah.
+
+Zac Williamson (00:09:31):
+And I kind of realized very quickly, wow, you combine this with distributed ledger technology, you had the ability to actually create you completely ledgers where like the protocol is transparent and trusted, but the actual information trading across it is private. That that could change a lot of things in this world. So I became a bit obsessed with it. Basically, one of my first introductions of cryptography was, I did something which later turned out was a massive stereotype, which is that I got introduced to an actual cryptographer Jens Groth, one of the OG folks. He's created the Groth16 SNARK. He's been in the space for a long time.
+
+Anna Rose (00:10:11):
+He's been on the show.
+
+Zac Williamson (00:10:11):
+Yeah. I owe a lot to him because basically I got introduced to him, I rocked up to his office and I'm like, "Hey Yens, I've got this like, amazing new cryptography protocol." It's like, no I'm not a cryptographer, I'm self-taught but trust me, this one works, it's great, it's going to change things. Then he read it in about five minutes. He's like, "yeah, it's broken." So yeah, that was my extremely stereotypical introduction to cryptography.
+
+Anna Rose (00:10:36):
+It's funny cause it's like don't roll your own crypto.
+
+Zac Williamson (00:10:39):
+Yeah.
+
+Anna Rose (00:10:39):
+But then you did
+
+Zac Williamson (00:10:40):
+Then I kept going. Yeah, exactly. I'm like, I, I you know what's that? The definition of insanity is trying the same thing over and over and expecting different results. Well,
+
+Anna Rose (00:10:49):
+You did get a different result though.
+
+Zac Williamson (00:10:50):
+Well, I did because Yens was, was exceptionally good natured and kind of spent time advising my startup and basically mentoring me in how to actually do cryptography.
+
+Anna Rose (00:11:00):
+Wow.
+
+Zac Williamson (00:11:01):
+And so that's what, then with his help, that's where what then produced the original Aztec critical, which was this Sigma critical thing that I was mentioning earlier
+
+Anna Rose (00:11:10):
+Interesting. But then, so even on that one, you had gotten something sort of functional. Yeah. Where does Plonk come in?
+
+Zac Williamson (00:11:16):
+Plonk comes in 2019. Yeah. so we knew when we were building the original Aztec protocol with this junkie segment protocol we kind of we're in a bit of a, a difficult spot because we knew that what we were building wasn't actually very good. and we didn't have the technology to build what we really wanted to build, which is not a good place to be quite demoralizing. And so I was basically spending all of 2019 and, and a bit of 2018 based studying furiously everything about ZK SNARKS trying to figure out if it's possible to create a what is now like called a universal SNARK, which is one way you don't need per circuit trusted setups where you could just make, do one trusted setup or, or ideally, no trusted setups, but at, at most one trusted setup for your entire crypto system. And then you can program in any arbitrary circuit you want, and you don't need to do anymore trusted setups.
+
+Anna Rose (00:12:04):
+And at this point there was like, Sonics had been, was that out?
+
+Zac Williamson (00:12:08):
+Well, that was the inciting incident because, okay. Sonic was published in 2019, I believe or late 2018. I can't quite remember the date. So it was like Mary Maller's PhD thesis. I think it had Sean Bow on it from Zcash and a few others. And, sorry, I can't remember the full author list.
+
+Anna Rose (00:12:24):
+I think we may have covered that at some point on the show too in detail. I remember doing a study club on that actually.
+
+Zac Williamson (00:12:29):
+Yeah. And it was the first actual universal SNARK that was like remotely practical
+
+Anna Rose (00:12:36):
+Although not really feasible, right?
+
+Zac Williamson (00:12:38):
+Yeah.
+
+Anna Rose (00:12:39):
+So, the idea was it proved, it showed something, it showed you could do this universal trusted setup, but it didn't necessarily, like, hadn't figured out the sweet spot.
+
+Zac Williamson (00:12:47):
+Yeah. Because the prover was extraordinarily slow, so you wouldn't have been able to use it in practice. But it, it showed techniques where it should hey this is possible. And so I looked, I saw the paper and I'm like, I have to figure out your secrets and see if there's something that can be evolved out of it. Which wasn't the easiest thing to do because I do not wish to throw shade. I have an enormous amount of respect for the Sonic authors. They contributed immensely to the field of cryptography. There is a but though
+
+Anna Rose (00:13:13):
+Oh. And that, but is that the paper is not the most, is not the easiest to read. Particularly if you are not kind of completely up to speed with a lingo of cryptography, with the syntax of it.
+
+(00:13:24):
+Sonic paper is split into two components. There's the component where they, they describe a SNARK that's universal, but it requires an untrusted third party helper who has a lot of computational resources. To help make the proof. And then there's the part where you don't need that untrusted third party, but the prover is extremely slow. And that second part was the one I was interested in, but it was also the part that was kind of not really described that well because it was, it wasn't the main focus of the paper, it was kind of an a side, oh, by the way, you can do this.
+
+(00:13:51):
+But this split you just described this isn't, the split does not correspond to like the polynomial IOP and the polynomial commitment scheme or anything. This split you're talking about something else. This is like,
+
+Zac Williamson (00:14:01):
+It's different. okay. Because they both had two, like both the modes had two different polynomial IOPs, I believe. Yeah. I spent that was a couple of weeks where I basically camped out at a little bougie artisan cafe that's right next to the flat that I was living in. I camped out there with a supply of iced mochas and a notepad and the Sonic paper. And I went through it line by line, basically grinded through it until I understood how the damn thing worked.
+
+Anna Rose (00:14:26):
+Wow. It sounds like it was because you needed something like this for Aztec to actually work. And this, what we're talking about here is it's still Aztec 1. Yes. Or is this Aztec?
+
+Zac Williamson (00:14:35):
+Aztec 1.
+
+Anna Rose (00:14:36):
+Aztec 1, yeah. Because you had created something, but it, did it not work?
+
+Zac Williamson (00:14:40):
+Well? So Aztec 1 was, it wasn't, it didn't have any scalability. So the idea was, what it enabled was like private-ish value cryptocurrency transfers on Ethereum. But like, the values were hidden, but the identities weren't and it wasn't scalable, as in, if you like, each, each transaction required a verification occasion on Ethereum. And that cost a lot of Gas, about 800,000 Gas. So, it clearly wasn't a sustainable long-term solution. And we needed something better. We need a better tech. And that better tech did not really exist, and that was causing an existential crisis for me.
+
+Anna Rose (00:15:13):
+So you're sitting in this cafe. Yeah. You're figuring it out. Had Ariel already joined Aztec?
+
+Zac Williamson (00:15:19):
+No. Oh. So at the time, I barely knew Ariel, like I met him once at a Zcash conference. Like we shared a cab ride but we didn't really know each other that well. And so that came a little bit later, about a month afterwards. So I, once I cracked the Sonic paper understood how it worked, I'm like, right, okay, is there a way of making this fast? And I was basically drawing blanks there actually. I was like, Hmm, how do I make this fast? Well, dunno!
+
+Anna Rose (00:15:47):
+Did you go to Jens Groth again and ask him?
+
+Zac Williamson (00:15:48):
+I didn't because at the time, so he had to stop being our advisor because he joined DFINITY so there was a slight conflict of interest. They poached him, and yeah, he couldn't, so he couldn't help, but his papers did because basically the path that was on before I bumped into Ariel and actually had the the inciting incident, which put it all together. There's a kind of a trifecta of papers that were coming that had come out over the last couple of years that were really, they, whilst they didn't codify it explicitly, they were using this, this kind of general construction of creating ZK protocols using a polynomial interactive Oracle proof and a polyomial commitment scheme. They weren't synced, they weren't SNARKs, not really, but they were for like general purpose compute, and not general, but sorry, special purpose computations.
+
+(00:16:33):
+But they were kind of written by Jens Groth, Jonathan Bootle, that kind of crowd. And I was kind of devouring these papers because, you know, I had a kind of like intuition that there was something there that you could combine this with something, some of the stuff in Sonic and somehow get something working but I didn't really know how to do it. And that's kind of where Ariel came into the scene. Because I met him at some crypto conference in London. I'm afraid I cannot remember the name of the place. It was the company that hosted, it has since gone under. But at the time I was working on a problem where I was trying to create a bespoke ZK circuit for verifying Poseidon hashes. So very specific and it was more of a toy at the time.
+
+(00:17:17):
+I didn't really have a good use case for it, but I was like, Poseidon's a fun hash function. Can you make a, like a very specific kind of like ZK protocol using these, these Polynomial IOP ideas to do it. And I got to the point where I'd almost got something working, but there was this one minor niggling little issue, which is a, basically like the way these Polynomial IOPs work is generally, you know, you'll use a commitment scheme to encode a vector as a polynomial. And then you'll perform some arithmetic of your vectors and use, and basically define some kind of polynomial expression that checks the correctness of that arithmetic. And the problem that I had is for my Poseidon protocol to work, I needed a shift. Basically. I needed to encode a vector as a polynomial and also encode, it shifted form as a polynomial and verify that those two were identical.
+
+(00:18:03):
+And I didn't know how to do that using the, the representations that I was using, which was at the time this, this whole like Lagrange-based thing, which is in PLONK. So long story short, basically ran to Ariel I'm like, hey, you're a brain, you know how this works. Or you know how cryptography works, like do you know how to do this the, the shift thing? Ariel to his credit he spent a lot of time talking with me that day because I was struggling to explain the problem because I was speaking in kind of a bit of a like a butchered language of cryptography because I'm not formally trained in it but he, yeah, he listened. He listened to me.
+
+Anna Rose (00:18:35):
+He translated.
+
+Zac Williamson (00:18:36):
+He translated me, yes, he was the PLONK whisperer and he was like, "hmm, I'll think about this". I went away end of the conference, I was hacking around on my notebooks. And that evening I realized, hang on a minute, this problem, like, if you can get this, this kind of, this equivalent of a shift in a polynomial form in this kind of Lagrange-based idea, if you can do this and you can create a universal SNARK, then you could make Sonic fast. I kind of, that it triggered, it clicked in my mind. And I remember it quite clearly because the I had an Apple watch at the time and it it started beeping at me saying, Hey, you're not doing an exercise, but your pulse is like 120. Are you okay? Because I was, my heart was panicked because I'm like, oh my God, there's something here.
+
+Anna Rose (00:19:16):
+Whoa.
+
+Zac Williamson (00:19:16):
+But I thought this shifting problem because I just wasn't familiar with the tech, like how to solve it. I was like, ah, it's probably impossible. You know, this is a, this is a pipe dream. Move on. And then the next day at the conference I turned up and, you know, I was walking past Ariel and he just whipped his head around and he is like, oh yeah, by the way, I've solved that problem you you mentioned yesterday.
+
+Anna Rose (00:19:37):
+Wow! Oh, that's so cool. I actually, I want to say we interviewed Ariel last year about a little bit, the history of PLONK on his side. So I will actually try to dig that up and add it in the show notes, but I love that. So you guys met you, you connected and you weren't working together still this was just like people who you knew each other sort of peripherally and this was the point where you started to work together and it was on PLONK.
+
+Zac Williamson (00:20:02):
+Not even well-ish. I mean, basically we were there just for one conference. Ariel was moving, was traveling around. And so we, we basically at the, at that conference, we hashed out a way where you could possibly create a universal SNARK, but it was still very, very foggy in our minds, because what became the PLONK permutation argument, I was when Ariel told me like, there's this thing you can do you can solve this problem, I'm like, dude like, do you know what this means? And so we, we basically hit off in a side room and I explained to him Sonic's permutation argument because not many people that would had at the time had really like, dug into the Sonic's permutation argument part because it was somewhat inscrutable. And so like, I wasn't teaching him permutations. Ariel knew all about permutation networks, like they've been around for donkeys years, but how to get universal SNARKs out of them was relatively new-ish.
+
+(00:20:48):
+And so anyway, but, but once, that clicked with him, he's like, "oh yeah, wow, there's something here" and then we had to split because, you know, we had our own lives to live. But then a couple of weeks later, we met at an airport waiting to board a plane to go to a Zcash conference. And I looked at him and I'm like, "dude, this idea that we have" and he's like, "yeah". I'm like, "should we write a paper about it". And he was like, "yeah, I was thinking that too let's write a paper" and then eventually that, that became PLONK.
+
+Anna Rose (00:21:11):
+Did you know when you were doing this how influential PLONK would be?
+
+Zac Williamson (00:21:15):
+I knew it was going to be a thing.
+
+Anna Rose (00:21:18):
+Because it's, I mean, it's took over so many systems, like people who were developing their own proving systems sort of sometimes threw them away just to use PLONK and it's evolved, there's like all the variations on PLONK. There's even like PLONKish is like a term, like an adjective now. So like yeah. Did you, did you have any sense?
+
+Zac Williamson (00:21:41):
+I mean I had a sense that it was going to be quite valuable for the, for the reasons why I wanted to use it for Aztec because a universal SNARK that's fast enough to put into production systems was completely new at the time. And yeah, I knew it was going to get used. It's kind of why I gave it a silly name because I thought it'll be funny. But I didn't quite realize just how much it would take off and also just how much the community would embrace and adopt it because the PLONKish arithmetisation, it's how do I put this? You know, it would've been very easy for quite, for, for several groups who are you know, companies, institutions, researchers to basically just name their protocols whatever they wanted, as in if they, they, they use ingredients from PLONK but it doesn't mean you need to name it after PLONK. But they've been quite, they've been quite good natured and kept the theme and so it's, it's helped the concept of PLONK kind of worm its way into the, into the wider cryptosphere.
+
+Anna Rose (00:22:32):
+To stay alive. Well actually tell me a little bit about like the PLONK work you've done maybe even since you first introduced PLONK on the show back in 2020. Like, becauise I mean, even then, I mean, or at least the last time you were on, I think we were hearing about like, you know, there was a Hyperplonk, there was an UltraPLONK, there's a Turbo-PLONK. There was an 'Octo-plonk'.
+
+Zac Williamson (00:22:55):
+No, but...
+
+Anna Rose (00:22:56):
+I think I misheard somebody and then started this rumour!
+
+Zac Williamson (00:22:59):
+There might be an 'Octo-plonk' in the future, but not right now.
+
+Anna Rose (00:23:03):
+Actually, I asked, when I was interviewing Daira and Str4d, I think I mentioned this 'Octo-plonk' also as a probably not real thing and I think they did actually have a vision for what 'Octo-plonk' could be.
+
+Zac Williamson (00:23:18):
+Interesting.
+
+Anna Rose (00:23:19):
+So I think it should exist.
+
+Zac Williamson (00:23:21):
+Yes. It's going to be like the crypted of cryptography protocols, you know, it's the one you hear about, but it's never, you can never really see.
+
+Anna Rose (00:23:27):
+No, you can't find it anywhere. You can't find it. But, okay. So from there, we just mentioned this like PLONK-ish...
+
+Zac Williamson (00:23:34):
+Arithmetisation.
+
+Anna Rose (00:23:35):
+Arithmetisation. That you find in Halo 2. Do you find it in Plonky2 as well?
+
+Zac Williamson (00:23:40):
+Yep.
+
+Anna Rose (00:23:40):
+Okay. What else do you find it in?
+
+Zac Williamson (00:23:43):
+Where does a PLONKish artihmetisation worm it's way in? Everywhere. I mean well, anything that isn't R1CS or a STARK like AIR is basically PLONKish. Because if you don't want to do a per circuit truster setup. The, the tricky part about doing a SNARK circuit is proving that your wires are correctly feeding into the relevant gates properly basically that your wires are copied where they need to be copied and the way that you do that canonically like the, what, what PLONK showed is that you can do this really efficiently with a permutation argument. So that permutation argument is, is core to a ton of protocols, but, but more, I guess, more, more broad in that, that PLONKish arithmatisation is a way of taking arithmetic that you want to express over vectors.
+
+(00:24:26):
+So like, imagine you're iterating over elements of a vector and you're applying some arithematic statement to the elements of that vector. It's a very nice transformation. I guess at it, at its core, it's a way of if you have vectors of information and you want to iterate over your vectors and apply some arithmetic operation as a mathematical expression over those vectors, the PLONK-ish arithmetisation is a very efficient way of converting that into arithmetic over polynomials at its core. Combined with a way of correctly checking that copy that basically certain elements within those vectors are copies of one another. It's kind of taken hold of it because it's very expressable and customizable, as in you can, well, at the, like back in 2019, I was talking about the side of custom gates where basically instead of doing additions and multiplications, which is the general way you create gates in a SNARK circuit, you can do like weird, funky custom arithmetic that's going to help your program be a bit more efficient.
+
+(00:25:18):
+Things like range checks, bitwise arithmetic, elliptic curve operations. One of the big innovations iterations that we did was in 2020 we published plookup, which is how to do lookup tables inside a PLONK-ish type SNARK which changed the game a little bit in terms of how like the complexity of, of programs you can encode. It's, it's difficult to do complex arithmetic in a zkSNARK because all your arithmetic is over these prime fields. It's all modular big primes and so if you want to do, if you want to represent a computer program as a SNARK circuit, you're faced with a fundamental problem, which is, well, computer programs use imperative programs that that use binary arithmetic. You know, there's lots of logic statements, lots of bitwise arithmetic. And it's very hard to translate that into prime field arithmetic without like a, a relatively large blow up in the number of kind of like constraints that you, you need.
+
+(00:26:09):
+And lookup tables sold this by basically being lazy and cheating. instead of doing the computation, you just look it up from a table instead, and what what really inspired me was a couple of things. One of them was early micro computing in the 1980s. So when, when the home computing revolution exploded in the eighties programmers had to be very creative because these machines were very, very primitive. To give an example, like the common CPU chip at the time couldn't multiply, if you wanted, you had to like add repeatedly to multiply. It couldn't multiply, it couldn't divide, it couldn't even do proper bit shifts like you could shift left or to the right by one bit. So we're talking like unbelievably primitive and so what programmers did was they, well they used lookup tables to store arithmetic computations instead of doing them like multiplication tables and so I was like, hmm, there must be a way of doing this in a SNARK too. And there was! So yeah!
+
+Anna Rose (00:26:58):
+And that's the lookup arguments basically, lookup tables. We actually asked that question on the latest ZK summit form though. What is the lookup argument? Oh, actually, what is the difference lookup table lookup argument?
+
+Zac Williamson (00:27:10):
+Well, I mean I'm not going to claim to have invented lookup arguments generally because they're, they, they go back a ways, but so lookup was just a way up was a way of doing them very efficiently in a PLONK-ish arithmetic type circuit. So what's the difference between lookup table and lookup argument? Lookup argument is a way of proving that you've correctly read from a lookup table.
+
+Anna Rose (00:27:28):
+Okay. Got it. Yeah. We talk just now about like the ways that PLONK-ish arithmetisation has been used and it's how it's showing up and that some of these other techniques. But what about on your front? Like, since we spoke even maybe like in 2021 what kind of PLONK variants or developments have we have you done?
+
+Zac Williamson (00:27:48):
+Yeah, so, so quite a bit because you know, I mentioned at the start, like one of the key driving forces behind Aztec is we want to do private smart contracts. And PLONK on it's own own isn't enough. It's good. It's not good enough so we, we need, we always need more speed and more power make things faster and just what I've been trying to do well, you know, in tandem with a lot of people in this, in this space over the last, well, several years. And so part of that has been improving PLONK. So adding lookup tables, adding custom gates, creating these new weird variants like Turbo-PLONK and Ultra-PLONK. And then something else which kind of changed the game a little bit, flip the board over was HyperPlonk.
+
+Anna Rose (00:28:25):
+Which you didn't do right?
+
+Zac Williamson (00:28:26):
+Which I didn't do No, that was
+
+Anna Rose (00:28:27):
+Benedikt.
+
+Zac Williamson (00:28:28):
+That was Benedikt and Ben and the Espresso Systems folks. Yes. See, they pipped us to the, to, to publication on that one.
+
+Anna Rose (00:28:35):
+So had you had something like that in the works?
+
+Zac Williamson (00:28:37):
+Yeah, so, so we, we had so HyperPlonk at its core is PLONK with using something called a sum check protocol. And it stems from a paper from 2020. I think Benedikt also was an author on that, but I can't quite remember. So there's 2020 paper about how to like do some checks with cynical tensor codes and it was quite clear from reading the paper, this could be adapted to PLONK relatively straightforwardly.
+
+Anna Rose (00:29:02):
+One thing though, if this adding sum check or making it sum check was the change, what was it before? So zero check or?
+
+Zac Williamson (00:29:09):
+Yeah. So zero check. So the idea is if you have some arithmetic over your polynomials, you encode your vectors of information such that the resulting polynomials, they vanish on some subgroup.
+
+Anna Rose (00:29:18):
+Yes. And this was the vanishing polynomial concept.
+
+Zac Williamson (00:29:21):
+Yeah so the idea is you check your arithmetic is zero modular, the vanishing polynomial of your subgroup and that's what the, zero checks quotient computations so you can place that with a sum check protocol where you basically, instead of encoding things over in a univariate polynomial, you, you incur them as a multilinear polynomial. The idea is if you have a vector of size, N you take log-N variables and you encode your data as a polynomial and there's variables where when you evaluate those, those log-N variables at zero and one, each combination, the zeros and ones gives you one one of the elements in your vector. Hmm. So basically you, you encode your data as, as the elements of a Boolean hypercube, an indimensional Boolean hypercube which I love saying. Whoa. Yeah. It's kind of a weird crossover between zero knowledge cryptography and psychological horror novels,
+
+Anna Rose (00:30:13):
+But yeah. HyperPlonk. I think we had, I think Benedikt gave the presentation at actually ZK8. Potentially. So it's pretty, it's like six months ago?
+
+Zac Williamson (00:30:24):
+Yeah. yeah, so, so we, we had very similar ideas, but we took our sweet time putting together a paper. Our paper is not yet published for a couple of reasons we, but we're, we're nearly there, so yeah, they, they, they pipped us to the post and got it pretty, pretty awesome work and very grateful that they kept with the PLONK theme.
+
+Anna Rose (00:30:41):
+You recently released Goblin Plonk but this is not this work, right? This is something else.
+
+Zac Williamson (00:30:46):
+Yeah. So the thing I was just talking about, at least the one that we are, we're internally we're calling it Honk.
+
+Anna Rose (00:30:51):
+Oh, that's Honk. Yeah. Okay. So you just skipped the HyperPlonk and just went straight to Honk.
+
+Zac Williamson (00:30:56):
+Yeah.
+
+Anna Rose (00:30:57):
+Cut out all the middle letters.
+
+Zac Williamson (00:30:59):
+Yeah. Yeah. So it stands for highly optimized PLONK with a, with a few silent letters. But yeah, slightly different to Goblin Plonk.
+
+Anna Rose (00:31:07):
+Okay. But why would you keep working on Honk if HyperPlonk already exists? Like will you be adding to it?
+
+Zac Williamson (00:31:13):
+So Honk is, yeah, Honk should be adding some several editions to HyperPlonk because the, the HyperPlonk paper treat is a very general description of how do you PLONK when you encode things over a brilliant Hypercubes. So my take on it is that the authors, they wanted to create a general description, which means that they treat the various cryptographic subprotocols you need as black boxes and the paper doesn't describe particular schemes you can use and therefore all the particular ugly engineering hacks and tricks you can use to make it fast, and so things like cyclic shifts are expensive and if you choose specific scheme like multilinear commitment schemes, they don't, they, they become very, very cheap. And so there's, yeah, there's lots of tricks you can do and so I guess our paper is A), it's a collection of the tricks, but B) it's also, it's, it's got a new multilinear polynomial commitment scheme which should be more efficient than the other stuff.
+
+Anna Rose (00:32:01):
+What's it called?
+
+Zac Williamson (00:32:04):
+Doesn't have a name yet.
+
+Anna Rose (00:32:05):
+Oh. But what would it be replacing? KZG?
+
+Zac Williamson (00:32:07):
+So no, it, it's, it uses KZG as a sub-component. It would be replacing something called Gemini. So Gemini is a folding scheme where you basically, you have a, an like a, an abstract multilinear polynomial, but you, you use a folding scheme to represent it eventually, like to provide a a mapping to map that maps it to a univariate polynomial commitment that you can then open with KZG.
+
+Anna Rose (00:32:28):
+Is this at all like playing on, on the Nova work?
+
+Zac Williamson (00:32:32):
+Not quite, no. No. I've used the word folding it, but it's, it's folding in a different way. Most, most of ZK crypto is basically, it's folding schemes and polynomials at it's core I think. And yes, it's just a different way of pop folding different, context.
+
+Anna Rose (00:32:43):
+Got it. Okay. So that's Honk. Now tell us about Goblin Plonk.
+
+Zac Williamson (00:32:47):
+Okay. Goblin Plonk. Oh yeah.
+
+Anna Rose (00:32:51):
+ You were also just describing, you had to explain some zen, what is it?
+
+Zac Williamson (00:32:55):
+Generation Z slang.
+
+Anna Rose (00:32:56):
+Generation Z slang. To help me understand why you decided on this name.
+
+Zac Williamson (00:33:00):
+Okay. So it's wider context is one of the things that's obsessing me is the cost of recursive proof composition. To do something like Aztec 3 with private smart contracts, it helps immensely if you can if you have recursive SNARKs as a very, very cheap primitive you can use where, you know, you can just check the credits of proof within a proof and that not add much overhead to the prover. We care greatly about this because if we can do client side recursion quickly, so, you know, proof's constructed in a web browser or a, you know, an old computer with not a lot of memory, if you can do that, then it makes it makes it possible to, to represent SNARK-based smart contracts in a, in a manner that's very intuitive for developers, where it allows you to abstract a lot, a lot more away. And so I've been assess, I've been assessing around fast recursion for ages, and Goblin Plonk is a recursion scheme that I believe we've not finished implementing it yet, but I believe it's going to be exceptionally performant and have very, very low prover costs. And it's called Goblin Plonk because it's, it's when a recursion goes goblin mode
+
+Anna Rose (00:34:02):
+Ah-ha. And goblin mode is lazy, greedy and slothful.
+
+Zac Williamson (00:34:09):
+Yes.
+
+Anna Rose (00:34:09):
+That's what you were telling me before.
+
+Zac Williamson (00:34:10):
+Exactly. Yes. Okay. And the reason I call it that is because the recursion scheme, it's very lazy in that when you're, when you're recursing elliptic curves one of the big problems is you need to do something called non-native field arithmetic, where you need to do lots and lots of arithmetic modular, a modus, which is not the native modulus that your circuit is using. So generally that's a very expensive thing to do, which slows down provers. And the best way of doing it so far is the Halo 2 curve cycle scheme, which I would consider Goblin Plonk to be very much an iteration of, because it still uses curve cycles but the reason why, but basically it's the, the main innovation is that when you are actually doing your recursion instead of performing all these... take the expensive computations you need to do, and instead of performing them or evaluating them, you cheat, you present a a lookup table which just magically has the results you're looking for, and, and you then you worry about proving the correctness of that lookup table later on in the protocol.
+
+Anna Rose (00:35:07):
+This seems to be a trend though, this idea of like, you push the proving of something to later. This is this like Halo 2's doing it, or rather Nova starts to do this I think, and this is where, this is where it sort of sounds again familiar.
+
+Zac Williamson (00:35:22):
+Yeah. So, so it is, it's a good trend because, because it's you know, it's always, it's always nice to make something somebody else's problem.
+
+Anna Rose (00:35:29):
+But isn't it still your problem just later?
+
+Zac Williamson (00:35:31):
+Yes, so true. But, but it's, well, there's, there's two ways of why, why deferred computation is valuable. One of them is genuinely as somebody else's problem. The idea is you, like, you have two provers, one has very weak computational resource, one has lots of computational resources, but it's perhaps not trusted. You want to basically, yeah, like minimize the computation that you're weak prover does and defer as much as you can to the strong prover without leaking information to the strong prover. And that's kind of what Halo 2 is doing with these curve cycles and similarly I think, I think it's what Nova is doing as well, I'm not, not, not the expert on that, so I could be mischaracterizing the protocol. Goblin Plonk is slightly different where it is still all your problem as a prover.
+
+(00:36:15):
+But the, the idea is that what you can do is, is as you're recursing you're basically building up a giant lookup table that contains all of these elliptic curve operations you need to do that are over a foreign field. And then at the very end of your like once you've actually computed all your recursive proofs at the very end, and you, you some, somebody needs to prove the correctness of this transcript. And one way of doing that is basically you use these curve cycles, so you commit to the same information over your, over, over your cycle curve. Which basically translates the problem from doing this foreign field arithmetic, doing native field arithmetic, so it reduces the complexity of the problem by about a factor of a thousand and then you, you prove the quality between these two commitments.
+
+(00:36:57):
+So basically you have commitments to your elliptic curve operations over your main curve. You have commitments to your elliptic curve operations over your cycle curve. If they are equivalent, if you can prove they're equivalent, then the problem becomes very, very easy because then you just create a custom SNARK circuit over your cycle curve to evaluate the correctness of the transcript. It turns out that actually it's not, not very hard to do that equivalence check so I stole this from EIP-4844 because they have a similar issue where you, take your cycle curve commitments, you just open them using the inner product argument or whatever commitment scheme is useful for you at some random point and then what you want to do is use a SNARK circuit of your main curve to iterate, so you take your transcript commitments of your main curve and you, you, you incorporate them into a SNARK circuit where the commitments become columns in a, in a circuit, and then for each row you're basically iterating over the coefficient of your polynomial and you use foreign field arithmetic to evaluate the polynomial at the same random point that you opened your cycle curves on using the field of your cycle curve.
+
+(00:37:57):
+And so long story short, it translates the problem of doing non-native elliptical scale multiplication into the problem of doing native elliptical scale multiplication, which are very cheap, and five non-native field multiplication, where if you only do five, that's also very cheap, especially in the Goblin scheme. You can basically create a custom circuit that just does non native-field muls. Doing five of those is actually about the same cost as doing a native elliptic curve multiplication. and my kind of back on the envelope napkin math is that this should be exceptionally prover efficient as in possibly something like 8,000 PLONKish constraints all into recursive verified proof, which would be if I'm right, it would be like at least one order of magnitude I think of an improvement over the existing stuff.
+
+Anna Rose (00:38:45):
+So what does that mean, sort of like in terms of speed, is it like half as long or?
+
+Zac Williamson (00:38:49):
+No, like about 10x
+
+Anna Rose (00:38:50):
+10x, okay
+
+Zac Williamson (00:38:51):
+If it genuinely is 10x less fewer constraints. and so yeah, so basically the idea is then you can just use it as a cheap commodity, primitive and recursion no longer becomes like a difficult problem.
+
+Anna Rose (00:39:02):
+Oh wow.
+
+Zac Williamson (00:39:02):
+which would be really nice.
+
+Anna Rose (00:39:04):
+Is it, is it solved or is it like work in progress?
+
+Zac Williamson (00:39:06):
+So we're implementing it because we're implementing lots and lots of things at once and so yeah, we are doing our best. But
+
+Anna Rose (00:39:14):
+Ah, I see
+
+Zac Williamson (00:39:14):
+One of the things that I did with Goblin PLONK was, I just published it as soon as I had the idea, I just wrote it up and threw out into the world because I want, I figured, you know, the more eyeballs on it, the more people can break it, improve it, etc.
+
+Anna Rose (00:39:27):
+Yeah, but you have to implement it to really know if you
+
+Zac Williamson (00:39:29):
+Exactly, yeah. Until then I'm just bullshitting. It's just basically me with a megaphone saying, I've got this amazing idea, you know? But she goes to the school next door and you can't see her.
+
+Anna Rose (00:39:41):
+I want to kind of bring in the topic of Noir to this conversation about PLONK because Noir, is it Aztec specific or is it PLONK specific?
+
+Zac Williamson (00:39:53):
+Neither.
+
+Anna Rose (00:39:54):
+Neither. Oh, okay. So Noir is a DSL, is ZK domain specific language? And this was released when, like eight months ago or so, 10 months ago.
+
+Zac Williamson (00:40:06):
+Yeah, yeah. About that. Yeah.
+
+Anna Rose (00:40:07):
+And we've, we actually hosted a workshop for zkHack3. Where we got to actually see Noir in action. I think that there's a lot of people who are very excited about it. I always thought it was like the PLONK native. Okay. Tell me, tell me then what is Noir.
+
+Zac Williamson (00:40:22):
+Okay, so Noir it's our attempt to create a very generalized ZK programming language where the idea is it exposes a very high level programming language that's Rust like. The idea is that it compiles down to ZK circuits, but we deliberately made it platform agnostic because we didn't want this to just be, you know, the Aztec thing or the PLONK thing because, well, it's an open source project and we want as many people to use it as possible.
+
+Anna Rose (00:40:45):
+Does it like favor PLONK? Is it more like usable with PLONK? Is there any benefit to like, or is there any connection?
+
+Zac Williamson (00:40:51):
+I mean, I would say it's faster with PLONK because PLONK is the fastest alphabetization scheme out there, but that's my bias. So it's, we want it to basically be the LLVM of SNARKs where it compiles, it doesn't compile to circuits or constraints. It compiles to an intermediate representation called ACIR - Abstract Circuit Intermediate Representation, where the idea is then once you have an ACIR program, then you can take any cryptography backend that you like and convert that ACIR into constraints for that backend specific previous system. So basically equivalent to how computer program languages in general are constructed. The idea is you have a language front end like Rust or C++ or I don't know, Haskell, where you have your front and the actual like language you code in, whether it's semantics as rules, etc.
+
+(00:41:39):
+And then the, the language compiler doesn't turn your programme into machine code. Generally what it will do is it will turn it into, well, LLVMIR, low level virtual machine intermediate representation. It turns it into a, basically a kind of proto assembly, but for an imagined virtual machine that doesn't really exist. So that's what the language front does, and then the language backend takes that intermediate representation and actually turns it into machine code for a specific computer architecture.
+
+Anna Rose (00:42:04):
+Okay.
+
+Zac Williamson (00:42:05):
+And this is how you can have a program that you write once and it compiles to Mac to Windows to iPad, iPad to iPhone, to, you know, to tons of different CPU architectures. And so we are taking the same approach with ZK languages. So Noir is a language front end for ACIR. SO it has its own special Rust like syntax that compiles programs to the ACIR representation, but that's where kind of Noir stops and then it's somebody else's job to take the ACIR and turn it into a actual ZK second.
+
+Anna Rose (00:42:34):
+What would it work with then? Would it work with Arkworks?
+
+Zac Williamson (00:42:36):
+Yeah I think
+
+Anna Rose (00:42:38):
+Would Arkworks be the second part of that?
+
+Zac Williamson (00:42:40):
+Yeah, yeah, exactly. So Arkworks would be the backend, I think. I'm not sure we either have or are working on an Arkworks integration. We have a GNARK integration as well as the the Aztec.
+
+Anna Rose (00:42:48):
+Yeah. The GNARK one was, that's the consensus.
+
+Zac Williamson (00:42:51):
+Yeah.
+
+Anna Rose (00:42:51):
+Okay. And but is Noir more than on the same level as Circom, is Circom doing the same thing as Noir? Does it also compile down to?
+
+Zac Williamson (00:42:59):
+Yeah, it's doing a similar thing, but Circom is a bit more, I believe it's a bit more integrated in that Circom has a R1CS backend and a PLONK backend, but there that they're tightly integrated in the language itself. So it's not, it doesn't really give you an intermediate representation that you can then compile using some other kind of proving system. So it's a bit less abstract in that way and less modular.
+
+Anna Rose (00:43:19):
+I see. I see. But like, so actually yeah, what you're saying though is because it has this intermediate representation, where does the PLONK part start? Is that like after that?
+
+Zac Williamson (00:43:29):
+After, yes.
+
+Anna Rose (00:43:29):
+Okay.
+
+Zac Williamson (00:43:29):
+So you can, your backend can take those, the IR and turn it into R1CS constraints and then compile those into a second, or can turn it into PLONKish constraints and compile those into a PLONK circuit.
+
+Anna Rose (00:43:38):
+Could it do something in like the Miden error kind of context? As well?
+
+Zac Williamson (00:43:42):
+Yeah. I mean, it might not be the fastest because you are, you're seeking a program and converting it into VM code for like, you're taking the IR for Noir, and then turning it into Polygon Miden Assembly, which is again, another form of IR.
+
+Anna Rose (00:43:55):
+Yeah.
+
+Zac Williamson (00:43:56):
+And then that gets turned into a VM second. So you could do it. Absolutely, it might not be the fastest, but you could do it.
+
+Anna Rose (00:44:01):
+I see, I see. At the recent zkHack, I know a few people, you know, started to work on Noir and used Noir. Is Noir meant to be the language that like a hacker could build a little ZK project with?
+
+Zac Williamson (00:44:14):
+100%
+
+Anna Rose (00:44:16):
+Okay, so it really is, because like that's what's sort of unclear, like the way you described it though, like you're still sending it into this Intermediate Representation (IR) context. Like if you just use Noir, you still need to use that second part, don't you?
+
+Zac Williamson (00:44:31):
+You do, but the idea is so an actual build of Noir. A deploy version of Noir will choose a specific crypto backend to use. And so the goal is to present an abstraction layer to the developer where they just write their Noir program and they just click a button and it compiles to a circuit with a smart contract verifier they can deploy to an EVM chain
+
+Anna Rose (00:44:53):
+Underneath that they don't need to know about
+
+Zac Williamson (00:44:55):
+Exactly. The idea is the end goal is for it to be turnkey effectively where you just code your Noir program and then you just run it and you don't worry about anything that's happening under the hood. I'm not going to claim we're there yet but we are working, we are working very hard to get the language
+
+Anna Rose (00:45:09):
+Would Noir then be also used with something else like, say you wanted to create like, I don't know, some like front end application that then on its backend, not back backend, we're not talking circuit yet but like where it, but it's going to be using ZKPs under the hood.
+
+Zac Williamson (00:45:25):
+Yeah.
+
+Anna Rose (00:45:25):
+Would you be using something like Solidity on the front end or JavaScript or something and then you have actually it wouldn't be Solidity, it'd probably be JavaScript. So would you be using something like JavaScript then Noir then, like it's automatically using Arkworks?
+
+Zac Williamson (00:45:40):
+Yeah, exactly.
+
+Anna Rose (00:45:41):
+Is that kind of what that looks?
+
+Zac Williamson (00:45:42):
+Yeah. The release of Noir that you're using would contain either like an integrated Arkworks backend or a Aztec backend or GNARK backend. You would just have, you would have a tool chain. I mean, we have a tool chain now which does this. Although it yeah, for the Aztec backend at least a tool chain where you just compile Noir, it gets turned into a proving key/verification key. You can make your proofs and it's relatively straightforward and yeah, we have a JavaScript wrapper around it all. So that you're building a front end website that uses Noir, that whether the user needs to make a a Noir proof. You can do that all by making JavaScript calls.
+
+Anna Rose (00:46:15):
+Now that we've gotten to this point, I'm like, Aztec as an entity. Now we have to dig into it because I have always thought about Aztec as almost like a rollup, right? Like like, cause we did the ZK rollup episode and you know, you said it first, it was like a smart contract directly on Ethereum and then migrated to this like, rollup concept. But now what you're describing the fact that it, like, is Aztec Arcworks then?
+
+Zac Williamson (00:46:46):
+No. Sorry to confuse you.
+
+Anna Rose (00:46:48):
+No, no, but this is where like, I want to
+
+Zac Williamson (00:46:49):
+I'm asking is the question basically why, why are we doing this with Noir?
+
+Anna Rose (00:46:52):
+Well, it's almost like now that we've, we've described PLONK. Then we've described Noir and what we haven't really described is like Aztec, which brings all of these things together and that connection point I think I want to understand.
+
+Zac Williamson (00:47:06):
+Sure. So the reason we're developing Noir, like this is very much like transparent. We have very ulterior motives.
+
+Anna Rose (00:47:11):
+You have what?
+
+Zac Williamson (00:47:12):
+Ulterior motives so, you know, in terms of like, we want Noir to be a public good that is open source. Anybody can use it. They can build their own backends, their own front ends. They can basically just use it however they want, even if it doesn't touch any other Aztec system. And yeah, it doesn't, doesn't benefit like Aztec as a company directly and well, why is that? It's because what is the interstate for Aztec? We are building a zk-rollup. A layer 2, where the layer 2 is effectively we want to recreate the smart contract ecosystem that Ethereum has, but as a layer 2 where you have private state as a first class default primitive, basically things become private by default. Where as a developer you can write your smart contract and then just like, just trivially easily just include private data in your program, in your program logic.
+
+(00:48:04):
+So that needs a lot of disparate components to work. You need an exceptionally fast zk proving system. You need like an architecture that enables all of this, that represents programs as ZK circuits, and then represents evaluating these transactions over these programs inside some kind of zk-rollup architecture. you need the entire layer 2 architecture coded up as recursive zk-SNARKS, and you need language that you program these contracts in.
+
+Anna Rose (00:48:30):
+Okay.
+
+Zac Williamson (00:48:30):
+And this is where Noir comes into the picture, because we want, like, we plan for Noir to be the smart contract programming language for Aztec 3. So we want to very much grow the developer ecosystem for Noir just generally, as in it's a positive sum win-win game for everybody is, and we build Noir as a general purpose language that, you know, doesn't need to plug in Aztec 3 just commands the SNARKs or STARKs or whatever you want to basically make it easy to write ZK programs. And the bigger that developer ecosystem is, the better it is for us, because then the bigger the stable of developers is that could potentially write Aztec 3 programs and smart contracts.
+
+Anna Rose (00:49:09):
+I kind of want to go back to that description before of like what a developer would do if they're deploying a contract or they're building an application. This sort of like, we're using Noir as this middle thing. We have JavaScript on one side, we have Aztec on the other side. Let's kind of rewind to like 2021 when we were doing this like series on all these rollups, you had and I think most people listening to the show are probably familiar with it, but like, you often have this like, batching of transactions or state changes or whatever, and then they're writing something to the base chain. I always thought of like the SNARKS as just sort of like the thing that just does the validity. You add the ZK part, the secret part. But now I'm confused about like, how does a, like if you're writing on top of this SNARK or you're writing on top of the zk-rollup. Where is the circuit going? Like I don't
+
+Zac Williamson (00:49:59):
+Where is the circuit going? That's a good question
+
+Anna Rose (00:50:00):
+If you could you kind of understand why I'm confused here.
+
+Zac Williamson (00:50:02):
+Yeah, yeah. Definitely. I mean it's
+
+Anna Rose (00:50:05):
+It's like I know a lot of the parts of this but the actual way that a smart, like an application on this rollup using ZKPs in its fullest form. Like for privacy then is also connected to this main chain. Base chain. This is where I get confused.
+
+Zac Williamson (00:50:23):
+Okay. So, so I can try and describe the Aztec 3 architecture at a high level. I'm about to record a one and a half hour presentation that describes the full architecture.
+
+Anna Rose (00:50:32):
+I'll try to find it if it's out by the time I release this
+
+Zac Williamson (00:50:35):
+Yeah. But so I'll try and give it quicker, so the idea is, to start with let's take a Noir contract.
+
+Anna Rose (00:50:41):
+Okay.
+
+Zac Williamson (00:50:41):
+So at least once we've added all the functionality we need into Noir then you'll be able to define your contract as a set of public functions and private functions where a public function can modify public state. So it'll be like state as in the kind of state that you have already in a Solidity contract. Variables, mappings, et cetera.
+
+Anna Rose (00:51:01):
+Is this state also on the rollup though? This public state on a rollup?
+
+Zac Williamson (00:51:04):
+Yeah. Yeah. So it's going to be, it's,
+
+Anna Rose (00:51:06):
+It'd be like what optimism has or something
+
+Zac Williamson (00:51:08):
+Yeah. Yeah. It's going to be like part of the L2 state database.
+
+Anna Rose (00:51:11):
+Okay.
+
+Zac Williamson (00:51:12):
+And the new private functions which modify private state, where this state will, again, it'll be part of the rollup, but it'll be encrypted and it's going to use the similar abstractions that Zcash use and Aztec use where you have this idea of a UTXO set on switch transaction objects and nullify set, where the idea is like when you add, you can add encrypted data to the UTXO set, and then you can effectively delete it adding its nulliy to another nullify set. Unless you have the decryption keys, you can't link a nullify to a UTXO and therefore if you've deleted a UTXO only you as the deleter know about that.
+
+Anna Rose (00:51:47):
+But the challenge of UTXOs has always been like, there's no programmability in it. It's just about like transfers.
+
+Zac Williamson (00:51:52):
+Well, that's, so the way we are representing it as a UTXO, it's just very abstract as in the state that it encodes is not at the protocol level. We don't know or care about. It is not values, it's not identities. It's just 64 bytes of information.
+
+Anna Rose (00:52:09):
+Okay.
+
+Zac Williamson (00:52:09):
+Very much like a storage slot in Ethereum. Well, the idea is then the Noir contract you're writing, that's the thing that's defining the rules around when what state that state is, like, how it's encoded, how it's changes. So you can write, say, a private token contract using a combination of these private and public functions. And the idea here is that these functions get converted into SNARK verification keys. And a contract on Aztec 3 is defined as the set of SNARK verification keys that correspond to all of the functions of that contract
+
+Anna Rose (00:52:44):
+Private and public?
+
+Zac Williamson (00:52:45):
+Yes.
+
+Anna Rose (00:52:46):
+Does each contract then have like a unique way of the interaction between those two? Like I'm just curious, like how do you still keep state if like part of state is private and it's just a blob of data and it's not in any sort of like account system?
+
+Zac Williamson (00:53:00):
+Well, it's in a Merkle tree
+
+Anna Rose (00:53:01):
+But it's private and like, does this Noir contract, is it still able to go in and like retrieve information from it?
+
+Zac Williamson (00:53:07):
+Yeah. That's hard. But yes. So the idea is basically when you are actually constructing Noir proofs or simulation and et cetera, you are basically your Noir like the Aztec client effectively has a private state store. And so when you are kind of, when you're running a Noir program to make proof, et cetera, there's basically the noir intermediate representation has like state read op codes, state write op codes. And then when you are executing, turning those OP codes into constraints, then you've gotta send requests to a private state store to say, hey can I read this information? Like I've got a storage slot, can I get the UTXO and the underlying data? And then that private state store, it has its own permission security rules to say, well, either yes.
+
+(00:53:51):
+Okay. I can, I'm going to give that to you or like, no, get lost. I'm not giving you my secret keys. So the idea is that basically inside the layer 2 kind of like state databases, we have a contracts Merkle tree, like when I use Merkle tree that's in this context, it's basically synonymous with database. It's just a way of representing a database.
+
+Anna Rose (00:54:09):
+Yeah.
+
+Zac Williamson (00:54:10):
+So the Merkle tree contains leaves that represent contracts, and each contract leaf is its own mini Merkle tree that contains all the verification keys for the functions.
+
+Anna Rose (00:54:17):
+Okay.
+
+Zac Williamson (00:54:17):
+And so that uniquely defines the contract. So if you're sending a transaction on the Aztec network you basically need to construct a proof over something that we call the kernel SNARK. So we're very much using the, the Zexe nomenclature here. And this is very much kind of a
+
+(00:54:33):
+Very much derived from XXI was kind of the OG that attempted doing this. And what the kernel snuck will do is, well, it'll fish out a verification key from the contracts tree that you are requesting check it exists and then you'll provide, the reusuable provide proof for the correctness of that function call that will then get verified recursively by the kernel circuit. And then the kernel circuit's going to do some logic. So it's going to basically grab the public inputs out of that SNARK circuit, and those public inputs are going to be interpreted according to a contract ABI. And so basically, so some of the public inputs are going to represent chain state. Some of them are going to represent state updates that the user's trying to make, except things like that. And the kernel snuck's job is to check the validity of all of that to make sure that you're not lying you're not presenting the incorrect chain state.
+
+(00:55:19):
+The user's not trying to make state reads that don't exist, et cetera. And so one kernel proof basically represents the correct execution of a private function. The way we use recursion, the problem is that take a theory, for example, one transaction may be constructed out of multiple function calls to different contracts. If I'm, for example, if I'm trading on Uniswap, my Uniswap transaction is going to talk to at least two token smart contracts. There's probably other contracts that Uniswap talks to, to do things that get price fees, et cetera, et cetera. And so what you really need is composability, how do you get composability between multiple contracts in a zk-SNARK world with privacy preserving properties? And this is where we add recursions. So we have this concept of a core stack. So the kernel circuit contains two data structures basically arrays like vectors that isn't your private function calls and your public function calls.
+
+(00:56:14):
+And when you start your transaction, your private function call stack has one item on it, the contract you're calling. But once it's processing that function call, one of the results from that can be that your function call can instruct the kernel circuit to add more function calls to the functional stack. And so the idea is what the kernel circuit's doing, it's a requester structure where it's verifying a previous iteration of a, like a previous kernel circuit proof if one exists, and then it's popping a function call off the function call stack processing it, and then conditionally adding more function calls onto the function call stack if that is required. And basically what you can then do is by iteratively computing kernel circuit proofs, you can wind your way down to eventually that your function, your private function call stack being empty. And at that point, your proof is ready to be sent to a rollup
+
+Anna Rose (00:57:02):
+Sequencer.
+
+Zac Williamson (00:57:03):
+A sequencer. Yes. To be, to be, to be aggregated into the roll up block.
+
+Anna Rose (00:57:06):
+In this case you've used the term recursion. But are you talking about recursion in the ZK sense?
+
+Zac Williamson (00:57:11):
+Yeah.
+
+Anna Rose (00:57:12):
+Or is it SNARKs recursive SNARKs.
+
+Zac Williamson (00:57:14):
+Yeah. Because the kernel circuit has to verify the correctness of function proofs, which is a SNARK circuiting a SNARK circuit. And also if your transaction is consisting on more than one private function, then you have to repeatedly compute kernel circuit proof square at each iteration. Your kernel circuit is verifying a proof of the kernel circuit at the previous layer. Which is another layer of chunk of recursion
+
+Anna Rose (00:57:37):
+Wild. I do feel like I'm going to need to see slides.
+
+Zac Williamson (00:57:41):
+Yes. Yes.
+
+Anna Rose (00:57:42):
+Which I think we will see at some point.
+
+Zac Williamson (00:57:44):
+Yeah. Well, our architected documents are finally public. We finally got them in a state where amazing. We're happy to show them to the world.
+
+Anna Rose (00:57:49):
+And so, yeah, I want to see this, I want to walk through, like, when I get to re-listen to this, I want to see it kind of with some imagery. So if you can send that my way, I'll add it to the show notes for folks as well.
+
+Zac Williamson (00:57:58):
+I will do. Yeah.
+
+Anna Rose (00:57:59):
+This is fascinating. Aztec 3 was teased on the last episode I did with on Aztec with Joe and Charlie, but like at what stage is it? Like yeah, is it close or is it like, or which pieces maybe are already built?
+
+Zac Williamson (00:58:14):
+Yeah. So we're, we are building it in anger but it's a very
+
+Anna Rose (00:58:17):
+In anger?
+
+Zac Williamson (00:58:18):
+Well, sorry, it's a turn of phrase as in
+
+Anna Rose (00:58:21):
+Okay.
+
+Zac Williamson (00:58:21):
+We are like, we're going ham on it as in like, it's the focus of the company
+
+Anna Rose (00:58:24):
+Going ham on it?
+
+Zac Williamson (00:58:26):
+Can I swear on your podcast?
+
+Anna Rose (00:58:28):
+Yes, you can swear.
+
+Zac Williamson (00:58:29):
+Ham stands for hard ass motherfucker.
+
+Anna Rose (00:58:31):
+Oh okay. You're working hard.
+
+Zac Williamson (00:58:34):
+Yeah.
+
+Anna Rose (00:58:35):
+Okay. That's what you mean. Okay.
+
+Zac Williamson (00:58:36):
+Yeah
+
+Anna Rose (00:58:37):
+Kobe created like a translator for basically like British terms too.
+
+Zac Williamson (00:58:42):
+I see.
+
+Anna Rose (00:58:42):
+For other people. And I feel like we need to use it a little bit with you, but okay.
+
+Zac Williamson (00:58:46):
+Possibly, yes.
+
+Anna Rose (00:58:47):
+Go for it. So you're working hard on it.
+
+Zac Williamson (00:58:50):
+We're working hard on it, but it's it is an exceptionally complex project. No one's really attempted anything of this scale before. At least that's my bias take on it. So we are planning on a mainnet launch at the end of 2024.
+
+Anna Rose (00:59:02):
+Okay.
+
+Zac Williamson (00:59:02):
+We don't want to do the thing where we're like overly optimistic with our timelines because this whole industry is very, it's got a bit of a problem with actually correctly predicting launch dates but we are hoping to get a local developer testnet out by the end of the quarter. So that'll be something where you can deploy the Aztec 3 network to your local machine. You can write Noir contracts, deploy them to local network, test them, run them.
+
+Anna Rose (00:59:22):
+Wait, you mean this quarter?
+
+Zac Williamson (00:59:24):
+Yes.
+
+Anna Rose (00:59:24):
+So like Q2?
+
+Zac Williamson (00:59:25):
+Yeah. End of Q2.
+
+Anna Rose (00:59:27):
+Oh wow, 2023
+
+Zac Williamson (00:59:28):
+To be very transparent this local testnet will not have provers enabled. The goal is to basically present our planned manner of interacting with the chain, how you write contracts, how you deploy them, basically presenting users and developers with the developer experience and getting feedback from them about how it works and then at a later point when we're launching our testnet, we will integrate our tech into it. Because we, we are developing everything in, in kind of in parallel.
+
+Anna Rose (00:59:56):
+Wow. I want to ask about Aztec Connect and ZK Money, because these were other products that we did talk about in the last show.
+
+Zac Williamson (01:00:05):
+Yes.
+
+Anna Rose (01:00:06):
+So you, what do we call disbanded them? No, you
+
+Zac Williamson (01:00:09):
+Sunset.
+
+Anna Rose (01:00:10):
+You've sunseted them
+
+Zac Williamson (01:00:10):
+We've sunsetted them.
+
+Anna Rose (01:00:11):
+Okay.
+
+Zac Williamson (01:00:11):
+Yes. So, so Aztec Connect was, I mean, one way we consider it is basically a bit of a trial run for Aztec 3. As in, at the time our tech wasn't advanced enough to get general purpose programability in, but we did have a tech to produce a zk-rollup. So as Aztec Connect goals was really to demonstrate a) privacy is useful on chain.
+
+Anna Rose (01:00:29):
+Yeah. Yeah.
+
+Zac Williamson (01:00:30):
+It's not just a mixer. You could do cool things with it like DeFi and that is valuable and that a) it's possible you, you can deploy zk-rollups to production. These are things you can build nowadays and
+
+Anna Rose (01:00:39):
+Was it almost like a custom application
+
+Zac Williamson (01:00:41):
+Yes.
+
+Anna Rose (01:00:42):
+For, on this very kind of like, not fully fleshed out, but like just the proof of concept, the MVP, I guess
+
+Zac Williamson (01:00:48):
+Exactly. Yes. The idea is that instead of the users programming circuits, we as a first party company, we programmed a small set of circuits you can interact with on the Aztec Connect network. And yeah, basically what part of it was also just for us to get experience about building zk-rollups, deploying them into production. Actually shipping something and, you know, dog fooding our tech and making sure that we have the experience required to make it work. We would not be able to build Aztec 3 without the experience of deploying Aztec connect without a shadow of a doubt. However, we've been having internal debates over several months about what to do with Aztec connect because it was consuming quite a lot of resources, engineering resources from us because it was our first go at doing zk-rollup.
+
+(01:01:31):
+And so as the architects, I'm very, very confident saying that it had some architecture problems, it had some, you know, some issues that we wouldn't do again. That just design choices that at the time when you were figuring things out for the first time, you know, what we ended up with was a system where you needed an enormous amount of domain knowledge to solve problems that cropped up and so we ended up in a place where a lot of our most senior engineers were basically working full-time
+
+Anna Rose (01:01:59):
+Troubleshooting?
+
+Zac Williamson (01:01:59):
+Troubleshooting, keeping the network alive, building the improvement center to make it, to improve its stability as it grew. And basically it was reached a point where effectively as a company, we had two children. We had Aztec Connect and we had Aztec 3. And at some point, you know, we
+
+Anna Rose (01:02:17):
+Had to make a choice
+
+Zac Williamson (01:02:18):
+We have have to make a choice, you know, sometimes you've got to take your second most favorite child and take them out behind the shed and
+
+Anna Rose (01:02:24):
+No, no, no
+
+Zac Williamson (01:02:26):
+I'll stop the imagery that I don't give parenting advice but basically we needed to focus our resources on Aztec 3.
+
+Anna Rose (01:02:35):
+Okay.
+
+Zac Williamson (01:02:36):
+As an organization, you know, where 50 people, which for Web3 is large for everything else, it's pretty tiny.
+
+Anna Rose (01:02:43):
+Yeah.
+
+Zac Williamson (01:02:43):
+And we needed to pull our resources and focus in title on Aztec 3.
+
+Anna Rose (01:02:47):
+Got it.
+
+Zac Williamson (01:02:47):
+So that's what we're doing.
+
+Anna Rose (01:02:48):
+Cool. So it sounds like as we speak, you have sort of set a bit of a timeline. Yeah. 2024. What are the big building blocks that you still need to reach that? Do you feel like there's any additional research that's needed? Or like, do you feel like in general the architecture's there and it's just implementation now?
+
+Zac Williamson (01:03:07):
+Yes. I'm fairly confident it is a pure execution problem now.
+
+Anna Rose (01:03:10):
+Okay.
+
+Zac Williamson (01:03:10):
+A very big one. But in terms of the tech PLONK and Goblin Plonk ought to be more than good enough.
+
+Anna Rose (01:03:16):
+Okay.
+
+Zac Williamson (01:03:16):
+So yeah, there's like, there's big things we need to execute on. Like we need to build our sequencer software and our prover, like third party bureau software because we want to launch this from day one, decentralized. And there are some unique challenges when you have privacy involved that change the architectures of like how to coordinate sequences and provers. Yeah. So there's this, it's a lot of complexity there. There's lots of network engineering, there's lots of critical engineering. Lots of second building, second design but yeah, it's a very challenging execution problem. But the technologies is all there.
+
+Anna Rose (01:03:47):
+Wow. You were one of the judges with me actually.
+
+Zac Williamson (01:03:50):
+Yes.
+
+Anna Rose (01:03:50):
+At the zkHack Lisbon event that we just did. I feel like, I mean, we just covered Noir and what it's for. Do you think that, and this is, so I don't want to put you on the spot here, but do you think that by the next time we do a hackathon circa end of 2023, that like people could actually be using Noir to build like these sort of hackathon projects?
+
+Zac Williamson (01:04:12):
+That is the absolute intention
+
+Anna Rose (01:04:14):
+Even though Aztec 3 is not ready.
+
+Zac Williamson (01:04:17):
+Yes. So you don't need Aztec 3 for Noir. Noir compiles straight on its own to ZK circuits.
+
+Anna Rose (01:04:24):
+Oh yes.
+
+Zac Williamson (01:04:24):
+These verification keys, you can deploy verifiers to Ethereum, you know, we have a see fantastic team building, we've got amazing people. Like this really is the brainchild of Kev who as close to an RL-anon as I think you can get. He doesn't have much of an online presence, but anyone I
+
+Anna Rose (01:04:41):
+Have tried to get him on the show multiple times.
+
+Zac Williamson (01:04:43):
+Oh dear
+
+Anna Rose (01:04:44):
+To no success so far.
+
+Zac Williamson (01:04:46):
+Yeah, but you'll see him crop up from time to time in photographs when you know, if people are taking pictures and he's not aware but yeah, I mean, I think anyone in the space knows about Kev like we've got an amazing team building this, the goal is for it to be something that you can absolutely just quickly write programs, you deploy, hack around with. So if we're in a place where in November where people are not comfortable using Noir, like that is, you can hold me to account to this, this is a massive failing on my part.
+
+Anna Rose (01:05:15):
+Okay.
+
+Zac Williamson (01:05:16):
+As CEO of Aztec, if we can't get Noir to a state where it can be used like that.
+
+Anna Rose (01:05:20):
+So by next zkHack, in-person hackathon.
+
+Zac Williamson (01:05:25):
+Yeah.
+
+Anna Rose (01:05:25):
+We should be able to build things with Noir. Maybe you already can.
+
+Zac Williamson (01:05:28):
+Yeah. You can do it today. Yeah, I mean there were a couple of hackathon people that did bring answer with Noir. Noir as a product is relatively new. And so we definitely have work to do on the tool chains and the tooling, but like we've got an entire team now focusing on that and should be pretty plug and play fairly soon.
+
+Anna Rose (01:05:45):
+Like, given that, like, because Circom has been out there a lot longer.
+
+Zac Williamson (01:05:49):
+Yeah.
+
+Anna Rose (01:05:49):
+And it has, I mean, what's crazy is you've seen things like the Xerox Parc group just build all these tools around it. Does Noir need to build the same tools or is there something portable? Like, could you somehow use some of this?
+
+Zac Williamson (01:06:03):
+So I'm not sure how much of it can be used because the paradigms are very, very different between Noir and Circom.
+
+Anna Rose (01:06:07):
+Okay.
+
+Zac Williamson (01:06:08):
+Where because Noir has its own language, its own intermediate representation, where we had some very different designs for Northern Circom where for noir we wanted to make sure that most important thing for Noir is to present an abstraction layer for developers that's intuitive. So what Circom does is that the coder writes to define your constraints in your circuit. And the code writer defines the witness assignments to those constraints is different and that can cause a lot of foot guns for new developers. And it's not a very intuitive way of writing programs. What we wanted to do was unify those two where, you know, when you are, you program your like a regular language, and then the compiler front end is clever enough to figure out both what constraints that turns into and to derive the witness assignments. With that we have been largely successful but it does mean that, you know, it's a different language. The tooling is not quite the same. We are also more modular, which means that you know, we can't build like the <inaudible>, we then you then need a kind of an integration with the backend, which adds a small amount of integration complexity, but means it's, well it's much easier, it's possible to add like, other backends of the proving systems.
+
+Anna Rose (01:07:13):
+Yeah, yeah. Without having to like hard code them. I mean, it's not really hard code, I guess the language, but like whatever.
+
+Zac Williamson (01:07:18):
+Yeah. Like as in like put a PR into the Circom
+
+Anna Rose (01:07:21):
+Yeah.
+
+Zac Williamson (01:07:21):
+Repo. You, you don't have to do that with Noir. And so yeah, we are very hopeful for the language. we would like to see a lot more backends. We'd love to see every backend, like every cryptography module supporting Noir, because I think it could be a way of creating relatively agnostic apples to apples benchmarks for all these proving systems.
+
+Anna Rose (01:07:40):
+Yeah. That would be good. Yeah I want to, I think we're almost at time, but I did want to talk to you just about like the general ZK space.
+
+Zac Williamson (01:07:47):
+Yes.
+
+Anna Rose (01:07:47):
+Quickly. Where we're at, I mean, we're recording this about two weeks after, or not even after this, this crazy week of events that me and my team put together. And you were at, and actually we're recording here in person at a place where we're going to be seeing more ZK stuff.
+
+Zac Williamson (01:08:06):
+Absolutely. ZK week at Zuzalu.
+
+Anna Rose (01:08:08):
+Yeah. So tell me a little bit about, like, you and I have been in space for a while. I think you're 2017 like I am. So
+
+Zac Williamson (01:08:15):
+Yeah, we're, I mean, when it comes to the ZK, we are both, we're old, you know,
+
+Anna Rose (01:08:19):
+Ancient,
+
+Zac Williamson (01:08:20):
+We're fossils, you know,
+
+Anna Rose (01:08:21):
+The elders
+
+Zac Williamson (01:08:22):
+We are, I mean it's such an insane
+
+Anna Rose (01:08:25):
+It's funny though, the cryptographers who made this up in the eighties are kind of like, you are not the elders.
+
+Zac Williamson (01:08:30):
+But anyway. I know, but the thing is, Anna, we're cut from a different cloth. You know, those, those OG cryptographers, they were the academics in the ivory towers. But we do something a little different here. We do cryptography on the street, you know, we don't publish on euro crypt. We write HackMD observations, you know. Yes. We
+
+Anna Rose (01:08:46):
+ZK hustle
+
+Zac Williamson (01:08:48):
+Absolutely.
+
+Anna Rose (01:08:50):
+That's gotta be a hackathon project soon. If it isn't already
+
+Zac Williamson (01:08:53):
+Street crypto?
+
+Anna Rose (01:08:54):
+ Street crypto or ZK hustle.
+
+Zac Williamson (01:08:56):
+ZK hustle.
+
+Anna Rose (01:08:56):
+I don't know what that is, but
+
+Zac Williamson (01:08:58):
+Yeah, we'll figure it out. It's going to be something. So, so I guess to the question you asked about, like how has the space evolved?
+
+Anna Rose (01:09:04):
+Yeah.
+
+Zac Williamson (01:09:04):
+I think one of the things that was really, really positive to see was just the energy in the last zkHack you organized, because really for the first time you had people coming to the space who would complete, like not cryptographers, like didn't know much about ZK at all, and could actually build stuff, actually build ZK applications with the tools and technology that, that this community has built. And that is really, really exciting because we've been trying to do that for years.
+
+Anna Rose (01:09:30):
+I know.
+
+Zac Williamson (01:09:30):
+And it's always never been ready. It's always not been quite good enough. Or like you've got to like, you know, you've got to understand cryptography, you've gotta understand like very, very complicated tool chains to do anything and now things are slowly changing.
+
+Anna Rose (01:09:41):
+Yes.
+
+Zac Williamson (01:09:41):
+We're kind of almost there now, and
+
+Anna Rose (01:09:44):
+I know
+
+Zac Williamson (01:09:44):
+that's really exciting.
+
+Anna Rose (01:09:46):
+Yeah. I was just thinking that like last year you could do things, but you would often, and if you look at like, the programs that existed, I mean, I think Xerox Parc was an amazing example of this where like they got things built
+
+Zac Williamson (01:09:58):
+Yeah.
+
+Anna Rose (01:09:59):
+But they weren't built in a weekend.
+
+Zac Williamson (01:10:00):
+Yeah.
+
+Anna Rose (01:10:00):
+It was often like someone would set out to build something
+
+Zac Williamson (01:10:03):
+Yeah.
+
+Anna Rose (01:10:03):
+And then realize that all of this tooling was missing. And so then would have to build the tooling and over a few months could kind of create that hackathon project.
+
+Zac Williamson (01:10:11):
+Yeah.
+
+Anna Rose (01:10:12):
+Now, and I mean, those also developed into full comp, like full projects and companies and stuff.
+
+Zac Williamson (01:10:17):
+Yeah. Yeah.
+
+Anna Rose (01:10:17):
+ But this past, you know, this zkHack was so crazy to see that like in 48 hours people could actually start to do things.
+
+Zac Williamson (01:10:26):
+Yeah.
+
+Anna Rose (01:10:27):
+And it's still hard and I don't think it's like, it's,
+
+Zac Williamson (01:10:30):
+Oh, it's still like chewing glass.
+
+Anna Rose (01:10:31):
+Yeah. Yeah.
+
+Zac Williamson (01:10:31):
+It's not, I don't think any of us would say it's easy and the tooling is nowhere near as good as, you know
+
+Anna Rose (01:10:38):
+Or something. Yeah.
+
+Zac Williamson (01:10:39):
+Language and platforms but it's getting there. Yeah.
+
+Anna Rose (01:10:42):
+And you're also seeing, I mean, even this week it was Eth Tokyo is just happening, I think it's just wrapping up now. And there's a ton of projects that are using ZK. We've been seeing that at the Eth global events and stuff, like more and more ZK use.
+
+Zac Williamson (01:10:53):
+Yeah.
+
+Anna Rose (01:10:54):
+And so, yeah, I can't wait to see what this year brings in terms of these projects. And just like the ideas that can come out of a hackathon these are the things that could like, be used by people and potentially have incredible impact. So it's very exciting.
+
+Zac Williamson (01:11:09):
+Absolutely.
+
+Anna Rose (01:11:10):
+Cool. Zach, thanks for coming back on.
+
+Zac Williamson (01:11:15):
+Thank you. Thank you. It's been a pleasure. It's been a pleasure.
+
+Anna Rose (01:11:17):
+And thanks for doing this recap of sort of the history of PLONK and pre-PLONK and Aztec. I think for folks who hadn't heard those earlier episodes or like newer, I think this could be really great to add some context. Most people have like, heard about PLONK.
+
+Zac Williamson (01:11:33):
+Yeah.
+
+Anna Rose (01:11:33):
+Not everyone knows where it came from, so this is cool. Yeah.
+
+Zac Williamson (01:11:36):
+Happy to talk about it. It's been a long road
+
+Anna Rose (01:11:38):
+and we're not done.
+
+Zac Williamson (01:11:39):
+Oh, no. We've barely started.
+
+Anna Rose (01:11:41):
+Cool. All right. Thanks Zack.
+
+Zac Williamson (01:11:43):
+Cool. Cheers.
+
+Anna Rose (01:11:44):
+I want to say thank you to the podcast team, Tanya, Henrik and Rachel, and to our listeners. Thanks for listening.
+

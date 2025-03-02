@@ -1,0 +1,477 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+This week, Nico and I interview Srinath Setty, Principal Researcher at Microsoft Research, and the author of Spartan, Nova, SuperNova, HyperNova, and many more works. We talk about his early research that led him to working on SNARKs, the work he did on folding schemes, sumcheck protocols, and what he thinks is next for the ZK space. Nova-style accumulation schemes seem to be the talk of the town at the moment, so it was great to finally get a chance to meet the author of a lot of this work. Now, before kickoff, I do want to direct you to the zkJobs board. There you'll find jobs from top teams working in ZK. So if you're looking for your next job opportunity, be sure to check it out. And if you're looking to find great talent, be sure to add your job to the jobs board today. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya (01:13):
+Zero Knowledge is changing the world, and until now, building ZK applications meant learning new chain specific languages and complex cryptography, but not anymore with SnarkyJS, the easiest use of ZK SDK, developers can add the magic of ZK to their apps using TypeScript! Whether you're targeting Mina, the leading ZK blockchain or off-chain applications, SnarkyJS from O(1)labs has you covered. With support for infinite recursion, in-browsing proving, and so much more, the full power of ZK is available to everyone. Visit snarkyjs.o1labs.org to get started. You can also find the link in our show notes. And now here's our episode.
+
+Anna Rose (02:01):
+Today we're here with Srinath Setty, principal researcher at Microsoft Research. Welcome to the show, Srinath.
+
+Srinath Setty (02:07):
+Thank you Anna for inviting me here. It's great to be here and talk about I guess the Nova line of work.
+
+Anna Rose (02:14):
+Amazing. I've also invited Nico to join us. Hi, Nico.
+
+Nico (02:18):
+Hi
+
+Anna Rose (02:18):
+Nico, you were recently on the zkHack / zkSummit episode, and we had actually, in that episode, discussed Sangria the work that you did, which uses similar techniques, similar folding techniques, but in a different context. And so, yeah, I asked you to join this episode to also help us dig into the topic.
+
+Nico (02:36):
+A lot has changed since zkHack / zkSummit, so very excited for this discussion.
+
+Anna Rose (02:42):
+Yeah, I want to make a little side note too, this episode came about because, I mean, I've just, for the last month or so, been immersed in Nova conversations and Nova Workshops. I also saw Ariel Gabizon get Nova pilled by Justin Drake over dinner just a few weeks ago. And we also had actually a listener, Joseph, who had emailed us a few months ago asking us to bring you on. So a little shout out to Joseph for that tip, and we're really happy to be able to do this episode. I think as a starting point, Srinath, let's learn a little bit about you. How did you get to be working on ZK topics?
+
+Srinath Setty (03:22):
+Okay, so I'm going to start with using ZK to mean something broader, which includes all kinds of succinct arguments where there's a proof that is small and quick to verify. So it all began when I started, at least my journey into this area started in my grad school where I started working on this system. It's a storage system, and we wanted to run it in a cloud but we wanted the guarantee that even if the storage services compromised, the clients or the customers of the service can get some security guarantees and liveness guarantees from the system. So we wrote a paper about the system called Depot. This was back in 2010. And as a result of working in this project, I was thinking about how to sort of broaden this kind of work to also cover arbitrary computations.
+
+(04:12):
+For example, let's say there is a cloud service and the customers offload some sort of computation to the cloud. This could be a map produced job, or it could be a database that executes some types of transactions. And we want to guarantee that the cloud service cannot cheat. So in particular, it should be able to prove that it actually executed what it claims to execute. So this sort of made us to explore this notion of probabilistically checkable proofs. So we started looking into this area. At the time, there were no implementations of this machinery, so it was all in theory paper. So we sort of asked this question, can we actually implement this and use it in practice? So it turned out that there were a lot of theoretical work like, or many decades. But if you look at the constructions, they sort of had this two properties. One of them was their asymptotically efficient, but they had gigantic constants, or they were asymptotically, I guess not as efficient, but they had relatively smaller constants. So either of them was not a good starting point to implement, and they're also very, very complicated to even write the algorithm and implement in code. So that's what, that was actually the starting point of my PhD work
+
+Anna Rose (05:33):
+At that time. We're talking 2010. When you talk about this probabilistic proof work, you weren't looking at SNARKs yet, were you?
+
+Srinath Setty (05:40):
+So it wasn't really, I guess the name SNARK didn't exist back then.
+
+Anna Rose (05:45):
+Okay.
+
+Srinath Setty (05:46):
+So, but if you look at this probabilistically checkable proofs they are very long proofs, but you can't send them to the verifier. So the prover would commit to such long proofs using something like a Merkle tree, and then the verifier checks some parts of this probabilistically checkable proof. So there was an interactive protocol for doing this, and then it was also turned on interactive. So the SNARK protocol existed, but the term SNARK did not exist back then.
+
+Anna Rose (06:13):
+Okay. But was this proto-SNARKs then? Were you working alongside the same work that became SNARKs?
+
+Srinath Setty (06:21):
+Yes. So we sort of started exploring implementations of this PCP based arguments, but it was very difficult to implement. In fact, if you estimate the cost of doing this, it would take trillions of years to just prove even simple statement. So we spent so much time digging into this theory. Then we came across this other work, which was published in 2007. So this was also based on PCPs, but it was based on something called linear PCPs. So these are PCPs that are sort of also used in the the other PCPs, which are also sometimes called short PCPs because they're asymptotically short, but they're used as a first step to constructing the more efficient or more asymptotically efficient PCPs. So this linear PCPs are like, if you write it out, they're exponentially large. But the insight in this 2007 paper was that you can commit to that exponentially size PCP with some polynomial work and then you can have the verifier query this PCP at some points and then do its checks. So this approach was actually very simple because it used a, a simple PCP and the cryptographic missionary was also somewhat simple. It was used based on additively homomorphic encryption. So it sort of sound as a good point for us to implement and also optimize.
+
+Nico (07:49):
+Is this the line of work that eventually culminates with Groth16?
+
+Srinath Setty (07:52):
+Yes, exactly. So what happened was so this the linear PCP based succinct argument, so at least the, the IKO07, which is the paper that we started building, and the system that we built was called Pepper. So this, this first version was interactive, so it had two rounds of interactions. So the prover sent something, the verifier asked some question, and then the prove sent the answer. And there is one more round of interaction, and it was all based on standard cryptographic primitives. So actually there was one more downside to this approach, which is this, the provers work in this construction is quadratic in the size of the circuit. So in this work Pepper, we sort of try to mitigate this problem at least for some computations. For example, if you had a structured computations like matrix multiplication or some polynomial evaluation, we were able to avoid this quadratic blow up.
+
+(08:46):
+And then we were like as follow up work, we were exploring a way to do this automatically, where can we automatically build this linear PCPs that don't have this asymptotic overhead or the quadratic cause. Then what happened was there was this breakthrough work by GGPR. This was back in 2012 that introduced a SNARK that had a quasi-linear prover for all computations. But the SNARK was described as a sort of a monolithic object. And then one of the observations that we made, because we had already started working in this linear PCP based arguments, what we sort of realized was there was actually a linear PCP inside this GGPR. So we did two things there. One was we sort of separated the constraint system that's used inside GGPR and also show that there is a linear PCP inside this construction. And then we combined that linear PCP with the cryptographic missionary that was inside this Pepper. We wrote another paper called Zaatar based on this work and then eventually there are like, I guess, refinements to GGPR that led to Groth16 and all of that was non-interactive. The works that I did was interactive but based on standard cryptographic assumptions.
+
+Nico (10:05):
+So for avid listeners of the podcast, this is right in chapter one of Ariel's SNARK trilogy
+
+Anna Rose (10:12):
+Yeah. We just recently did a three, well, Ariel gave us sort of a chapter by chapter history of SNARKs, and this is actually very, this episode, it might be good to listen to in tandem to sort of map it. Srinath, I want to ask you, as you were doing this work, were you already at Microsoft?
+
+Srinath Setty (10:31):
+No, this was I was doing my PhD at UT Austin.
+
+Anna Rose (10:35):
+Okay.
+
+Srinath Setty (10:36):
+So this was between 2010 and 2012.
+
+Anna Rose (10:40):
+So when did you join Microsoft?
+
+Srinath Setty (10:42):
+Yeah, I joined Microsoft end of 2014.
+
+Anna Rose (10:44):
+Okay.
+
+Srinath Setty (10:45):
+So by then already there was GGPR there. I guess Zaatar paper was written. Pinocchio paper was written.
+
+Anna Rose (10:54):
+Oh, yeah.
+
+Srinath Setty (10:55):
+And there were also other papers that we had written in between.
+
+Anna Rose (10:57):
+What was the step to Microsoft? Were they building out some sort of cryptography? Did they already have a cryptography, I don't know, institute or like, part of their company? It, like, I'm just kind of curious, like what was the draw to Microsoft? What kind of work were you seeing yourself doing there?
+
+Srinath Setty (11:12):
+So, Microsoft Research works on a broad range of topics in computer science and also beyond. As a grad student working in this computer science, this was a natural place for me to go and continue my research because there was potentially applications to cloud computing and other forms of computing based on my work.
+
+Anna Rose (11:36):
+Did they have a focus on SNARKs or were you kind of bringing that into the org? Was there anyone else there working on ZK stuff?
+
+Srinath Setty (11:43):
+Yes. So there are a lot of other researchers who worked on interactive proofs. They were already working at Microsoft Research.
+
+Anna Rose (11:52):
+Okay. So then tell me a little bit about the work you did there. Like what kind of research, and I mean, we definitely want to get to Nova but what kind of maybe led to Nova in your time there?
+
+Srinath Setty (12:02):
+Yeah, so when I joined Microsoft Research, I also spent a little bit of time on doing formal verification of distributed systems and cryptographic algorithms. But then at some point I started working on this system called Spice. So the goal of Spice was to sort of continue the work that I was doing back in grad school, but try to do it in a much more large scale manner where we wanted to run a concurrent system in the cloud, but have that system produce a proof that it was actually executing all the transactions in a succinct manner. So this was a paper that we wrote back in 2018 where you can run a concurrent program or a system that executes different transactions concurrently, and then there is a succinct proof. Internally it uses Groth16, but it requires new techniques to both represent state and also execute transactions in a concurrent manner and in parallel.
+
+(12:58):
+So we also wrote another paper called Piperine. This has a timestamp of 2020, but it actually happened around right after this Spice paper was published. The goal of this Piperine was to use this Spice but in a blockchain context. So what we wanted to do was execute these transactions in the cloud, but verify the execution on the blockchain by producing a succinct proof and this, I guess there are around the same time, there are also discussions in the Ethereum community around rollups. So it's sort of, I think, one of those academic papers that described how to do this off-chain execution and then verify on the blockchain and there was one property that we achieved in this Piperine, which is to provide liveness. So even if this off-chain entity goes away, there is a way to recover the funds or tokens that were present in the off-chain system without really trusting the off-chain system. I guess now a lot of this might sound obvious because every system I suppose, has this kind of functionality but back then, I think it was one of those properties that wasn't
+
+Nico (14:12):
+Hindsight is, is always 2020, right?
+
+Srinath Setty (14:14):
+Yes, exactly.
+
+Nico (14:15):
+I had a question actually, because you're mentioning academia and academic papers, and I sort of got the sense that your position is kind of at the intersection of industry, Microsoft Research and academia. Is that actually what's happening? Or do you think you're more of an academic? Where would you situate yourself?
+
+Srinath Setty (14:31):
+Yeah, that's a good question. So I sort of think of myself as a person who works at the intersection of two different fields. One of them is this systems or distributed systems, and the other is cryptography so what I mean by this is I not only work on the theoretical aspects, but I also work on the practical aspects where I implement the algorithms, build it in the context of an application, evaluate it, and it sort of goes both ways. So the theoretical work is inspired by the systems' work and sometimes the systems' work is inspired from the theoretical work.
+
+Anna Rose (15:10):
+Going back to Nico's question, do you see yourself as academic or industry? Do you have still a connection to the school or did you make the full shift over to industry?
+
+Srinath Setty (15:18):
+So Microsoft Research sort of operates in both worlds. On the one side we do research, but on the other side we are also a company. Like we are part of a larger company. So there is a blend of both the academic side of things and also industrial side of things so
+
+Anna Rose (15:38):
+Nice. Let's move into the topic of the day, Nova. And I say Nova, which is like the group of Novas because there's now a few papers around this topic. Tell us a little bit about like what inspired Nova, where does this idea come from and what is it doing?
+
+Srinath Setty (15:55):
+Yeah, so one of the things that I always focused on in my work was to drive down the provers cost. So we want this proof generation cost to be as low as possible. And this has always been a thorny problem going back to 2010 or even before, well, the cost of producing this proof has always been very high. So when I worked on the systems like Spice and Piperine one of the patterns there was that the same kind of computation was executed over and over again. For example, if there is a batch of transactions for every transaction, the prover sort of has to do the same thing. So one of the motivations for this Nova work was, the question was, can we leverage this pattern and speed up the prover substantially? This led us to think about a way to compress the work that happens in two separate transactions into one which eventually led to the creation of folding schemes.
+
+Anna Rose (16:59):
+Are folding schemes sort of the result? Like, is does it follow the idea of recursion or would you say it's like a different kind of compression? Is it like working at a different level?
+
+Srinath Setty (17:11):
+Oh, this entire line of work was definitely inspired by other projects that try to do better recursion like construct better recursive SNARKs, most notably the Halo lineup work.
+
+Anna Rose (17:23):
+Okay.
+
+Srinath Setty (17:24):
+So in Halo, if the verifier circuit, the circuit that verifies proof of a prior statement, performs sumchecks, and then it differs some expensive parts of it to the future, so in Nova what it's doing is it does not produce a SNARK. Instead it's able to fold statements at the level of a statement itself where the prover commits to the state the witness, and then it runs the simple or inexpensive protocol to combine two statements into one.
+
+Anna Rose (17:57):
+But Halo didn't do folding, right? Was it doing the compression part, kind of almost like a different point in the operation?
+
+Srinath Setty (18:04):
+Yes. So if you look at I guess the internals of the verifier, there is some amount of folding that's going on in terms of the inner product statements. So it is doing folding but at a lower level of abstraction, it writes out the proof, and then while verifying this proof, it folds certain steps in the verification.
+
+Anna Rose (18:29):
+Is that Halo or is that a Nova?
+
+Srinath Setty (18:31):
+Oh, this was Halo.
+
+Anna Rose (18:32):
+That's Halo. Halo was doing that. Okay. Okay.
+
+Nico (18:34):
+Yeah. The way I like to see Halo is you do most of the verifiers work. You get down to polynomials and rather than checking your polynomial commitments, you defer that to later. So what you're folding is claims about polynomial, you're like, oh, I have all these evaluations, all these commitments. I don't know if they match. We'll see that much later.
+
+Anna Rose (18:55):
+And this is Halo, not Halo 2, or are we kind of just grouping Halo work into one?
+
+Nico (19:00):
+So we're grouping them together because they sort of work pretty much in the same way
+
+Anna Rose (19:04):
+Got it. So kind of moving towards this folding thing though, what you said when you started to describe it was the fact that all of these operations are similar or like there's a similarity in what you're actually able to fold together. Would you say that this was inspired because rollups had kind of taken off this idea for, and as I understand it, those have that property, which it's repetitive and and consistent.
+
+Srinath Setty (19:29):
+Yes, exactly. I think if you look at the large scale statements that I think people want to prove today, I think most of them have some amount of structure to them.
+
+Anna Rose (19:40):
+And maybe explain what that means. Like, and you can see I'm struggling a little bit to say this, but it's like, what's similar? Like I know that there's a similarity and there there's these things that are similar to each other, but what exactly does this data look like?
+
+Srinath Setty (19:55):
+Let's take the simple example of a rollup that's just doing some payment transactions.
+
+Anna Rose (19:59):
+Okay.
+
+Srinath Setty (20:00):
+For a batch of transactions, if you look at the circuit, it takes one transaction and then maybe checks and balances, updates the state, and then it goes to the next transaction, it does the same thing. So if you look at the circuit for executing a batch, it consists of a sequence of sub-circuits where each of those sub-circuits are the same.
+
+Anna Rose (20:23):
+So you're saying though, in a context like this, Nova is useful, but is it compressing multiple actions together in a folding sequence? Or is it like compressing steps that are coming one after another?
+
+Srinath Setty (20:37):
+Yes. So, so Nova targets what's what we call a sequential computation. So let's say you have a program where at each step you execute some function 'F' or some circuit 'C' and in the next step you execute the same thing maybe with different inputs, potentially taking inputs from the previous step. So it targets this kind of sequential computation.
+
+Anna Rose (21:01):
+Cool.
+
+Nico (21:02):
+So I guess a little comparison question here because so this is what a VM does, right? A virtual machine, it has a step function and it applies it many, many times. So far people have been designing VMs inside STARKs, right? Because with each row of your STARK, you have a step of your VM. We could also do this with Nova, right? With steps of recursion, I guess. Do you have any sort of comparison between these two methods? Maybe some back of the envelope calculations?
+
+Srinath Setty (21:30):
+Yeah, I think they, they sort of both target a similar computational model where there is same sub-circuits that are executed. I guess one difference might be that with Nova because it's a recursive proof system and it also provides low recursion overheads you're able to do this in an incremental fashion where let's say you executed this computation for 'N' steps and now you can take the proof produced at the end of the Nth step and update it with more steps and produce proof for the updated computation. Whereas with STARKs, you can do the same thing, but first you have to unroll all the steps of the computation, produce proof, but then if you have to continue executing, then you need something something people refer to as a recursive STARKs.
+
+Nico (22:20):
+So more flexibility and I guess less prover work in the end.
+
+Srinath Setty (22:24):
+Justin Drake had this slide that sort of shows this bifurcation in SNARKs, like now we have this curve based arguments like Nova and then there's this hash based arguments. One of those examples might be this FRI based SNARKs like STARKs. So there is, I think now this 2 lines of work. I think there is more work needed to understand the tradeoffs, but I guess in a nutshell no provides inexpensive repercussion.
+
+Nico (22:56):
+And what to talk a bit more about the internals of Nova, because we've mentioned this folding idea of this repeated structure. What else goes into Nova? Is there, I guess a SNARK, an arithmetization?
+
+Srinath Setty (23:10):
+Yes. So in Nova itself, we focused on the simple R1CS. So that was the arithmetization that we used in that work. And then after that, it's mostly the folding scheme that allows you to recurse. And the folding scheme internally uses a commitment to vectors, some and it needs to be additively homomorphic, meaning you can take 2 commitments, add them into 1 to get a commitment to the sum of the underlying vectors. Those are the only ingredients that are necessary to construct a recursive proof system. But of course, there's one downside, I allude to this in my talks whenever I talk about Nova is when you produce a proof with Nova, the size of the proof is proportional to the size of one step of the recursive computation. Typically you don't, it's going to be large because you might have large step sizes. So what what we describe in our paper is a way to take that large proof and compress it into something smaller and that step requires say general purpose SNARK because we need the properties from the SNARK to compress this.
+
+Anna Rose (24:23):
+You just mentioned this additive homomorphic property that it needed, I think in a, in the episode I did with Ariel, I think we also talked about that like KZG it has that property, right?
+
+Srinath Setty (24:36):
+Yes. So in Nova we require this commitments to vectors that are additively homomorphic, and you could instantiate this in different ways. One of the ways we instantiated this was with Petterson Commitments where you have a set of group elements that are sampled where nobody knows the discreet log relationship between them. And now you can commit to the vector using that. And this requires no trusted setup but of course I think you can also use KZGs SRS in place of these group elements as a commitment to vectors.
+
+Anna Rose (25:11):
+Got it. I want to ask a question. A word that came up a lot in the workshops that I was at focused on Nova was like IVC, I don't know if it was in the original Nova or later Novas, but what is that?
+
+Srinath Setty (25:25):
+Yeah, IVC stands for incrementally verifiable computation. So this can be thought of as a primitive that defines the notion of producing a proof in an incremental manner where the prover executes a step, produces a proof, and then it executes another step and takes the proof that was previously produced and updates it to produce a proof for 2 steps and it keeps doing this. So this primitive defines this kind of proof generation process.
+
+Anna Rose (25:58):
+And was IVC already in the original Nova paper or was that introduced later?
+
+Srinath Setty (26:03):
+So IVC the concept of IVC was introduced back in 2008.
+
+Anna Rose (26:07):
+Oh, okay.
+
+Srinath Setty (26:07):
+In the paper. So Nova is a way to realize this IVC primitive in a more efficient manner.
+
+Anna Rose (26:15):
+What was the 2008 paper, if you remember?
+
+Srinath Setty (26:19):
+So this was a paper by Valiant. Okay. I forget the name of the title
+
+Nico (26:24):
+We always quote it as Valiant 08. And I don't think people remember the title of it.
+
+Anna Rose (26:30):
+Yeah, we can try to dig it up and put it in the show notes.
+
+Nico (26:33):
+So IVC is sort of what we're realizing here with Nova. And I wanted, I guess to keep digging at the internals. How does the folding scheme work or what's the, like, main mechanism behind it?
+
+Srinath Setty (26:44):
+The main trick is something that we see very often in the proof systems take a random linear combination of different things. So we start with 2 R1CS instances that has their own witness vectors. And these R1CS instances have the same matrices, meaning the same, they're about the same circuit. Now if we take a random linear combination of these witness vectors, there are these extra cross terms that show up. So what the folding scheme does is it has the prover commit to these cross terms, or there are vector first, and then the verifier sensor challenge that's going to be used for the random linear combination. Then the prover can combine the 2 witness vectors and also the two error vectors using this cross term. And then the verifier can do the same, but just by using additively homomorphic commitment. So the verifier is doing some group operations to do this.
+
+Nico (27:40):
+So with this description of folding, there's also a similar thing described, which is accumulation or a split accumulation. And I think there's been some confusion these days as to what these things mean or how do they compare. Do you have any insights there or any nice frameworks for us to place this back together?
+
+Srinath Setty (27:58):
+Yeah, I think one way to think about folding scheme is it's a very simple version of a split accumulation scheme. I think it places fewer requirements on the primitive. Like all it needs to do is take two statements combined into one. I think split accumulation captures even larger class of protocols.
+
+Nico (28:18):
+This folding scheme you described with the AIR term works for R1CS right. And I've think I've been noticing this thing where academia likes to work with R1CS, but industry likes to work with this sort of PLONKish arithmetization. I was wondering if you had any thoughts and yeah. If that motivates any extra work.
+
+Srinath Setty (28:35):
+Yes, exactly. That's a great question. So we were using R1CS in Nova and then as you said, like everyone building systems in practice seem to be using PLONKish for writing circuits these days. So we wanted to, I guess, extend Nova to support these kinds of higher degree constraints.
+
+Nico (28:56):
+Is there a specific reason why people like PLONKish or is it kind of a, do you know the masses gathered around something and we can't move them anymore?
+
+Srinath Setty (29:06):
+If you look at R1CS, PLONKish, and there is also this algebraic intermediate representation or 'AIR' I think they have their own pros and cons. for example, in R1CS under some proof systems you can get linear combinations for free. But the downside is it's restricted to certain types of degree, 2 constraints. And in plunk this linear combinations don't exist. But there are other features like higher degree constraints and also lookups. Sometimes people associate lookups with PLONKish, but they can also be done in all of the 3. So there are I think, pros and cons for each of these arithmetizations. In fact this motivated another work that we recently published right before HyperNova called Customizable Constraint Systems. So as we describe in the paper one of the motivations for this work was to unify all these different constraint systems that people were using in practice. And one of the observations that we made in this paper was there is a way to describe a new constraint system that happens to be a sly generalization of R1CS. And this generalization allows us to capture all of the 3 popular arithmetizations, and it can do so with almost no overhead or no overheads in most of the cases.
+
+Nico (30:29):
+And does that mean we can adapt the existing proof systems for R1CS to this new CCS? Yes,
+
+Srinath Setty (30:35):
+Yes exactly. I think that was one of the results in this paper besides describing the constraint system, was to show that if you had a SNARK for R1CS, here I'm talking about non-recursive SNARKs, something like Spartan, which was originally designed for R1CS, Marlin, which was originally also described for R1CS. It easily translates to the CCS with almost no modifications and then because CCS covers PLONKish and R1CS, we suddenly get a proof system for PLONKish.
+
+Anna Rose (31:12):
+Nico, Sangria was that kind of doing that as well?
+
+Nico (31:15):
+So yeah, Sangria happened. So when SuperNova came out actually I suddenly got very excited about folding schemes and thought, oh, it's a shame that it's only described for R1CS can we do this for PLONKish? So I sort of literally copied the ideas, right? Like, oh, we take a random linear combination. If it doesn't work, we put in a error vector and suddenly we have this sort of generic way to do it for any kind of degree. I think CCS goes further in in saying like, okay, here's how you would describe PLONKish in a different way, but that is still amenable to being proven by things like Spartan or Marlin. So I guess I've now thrown in a new word, SuperNova. I think that was the paper that came out after Nova, right? In the, in the series before CCS, like the, we kind of skipped a step there. Can you tell us more about SuperNova and how it compares to Nova?
+
+Srinath Setty (32:09):
+Yes. So now if we recall this computational model, so it was executing same circuit at every step of the computation. So this, this model is general, as you said where we could incode the step of a VM as the circuit that's executed at each step. So it's general enough but one issue is if you try to encode a step of a VM and that VM has many instructions or many OpCodes, then the size of the circuit is going to be at least the sum of the sizes of circuits for each of those OpCodes. So at each step, if you, even if you didn't execute an OpCode, you're paying for that cost. One extreme example might be, let's say you have a VM where there's an instruction for executing some expensive hash function like Keccak and there's another OpCode that just executes maybe an addition or a multiplication. Then in the actual execution, if you're doing an Add or a Mul, you're still paying for this other instructions like Keccak that were not even invoked. So our goal was what we call a la carte cost profile. where can we build a proof system or a system where the provers cost is proportional only to the cost of the instruction that was actually executed not on all of the supported instructions or OpCodes and this led to this work called SuperNova.
+
+Nico (33:36):
+Nice. And so that is kind of tangential to the other axis, which is R1CS to more general R1CS, and then from the CCS you build HyperNova.
+
+Srinath Setty (33:47):
+Yes, yes, it is tangential and also octagonal. So when the CCS abstraction existed, one of the natural questions was can we apply this to Nova can we build Nova that can prove CCS? I think around the same time Sangria came out it was also using these error vectors or slack vectors. So we could do the same in CCS where if you introduce relaxed CCS, you could apply Nova what this relaxed CCS but they show us that the degree of the constraint is D then you need need the prove to commit to D error terms or order D error terms. So this was not useful because there was another application that we have been working on called this VDF, which internally executes a delay function. And this is a very simple function that happens to be degree 5. So if you try to represent this delay function in CCS, you can encode this degree 5 relation as one constraint. Whereas in R1CS it's going to be 3 constraints, but because the prover is actually committing to D terms, it does not actually give benefits over just using R1CS. So the goal in HyperNova was actually to be able to prove CCS without requiring the prove to send this order the cross terms.
+
+Nico (35:17):
+And in comes the mighty sum check protocol, right?
+
+Srinath Setty (35:19):
+Yes, exactly. And so the sumcheck protocol was also used in this Spartan paper. So the way the Spartan prover works is it starts with some statement and it applies the sumcheck protocol and then it ends with some claims about some polynomials, and then it approves those claims using additional invocations of the sumcheck protocol. So this sort of made me think about using the sum check protocol as a folding scheme on Nova, which eventually became HyperNova.
+
+Nico (35:50):
+It's funny how this tool keeps popping up in different places. Does it have a very specific cost profile? Is that why it's so attractive?
+
+Srinath Setty (35:59):
+Yes. So for example, if you look at HyperNova itself, so at each step the prover commits to the witness the minimal thing it's supposed to do and then to do the folding all, it's just doing finite field operations, which are much less expensive compared to cryptographic operations.
+
+Anna Rose (36:20):
+It's funny actually in the, I keep throwing back to that episode with Ariel, but at the very end we talked about folding Nova and then he had said that he had been like sumcheck protocol pilled as well by Zac the same week he was Nova pilled and we talked a little bit about like, would there be a way to combine it? And then the HyperNova paper came out like two days later, I think. So because there you're using both of these techniques, but you're not using, like, you're not using sumchecks all the way through, you're just using them in a specific place, right?
+
+Srinath Setty (36:50):
+So HyperNova uses the sumcheck protocol but it performs a single invocation of the sumcheck protocol. Whereas if you look at a full-fledged SNARK like Spartan in the main protocol, there are two invocations of the sum check protocol. And then Spartan also has something called a sparse polynomial commitment scheme where there are additional invocations of the sum check protocol. So if he compares Spartan with HyperNova it's doing fewer sumchecks and fewer commitments.
+
+Anna Rose (37:19):
+That's interesting. Actually, I want to make a quick correction actually to a previous episode. I think in the, I did an episode with Justin Thaler and I think I incorrectly added him as an author of that, but he wasn't, he said, he told me that after I just like said it on the air. So, quick correction, Srinath, you were one of the authors of Spartan. Were you the only author? Are there other authors?
+
+Srinath Setty (37:40):
+I was the only author.
+
+Anna Rose (37:41):
+Okay. Well I'm glad that we get to make that correction officially on the Zero Knowledge podcast and apologies for mixing that up in the earlier episode.
+
+Srinath Setty (37:51):
+No worries.
+
+Anna Rose (37:51):
+So that's super interesting though that you had actually been working on this sumcheck work and then moved over to the folding and now you're starting to combine them in HyperNova. Where do you go from here? Like do you add more sumchecks? Do you find new ways that they can be combined?
+
+Srinath Setty (38:08):
+If you look at HyperNova itself, if you look at the provers work, I think it's doing somewhat minimal work. Something that we expect the prover to do, commit to the witness and maybe do some finite field operations. This might be a strong statement, but we maybe we have reached the sort of optimal point in terms of prover cost there but there are, of course there are other aspects in HyperNova that may be less optimal today. I think one of those is the lookup argument. I think this is an active area. There are already like so many proposals for lookup arguments in the context of recursive arguments. I think it's not clear what's the best one yet.
+
+Nico (38:47):
+So there's also this, this Protostar work that came out recently, which I think also proposes kind of a folding scheme using kind of sumcheck ideas. Are are these related?
+
+Srinath Setty (38:59):
+Yes, that's another interesting work that came out recently. I think the prover is doing somewhat similar work, so the prover is committing to the witness and I think it's doing a similar number of finite field operations. So the, both the Protostar and HyperNova prover might have the same cost concretely as well. I think the paper describes Protostar for PLONKish whereas HyperNova was described for CCS. And there are some differences between the two. In particular CCS witnesses are smaller than PLONKish witnesses by an additive factor equal to the number of copy constraints. So maybe there are some differences in terms of the witness commitment costs there. But I think one of the places where Protostar does better than HyperNova is in the verifier circuit size. In HyperNova we require more hashes than Protostar. But in practice when using SNARK-friendly hash functions, I think the difference might not be as much. Protostar paper also has a different lookup argument than what we described in HyperNova. So as I said this lookup argument the topic of lookup argument in the context of recursive SNARKs might still be an open problem where what's the best lookup argument in this context
+
+Nico (40:23):
+You were mentioning in practice? Does that mean there's plans of implementations for HyperNova?
+
+Srinath Setty (40:29):
+Yes, we do plan to implement HyperNova and provide a reference implementation for it in the near future.
+
+Nico (40:34):
+Nice. I think that's one thing that's been widely lauded about Nova was the quality of the implementation. So really looking forward to a HyperNova repo.
+
+Srinath Setty (40:44):
+Thank you.
+
+Anna Rose (40:46):
+There's two concepts that you talked about just now and I actually don't know that we've really defined it. So we mentioned sumcheck. You also mentioned VDFs, which we have defined in the past on the show. Maybe I'll start with the VDF side, verifiable delay function. Why is that connected to what we're talking about? Why do VDFs matter in this, in this case of like Nova or accumulation? I don't understand why they're connected.
+
+Srinath Setty (41:14):
+Yes. So VDF, which stands for this verifiable delay function, the goal is to execute some delay function and also produce a proof that it was executed. And there has been a lot of work on VDFs itself, how to realize this and one of the ways of doing it is to combine what's called a delay function. This is some function that takes non-trivial sequential time to compute. One of the examples is what's called MinRoot and then take this delay function and combine with an IVC scheme where at each step the prover executes the delay function and also produces a proof that it has executed that. So when the Nova paper came out, so there was a lot of interest in using it to realize the VDF because it provided a less expensive prover than prior recursors now constructions or a prior IVC schemes. So this naturally led to this joint project between MSR, Supranational, Ethereum Foundation, Protocol Labs and Filecoin Foundation. And there was a blog post about this using Nova and also I think Halo to build VDF using IVC.
+
+Anna Rose (42:29):
+I see, okay. So this is more like using Nova for a VDF.
+
+Srinath Setty (42:33):
+Yes.
+
+Anna Rose (42:33):
+I guess not VDFs within accumulation schemes or anything like that.
+
+Srinath Setty (42:37):
+Yes, exactly.
+
+Anna Rose (42:38):
+That was definitely where my confusion came because I, I couldn't understand how it was used in that part of the stack. Okay. I now want to define, and we probably should have done it a little earlier, but like sumcheck, I feel like we've done a pretty good job of talking about accumulation of folding, but not really the sumcheck that we've now introduced. So what is that?
+
+Srinath Setty (42:58):
+The sumcheck protocol is a powerful tool. It's an interactive proof. It's again, a protocol between a prover and a verifier and it has this very specific interface where there's some polynomial, let's call it 'G' and then the evaluations of this 'G' or sum space or sum together. So it's sum of evaluations of 'G' or sum space. And the goal is for the prove to be able to prove the sum equals some target value 'T' and obviously the verifier can just take the polynomial 'G' evaluate it to all the points, sum them together and check if it equals this target value 'T'. But the sumcheck protocol provides a more efficient mechanism to do this check. And the only thing that it requires from the verifier is do some log number of operations and also evaluate this polynomial 'G' at one point.
+
+Anna Rose (43:58):
+So in HyperNova starts using sumcheck, but were there other types of checks being used in the previous works? The previous Nova works?
+
+Srinath Setty (44:07):
+So in the previous Nova work we would just do this random linear combination and have the prover commit to this extra terms that arise called slack terms or error terms. And there was no need for the sumcheck protocol.
+
+Anna Rose (44:22):
+I see.
+
+Nico (44:23):
+No, I think what you're going for, Anna, is how did we construct SNARKs before the sumcheck protocol was so prevalent?
+
+Anna Rose (44:30):
+Oh yeah, fair.
+
+Nico (44:31):
+And in that sense, a lot of the SNARKs that are popular today are using univariate polynomials. And so they use very different techniques and a whole different toolbox where we like to do quotient checks and that's something completely different. And from quotient checks we can build zero checks, and from zero checks we can build other things. Similarly, in the world of multilinear polynomials, we can use the sumcheck protocol to check a sum, but checking a sum also allows us to check other things like checking that a vector is all zero elements and so that actually reduces to a sumcheck. There's a lot of, there's a little toolbox essentially that you can build out with the sum check as your core element.
+
+Srinath Setty (45:09):
+Yes
+
+Anna Rose (45:10):
+Okay.
+
+Srinath Setty (45:10):
+So actually if you recall I had this slide in ZK study club. There were, I guess there was a trilogy there, a different trilogy I think. In the middle second stage there were all these works like PLONK, Marlin on one side there was Spartan, HyperPLONK on the other side. So the second one was called univariate polynomials, and the first one was based on multiline polynomials. So in all of these works and the multilinear polynomial column, they were already using sumcheck. I mean, the second one they used this quotient check for the same purpose.
+
+Anna Rose (45:48):
+Cool. We should dig that up and add that video to the show notes.
+
+Nico (45:52):
+Since we touched upon univariate, multivariate I kind of have the sense that are the multilinear polynomials allowing essentially more powerful protocols, it feels like, you know, all these linear time provers come from protocol based on multilinear polynomials. Do you think there's some kind of trade off there or is it just like strictly superior?
+
+Srinath Setty (46:12):
+Yeah, that's a good question. I think so this multilinear polynomial sort of allow us to use the sumcheck protocol internally does not require doing any super linear operations like FFTs or Fast Fourier Transforms which are also sometimes called NTTs. So it does not require those operations. One downside though is the proofs are logarithmic in the size of the statement proven. So for example, in the context of SNARKs so the proof size is going to be longer than in the size of the circuit itself that's being proven. Whereas I think the schemes that are based on univariate polynomials, the information theory component, I think has a constant number of field elements. So when you combine this univariate polynomial based techniques with something like KZG, you get a constant size proof. Whereas on the multilinear side even if you combine with the best polynomial commitment scheme, you still end up with some logarithmic number of free elements in the proof. I think that's the tradeoff that exists between the two. One of them has a fast prover, but a large size proof. In practice it might be small enough, but on the other side you have potentially more expensive, but a smaller proof.
+
+Nico (47:31):
+Yeah, that makes a lot of sense. So I wanted to touch on a few technical questions since I have you here and since I've been also looking at similar ideas. One thing is with HyperNova, Protostar, all these things the terms folding, multifolding, accumulation, split accumulation, simple accumulation, all are all being thrown around. And I have my own opinions on how they map to each other, but do you have a simple framework for listeners who like me are very confused by all this?
+
+Srinath Setty (48:01):
+Yeah, I think that's a good question. So these different primitives, I think they're all different definitions. There is a lot of overlap among them and it can get confusing. So I think a folding scheme in particular can be viewed as a simple version of split accumulation schemes. So it's more specialized and also I think more easy to realize and also analyze and practice.
+
+Nico (48:29):
+Do you think that's why people have been latching onto folding recently more than these other schemes?
+
+Srinath Setty (48:36):
+Yeah, I think the folding scheme definition itself is simple so it just takes 2 statements, combines into 1, and the security definitions are also easier to read because it's focused on this very simple goal perhaps that makes it easy for someone to follow it and build on it.
+
+Nico (48:58):
+Nice. Okay. And now slightly, I guess unrelated question, but still in the technical realm. So we've been talking about IVC, so incrementally verifiable computation. How far can we increment? I know there's like some, I guess, theoretical debate on how do we prove these systems and how do we prove these things are secure? Is the limit real or is it just our inability to prove further?
+
+Srinath Setty (49:23):
+I think it's it's the latter. So for example, in our proofs we sort of assume or require that the depth of the recursion is a constant. This is the case in all of the prior recursive arguments in the literature. But I think there are ways to mitigate this. For example, instead of doing this linear folding but at each step, you take the prior proof and fold, you could do binary tree folding. This way the depth of the recursion is kept logarithmic in the number of steps. And I think there are also other ways of getting around this issue where use stronger assumptions about the underlying primitives.
+
+Nico (50:02):
+Okay. And when we say a constant recursion depth, do we have a number for that constant?
+
+Srinath Setty (50:08):
+I think this is something that many people are investigating to establish concrete security bounds for these kinds of regressive arguments.
+
+Anna Rose (50:17):
+So I think we're at the end of the interview, but I have a question. I sort of hinted at this before. You've gone Nova, SuperNova, HyperNova, what is the name of your next work? Where do you go from Hyper, do you go GoblinNova? I don't know if you've heard of Goblin Plonk, but
+
+Srinath Setty (50:39):
+Yeah, there was a joke on Twitter. They suggested a name, I think it was Gamma Ray Burst.
+
+Anna Rose (50:48):
+Okay. Ah, very good.
+
+Nico (50:52):
+So I had drawn out this little diagram, this little Venn diagram. It's the intersection of ZK, anything astronomy and alcoholic beverages because ZK and alcoholic beverages, we have PLONK and I'm trying to wiggle in Sangria into there. ZK and astronomy we have SuperNova, Protostar. Astronomy, and alcoholic beverages, I'm sure we can find many. There's amongst others a Champagne Supernova song, but maybe there's something unexplored there, right? The intersection of ZK, alcoholic beverages and astronomy. Is that the next paper? Or is it time for Spices to make a comeback?
+
+Anna Rose (51:31):
+Ooh.
+
+Nico (51:32):
+Because you had Pepper and Zaatar, right?
+
+Srinath Setty (51:34):
+Yes. So there was actually a long line Pepper, Ginger, Zaatar, All Spice, Buffet, Spice, Piperine
+
+Nico (51:43):
+Okay. Okay. We have a new little circle in our Venn diagram and we need to find all the intersections now.
+
+Anna Rose (51:48):
+Yeah, that's so funny how some of these works. Like if you think of the Poseidon, that was all the Greek gods, I think. And then you have the Rescue, which was all some superhero track. That's funny. Cool. So Srinath, thank you so much for coming on the show, sharing with us sort of the story to Nova, Supernova, HyperNova, sumchecks, folding schemes. Yeah. Thank you so much for this interview.
+
+Srinath Setty (52:13):
+Thank you Anna and Nico this has been great.
+
+Nico (52:16):
+Absolute pleasure. Thank you very much.
+
+Anna Rose (52:17):
+And I want to say thank you to the podcast team Henrik, Rachel and Tanya, and to our listeners, thanks for listening.
+

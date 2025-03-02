@@ -1,0 +1,1087 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in Zero Knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+00:27:
+
+
+This week I catch up with Howard Wu, co-founder of the Aleo Network, and Alex Pruden, executive director of the Aleo Foundation. We do a long overdue revisit of the Aleo Project on the show. The last time we covered all this was at the beginning of the project, very early on, back in 2020, and in this interview, I get a chance to learn about all of the lessons learned, technical decisions, shifts, and breakthroughs that they've experienced as they build out their system. We also revisit the initial goals of the project, that is to deliver a safe and private experience to end users of this decentralized system. It was really fun to catch up with both of them.
+
+
+01:01:
+
+
+And I do want to quickly mention my connection to the project. The company is a sometimes sponsor of our events like ZK Summit, as well as a sponsor of this show, although just to note, they are not a sponsor of this episode, as this is not a sponsored interview, I don't do those, but if you are a listener to the show, you've probably heard them mentioned at the beginning of other episodes. I'm also an investor through the ZK Validator. I was personally an early contributor. So yeah, I feel like I've been around this project for a long time. I've also gotten a chance to see it through its many iterations. It was very fun to explore with them the status of the project as it gets closer to launch.
+
+
+01:37:
+
+
+Now, before we kick off, I just wanna let you know about ZK HACK IV. The event just kicked off yesterday on January 16th, and it runs until February 6th. This is not a hackathon, but more like a crash course in ZK. It's pretty unique as an event, in that it combines three things over the span of four weeks. That is, it's a live virtual workshop series with workshops running every Tuesday. It's a CTF-like puzzle hacking competition, and it's a job fair. I've added a link to our next sessions in the show notes. I want to say a big thank you to the ZK Hack for Workshop Partners, RISC Zero, and Polygon Labs, as well as Geometry Research, who have built the puzzles for this edition. As you may know, the ZK Hack is actually a separate project from the podcast, but I'm involved in both of them and I wanted to let you know about it. Our next workshop is on January 23rd, followed by one on the 30th and on February 6th. Hope to see you there. Hope if you're already hacking on the puzzles that you're having fun and we can see you over on the Discord. I've added all links in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+
+02:40: Tanya:
+
+
+Launching soon, Namada is a proof-of-stake L1 blockchain focused on multi-chain asset-agnostic privacy via a unified set. Namada is natively interoperable with fast finality chains via IBC and with Ethereum using a trust-minimized bridge. Any compatible assets from these ecosystems, whether fungible or non-fungible, can join Namada's unified shielded set, effectively erasing the fragmentation of privacy sets that has limited multi-chain privacy guarantees in the past. By remaining within the shielded set, users can utilize shielded actions to engage privately with applications on various chains, including Ethereum, Osmosis, and Celestia, that are not natively private. Namada's unique incentivization is embodied in its shielded set rewards. These rewards function as a bootstrapping tool, rewarding multi-chain users who enhance the overall privacy of Namada participants. Follow Namada on Twitter, @namada for more information, and join the community on Discord, discord.gg/namada. And now, here's our episode.
+
+
+03:42: Anna Rose:
+
+
+Today I'm here with Howard Wu, co-founder of the Aleo Project, and Alex Pruden, executive director of the newly founded Aleo Network Foundation. Welcome to the show, both of you.
+
+
+03:53: Alex Pruden:
+
+
+Thanks. It's great to be here.
+
+
+03:54: Howard Wu:
+
+
+Thanks for having me again, Anna.
+
+
+03:55: Anna Rose:
+
+
+Yeah, I should say welcome back. Both of you have been on the show before. It's been a long time since we've had an episode on Aleo, and I think it's a really good moment for us to do a catch-up. So let's kick it off. Howard, I sort of want to start with you because the last time you were on the show was August 2020. And this was right at the beginning of Aleo. But actually, I want to throw back to an even earlier episode. You were on episode 38. You were the first person to come on the show and define SNARKs to our audience, which is kind of cool. So that was all the way back in 2018.
+
+
+04:29: Howard Wu:
+
+
+I think it was like July or August, something like that.
+
+
+04:32: Anna Rose:
+
+
+Yeah, it was a long, long time ago. Actually, that was like within the first year of the show. It's really interesting listening to you describe SNARKs today as well. Like I will add that link to the show notes. Something that I noticed though, back then, I don't know if the breakdown of the IOP and the polynomial commitment scheme had been properly communicated yet or even thought of. Yeah.
+
+
+04:55: Howard Wu:
+
+
+Yeah. I think a lot of the formative work back then was still early in terms of reaching practical maturity. There was also that era where people started realizing, hey, there's different ways we can construct Merkle trees, like polynomially based, and there's the now, Merkle trees as a concept. There's been a lot of new primitives that have been invented since that time, which have accelerated the proving aspect of SNARKs. I feel like on the verifying side, pairings remain the fastest and people continue to kind of use those where it's necessary. And this is also even a call out to Georgios where he had this presentation several years ago at ZK Summit saying Groth16 is not dead and you know, Groth16 still not dead to this day.
+
+
+05:37: Anna Rose:
+
+
+It's still out there.
+
+
+05:38: Howard Wu:
+
+
+Like I still see it out in the wild, I still see research papers reference it. I still see projects that are trying to kind of generate their initial PoCs use it, like it is very much still a viable proof system, and I think that is a testament to just like... There's a lot of work that has gone into this space, but there's also a clear demonstration of history and lineage that has remained even since the original episode that we did.
+
+
+06:03: Anna Rose:
+
+
+Totally. It's a time capsule, but it's actually a really fascinating one. To give some context, at the time, STARKs were brand new and kind of unusable, I think. And this is before Plonk too. This is long before Plonk or Halo or any of the systems that kind of came after that we are very familiar with now.
+
+
+06:23: Howard Wu:
+
+
+I think even at the time, rollups were still a new concept, if at all.
+
+
+06:27: Anna Rose:
+
+
+I don't think they existed, actually.
+
+
+06:29: Howard Wu:
+
+
+Yeah. I remember when Barry put out that blog post about it, I don't even think rollups were around back then. So, yeah, I mean, STARKs are a great example of a technology that emerged since that have been very applicable for rollups. It's a great use for that because you're talking about these massive bulk transactions that you're willing to pay the verifier time for and the storage size of. It's reasonable for so many transactions to amortize across. It's a clear demonstration of where people have gone with that technology, and now recently you see it with folding and ZKML. These are entirely new primitives, entirely new concepts that are only a year or two old. So it's really fresh.
+
+
+07:09: Anna Rose:
+
+
+Totally. A few years after that, you came on to basically introduce Aleo. I want to later on in this episode talk about the evolution of the Aleo stack. But let's start more with the evolution of the Aleo company or project and sort of your position in it, what you learned over the last few years.
+
+
+07:28: Howard Wu:
+
+
+Where do I begin?
+
+
+07:30: Anna Rose:
+
+
+What did you learn?
+
+
+07:32: Howard Wu:
+
+
+I will say that even though the journey in my mind is still beginning, I've learned a lot and I feel like it's forced me to teach myself a lot of things along the way and most of it being non-technical things. You know, certainly I've never built a business before this and doing that with Alex has been both a pleasure and quite a journey. It's tested a lot of our skills. Yeah, I guess overall I have found that it's incredibly important who you bring on to a team and it's incredibly important how you interact with those team members. Everything that you build as a project really emerges out of the skills that the people around you bring to the table. And without those skill sets, you don't have a team.
+
+
+I think that that was probably the biggest kind of journey or kind of lesson that I have taken away from this just on a human level. And then I'd say like double clicking into it, I've also realized just the importance of setting the right mission and vision to guide a group. And I think that this also touches into the point about why we think a foundation is so important. It's that in order for... At least from my view, in order for this technology to really, really take rise, and I mean, ZK to take rise, I think you need to have both an ecosystem and a product-driven focus for this technology, and this is where I think Alex and I are in a really unique position to take this to the next step and make this happen.
+
+
+09:04:
+
+
+But it was something that was really emergent over the past two years that really helped me to start to see this and come around to it. And this does touch a bit into the stack. I would say that like on a high level, a lot of the existing code that we had when we started Aleo was based off of libsnark and based off of ZEXE. Very early software designs at the time. And we learned the hard way, admittedly, that a lot of those design choices weren't the right ones, not only because it was difficult as a developer to use that stack, but also from a feature set, it was either incomplete or it kind of optimized in the wrong directions. And we had to go back and rebuild a lot of that.
+
+
+09:49:
+
+
+And so this was something that with the engineering team, I would say was a really big shift in our focus was moving from that research domain into that product domain. And then I'd say on the other side, which was on the community front, that I felt like we really had to figure out a good cadence and a good way to get feedback from the community. I mean, now we're starting to really formalize this concept around ARCs, which are our kind of Aleo Request For Comments. I think that that's going to become an emergent aspect of the foundation and I'll let Alex kind of chat on that side of things, but I think that just having a feedback loop that is iterative rather than kind of master planning was something that was much more hard learned over time.
+
+
+10:30:
+
+
+We had these grand plans about how we wanted to evolve the language and how we wanted to evolve the feature sets, and we realized actually it's better to look at what applications grantees are building and figure out what are the missing opcodes and pieces there and just plug it in iteratively. And that was something that at least for me has been an important part of this process is just, you know, I'd say one is finding the right team members and then two, figuring out a good feedback loop with them.
+
+
+10:56: Anna Rose:
+
+
+Interesting.
+
+
+10:57: Howard Wu:
+
+
+Yeah.
+
+
+10:57: Anna Rose:
+
+
+Those ARCs that you just mentioned, are those the equivalent of like the EIP?
+
+
+11:01: Howard Wu:
+
+
+Yeah, it's effectively mirroring the kind of BIPs process or the EIP/ERC process. It's something that I think we still need to formalize more so, like as you know, governance is an unsolved problem. But I think that especially when it comes to ZK tech, you have even more on the line now. But it's something that I think is also an opportunity because the fact that you have these lightweight verifiers, so you could also design things that are much more formalized than before. And it's an open question whether on-chain or off-chain governance is going to be the right thing. I think it's going to be a bit of a hybrid. You probably want some form of voting with stake on-chain, but you probably want some human process to make sure people are adhering to the protocol of ARCs in this case. But yeah, I think that's probably something best touched by Alex.
+
+
+11:51: Anna Rose:
+
+
+Yeah, yeah, so let's shift to Alex. Alex, last time you were on the show was last year where you came on to talk about ZPrize. We actually did a two-parter. You were kind of the co-host leading us through the ZPrize world. I think you've also been on another time. I did an episode on funding a long time ago. You were also the host of the ZK Study Club, which folks might be familiar with. That's over on the YouTube channel for the Zero Knowledge podcast. But why don't you share with us kind of what you're up to today, because last time you came on, you were the CEO of Aleo Systems. Now you have a new role. So share a little bit about that.
+
+
+12:31: Alex Pruden:
+
+
+Yeah. So first off, it's been amazing to collaborate in many ways over the years, and it's a pleasure to be back today. Yeah, and as you had mentioned in the introduction, I am now the executive director of the Aleo Network Foundation, which we just formed. It's new as of like a week ago. And we did this very intentionally, as Howard mentioned, because both Howard and I are really committed to... We want to walk the walk of decentralized network, not just talk the talk. I think there's a lot of excitement about blockchain and cryptocurrency and decentralized technology. But there's not a lot of teams or projects that are very far along that roadmap. You know, and of course we're also at the beginning, but we wanna make sure that we set things up so we can actually achieve what I think makes Bitcoin, for example, really special.
+
+
+13:18:
+
+
+I mean, the thing that started this entire space, right? Bitcoin. It's like the guy that founded it literally just disappeared off the face of the earth and it still works, you know? This concept of a permissionless network kind of really deserves its own organization, its nonprofit, that's focused on the hard problem that Howard just mentioned. The hard problem, which I'm convinced will always be an unsolved problem, which is governance and social consensus, right? Because now that we're imminently about to launch the network, it's not just Howard's anymore, it's not just mine anymore. It's going to be owned by all of the users, all the community members, all the validators, all the provers, and the hope and the mission of the Aleo Network Foundation is to be the steward of that, right? And guide it in a direction that promotes use and usage and relevance, right? And that to me is, I think, another really important piece.
+
+
+14:06:
+
+
+So in addition to ensuring we hew to the principles that motivated the founders of the entire industry, we also try and do our best to guide things in a direction where this is about technology, but it's also about technology enabling real world applications. I mean, that's such a critically important part for me, right? Because I think I got motivated to join the space because of what I saw as fundamental problems specifically with remittances and payments in third world countries. And I think still to this day, crypto has not quite realized this potential. There's still a lot of hype, but there's still precious few applications. Right? And of course, Aleo is pre-launched, so there's not really any real applications here either, but it is definitely my hope and my goal to take the Aleo Network Foundation and use its resources to promote real applications.
+
+
+14:53:
+
+
+And I think, obviously for many reasons, I'm bullish about privacy being a big part of enabling real applications and decentralization, and also the programmability that Aleo provides. But yep, I'm very excited for this new journey, and it was awesome to work with Howard. Throughout my time, I think for context for everyone else on the show, I joined Aleo as the first employee, I was the chief strategy officer, then I became the chief operating officer, then I was the chief executive officer, and now I'm now the executive director. So I've kind of been running all around, and the last thing I'll say is maybe just, I tweeted recently, like leadership has two parts. Knowing what to do and knowing what not to do, right? And a big part of what not to do is not to get in people's way. If I have any accomplishment that I'm proud of as being the CEO, it was enabling Howard to do what he was best at, which was be a technologist, and to get us to this point that we're at today. And so I'm incredibly thankful to have been part of the journey so far and excited for what's next.
+
+
+15:43: Anna Rose:
+
+
+I like that. Alex, also, you are the person in the community who consistently brings up the "we need applications" comment.
+
+
+15:50: Alex Pruden:
+
+
+I know, I am a broken record.
+
+
+15:53: Anna Rose:
+
+
+In our chat on the stage of the ZK Summit. But I think it's a really important one. I feel like every time I see you say that, I'm sort of reminded to take my head a bit out of the sand. I feel like I get very excited about these technological tweaks and the cool implementations and these theoretical ideas. But I think we are still on the lookout for something real and something beyond maybe just private transfers, because I don't even know if that's really successfully done yet, but beyond that, like something where people use ZKPs every single day and they use it for something key. And yeah, I don't know if we've fully got that yet, although there are some ideas.
+
+
+16:31: Alex Pruden:
+
+
+I would argue we haven't, but yeah, definitely there's some really exciting ideas. And that's like, look, it's great to be excited about this technology. I mean, we're all excited about it. It's super cool stuff, right? I'm sure all the listeners of your show are as excited as we are about the potential that it can provide. But it's just potential until it's realized in the form of an application. And that's its own journey. And I think it's just... It's important not to forget that, at least to me, as everyone now knows, because I bring it up all the time.
+
+
+16:55: Anna Rose:
+
+
+Yes.
+
+
+16:56: Howard Wu:
+
+
+To be honest, I feel like Alex's repetition around this concept is important, because people in the current news cycle lose track of these motivations of why we're doing what we're doing here so quickly. Like you see on the one side, there is the kind of crypto price narrative, which tends to drive the short-term hype cycles. And to me, that can be frustrating because it's a big distraction a lot of the time when you're trying to build something that's long-term sustainable and meaningful. But then there's also the other side of things, which is the research side of things where you're always trying to optimize for a new theoretical proof system. And sometimes that's specializing in the one domain or specializing into a general purpose domain, but it's touching on a different pain point than what the user cares about.
+
+
+17:40: 
+
+
+There needs to be kind of this third leg to this whole story, which is really touching on the end product and the end user and the end goals of this technology. And I don't think that that's been adequately represented in this space. You know, I'll echo Alex on every one of the points he makes again, and call us a broken record. I just feel like it's very much missing, like there's no one out there that's really focused on... Like everyone talks the talk, but very few are willing to put in the time and hours from my perspective and really walk it. Certainly, in terms of the fundamental developments, in terms of the messaging, in terms of the actual outreach that's being done, a lot of it is driven by some of the two other verticals, not so much this one. And I think that it's something that continues to be missing in this space.
+
+
+18:25: Anna Rose:
+
+
+Well, I will just add maybe a little bit of a counter to this, which is I think in the past year with the hackathons that we've been doing with like my other hat, ZK Hack, we actually were seeing people pretty genuinely experimenting with the tools that exist on the application front, trying to build out all these different ways that we can start using this cool thing. And when I look at that, I don't think people aren't trying. I just think we're just at the point where people can start experimenting because the tools are just getting onto the market. I'm somewhat optimistic, I guess.
+
+
+19:01: Alex Pruden:
+
+
+Yeah, no, for sure. And this is a long arc, right? If you look at the history of the internet, or actually I just read a great article about the history of video games. I mean, it's like literally decades long, right? So this is a long arc. It's early and experiments are important. And so, you know... But it's yeah, I think we're all committed to the long-term goal of having this tech be relevant. We all share that.
+
+
+19:19: Howard Wu:
+
+
+Yeah, I think there's like two aspects that people have finally started to reach group consensus around. One is after many years realizing that it's better to decentralize the verifier than to decentralize the prover. And that's something that I think has been a hard topic for people to recognize, and even in the rollup arguments and the coprocessor discussions, I think some people still haven't fully come around. But I think as a group, we've reached a form of consensus that, hey, you should check the proofs on-chain and you should do all the proving work off-chain. I think that's one aspect that has helped to maturize a lot of discussions. Because early on, there was so much efforts to try to put the prover on-chain, and I think that that really hurt the progress of this kind of discussion.
+
+
+20:02:
+
+
+And then I'd say to the second point, which you've made a call out for Anna, is that the stacks of these various platforms has improved enormously to the point that we're finally starting to be able to have developers write stuff that looks and feels a lot like JavaScript or Rust. They can write applications in a humane kind of way. It's not like computing polynomials by hand, although some proof systems still require that and stacks define around that for performance reasons. But nonetheless, we've reached a point where the average developer could come in, sans the performance optimizations, write a basic application and deploy it and see it happen. I think that that's a big accomplishment to have made. But yeah, I think without those two things, we wouldn't be here today. And I really do think that we're still so early. Like this is like JavaScript V1 type of stuff that we're doing right now. It's just like limited PoCs.
+
+
+20:55: Anna Rose:
+
+
+I want to ask one more thing on the application front before we move on. Because I actually want to talk about the tech stack evolution of Aleo too, but what is the coolest thing that has been built or proposed to be built on Aleo so far? And I realize it's early, but I just want to... I'm curious. What are you excited about? Is it zPass?
+
+
+21:14: Alex Pruden:
+
+
+I'll give my answer, yeah. So my answer is zPass, which is an implementation of a paper called zk-creds, which is a form of decentralized identity. And I think there's a lot of discussion around zk-powered identity, but I think the cool thing about zk-creds and zPass in particular is that it requires both a decentralized network and privacy to work. And I guess a programmable blockchain requires this combination of programmability, privacy, and permission lessness. Like without any one of those things, it's kind of redundant, right? So sometimes I'm critical of projects that only focus on the ZK part, because oftentimes there's like a database where identity information is stored, but then a centralized party is just proving.
+
+
+21:53:
+
+
+There's use cases where a centralized prover makes sense. But I think in the case of identity, like if you're okay with someone vouching for you, like why do you need a zero knowledge proof for that? Right? It's just like OAuth. The OAuth protocol works this way. Like I log into your site Anna, and you just query Google and you're like, hey, does Alex have an account? Yes, he does.  And then that's all you need. There doesn't need to be a zero knowledge proof there, right? It's just redundant. But zPass, it enables you to have a form of self-sovereign identity where the identity information based on a physically issued document, in the case of zPass, a passport, lets you upload that information on-chain with an attached proof that it is a valid identity document using some of the same techniques that like, for example, a few people were familiar with TLS notary, non-native signature verification, a proof of that.
+
+
+22:38: 
+
+
+And then you have this digital version of your physical document that is tied to that physical document by this proof. And then you can make claims about what's on that document without revealing it, what's true and what's not. And you are the only one that can do that. There's not a requirement for anyone else, right? And that's where the blockchain comes in is like, it's permissionless. So just like I can pull out my physical passport whenever I want, I can use this whenever I want. I don't need to be tied to some kind of API that's online or maybe not, I don't need to worry about someone hacking a database, or not, and so I think to me, the identity is the obvious and most near-term example of how I think applications for ZK and permission lessness and privacy... Or sorry, programmability are gonna be kind of formed around.
+
+
+23:19:
+
+
+And then from that, I think you get to payments, right? Because I think, obviously like the first concept that comes up whenever you talk about private payments, people are like North Korea, Iran, terrorists and that. So the obvious answer to that is like, do some form of on-chain KYC or on-chain checking. So there's some protocol that you do, but you don't wanna reveal everything about yourself because obviously no one like publishes their bank account information. So you have this ZK version of this where you say, hey, I'm not a bad person, and now I can pay Anna or something, right? And so I think those are the two things that I see as immediate term applications that I'm really excited about.
+
+
+23:50: Anna Rose:
+
+
+That's interesting because ZK and ID, we just recently did our predictions look forward episode, and I think all of us, these were the co-hosts, the sort of guest co-hosts of the ZK pod, we all had zkID on our list of dream application for 2024. And there are some amazing experiments. I think zPass being one of them, actually, zk-cred was even mentioned there. And I think it's going to be very cool to see them in action, to actually see them being used. And then we see what flavor of zkID works for which use case.
+
+
+24:23: Alex Pruden:
+
+
+Totally. And the cool thing about this is it's novel. I guess the last thing I'll say is like, this is novel. You cannot replicate this with a centralized system. Like DeFi, okay, it's like novel in the sense that I guess it's permissionless, but it's not like an exchange is an exchange, right? This is a truly novel thing. Like age... Like ZK...
+
+
+24:37: Anna Rose:
+
+
+I think some DeFi people might disagree there actually.
+
+
+24:40: Alex Pruden:
+
+
+Well sure, but take the mechanism of moving money. I guess if you care about it trustlessly, that's fine, but like take age verification online. There is not a protocol to cryptographically verify your age online, for any online content. This is actually the whole point of the paper, zk-creds. It's been an unsolved problem for the internet for decades. And zk-creds and zPass and these various identity solutions using ZK actually can solve that. And the cool part about that is you can abstract the blockchain away. It's required for it to work, but you can abstract it away and it solves a real problem that people outside of Web3 can appreciate. And that's the other reason I think it's really exciting.
+
+
+25:15: Anna Rose:
+
+
+Cool.
+
+
+25:15: Howard Wu:
+
+
+Identity is definitely one that I would strongly echo with Alex is an important use case. I think it's also one of the closest to being practical and ready to use off the shelf. I think going one step further, I'm looking at zkAPIs or ZKML being the area that's most interesting to me from there. And the reasoning around that really is like a big part of what excites me about using ZK on the web is this ability to unlock data and access data that simply is there, but simply can't be used for any sort of either business or protective or privacy reasons. And I think that this is an opportunity to actually take advantage of these types of systems and give it open access, give it access to anyone for their purposes to probe, to inspect, to use, to learn from. And this is where even in Alex's example of identity to payments, like today to do payments, think about the statistical checks that are happening under the hood when you're using PayPal.
+
+
+26:19:
+
+
+Like just to click buy, the number of systems that have to parallel process your request to auth you through, it's numerous and most of these systems need some form of authentication. And this is, I think, an opportunity to leverage existing credentials, turn them into verifiable credentials, and then take that information, that data, and actually give a statistically interesting proof about it, so that you can get from point A to point B with your assets. I think this is an area that is also going to motivate a big part of hardware acceleration, because when you start reasoning about data at scale with ZK, you're suddenly going to need dedicated chips, dedicated machinery, and I think that that is going to be a massive unlock for ZK proving times and ZK verification times.
+
+
+27:08:
+
+
+So we haven't seen that emerge yet. But I think that we're just a year or two away from seeing the first examples of that really, really bring it on. And as much as I think, the zkVM idea, it's probably more of an intellectual exercise to me than a practical one. I do think that the motivation for that is well-formed. It's coming from the right place, and I think that it's going to be applied to this general off-chain use case of just unlocking data for ZK.
+
+
+27:36: Anna Rose:
+
+
+I do think the rollup idea created the ideas that led to the coprocessor. I feel like there's been sort of a trajectory that you can follow in terms of thinking. And people sort of realized once you could do that, oh, you could do more. Maybe you don't have to have it be always fully attached to the main chain, you can do more off-chain. You just mentioned sort of this Web2 to Web3, and I know there's been some very cool experiments around that. We did an episode, just one of the last episodes of the year, which was zkLogin and ZK Email. These two projects that are very similar, but one's on Sui and one's on Ethereum, which is about taking Web2 credentials using ZKP to sort of bring them into the Web3 context.
+
+
+28:17: Howard Wu:
+
+
+On the zkLogins and authentication front, I think that ZK is probably going to be most useful for tying together different forms of authentication, because at the end of the day, like authentication, it's all about root of trust, it's all about provenance. That's why you need a chain, that's why you need this type of ZK tech. A lot of the times you can't do that type of native authentication in time in a browser with a server. And oftentimes you don't want to reveal all of that to the server. Recently, we've seen a lot of the industry shift towards passkeys. We're getting smarter, I think, as Web2 emerges and hardware emerges for cryptographic elements and secure elements to actually reason about these types of algorithms. But I think over time, we're going to start to realize, hey, there's so many of these types of cryptographic pieces that I could actually combine them to give a stronger attestation. I think that's where ZK is probably going to really jump in and become the actual center of mass, that route that everyone uses.
+
+
+29:14:
+
+
+ I mean, even to this day, I still think the privacy pass example from Cloudflare is a great example of a piece of ZK tech that is out there and used in the wild to basically forego the trouble of redoing captures over and over again. I think that's a clear example of using the tech as a root of trust. Cloudflare is obviously the one that's issuing this. That could easily be decentralized so that you have kind of general provenance for anyone to verify. And I think that if more people start using tech like that, then you're going to start tying this stuff together, and it's going to end up creating a much more secure web.
+
+
+29:47: Alex Pruden:
+
+
+Yeah, totally. And I was just going to echo the point that Howard made, which is that in combination, these things are more powerful. And I think actually some work that you've kind of focused on in the past, Anna, is some attested sensor stuff, right? This idea of combining a secure element or some kind of chip that signs a photo or whatever. And then you can use ZK and prove the photo was edited only in certain ways or something like that, right? So basically proving that things are authentic, I guess, from kind of a different definition of authentic, right?
+
+
+30:13:
+
+
+And then there's some really interesting work around combining other cryptographic primitives like MPC, multi-party computation and ZK. So we talked about, hey, centralized, decentralized prover, with MPC, you can kind of get the benefits of a centralized prover, but still have privacy from multiple parties. You know, this is probably something we're going to touch on as we talk about the tech of Aleo and the other pieces you mentioned, like ZK rollups has led to... Leads to these other ideas. And I actually think Aleo... I would posit... I'll let Howard maybe give his own take, but I would posit Aleo and the way we've architected this, the way we've come to it, is the natural logical conclusion. And I think you see whether or not people say it, the engineering direction that all of these projects have gone over the past couple of years is basically where we are, more or less. Is you have a separate system for data availability, off-chain proving and a bespoke language stack. It's much more similar to what we are probably than many people would probably have first thought of when they started on the journey of doing the zkEVM.
+
+
+31:12: Anna Rose:
+
+
+Bold statement there, Alex. Your end game.
+
+
+31:17: Howard Wu:
+
+
+I'll add that I have a hot take that I've kept off Twitter for months now. There's been all this discussion about we're going to decentralize the prover, we're going to decentralize the prover with these rollups, or these zkEVMs, or these coprocessor arguments. From my point of view, I don't think it'll ever be economically viable to decentralize the prover. Just think about... Name your rollup of choice and the amount of demand that is going to induce the proving hardware of that one provider. Now think of spinning up the second hardware provider that's going to be doing proving on that network and consider the need to split that pie up, like the actual rewards that are being issued, the fees that are being paid out to financially keep two of these companies in business. It's going to be so difficult, let alone add the third company or the fourth company. 
+
+
+32:12:
+
+
+There's a reason why most people use Google. There's an... And it's, you know, Google has this majority market share dominance because they have enough mass and enough network effects as a company to actually financially sustain this operation at scale. If you had a second one come in and decentralize Google and do the same thing Google's doing for Google, I don't think that you'd have enough pie for it to go around for that. And I think that this is the point that you've touched on a little bit, Anna, and this is the one Alex is touching on, is that people have started to recognize it's better to decentralize the verifier rather than the prover, and it's better to have an ecosystem of decentralized verifiers where you can have this kind of information and state available, but being proven off-chain.
+
+
+32:56:
+
+
+And I think increasingly the story is going to become like ZK proving will be off-chain. And I think that the story of ZK, the next chapter is going to be a lot of development in that off-chain universe. Because of the fact that the verifiers are going to be the cheapest and most commodity piece to really put on-chain, it's also the thing that's stateless and small that you can leave on-chain. But I think that a lot of that state needs to be proven off-chain, and I think that the statements that people are going to be making are going to be so large that it won't make sense to host it the Ethereum way, meaning in a smart contract on-chain, executing on-chain.
+
+
+33:32: Anna Rose:
+
+
+Is this like the bear case for those prover marketplaces that have been proposed? Because there is this decentralized prover marketplace concept that's been floated around.
+
+
+33:43: Alex Pruden:
+
+
+I mean, I'll give my take on that. I mean, look, I guess we're making a prediction here. It could prove to be... There could be some application that's wildly profitable for it to be a prover, and maybe that would incentivize a prover marketplace. But I think what Howard's point is, which I strongly agree with is like, everyone usually handwaves the economics point, right? But the reality even of a rollup today, and you can just look at fees of most of the ZK rollups, and you can just add up the fees in a week, paid on the L2 and add up the fees that that rollup pays to the L1. In many cases, they're negative. In some cases, they're positive, but not by much. And so the actual economics of a rollup, specifically a ZK rollup, or remember, compared to an optimistic, and the biggest cost for rollups is the on-chain data. Right?
+
+
+34:25: 
+
+
+So blobbing the data and there's EIPs to address that, but are still not in. Right? So the biggest cost is the data, but then ZK rollups particularly have the additional costs that optimistic rollups don't, which is the proof has to be verified and that gas can, however frequently you want to do that, that is a cost. And to really be apples to apples to Ethereum or the L1 transactions, you have to consider the time to finality, right? Because I can pay you on a ZK rollup but I haven't really paid you until it settles, right? And so the longer you make that, the cheaper it is for the prover, but it's less applicable depending on the use case. So I think it's not that the prover marketplaces in my mind won't be viable, but I think it is important to note that they'll only be viable if it economically makes sense. People take that for granted that they will, but I don't think we know that yet without the applications and without thinking through, because some applications would definitely favor a single party depending on what you wanna look at.
+
+
+35:17: Anna Rose:
+
+
+And in this case, like the provers would be hardware running agents, right? And you guys do a lot of work in this hardware direction.
+
+
+35:26: Howard Wu:
+
+
+I think people in crypto take for granted, magic money being printed, and people don't recognize the cost of doing business is far more complicated than what meets the eye. Like we take for granted in Web3 that tokens just magically come out and that we can just start to use them. And I think that that has been a big part of what's bootstrapped existing examples of marketplaces, however limited they may be. I think Mina is an example of where proving marketplaces is emerging, but it's really based on the steady supply and steady rate of an emission curve. And without that emission curve, like these marketplaces today don't have enough subsidy to really exist. And to be honest, even in Web2, most of these marketplaces needed some form of subsidy, meaning venture money here to really bootstrap themselves too.
+
+
+36:21:
+
+
+And so I don't think that this is not to really pin negativity around marketplaces. I just think that it's a far harder equation than people make it out to be. Because Uber today is still trying to be profitable on this exact concept, on this exact business model, 10 years later. And they're realizing how difficult it is to be just a marketplace. I think you need much more unit of economics in order to do that correctly. And a big part of that is also recognizing that you don't want to just be this thin horizontal stack, you want to be a vertically integrated layer if you really want to make this economically viable for yourself. And this is where I think Google with Waymo has taken an interesting stab at saying, hey, let's go autonomous. Let's own the fleet because then we can vertically integrate this market and possibly actually take on far more of the economics for ourselves so that this thing actually is viable.
+
+
+37:10:
+
+
+And I think, this is the same thing that's probably going to happen with these proving marketplaces that these proving marketplaces will likely be off-chain with a provider that's going to run hardware themselves. They're going to go and develop hardware that makes this economically viable for themselves. And I think that that is going to be how you make this emergent kind of field actually practical for real business use cases. But without that, I think a lot of today it's just subsidized by emission curves of these chains and it's a great demonstration, but I don't think we're there yet.
+
+
+37:41: Anna Rose:
+
+
+I now want to shift gears a little bit and talk about the big changes under the hood of the Aleo system. I want to sort of, again, throwback to that episode that we did in August 2020. I was just thinking about it as we were talking. It's like I really got a chance to take a snapshot at the beginning of Aleo. And I know we're not at the end of Aleo, but we are at the point where the system is about to go live. So it's at least fully formed to the point where it can work. I'm super curious to hear what has changed. And I'll bring up a few of the things I want to cover. So I want to talk about the original idea of proof of necessary work or proof of useful work. I want to talk a little bit about the libraries. You sort of hinted at this, the libraries that you were working with back then, how those have evolved, languages and all of that. But let's start with that system. So back when we talked, I think you had said the system would be based on Marlin. I would love to hear if you've made sort of adjustments to Marlin or Marlin as it existed, and then you had this proof of necessary work. Tell me what's happened there.
+
+
+38:46: Howard Wu:
+
+
+Yeah. So before I dive into it, also, I'm going to forget many facets. So just please help me by double clicking on certain things or probing questions because like there's a ton of changes here. So anyways, I'll jump into that. Yeah, so on the Marlin front, we've continued to use this exact lineage of proof system, and for the techies in the room, we've added two major components to Marlin, hence a rebrand to what we're now calling Varuna as our proof system. Varuna itself is now a proof system that mimics Marlin... Or well it is Marlin, but it adds the ability to support multiple proofs of the same circuit, so multiple instances of the same circuit, as well as multiple circuits at the same time. And so you can do in two dimensions, like multiple instances of the same circuit and multiple instances of different circuits all in one go.
+
+
+39:40:
+
+
+And this type of generality for what we call a batch proof allows us to actually craft and architect a much better compiler than existing language stacks that we've seen at least. There's the recursion kind of approach, and then there's this aggregation approach that we've taken. These are the two notable avenues that I think have emerged. I think a lot of the recent IOP based work is starting to shift people in our direction and they're starting to realize, hey, these primitives make a lot of sense, because you basically get to prove more general statements for free. For example, I can prove like, let's just say as a simple payment circuit, call it one second. Proving two of those payment circuits in a batch proof only takes one and a half seconds, it doesn't take you two seconds. And if you prove 10 of those, it only takes you 1.8 seconds. And if you prove a hundred of those only takes you 2.5 seconds, like it grows super sublinearly. It's very, very flat. And it's that type of flatness that lets you scale in a way that recursion currently doesn't. So from a proof system standpoint, we've doubled down on the Marlin side. We've expanded it and we've rebranded it as Varuna.
+
+
+40:47: Anna Rose:
+
+
+You just mentioned the term aggregation. Is it related to the folding work? Or are you thinking of aggregation at a different point in that stack? Is it more like finished proofs being batched or is it within the proofs themselves some sort of aggregation?
+
+
+41:03: Howard Wu:
+
+
+Yeah, so it's actually a good... It's a good call out. I guess I should clarify that this is separate from the folding work. Both use primitives that come from similar lineages, but one of the big advantages about the design, which is also a trade-off from the folding scheme side is that you do get full ZK in this design, whereas a lot of the folding schemes like... The folding schemes are very interesting for massive computations that have a lot of reusability in them, and this is where ZKML is a classic example of that. Neural net architectures are just highly large and repetitive. I think that this is an example of expressivity of statements. And so what this allows you to do is to have more generality in terms of saying, I want to do a payment circuit, I want to do a proof around an identity verification, I want to do a hash function, I want to do a Merkle path check, I want to do XYZ things and batch them all into one go. And you can aggregate these types of statements all into one solution, into one proof.
+
+
+42:00:
+
+
+You know, this takes it in a slightly different direction from the folding approach. I think that people are going to land on this as well, longer term, but it's probably a few years away from really reaching that generality statement where people are just going to use this out of the box. So, I mean, we're still experimenting with the best architecture for it, and this kind of gets into the compiler side of changes. When we last came on, we just released ZEXE, the library, which is now kind of forked into two universes. There's Arkworks, which is the general open source research library. And then there's snarkVM, which is the special purpose built library for Aleo. Both use the exact same architecture under the hood. In fact, if you check our trait types, they're virtually identical because we all came from this ZEXE work and the original ZEXE library.
+
+
+42:51:
+
+
+SnarkVM over time has actually changed a lot. We used to use the gadgets lib concept from libsnark in order to compile and compose our circuits. I made a really painful decision two years ago to scrap that and restart from scratch because we were working with our formal team to try to verify those circuits and the compiled out circuits and it was an impossible task. The gadget lib idea was right, and it's still right for a lot of research domain work, but we recognized at the time that we actually needed an additional layer of abstraction, a layer of abstraction that doesn't exist in research stacks. And that's the opcode layer. The opcode layer that traditional language and PL folks are familiar with.
+
+
+43:36:
+
+
+We realized that unless we had an opcode layer, it would be impossible for us to upgrade the system. Meaning once you've deployed on-chain, that was it. And if there was a vulnerability in one of the circuits, you wouldn't know which programs to turn off and which to leave on. That is a big challenge that I think we're only starting to realize the benefits or the merits of. So what we did two years ago was say, scrap the existing design, let's rebuild every single operation as its own function, and have every function be an opcode. Once we have every function be its own opcode, so now every opcode synthesizes one R1CS gadget, and it's clean on this level.
+
+
+44:22: 
+
+
+Then from there, Leo was rebuilt such that it no longer reasons about R1CS or any circuit architecture framework of its form, and it just reasons over opcodes. And so now Leo is a very thin language. It's a compiler down to a set of opcodes. And because of that, we now have two "instruction sets". We have the Aleo instruction set and we have Leo the language, which are the two layers with which developers can actually build an application on us. That did not exist four years ago.
+
+
+44:52: Anna Rose:
+
+
+Can you say that first one again? So it's Leo and...?
+
+
+44:55: Howard Wu:
+
+
+Aleo instructions.
+
+
+44:56: Anna Rose:
+
+
+Aleo instructions. Okay. I want to sort of map the lineage here a little bit because yeah, back on that episode, you talked about libsnark and at the time I think it was the de facto library. This was what you were working from. There was a ZEXE, I think almost just like test implementation, maybe at the time? I don't know. From libsnark, there is no transition to Arkworks, is there? You throw it out in a way and you start again.
+
+
+45:21: Howard Wu:
+
+
+Yeah, we ported a handful of the foundational core algorithms over, but because it was a complete language change from C++ to Rust, we had to rewrite the thing from scratch, and that was Pratyush and I spending a lot of our nights in the lab doing this together. So yeah, it was quite a journey.
+
+
+45:42: Anna Rose:
+
+
+I did do an episode on Arkworks a few years ago as well. So maybe we'll try to dig that up. But so Arkworks and snarkVM sort of split, but coming from the same source. This is the porting certain things from libsnark, but discarding a lot of it. From snarkVM, so we'll go on the Aleo track here. You mentioned the Aleo instructions and then Leo, like how do those things connect exactly?
+
+
+46:08: Howard Wu:
+
+
+Yeah, so we used to have in snarkVM like a gadgets lib, and we threw out the gadgets folder altogether and we implemented a new synthesizer folder. The synthesizer folder introduces the concept around opcodes, which are what we call Aleo instructions. So it's assembly like... It's an assembly-like language. And the idea there is that every opcode maps to an R1CS a circuit. So you have Opcodes like add, sub, mul, div, like an add circuit for a field is its own circuit. You know, an add for an integer is its own circuit. And we basically write specific circuits for every single opcode. So we've mapped it from the language side down to R1CS rather than from the R1CS side up to the language, which was how we used to do it.
+
+
+46:55: Anna Rose:
+
+
+Yeah. And where does Leo go from there? So like, does Leo then talk to Aleo instruction set? Like, is it compiling down or is it directly interfacing with it?
+
+
+47:06: Howard Wu:
+
+
+Yeah, so when Leo first started, we actually mapped the high level language straight down to R1CS. And actually, I think a lot of languages today from various teams actually still do this approach. And it wasn't until two years into that journey that we realized that there was a big upgradability problem with this. If any part of that compiler's circuits had a bug in it, and we learned it the hard way because our formal verification team did find bugs, it was impossible for us to trace and identify and resynthesize just the pieces of that circuit that were needed to be fixed. And so we said, let's change the architecture. Let's switch it to this opcode-based design.
+
+
+47:47: Anna Rose:
+
+
+I got it.
+
+
+47:48: Howard Wu:
+
+
+And Leo now is just a thin layer on top that just compiles from a high-level language down to opcodes.
+
+
+47:54: Anna Rose:
+
+
+Okay, so the opcode layer being Aleo instructions.
+
+
+47:57: Howard Wu:
+
+
+Aleo instructions, yeah.
+
+
+47:58: Anna Rose:
+
+
+Okay, both of them is sort of Leo then, like together.
+
+
+48:01: Howard Wu:
+
+
+Yeah, so the benefit is that Leo is no longer like, some special language that has to be the one in the ecosystem. It's a lot like in Ethereum, you have like... In the EVM, you have bytecode, right? And as long as you target that bytecode and the opcodes of the EVM itself, you can use any language you want. Solidity being the predominant one. But for those who are still around from way back, like I remember writing Serpent.
+
+
+48:26: Anna Rose:
+
+
+Was there something called Zim as well?
+
+
+48:28: Howard Wu:
+
+
+Vyper. Vyper is the other one.
+
+
+48:29: Anna Rose:
+
+
+Oh Vyper. Okay, okay.
+
+
+48:30: Howard Wu:
+
+
+Yeah, Vyper is the Python version of Solidity. And so, people have realized that this kind of abstraction layer makes sense generally to target different domains. And we've done the same. Like, Leo is one very clear example of a language that can target Aleo instructions, but at the same time, these opcodes in the EVM don't have to be limited by Leo. We can also expand it out to other forms. And actually people in the community have. If you look at the ZKML use cases, people have written Python transpilers. And so you can compile Python code straight into Aleo instructions, into these opcodes. And it's much more useful because the ML folks don't know Rust, the ML folks don't use JavaScript. They primarily base their work in Python. And so they can easily write Python frameworks to do ZKML. And so they'll come up with some PyTorch model. They'll then synthesize the equivalent verifier for ZKML here in Python, and then we'll compile it down into opcodes that are then verified in Aleo instructions.
+
+
+49:27: Anna Rose:
+
+
+Can somebody use Rust somehow? Because I remember, I mean, actually at our last ZK Hack, we did sort of a run through of ZK DSLs, I hope rightly, but we kind of classified Leo as a Rust-like language. So yeah, can Rust be used directly with Aleo instructions?
+
+
+49:45: Howard Wu:
+
+
+Yeah, so Rust can be used directly. We tend not to use it just because it can be complex to manage state yourself in Rust, like Leo manages a lot of state for the user so that they don't have to reason about all the various abstraction layers that come with the system. It's the same as like you could write your Solidity contract in JavaScript and piece it all together if you want, but you'd probably use Solidity at that point. It's the same idea here. So you can write it in Rust, but Leo continues to be kind of the preferred choice because it's stateful and it understands what it's reasoning over and it can understand the inputs you're giving it and the outputs you're getting from it. So that's an abstraction that kind of emerges from there. I guess I'll hit pause, but there's one other feature in Leo that I think is really worth touching on as well.
+
+
+50:29: Anna Rose:
+
+
+Well, actually, I was just about to say, would you also say then you're building a lot of the tooling for like Leo then? And actually, who is building the tooling?
+
+
+50:38: Howard Wu:
+
+
+That's a great question.
+
+
+50:39: Anna Rose:
+
+
+Would it be coming from you guys? Or is that a community project?
+
+
+50:43: Howard Wu:
+
+
+So Leo, at least in its current form has been, and it will always be an open source project. The company is continuing to focus around Leo and its efforts around proving using Leo. I think that there's going to be a very interesting collab with the foundation around how you design the UI/UX journey for Leo programs in general, because when we first introduced Leo, it was a pure off-chain computation language. You would write this code that would just execute off-chain, you'd send it on-chain and get verified. We then realized with a lot of applications, actually you still want some of that peer-to-peer interactivity. And so we introduced on-chain executions with Leo. And so now you have on-chain, off-chain programming as a paradigm, and the challenge there was to actually design an interface for Leo that was intuitive for the developer to use.
+
+
+51:39:
+
+
+And we actually struggled with this for, I'd say over a year and a half. We had kind of this function scope and this final scope, I think we even still do have a little bit of this function and finalized scope in the language and it wasn't until about six months ago that we realized, actually, wait a second, this is just async/await syntax. And we've started the transition in Aleo instructions towards async/await and Leo will also be getting the same update this year so that we can fully switch over from this old function finalized scope approach into this new async/await concept. And the idea around this is really to say, I have this off-chain execution, which is really where the root of my computation is running, and then I'm going to send off this computation to finish on the network. And when it finishes on the network, it's going to send the results back. And I'm just awaiting locally for that result to come back so that I can continue my execution flow.
+
+
+52:35 
+
+
+So instead of thinking about transactions as these kind of discreet one-off computations, we're thinking more about computations as a flow of execution that's happening across transactions, across blocks, across time. And it's a more general programming paradigm that maps into the traditional off-chain world, and that's something that I think is going to be very, very novel for Leo and certainly for ZK as a whole that we're just starting to really hit on with these last six months. It wasn't until I think three or four months ago that we even realized what the right syntax was for this, and we started to realize for a lot of the functional programming folks that we can actually just take this async thing, call it a future, wrap the futures, we can nest futures, and all these calls to the chain are just futures that are just native to async/await concepts in JavaScript and Go and Rust. And it kind of completes this lifecycle.
+
+
+53:31: Anna Rose:
+
+
+When you say futures in this context though, is this like future actions in the language?
+
+
+53:36: Howard Wu:
+
+
+Exactly.
+
+
+53:37: Anna Rose:
+
+
+It's nothing related to futures, like trading terms or anything.
+
+
+53:42: Howard Wu:
+
+
+Nah, yeah. Futures, it's a language, it's a PL concept that has been around for web use cases. And so often when you're in a web app and you call out to some other either service on your... Or thread on your machine or to a service remotely, you'll use a future in order to await and parallel process something else on your machine in the meantime.
+
+
+54:02: Anna Rose:
+
+
+So that it doesn't block.
+
+
+54:03: Howard Wu:
+
+
+Yeah. Exactly. So it doesn't block. Yeah, that's a great call out.
+
+
+54:07: Anna Rose:
+
+
+Cool.
+
+
+54:07: Alex Pruden:
+
+
+And if I could just add on to this, so the implication, there's a couple of things, and there's one thing I want to go back to. So first is that what Howard said, I think to state it another way is that, you have a program and that program, you can create transactions from the program, but really because of what Howard is saying with the async/await kind of paradigm, your program becomes a process in the same way that programs on your computer are processes when they're running and those continuously can go, right? And I think it opens up a whole new world where people in traditional smart contract blockchains are not really used to that, right? Where it's a single transaction affects a single state transaction.
+
+
+54:40: Anna Rose:
+
+
+Yeah.
+
+
+54:40: Alex Pruden:
+
+
+Right, so now you can potentially have a long running process, which is cool, unlocks new things. The other thing is that going back to public and private state, right? This is something like Howard glossed over briefly, but this was a huge effort for us to try and figure out how to do both things. A disadvantage of Ethereum is that everything is public, right? But an advantage is that there's a lot of shared state and kind of contracts can reference contracts. Transactions can reference other contracts and have it... A contract can call a contract, whatever. And this is the classic question people always asked about ZK was like, how do you do Uniswap, right? And this was always the thing that if you wanted to see people turn themselves in knots, so this is what you would ask like a ZK researcher, 10, 5, 4, maybe 3 years ago.
+
+
+55:21: Anna Rose:
+
+
+No, like, yeah, 2 years ago.
+
+
+55:22: Alex Pruden:
+
+
+But now like this concept... Maybe 2 years ago, maybe less, maybe less, maybe...
+
+
+55:25: Anna Rose:
+
+
+2021, yeah, that was when they started to be like coming out.
+
+
+55:29: Alex Pruden:
+
+
+Right, exactly. But now you have a paradigm which mixes both public, like a public state and a VM that processes public state, with this off-chain processing in the same paradigm. So now you can do Uniswap, but in a privacy-preserving way. In fact, Penumbra is this exact idea, right? And actually, Aleo, the model that we have, is effectively enables Penumbra and other things, right? So we generalized the model of Penumbra, I would say, and that you can, in addition to just focusing on exchange use cases, you can... Any kind of private state manipulation and any kind of public state manipulation, you wanna have governed by a single program, you can do that in this model. It's just the one thing I wanted to call out.
+
+
+56:04: Anna Rose:
+
+
+Interesting. And that's sort of dawning on me that smart contracts, as we understand them, do not have that concept of futures. And so I'm just wondering, do you know of any smart contract platforms that are trying to incorporate something like this? Because it seems kind of powerful.
+
+
+56:21: Howard Wu:
+
+
+Yeah, so I think that people haven't really double-clicked on it on the smart contract level today. People do use this concept in JavaScript with Solidity programs. So when you use web3.js, for example, you'll compose multiple state transitions for let's say some DeFi app this way. But they haven't gone to that layer of saying, what if I did my, call it like my DeFi swap or something across multiple blocks in multiple transactions as kind of a step journey, that has not been formalized as a concept. And I think a big part of that is that the EVM is pretty ossified at this point, that it's really hard to introduce such a foundational change to the architecture.
+
+
+57:05: Anna Rose:
+
+
+Although could the coprocessors do it? Because they get that off-chain element.
+
+
+57:10: Howard Wu:
+
+
+Correct.
+
+
+57:10: Anna Rose:
+
+
+Could they time it then to happen?
+
+
+57:13: Howard Wu:
+
+
+Correct. 
+
+
+57:14: Anna Rose:
+
+
+Yeah, okay.
+
+
+57:14: Howard Wu:
+
+
+So this is where ZK really shines, right? Like you start to see this technology become a bridge so that you can take advantage of whatever stack you want under the hood to actually go and weave together multiple statements or arguments across time or across space. And I think that we are only just starting to touch on this with Leo and certainly other people are, I think like the RISC Zero folks also are starting to see the opportunity of using this for this use case. And this works across recursion, also works across this kind of batch aggregation approach. It's something that I think is going to become more emergent once larger scale applications and multi-step journeys become a common concept with these types of Web3 apps. But today, because most of the use cases are DeFi based and they're one-off like instant swaps or transactions, they don't have these crazy user journeys or these really complex or powerful statements that require multi-factor or multi-step computations to arise from them.
+
+
+58:09:
+
+
+And so this is where we discovered this process in our goals and design of trying to build larger scale applications and needing to actually chunk it basically, these applications into multiple steps and realizing, hey, this is an opportunity to actually introduce a traditional language concept for web developers so that they can easily bootstrap in without having to learn new concepts for their own programming purposes.
+
+
+58:34: Anna Rose:
+
+
+That is so cool.
+
+
+58:35: Alex Pruden:
+
+
+And if I could just say something super quickly. So we talked about Ethereum. Traditional smart contract languages don't have this kind of feature. And I think this is actually something I want to go back to a comment I made earlier about how there's convergence around a set of ideas, right? And this is, I think, the concept of EVM compatibility, right? Huge talking point in all... Many rollups certainly, right? And I think what people have learned is that being compatible with the EVM gives you all the limitations of the existing EVM, right? And in fact, the way that people are building the ZK coprocessor direction is an exact evidence of this, is people are not building to be compatible with the EVM on all layers, they're building around it, right? And they're building a layer cake around it, right? Which is exactly what Howard is describing, right? This is like the EVM narrative, I think, was important for many of these folks to bootstrap. But I think increasingly people are seeing it for its limitations, which again, the EVM was groundbreaking in that it was the first example of a distributed world computer.
+
+
+59:34: Anna Rose:
+
+
+World computer, yeah.
+
+
+59:35: Alex Pruden:
+
+
+And now, of course, there's a million smart contract platforms. But so it was groundbreaking in that form. But it had all these drawbacks that now you can use ZK and the unique strengths of ZK to enable all kinds of new cool things.
+
+
+59:44: Anna Rose:
+
+
+So cool. Correct me if I'm wrong, but wasn't Aleo originally just proof-of-work fully? Or did it always have a proof-of-stake component? Okay, tell me a little bit about what changed there.
+
+
+59:55: Howard Wu:
+
+
+Yeah, so when we first started, we started with a proof-of-work system. And we launched this on Testnet 1 as well as Testnet 2. And we realized during that journey, a handful of things we actually wrote a postmortem about some of the learnings from Testnet 2, some of which included the realization that building a new novel L1 with a novel proof-of-work algorithm, is one incredibly difficult, but also to a form of chain security risk. And we took a very conscientious decision to look back at what the right construct is for this. And so we ended up going towards more of a hybrid consensus where now we have proof-of-stake alongside this work puzzle. The rationale around this honestly is to enable the security to be stake-based while also bootstrapping a new ecosystem with work.
+
+
+1:00:46:
+
+
+If you look at Bitcoin or Ethereum, the benefit of using the proof-of-work system honestly is to have a stochastic distribution of tokens. It's one of the biggest challenges with stake is that the only way for new users to acquire tokens is to buy tokens from existing holders. And that's one of the biggest limitations in my opinion for decentralization using the proof-of-stake approach. By having this work puzzle here, this puzzle enables people to actually go and frankly earn their own tokens just by the organic work process. And there is also the argument from people, well, work has a lot of concerns around the environmental aspect, environmental responsibility and environmental sustainability. And this is why in our design, we've designed this puzzle to linearly decay over a decade, so that its intended purpose, day one, which is to give an A-way for network participants to earn tokens without having to buy it, but by actually demonstrating and doing work, to over time have this mechanism fade out slowly so that we can transition fully into proof-of-stake by 10 years from now.
+
+
+1:01:49: Anna Rose:
+
+
+Interesting. Has anyone done that? The hybrid? Is this sort of a novel thing?
+
+
+1:01:56: Howard Wu:
+
+
+So there are example chains that do a form of hybrid. So I think, if I remember right, like Decred is an example of a chain that does something like this where they have some proof-of-stake blocks and proof-of-work blocks. We've taken it a different direction and saying every block is proof-of-stake alongside this puzzle. And so architecturally, I think we are very unique in our design. But people have touched on this point in the past because they've recognized the opportunity of the two different solutions at play here.
+
+
+1:02:25: Anna Rose:
+
+
+Okay, I want to shift a little bit and talk about privacy, something that is obviously at the heart of the Aleo Project. Howard, when we first spoke on this podcast, privacy was kind of like your main theme topic goal. At the start of Aleo, there was always this focus on privacy, and you're one of the teams, I know in our space, in the ZK space, there's been a lot of teams that maybe started with privacy and landed with scaling. In the case of Aleo, you've stuck to privacy. And I want to talk a little bit about your personal and maybe the company's perspective on privacy, if that's evolved a little bit, especially because now we have had a few ZK products out in the world. One in particular, Tornado being held up as a dangerous form of privacy, at least by the US government. I wonder if that had any impact on the way you think about privacy. So yeah, tell me about the evolution maybe of the Aleo perspective on privacy.
+
+
+1:03:23: Howard Wu:
+
+
+Yeah, so when we first chatted about Aleo in 2020, the idea really was to make the entire system fully private. And we've learned through that journey that actually it's more about a spectrum of privacy that you want to offer a developer platform that can offer everything from fully public to fully private based on your needs. And developers want that because some information you absolutely want to be public and others you want absolutely to be private. I think the classic example is in governance that you want to keep your vote private, but you want to make the tally public, right? And so there's key information that's relevant to all parties to be able to publicly see, and we've really doubled down on the flexibility of that.
+
+
+1:04:04:
+
+
+So in early days of Aleo, every application's state was entirely private. Like there was no concept of public state and there was no concept of hosting public state on-chain. And even with some of the new platforms like zkApps, I think on the new Mina platform, it's still taking that model of saying you just have full privacy in this domain. And we realized that this was a big challenge because a lot of applications need some form of public verification. And so we introduced this concept of public and private state into the programming language, into the stack and into the chain so that we could host that there. I would say that from the Tornado side of things, I really think this is a moment for people to recognize that ZK can be used for good and it can be used for bad. And this is exactly the same point that [?] has technologies have shown us too. Like no new technology is able to escape this argument.
+
+
+1:04:54:
+
+
+I mean, if you look at Napster versus Spotify, same end goal, very different approach to getting there. Right? One was saying, let's sidestep, let's circumvent. The other said, let's go compliant, let's integrate. And I think that the story about what Aleo is trying to do is very much the Spotify story, it's saying, let's take this approach of using the technology for compliance and showing you how to integrate this into a stack that can be used in real world applications. I think like Tornado went the fast way. It was the first way, and it was that early wave that showed you how not to do it. But I think this is a real opportunity to actually give you much stronger attestations, much stronger credentials than existing Web2 stacks can offer you.
+
+
+1:05:36:
+
+
+And Alex's point around identity is a great one that we can actually use this technology for good and there's almost a need to offer this. I mean, I have mentioned in the last podcast that one of the big challenges with payments in Web3 today is the fact that you reveal all of your information, including your identity every time you transact. And if you're going to use this for real world payments, I guarantee you, this will not stand the test of banking privacy laws or any type of compliance on the web like GDPR or CCPA. There's no way to wipe that information. And so this is a classic example of the UI/UX journey is broken. If I'm just trying to buy an anniversary gift for my spouse, the fact that we're married means that I probably know my spouse's wallet address, right? And I can just go and look up like, when did you remember our anniversary is coming up? How much did you spend on my anniversary gift? And where did you buy this gift from?
+
+
+1:06:29:
+
+
+And it just shows you this UI/UX is broken. If this is how we're using USDC in 5 years from now and 10 years from now in the real world, I'm sorry, I can't use this technology. I think I would rather stick with traditional banking rails for what it's worth. It's just, it's not the right user journey. And I think this is what privacy really opens the door to and unlocks for us. It's the ability for developers to offer privacy where it's needed and where it's necessary, and I think it's a fundamental part of the programming stack that's missing.
+
+
+1:06:56: Alex Pruden:
+
+
+Yeah, exactly. And I think the USDC example is great because my favorite question asked in every panel I'm ever on for crypto commerce is how many people here get paid in crypto and inevitably there's a couple of people that raise their hand and they get little contracts, but the vast majority of people that work in this industry get paid by the traditional banking system. Why is that the case? Because publicizing your salary is just socially, most places, not something people do, right? So even the people that are building this technology by and large don't use it because it is not private in this way, right? It's an example of where privacy is just taken for granted. I think there's people out there that are like, oh, no one cares about privacy. Absolutely they do. If they didn't, they would just publicize their salaries everywhere and they don't, right?
+
+
+1:07:36:
+
+
+But of course there has to be a balance. And this is what I think the important thing that I just wanted to pull out of what Howard said is like, this technology, technology itself can be used for bad or good, but I think the advantage of having a very rich technology that can enable a lot of different things is you can find a right balance, right? Where you can both protect kids online by having a robust age verification framework and you can prevent terrorists from using this for money laundering, right? By using the same technology. ZK can basically use it for on-chain KYC to do payments, right? For each stage of the payment process, for payments above or below a certain amount, to be defined however you want as the regulator, as the issuer, right? And so I think this opens up the door to... In fact, I would argue, more robust regulation in some ways, right? Because it gives not only individuals more privacy and therefore more protection, but it also gives potentially regulators and lawmakers and existing institutions the ability to kind of define, hey, what do we think is legal or compliant? And then you can just write a program, basically, that says, prove that you're compliant. And so you can kind of achieve the best of both worlds, which is something unique about ZK.
+
+
+1:08:42: Anna Rose:
+
+
+Did you see that article from Vitalik about the return to the cypherpunk? How do you sort of match that with sort of the origin story of crypto? Also your origin story, Howard, I just remember years ago you being very adamant privacy first. Do you feel like that shifts somehow here?
+
+
+1:09:01: Howard Wu:
+
+
+From my perspective, I'm doubling down on privacy. I think that this is a massively underutilized feature in crypto. We have not realized how bad it is because we've been living in a bubble where real world applications don't exist. And when you don't have real world applications, you don't have real world implications. And without real world implications, people don't realize that privacy is still a necessary function and it's a necessary feature. This is the exact point that I think Alex is making when it comes to the identity use case and the payments use case, that we need to have a form of privacy, a concept of privacy if we actually want to use this tech with real people in the real world. And that is something that I continue to echo and I continue to feel very strongly about. And I think the example with Tornado Cash is honestly, it's a good example of what goes wrong when you don't respect the technology. 
+
+
+1:09:57:
+
+
+This is an opportunity for us to take it the other direction and actually show people and policymakers, especially that this is a very enabling technology that I can start to do checks that previously could only be done in an audit and post-factum, that I can now enable you to do things for compliance purposes before the action is taken. And that the action can be gate kept and can be guarded using these types of rails. And I think that that is a massive, massive opportunity that once regulators come around and see this emergent property about this, I think that this will take off like wildfire.
+
+
+1:10:35: Anna Rose:
+
+
+Let's kind of continue on that regulation concept. So, I just felt when Tornado happened, there was this kind of self-evaluation in the ZK space. A lot of teams had to make certain decisions. I think you've described regulators being able to almost use an Aleo-like system, but how do you as a network talk and think about your relationship to regulators? Have you had those kinds of conversations?
+
+
+1:11:01: Alex Pruden:
+
+
+Yeah, I can take this because this is a big focus of the Aleo Network Foundation is to be a steward of the network and to encourage its use in ways that are positive, right? And using it for bad, breaking laws, for example, is not anything that we would ever encourage, in fact, will actively disincentivize with all the power that we have at our disposal. But I want to be clear here, going back to the very first thing we said, this is a decentralized network. There's not a server in the closet that's running it all. Right? This is like Bitcoin, right? So this is not just our network. It has to be the collective community that has to work together to ensure this. Right?
+
+
+1:11:39:
+
+
+So we as a foundation are absolutely committed to doing it. And of course, we in many ways have influenced just by virtue of the fact that many of us worked on the protocol and we have great minds like Howard, who's going to continue, even though he's the CEO of the company, he's continuing to serve on the technical advisory board of the foundation. So I think we have influence, but at the end of the day, our relationship with the network is as stewards not as owners. And that's just, to me, I think a really, really critical part. A, because I think, I don't want anyone to misconstrue that we can do anything unilaterally, right? Because that's not the case. And B, because I think, that's actually what we want this to be. I think the promise of blockchain technology is you have these community, it's community ownership, right? It's like the optimistic, the techno-optimist vision of open source software, right? But instead where everyone who owns it can basically realize in the value of it as it grows
+
+
+1:12:31:
+
+
+So yeah, so we are constantly thinking of ways for engaging all communities, including regulators, policymakers, everybody, because I think exactly what Howard said is true, right? There's a huge value in this for regulators. For example, I think if you were designing a CBDC, you obviously don't wanna reveal all the bank account information of every person in your country, right? You kind of do actually need to think about this, right? And then maybe you would issue it, I don't know, maybe this is overly optimistic, but maybe in 5 years, someone will issue a CBDC on Aleo. I think it could be a good use case.
+
+
+1:13:01:
+
+
+So yeah, so that's my view of it on the foundation. The last thing I'll say though, is, you know, people get scared, frankly, around this concept of privacy. They see people go to jail. And I think it just goes to show that this is serious technology. I don't think people should be afraid to build this tech, but also people should take it seriously because the implications to how, I love the quote, like no applications, no implications. I mean, there is real applications of privacy tech, and there's real implications, right? And I think we just have to take that seriously as a space. It's important tech that's worth spending time and worth building.
+
+
+1:13:35: Anna Rose:
+
+
+I have sort of a last question, which is, given that you guys are about to launch, Aleo is about to come online, security, you sort of talk about that responsibility aspect. I just remember when privacy systems were first proposed, one of the challenges of auditing these systems is can you see what's happening inside these private zones? And I think we have the example of the Zcash bug from a few years ago where there was basically a bug that would have allowed people to mint infinite tokens in a shielded environment, in a private environment, and there was almost no way to check. I feel like security in ZK is so fascinating because you obviously need to check and make sure that things are running correctly, but if you have these private environments, how do you see it? Now it sounds like the Aleo system is more nuanced now, but I am curious what you're thinking on the security front, how you're addressing it.
+
+
+1:14:29: Howard Wu:
+
+
+I just want to start by saying we are all humans. And I think as humans, we are all doing our best and we are trying our best, and I want to say that we've done an immense amount of work on the security front. We've invested heavily on formal verification, not only internally and in-house, but also externally with partners to build out tooling to formally verify every circuit that's going to mainnet, so that we can confirm that the R1CS is well formed there. In addition, we've also carried out extensive audits, six I believe, over the course of the past year, year and a half, to cover every folder, every library in snarkVM and snarkOS to the best of our ability to certify that, hey, this has undergone multiple independent reviews, and we found everything that we humanely could.
+
+
+1:15:26:
+
+
+And lastly, I'd say a big investment on the companies and the foundations front is this bug bounty program to get the entire ecosystem involved in helping us triage and identify vulnerabilities on a software level, on a programming level, on a developer level. And we found a long list of bugs. And we actually just published, I think it was two weeks ago, a blog post detailing our most recent round of audits from three firms, Trail of Bits, NCC, and also zkSecurity. And there were some very interesting findings in there. We fixed all of those. And I feel very good going into mainnet that we have a system that battle tested with the testnets to the best of our abilities. I think that going forward, there's going to be a major effort that needs to go in towards formally verifying Leo even further from where it's at today, especially if we add in these constants around async and await, it's going to take time, but also with every new arc that's proposed, we will also need to come up with a great audit process, a great bug bounty process around that. And I think there's much more we can do in terms of that.
+
+
+1:16:34:
+
+
+Now, as you've mentioned with the Zcash security bug, with some of these cryptographic bugs, this is always a persistent concern. And I think one of the big facets that I'm proud about is the fact that we've open-sourced the proof system and the prover from day one. We've never kept it closed source. We've always let it be open. We've also used it in various domains beyond just this network. We've used it in ZPrize, for example. We've seen a ton of hardware developers, provers in the ecosystem build dedicated chips around this. And so this has been inspected by multiple teams, various teams to vet for its correctness and its integrity. I would be very surprised if we missed something on the proof system level there because of that. Yeah.
+
+
+1:17:17: Anna Rose:
+
+
+What happens though, like say you did miss something? How do you find out about it? And how does the system actually deal with it?
+
+
+1:17:25: Howard Wu:
+
+
+Well, I think this comes into multiple factors. As Alex pointed out, we are standing up a technical advisory board that's going to be going through all future changes, especially feature changes for the system where this is a classic concern that Ethereum core developers have as well with introducing new opcodes and new capabilities is the fact that it opens the door to a larger attack surface vector, right? And so I think that coming up with a proper process to check that is going to be paramount. And then secondly, that, if there are vulnerabilities that are discovered, we come up with a process in governance to transition everyone to new software. And this is something that Bitcoin and Ethereum have done multiple times, numerous times is just emergency upgrades so that validators are updated in a timely fashion.
+
+
+1:18:14:
+
+
+We've also contemplated on the programming level, this is where the opcodes really start to kick in that, we introduced Aleo instructions as a layer of abstraction. So if we do find vulnerabilities in a specific circuit, even after verification audits and bug bounties, that we can still go flag those exact programs and detect them instantly, which programs have the vulnerability and disable transactions for those programs as a steward of the network. That's something that I think is going to be a key piece of technology that no other language stack in ZK has built out to date. And I do think that we are probably at the cutting edge, if not the leading edge of this type of paradigm for ensuring security and safety here. It's something that I can't understate enough or overstate. Is it overstate or understate? Anyways.
+
+
+1:18:59 Anna Rose:
+
+
+Can't overstate enough.
+
+
+1:19:00: Howard Wu:
+
+
+It's something that I can't overstate enough.
+
+
+1:19:05: Anna Rose:
+
+
+I want to ask though, when it comes to projects that are deployed on Aleo, because it has that smart contractness, this kind of goes back to the tooling and like, are you conceiving of ways, are you thinking about ways that people could almost do checks in private environments and would you need to build those tools for the app developers?
+
+
+1:19:24: Howard Wu:
+
+
+Yeah, so we've really prioritized security by design. For example, there will be no need to deploy a SafeMath contract on Aleo. Every opcode is safe by default. We've introduced additional sub components of opcodes that can be "unsafe behavior". If you want overflows or underflows, those are the secondary choice. The default choices are always safe by design. And so we've tried to make it so that what developers intentionally write out the box is safe. And I'd say that the second piece, which is a really big composability narrative is the fact that programs here are truly interoperable. In Ethereum, they're interoperable in the sense that I can redeploy the same contracts over and over again, and I can call out in that regards. But here, every program can actually truly reference existing programs that are on-chain and reference their state and use it in a way that does not require you to redeploy the same logic over and over if you don't want to.
+
+
+1:20:23:
+
+
+And that's where the concept around a program registry really arises here. Program registries are critical for security because it means that the people who originally wrote the code are the ones who are best to service it, they're the ones to best upgrade it and they're the best to address the issues when they arise. God forbid there's a issue in SafeMath, in Ethereum and you deploy the thing and you deploy the wrong copy, this actually happened with the ICON token, if people aren't aware. They had a copy of SafeMath where the arithmetic was off by one character. And it actually, yeah, created a big software vulnerability for the token that forced them to do a migration. And so there are examples of this type of concern, where we think that just by creating a programming paradigm where you have rails that you're safeguarded by and an environment that you're operating in using each other's safe code, that this is going to be a much better outcome for all of us.
+
+
+1:21:20: Anna Rose:
+
+
+Crazy. Do you have the entire governance kind of plan mapped out or is that something still in the works? I just know this as a validator on different networks like on Cosmos, what have you, or versus Polkadot or something like that, the way that the network is governed is very different. Is this something that's coming or is this something that's already planned? 
+
+
+1:21:41: Alex Pruden:
+
+
+There's already plans. So, Howard mentioned the ARCs process. There's a repository. There's been people who've already submitted ARCs to change various things already to this point. Some of them have already been implemented and accepted and merged in. And I think so that exists. And then I think the plan going forward is to extend and expand that. The one thing that, at least in the short term, we don't plan to integrate, is an explicit on-chain governance, where it's like, we all vote with our tokens. In general, I find that to be very extraneous and not that helpful. And so I think our focus is really to make the best possible off-chain governance process. And by best possible, I mean, inclusive of all voices, of all stakeholders and having... And transparent and fair in how things get discussed and how they get merged in. And even though we have something, it will 100% evolve and will continuously evolve over the course of this thing.
+
+
+1:22:32: Howard Wu:
+
+
+I think it's worth calling out that technology is made by people for people. And I think that this concept that code is law is not at odds with the concept around community governance. I think that these are both actually forms of code is law, just on two different levels. One is on the smart contract level and the other is on the actual node software level. I think that at the end of the day, like if the technology isn't serving the purpose of the people who are collectively using it, then there is no point to using that piece of technology. And so at the end of the day, like the DAO attack is a classic example of what was best for the community and for the ecosystem's long-term growth was to do the fork and that was the right decision there.
+
+
+1:23:17: 
+
+
+Just as when Tornado Cash happened and the OFAC sanction occurred, that as controversial as it was, it was the right decision as a form of social consensus to block usage of that application. And I think that this is reflective of the reality of why we build technology. It's to enable the majority of people to use it for the benefit of others. And if that is being abused, it needs to be fixed, it needs to be corrected. And I think that that is by definition the intention for me at least of what this code of law should be doing. And I think that that's frankly on a human level, what technologies is meant to serve as well. 
+
+
+1:23:53: Anna Rose:
+
+
+Wow. So that's a really good point, maybe to wrap up this episode, but I just have one last question, which is, what's next? I think we kind of know what's coming up soon, but yeah, what's Aleo looking forward?
+
+
+1:24:05: Howard Wu:
+
+
+Mainnet.
+
+
+1:24:06: Alex Pruden:
+
+
+Mainnet launch.
+
+
+1:24:07: Anna Rose:
+
+
+Very cool. Well, this episode comes out before the mainnet launch, but we'll be watching and very excited to see it all come to life. Howard, I've seen you through this journey for a very long time. Congrats on getting to this point.
+
+
+1:24:22: Howard Wu:
+
+
+Thank you. It's been a team effort and wouldn't be here without Alex, and I appreciate the kind words. I definitely look forward to the next podcast where we dive even further into this journey and see where we've gone. But yeah, from my view and Alex's view, I think we both can conclude that this is like reaching base camp for us and the journey ahead is just beginning.
+
+
+1:24:41: Alex Pruden:
+
+
+Yeah. Thank you so much for having us. This has been fun.
+
+
+1:24:44: Howard Wu:
+
+
+Yeah, thank you, Anna, for having me again. It's always been a pleasure.
+
+
+1:24:47: Anna Rose:
+
+
+Yeah, thanks for being on. I want to say thank you to the podcast team, Henrik, Rachel, Jonas, and Tanya, and to our listeners. Thanks for listening.

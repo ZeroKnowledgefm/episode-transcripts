@@ -1,0 +1,833 @@
+00:05: Anna Rose:
+
+
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Nico and I chat with Antonio from the EF and Youssef from Linea at ConsenSys about their new work, families of prime-order endomorphism-equipped embedded curves on pairing-friendly curves. This conversation has us diving deep into elliptic curve cryptography, covering things like Bandersnatch and how this is used in verkle tries or trees, we couldn't quite figure it out. We try to tease out what the terms in the title of this work means, like embedded curves, being endomorphism-equipped, as well as discussing how they were able to actually achieve this work. This one is a cryptography-heavy one, so get ready!
+
+
+Now before we kick off, I just want to highlight the ZK Jobs Board for you. There you can find jobs from top teams working in ZK. So if you're looking for your next opportunity and want to jump in, be sure to check it out. And if you're a team looking to find great talent, be sure to add your job to the Jobs Board today. I've added the link to the ZK Jobs Board in the show notes. Now Tanya will share a little bit about this week's sponsor.
+
+
+01:28: Tanya:
+
+
+Namada is the shielded asset hub rewarding you to protect the multichain. Built to give you full control over sharing your personal information, Namada brings data protection to existing assets, applications, and networks. Namada ends the era of transparency by default, enabling shielded transfers and shielded cross-chain actions to protect your data even when interacting with transparent chains. Namada also introduces a novel shielding rewards system. By holding your assets in a shielded set, you help strengthen Namada's data protection guarantees and collect NAM rewards in return. Namada will initially support IBC and Ethereum-based assets, but will ultimately serve as a single shielded hub for all assets across the multichain. Learn more and follow Namada Mainnet Launch at namada.net. And now, here's our episode.
+
+
+02:17: Anna Rose: 
+
+
+So today I'm here with Antonio, Core Researcher at the Ethereum Foundation, and Youssef, who works at ConsenSys on the Linea project. Welcome both of you to the show.
+
+
+02:28: Antonio Sanso:
+
+
+Thanks a lot Anna for the invite. I'm really flattered to be here.
+
+
+02:31: Youssef El Housni:
+
+
+Thank you Anna for having me, and thank you Nico as well.
+
+
+02:35: Anna Rose:
+
+
+Yes, and Nico is our co-host for this one. Hey, Nico.
+
+
+02:38: Nico Mohnblatt:
+
+
+Hey, Anna. Hey, Youssef. Hey, Antonio.
+
+
+02:40: Anna Rose:
+
+
+Yeah, so this is an episode that's been a long time coming. Antonio, we started talking about doing this episode, I think, almost a year ago. And then you were working on some exciting research. You had sort of asked me to hold off. And now we are very excited that we get a chance to talk to you about some research. I'm actually curious if that was the research or if this is new research.
+
+
+03:01: Antonio Sanso:
+
+
+Actually, the things that I standardly do is like I work on at least two, three problems at the same time, and when I'm stuck or bored with something and I can't solve it, I just switch topic and switch to search. And that is sometimes I'm lucky enough to solve something. And if not, I just stop, I go to the next problem, and so I repeat the cycle.
+
+
+03:28: Anna Rose:
+
+
+Sure, sure.
+
+
+03:28: Antonio Sanso:
+
+
+So I think when we were talking last summer about it, it was not this paper exactly, it was something else that I still didn't solve it. So I will maybe.
+
+
+03:37: Nico Mohnblatt:
+
+
+For a future episode.
+
+
+03:39: Antonio Sanso:
+
+
+Exactly.
+
+
+03:40: Anna Rose:
+
+
+Well, I'm glad we're getting a chance to get to know you anyway on the show. Youssef, we met... I mean, I remember you spoke at the notorious ZK Summit 5 online event, the one that crashed through the whole day. This was right when COVID hit. We did not have a... This was kind of our put together backup plan to throw a summit online with tools that were not very performant, I guess. But I remember you gave a talk at that. I think your talk went okay. Yours did not crash, as far as I remember.
+
+
+04:12: Youssef El Housni:
+
+
+Yeah, yeah, I do remember. This was my first ZK Summit where I actually had a slot. And that’s why I talked at the ZK Study Club on ZEXE. I think it was one year ago. It was also online. 
+
+
+04:26: Anna Rose:
+
+
+Yeah. Well, we're gonna dig up both of those videos as well. So we met back then. Tell us maybe a little bit about what you've been up to since then. If you've made sort of any changes in the type of research you've been doing or yeah, if you've had some new findings.
+
+
+04:40: Youssef El Housni:
+
+
+Yeah. So now I'm working on Linea, the zkEVM, but before I was working on gnark, which is now absorbed by Linea. So I'm still working on gnark and on Linea. So there is a lot of implementation because we need to go on production, we need to deliver things and stuff. But before I was doing more research, and when I had this talk on the ZK Summit 5, it was about elliptic curves, and I'm still doing research about elliptic curves. I mean, the paper we're talking about today is also about elliptic curves. And then I met Antonio, and then he brought me back to research.
+
+
+05:14: Anna Rose:
+
+
+Nice.
+
+
+05:14: Youssef El Housni:
+
+
+Yeah. So I'm still trying to do both.
+
+
+05:17: Anna Rose:
+
+
+I have a quick question about gnark. I've heard recently that there's not only one implementation of this. Is that true? Is gnark like a whole body of work?
+
+
+05:26: Youssef El Housni:
+
+
+So gnark is more of an ecosystem, but actually there are two libraries. So both are written in Go. So one is gnark-crypto, which has all the cryptographic primitives like FFTs, MSM, finite fields, elliptic curves. And then there is gnark, which implements the SNARKs based on gnark-crypto. So it has the Plonk implementation, the Groth16, some other variations like GKR, sum-checks. And then, there are a lot of projects that are using either one or both, and these are doing their own thing with gnark, so we just have them extend gnark and, yeah.
+
+
+06:00: Anna Rose:
+
+
+Which one are you working on?
+
+
+06:02: Youssef El Housni:
+
+
+So I'm working on both actually.
+
+
+06:03: Anna Rose:
+
+
+Oh, you are? Okay, you actually see what's happening in both of those. Are you worried sometimes about things like this splitting too far apart? Like does it create issues down the line if a library that becomes kind of used and then there's a team that needs something else so they kind of fork it off, start building in a different direction? Like does that... Yeah, is that something you worry about or is this a good thing?
+
+
+06:25: Youssef El Housni:
+
+
+I mean, we always welcome contributions to the core gnark libraries. So if it gets merged to it, then it's nice, for example. So there is Ingonyama who did the GPU acceleration and then they did a contribution back to gnark to integrate their GPU acceleration into gnark. This was nice. For example, there was BNB, so Binance, who were doing some stuff with gnark and then they contributed back to gnark. So I mean, everyone is allowed to do whatever they want to extend it, to fork it, but it's really nice to go back to gnark and try to merge things. But now that we are working on Linea, the whole things we are doing on gnark aim to Linea, but we still want to have time to support other teams that are doing something else with the zk-SNARKs and ZK in general. So we're partitioning time this way.
+
+
+07:13: Anna Rose:
+
+
+Antonio, let's hear a little bit more backstory from you. I'm curious when you got started at EF what you started on and what led you to work on this kind of stuff?
+
+
+07:23: Antonio Sanso:
+
+
+Sure. I actually started at the Ethereum Foundation in the core research team about three years ago. And the first things I've been working on actually is the motivation of this problem of some of the things we're going to discuss today. But basically, the first things I worked on is like during one of the meetings that we were having with the cryptographic team, Dankrad, one of my colleagues that's probably pretty well known in the Ethereum ecosystem, was actually asking for a specific elliptic curve for a project that he was doing with Vitalik, basically what is now known as a verkle tree. And basically, they were asking for a curve that has the base field equal, the scalar field of BLS12-381. It's like this really famous pairing-friendly curve, the one that came out from the Zcash project. And this motivated research on something, on a kind of new curve that is now known as a Bandersnatch, and that's basically one of the first things that I've been doing at the Ethereum Foundation. But what brought me there is like... One thing that I've been working on before and where I met Justin basically is like, I've been working a lot on the topic of VDF. And actually one of the papers I've been working with other co-authors before was discussed in one episode here, this famous Isogenies VDF or infamous Isogenies VDF. So when you had Luca De Feo presenting it and I'm actually a co-author on that paper. And this kind of context we're adjusting on VDF made it let's say into the EF.
+
+
+09:06: Anna Rose:
+
+
+Isogenies had an issue though, right? I actually ran into Luca and he was like, did you hear what happened? And I hadn't actually, but I want to ask you, is it the work that you did? What happened from there on that topic?
+
+
+09:19: Antonio Sanso:
+
+
+So what he probably refers like on the post-quantum world, one of the primitive that was presented to be standardized as a post-quantum key exchange, SIDH, got badly broken not on quantum computer, but on a standard computer. So what was supposed to be quantum-resistant was actually broken on a normal laptop in less than five minutes or a few seconds now, I guess, with the performance of the attack now. And it was like a disaster for the scheme called SIDH that Luca is actually one of the co-authors, but basically it has no impact on our VDF and as well has no impact on the original isogeny assumption that is the first way that isogenies were introduced to the cryptography world. So let's say, short of a long story, is like SIDH is broken, but isogenies are more alive than ever. But I'm a bit bullish on isogenies.
+
+
+10:20: Nico Mohnblatt:
+
+
+Sounds like you're a bit biased.
+
+
+10:22: Antonio Sanso:
+
+
+Yeah, of course I am. I mean, I know that for sure isogenies are not dead. I mean, that specific thing is good. Badly broken, but the original isogenies assumption, they're still alive. So there's like the scheme now that is based on isogenies for post-quantum CSIDH. I'm not just saying here, probably will not be one of the favorites of many people, but yeah, it's actually really cool. And like to come back to your question, actually the isogenies VDF is not touched as well by this attack.
+
+
+10:58: Anna Rose:
+
+
+Got it.
+
+
+10:58: Nico Mohnblatt:
+
+
+So I'm curious, how did the two of you meet and start collaborating on elliptic curves?
+
+
+11:03: Youssef El Housni:
+
+
+So I think the first time I knew Antonio was because of the VDF paper. I mean, I must have seen his name before, but the time I remembered his name was about the paper he did with Luca De Feo and Simon Masson. But I think the first time we physically met was during the ZK Summit in Amsterdam, I guess.
+
+
+11:23: Anna Rose:
+
+
+Oh, ZK7.
+
+
+11:26: Youssef El Housni:
+
+
+Yeah, ZK7. So, and also we tried to collaborate before with Antonio and Diego Aranha, who was a professor at Aarhus University in Denmark.
+
+
+11:38: Anna Rose:
+
+
+So we're here today to talk about this paper. The name of the paper is Families of prime-order endomorphism-equipped embedded curves on pairing-friendly curves.
+
+
+11:48: Nico Mohnblatt:
+
+
+Say that quick seven times.
+
+
+11:52: Anna Rose:
+
+
+How did you come up with the title? No, just kidding. Let's jump into it and then we'll probably figure that out.
+
+
+11:59: Antonio Sanso:
+
+
+Yeah, probably like connect to what I was saying before, like me and a couple of co-authors that is not Youssef, we came out with this new curve called Bandersnatch about three years ago after this request from Dankrad and Vitalik. But the reality is that Bandersnatch should not exist. It really should not. Namely, just to give a bit of background on elliptic curves. Usually, there are two ways to build elliptic curves. You can... Having a base field is the field of definition of the elliptic curves. And you want the number of points of the order to be cryptographically strong, namely the number of points of the curve should be a lot. And the factorization of the order should be not smooth. So ideally you want the prime-order, namely the number of points to be prime, or to be a prime and multiplied by a small number. Let's say 4, let's say 12. This is called cofactor. When you are searching for a new elliptic curve, you have two ways to do it. You either try randomly elliptic curves. You can change the base field and try elliptic curves in a random way. And hopefully, this will bring one day to have the right number of points, so either primes or big with the small cofactors. Or even play something complex multiplication that is like, well, it's really, really nice math, but will not fit the length of this episode. It's some really cool thing.
+
+
+And basically, if we talk about the BLS12-381, the scalar field to become the base field of a new elliptic curve was already done by a curve, again, by the Zcash team, and this curve is called a Jubjub. And so they were actually using the scalar field of BLS12-381 to build a new elliptic curve. But they did it in the first way, namely, they tried different elliptic curves until they came out to this new elliptic curve called Jubjub. What I've been trying to do instead after that, Dankrad and Vitalik asked me for this new curve is to employ CM curves. And so CM method, so this other method, because this will allow something called GLV endomorphism optimization. That's a way to actually speed things up, operation up. And the intriguing fact that I still cannot explain today is that we employed the CM method and with the fixed base field, that is the scalar field of BLS12-381. And this actually gave us a cryptographically strong curve and a cryptographically strong twisted curve. And the likelihood that this happens is nil, literally nil.
+
+
+14:50: Nico Mohnblatt:
+
+
+So I'm going to have to ask you to define a bunch of things here, because there's a lot of complex ideas and words that most of us don't know about. And the first one is why would I bother having a curve inside a curve? You were saying we want to take the scalar field of BLS12-381. Why do I want to use that scalar field as the base field for a new curve?
+
+
+15:14: Antonio Sanso:
+
+
+Sure. I will let actually Youssef define that because he's way more skilled than me on this specific area.
+
+
+15:21: Youssef El Housni:
+
+
+Well, yeah. So the question is... I mean, we're building SNARKs, right? And SNARKs are for generic purpose. You want to prove any kind of statement. But some of the statements we see in applications are statements about elliptic curves themselves. Imagine you need to verify a signature or you need to verify the image of a hash that is based on an elliptic curve, like the Pedersen hash that was used back as Zcash Sprout. So the question then is, you need this statement to be expressed in the minimum constraints possible. But if you're using an elliptic curve, then you're doing the arithmetic over the field of definition of this elliptic curve. But then remember you have another elliptic curve that substantiates the SNARK. And these elliptic curves, these two elliptic curves are distinct. So if you're doing the arithmetic for your statement over the field of definition, but then you're doing your SNARK-proving over another field defined by the SNARK curve, then you have a mismatch. And this mismatch is a big problem if you want efficiency.
+
+
+So one way to solve this is to find two elliptic curves for which the statement elliptic curve is defined over the field where we do the SNARK computation. So I'm not sure if it is clear, but it's the same problem that we had back in the Gepetto, we had it in ZEXE, we had it in MNT4-MNT6 curves. So it's always the same problem and we just need to find these two elliptic curves. So ideally we would like to find a cycle, which means that we can use an elliptic curve as the statement elliptic curve and the other one as the SNARK elliptic curve and vice versa. But for some efficiency or some applications, we want just to think one way. So you can do this for recursion, for anything else.
+
+
+17:24: Nico Mohnblatt:
+
+
+Sounds good. So that's the embedded curves part of the paper title.
+
+
+17:29: Youssef El Housni:
+
+
+Exactly.
+
+
+17:30: Nico Mohnblatt:
+
+
+We have two words down. Many more to go. Okay, so I guess the follow-up question for me is, Antonio, you mentioned that Zcash already had come up with Jubjub. Why was it necessary to come up with Bandersnatch?
+
+
+17:45: Antonio Sanso:
+
+
+So the requirement that I got from Dankrad was like, hey, this curve should be as fast as possible. So, when you think about speeding up operations on elliptic curves, you think about GLV. That's actually what... If you think about the curve that is in both Bitcoin and Ethereum, is like, before, I think until 2019, 2020, they had the GLV optimization, because not all the curves actually can have GLV optimization. Only the curve built in a specific way with the CM method allow this GLV optimization. And to come back to what I was saying, up to 2020, '19, I guess, both Bitcoin and Ethereum had the curve with the GLV ready to be used on the scalar multiplication, but it was a patent. So, they actually were ready to use it, but they could not use it until the patent expired. And yeah, now GLV is free to use by anyone.
+
+
+So when Dankrad and Vitalik were asking about like, hey, I want this curve to be as fast as possible, I said, yeah, there's a Jubjub, but let's see if actually you can find a CM curve. And again, I thought that this will bring nowhere, but actually I was extremely surprised. Again, it should not happen, but well, it happened. And one thing to actually specify here, it is true that GLV helps for scalar multiplication, and so helps for many cases, but at the end, for Verkle trees, where Bandersnatch is actually going to be deployed, it will not help too much, eventually, because for MSM, for multi-scalar multiplication, GLV degrades with the number of scalar multiplication. So for big MSM, GLV will not help anymore. And this is actually in the original paper. But for scalar multiplication, you have a gain of about 50%. So actually, Bandersnatch is 50% faster than Jubjub. 
+
+
+19:43: Anna Rose:
+
+
+You just mentioned this thing that was patented that became unpatented or it expired. Is that something you run into a lot in the work that you do where you're like, there's an amazing solution, you know it would be amazing, but you can't use it? Or what actually is the issue? Some company owns it, you could use it, but you'd have to pay them? Like what actually stops you?
+
+
+20:07: Antonio Sanso:
+
+
+Yeah, unfortunately, in the field of cryptography, it happens more often than you want to. One famous case apart from GLV is the Schnorr signatures. They were as well patented. So if you think about DSA and ECDSA signatures, they are by far to be perfect. We don't have proof of security. We do have Schnorr, but for 25 years we could not use it because of this. Previously, it was the case of RSA, and there are as well cases of elliptic curves. Certicom had a lot of patents on elliptic curves. Even I think point validation was patented by Certicom, other case, or even symmetric cryptography. I think OCB is by far the best AES method for encryption and is patented. So, unfortunately it happens. Only the good thing is they expire after 25 years, I guess.
+
+
+20:57: Nico Mohnblatt:
+
+
+I think actually we're now ready to explain the title of the paper. Now we saw what an embedded curve is. You mentioned Jubjub versus Bandersnatch, that's endomorphism and GLV. So what does the title mean? What does the paper do?
+
+
+21:11: Youssef El Housni:
+
+
+So just to give some credits, the first guys who introduced the notion of an embedded curve was in a paper called C∅C∅ by Kosba and co-authors. And it was for the exact same problem, which is to have native arithmetic in the statements with respect to the SNARK field. And then the Zcash guys introduced Jubjub, which is the exact same thing as the curve in C∅C∅ Paper, but they just express it in a specific elliptic curve form, which is called Twisted Edward, to enhance the number of constraints. And then there is Bandersnatch, as Antonio explained, where him and co-authors tried to have the same curve functionality as Jubjub or Kosba paper, but with the GLV, with this additional structure, this additional endomorphism to make things 50% faster. Then what we are trying to do in this paper, and then I'm going to explain now the title, is Families of endomorphism equips prime-order...
+
+
+22:15: Nico Mohnblatt:
+
+
+Embedded curves.
+
+
+22:16: Youssef El Housni:
+
+
+Embedded curves. So the embedded curve is this part, which is we are doing the same thing as Kosba or Jubjub or Bandersnatch. Then the other thing is endomorphism-equipped. So we're doing the same thing as Bandersnatch, but not as Jubjub and Kosba. And the other thing is prime-order. So elliptic curves have an order, which is basically just the number of points on this elliptic curve. And this is the group defined on which we're gonna do these cryptographic operations. And this number of points can be prime or can be composite. So if it is composite, then we have some issues because we need to multiply by cofactors, we need to check that the points are on this subgroup we are working on and stuff like this. But it comes with fast operations. But now we know how to do fast operations over a prime-order group, both out of the circuit and also in a SNARK context. And you can also look at Halo2 book or the gnark implementations. So this is a new part. So we are doing the same as Kosba, Jubjub, Bandersnatch, but we're adding the prime-order thing. But beyond all of this, the question, the real question we were asking is, is there a family of such curves? So instead of just finding one curve, one isolated curve, the question we asked with Antonio was whether we are possible to find families of elliptic curves. Like for example, instead of choosing, for example, the BLS12-381 curve or the BN254 curve on Ethereum, and then looking if there is an embedded curve that has this criteria, what we try to do is we find both the SNARK curve and the embedded curve in a way that there isn't only a single isolated curve, but you just change parameters and then you have an infinity number. I mean, not an infinity, but a lot of... A family of curves. So I hope this explained the title.
+
+
+24:15: Antonio Sanso:
+
+
+I think it will be as well as useful to go to do a step back on how you actually find pairing-friendly curves. So basically, there are less than 10 families of pairing-friendly curves. So pairing-friendly curves are pretty rare. If you take any random elliptic curves, it's not pairing-friendly. So technically, we'll say that the embedded degree is big. And we want this embedded degree instead to be small. So if you take a random elliptic curve, it's not going to be pairing-friendly. In the early 2000s, a lot of researchers, like Barreto, Naehrig, Barreto again with Lynn and Scott. So we have BN, BLS, we have the MNT, we have Freeman, they came out with ways to solve something called Diophantine equations. I'm introducing more terms and terms every time. But basically, Diophantine equations are normal equations where you find solutions not on the real… But either in the rational or in the integers. So you take an equation and you don't want the solution to be over the complex or the real numbers, but you want the solution to be on the integer or the rational.
+
+
+So if you want actually to find pairing-friendly curves, at the end of the day, your problem is to solve this Diophantine equation. And solving the Diophantine equation is not easy. It's actually pretty complicated. And basically like Barreto-Naehrig , Barreto-Lynn-Scott, they came with this clever way to solve the Diophantine equation, and this allows to find family of pairing-friendly curves. So you start from a seed, from a parameter, and actually you're able to split pairing-friendly curves. So this paper we did with Youssef is actually, it's extended the original method of finding pairing-friendly curves. So you use the same seed, and at the end of the day, you don't only have the pairing-friendly curves, but an associated embedded curves of prime-order. So you have in one go, you have both. And we do this, again, solving this Diophantine equations. 
+
+
+26:20: Nico Mohnblatt:
+
+
+All right. We've kind of covered what the paper tackles and what you guys are trying to solve here. How do you tackle this kind of resource question? Like what is the angle with which you go in? What's the initial idea?
+
+
+26:32: Antonio Sanso:
+
+
+I'm still on the quest of trying to understand why Bandersnatch exists, because I still didn't understand. Actually, if you read the conclusion of this paper, we say that we explain something on this paper, so we generalize the curve like Bandersnatch and so on. The initial paper was like only covering BLS. In this paper, we cover as well other curves like BN and KSS, but we kind of explained more than we used to know before this paper, but we still don't explain Bandersnatch. So really, this became kind of an obsession for me and it's not the only one I have, unfortunately. It's like, I still would love to understand why Bandersnatch exists, because it should not. Really, like if you do the math and the likelihood that this exists, we did actually a few years ago and it's like plus and zero. I mean, if you take... This should not be there. And that's the motivation of this kind of work, I guess.
+
+
+27:39: Nico Mohnblatt:
+
+
+Maybe you were that one malicious prover that found the negligible probability of winning. 
+
+
+27:44: Antonio Sanso:
+
+
+You see, in these things, I don't believe in coincidences when there's math involved. So I'd rather believe there's some kind of hidden structure so far. And it isn't like... There was an interesting talk by Nadia Heninger a few weeks ago at PKC, she was an invited guest. And she did a survey on security, that is one of my other passion on constructions. And she was sharing an opinion from Wouter Castryck, one of the guys that broke this Isogenies scheme, SIDH, the one we mentioned before. And actually Wouter was mentioning that he actually trusts more RSA assumptions, so factorization, than elliptic curve GLV. And the reason behind that is because in elliptic curves, you have way more structures than in pure factorization. Now, this is actually kind of sound a bit controversial, for sure, but I understand where it comes from. Because when you have structures in things, you probably get speed, but you open your, let's say holes for potential security breach.
+
+
+28:54: Nico Mohnblatt:
+
+
+I mean, this is very similar to how pairings were first discovered, right? They were a method of attacking certain curves.
+
+
+29:01: Antonio Sanso:
+
+
+Exactly. Yeah. The first things that happened with pairing was this MOV attack, and even there, now the curve that we use for pairing is BLS. But before the BN curves, they were really more popular. And there's this famous quote of Menezes that says, BN curves are too good to exist. And indeed, now we are actually not using it anymore because we know that they're less safe than we thought they were.
+
+
+29:32: Nico Mohnblatt:
+
+
+Are you worried this might be the case with Bandersnatch?
+
+
+29:35: Antonio Sanso:
+
+
+So here we open the big debate. And we go basically like, if you remember what we were saying before, there are two ways to build elliptic curves, the random way and the CM way. There's a website from D.J. Bernstein, this is one of the most famous cryptographers. It's called a SafeCurves. And basically in his opinion, for example, he doesn't trust CM curves. And if you go... There's a list of security things that he checks, and he doesn't trust curves like Bandersnatch. But at the same time, the curve that where Bitcoin and Ethereum are deployed, that they do ECDSA signature, is actually a CM curve. That's why you can do GLV. So we actually... It's like these are things that we will discover eventually, maybe, but there is no agreement at the moment on this topic.
+
+
+30:26: Anna Rose:
+
+
+You talk about these two, like Bandersnatch has these two things that shouldn't be the same but are the same kind of... Can you say that again? You talked about the... I'm not going to be able to word this right, but you have a curve and then you have the twisted curve or something? Can you just say that again? Because you're saying... Are you saying because they both exist here, it shows that there should be an underlying structure? It would be very unlikely that these two things coexist.
+
+
+30:54: Antonio Sanso:
+
+
+So what I was trying to say is this, let me take a step back, it is both Jubjub and Bandersnatch are so-called Montgomery curves. So usually when... I'm introducing, again, more and more terms, but Montgomery curves are like, they can never be prime-order. They're like they've always a cofactor and the cofactor is at least four. So, but the good thing is that you can use different way of doing scalar multiplication, not the usual method that they use for Weierstrass curves, but you need to pay a little price. So usually you do like X-only arithmetic, so you do that arithmetic without using the Y coordinate, but you have to be careful on one thing. That the isomorphic curve that is called twisted curve is as well cryptographically strong. And the amazing thing about Bandersnatch is that when we actually found it, not only the curve Bandersnatch had a number of points that was cryptographically strong. But also the isomorphic twisted curve.
+
+
+31:59: Anna Rose:
+
+
+Was strong.
+
+
+32:00: Antonio Sanso:
+
+
+Yes.
+
+
+32:00: Anna Rose:
+
+
+And that's unusual. And that's why you think there's a reason that it has both of these qualities or both of these curves being secure?
+
+
+32:07: Antonio Sanso:
+
+
+I would be already surprised to have only one part to be cryptographically strong. But the amazing thing about Bandersnatch is that they have both to be cryptographically strong. For example, for BLS12-377, only one is strong. The twist is not strong.
+
+
+32:25: Anna Rose:
+
+
+I see.
+
+
+32:26: Antonio Sanso:
+
+
+And instead like for BLS12-381, both are cryptographically strong. And again, I would be surprised already to see the first case seeing both. I mean, maybe in a couple of years, I hope that we will be back talking about why Bandersnatch exists.
+
+
+32:41: Nico Mohnblatt:
+
+
+I wish our listeners could see how much side-nodding there's going while you're saying this, like the disbelief, the true disbelief.
+
+
+32:51: Antonio Sanso:
+
+
+Yeah, it's really amazing. I mean, again, we actually... I can't remember now because I don't have any more of these notes, but we did actually the calculation and it's really unlikely. 
+
+
+33:00: Anna Rose:
+
+
+I mean, you've mentioned Bandersnatch, Jubjub, this work. Where does this work actually get used? Is it part of some systems that we're aware of?
+
+
+33:10: Antonio Sanso:
+
+
+The motivation is like, again, from Bandersnatch came from this request that I got by Dankrad and Vitalik and it's Verkle Tree. Verkle Tree is going to be shipped in Ethereum not in the next upgrade, but in the... So not in Pectra, but I think in Osaka, hopefully. And basically Ethereum is going to change the way how things are persistent. So we will move from, I think it's Patricia Merkle tree to the Verkle. And Verkle tree will actually use Bandersnatch. And yeah, that's the main motivation.
+
+
+33:44: Anna Rose:
+
+
+But in this case, this is not new curves, is it? Are you saying the Verkle trees will use these curves? Or, yeah, I'm kind of trying to figure out exactly what the connection is there. 
+
+
+33:55: Antonio Sanso:
+
+
+Verkle tree will use... The motivation of this paper is to use Bandersnatch.
+
+
+34:01: Anna Rose:
+
+
+Okay, will use Bandersnatch.
+
+
+34:02: Antonio Sanso:
+
+
+Bandersnatch. But if people will have other... They want new pairing-friendly curves, with this paper, they can actually, in one go, they can find BLS or BN or KSS pairing-friendly curves and the associated embedded curves in one go. So they don't need to have luck like we got with Bandersnatch. They can really engineer that.
+
+
+34:27: Youssef El Housni:
+
+
+I actually have a point to add to this, which is a problem we have in the blockchain community when we are doing elliptic curve cryptography, which is basically… So we know elliptic curves cryptography from other parts of cryptography, and then we know pairing-friendly curves, and now we are using pairing-friendly curves in SNARKs. So what we did is we just took an elliptic curves that we know from the elliptic curve cryptography, and then we added just a criteria which was again another word which is the 2-adicity, which means that we can do FFTs over the SNARK field quite efficiently. And then we worked with this curve. So this curve is, for example, the BN254, which is on Ethereum, or the BLS12-381, which is on Zcash, and now also on Ethereum. But then whenever we have a new problem, it's very difficult to move from this old elliptic curve to a new elliptic curve. For example, when we want to do things like embedded arithmetic, then we were lucky to find Bandersnatch. But it's not always the case. I mean, I've run Antonio's code on, I think, dozens of elliptic curves, and none of them had an embedded curve with this security. And so it's really, really unlikely. And I think that it should exist. I mean, my take on it is it should exist because I mean, it's so improbable that there must be a reason for it.
+
+
+So when we wanted, for example, to do recursions à la ZEXE, then we had to introduce a new elliptic curve, which was the BLS12-377 and then the BW6 that forms a 2-chain with it. Now that we want to find families of embedded curves, the problem we face is we need to introduce others pairing-friendly elliptic curves. So we cannot just pick an elliptic curve that we use on Ethereum and then find an embedded. So it's always the same problem, which we keep discovering new requirements, and every time the requirements means that we need to start from the beginning. We cannot just take any elliptic curves we had before and then add this new elliptic curve to it.
+
+
+36:34: Anna Rose:
+
+
+I've always understood that the things that have been implemented in Ethereum or choices that early Ethereum engineers made sort of impacted how these newer systems can actually interact with it. And it sounds like the change that's happening here, is it at the base layer? This sounds like it's part of the upgrade. So this would be like the introduction of a new family of curves or curves specifically.
+
+
+36:58: Youssef El Housni:
+
+
+Yes. 
+
+
+36:58: Anna Rose:
+
+
+And you're saying you can't add on, it's not modular. You can't just upgrade what's exactly there. You have to sort of start again.
+
+
+37:05: Youssef El Housni:
+
+
+Exactly. So for example, if we want to use these families in Ethereum, for example, we need not only to add this new embedded curve, but also the underlying SNARK elliptic curve, which would replace BLS12-381. But it's very difficult to do so. I mean, I have an EIP to add BW6-761 curve.
+
+
+37:26: Anna Rose:
+
+
+Since when?
+
+
+37:27: Youssef El Housni:
+
+
+Four years now?
+
+
+37:28: Anna Rose:
+
+
+I wanted to ask you, what year?
+
+
+37:32: Antonio Sanso:
+
+
+At least let me give you the news... I mean, it's not so news anymore. But basically, finally, after three years of fighting, BLS12-381 pre-compiles will be shipped in the next upgrade of Ethereum. So this is... 
+
+
+37:46: Anna Rose:
+
+
+Nico is clapping.
+
+
+37:49: Antonio Sanso:
+
+
+Yeah, it took only like three years, but at the moment, and I'm a bit, let's say, ashamed, and I can say that at the moment, the only pre-compiles for pairing-friendly curves we have is like BN254. And yeah, I mean, it's not as weak as that everything's going to fail, but it's not clear how many bits of security it has, but definitely not 128 bits of security, and it's the only option we have now in the pre-compile.
+
+
+38:14: Nico Mohnblatt:
+
+
+I do want to come back to the paper of today's session because there's one thing that we didn't really cover is what is the method that you guys came up with to find these families of pairing- friendly curves with embedded curves?
+
+
+38:27: Youssef El Housni:
+
+
+Yeah, so as Antonio was mentioning earlier, so you have these Diophantine equations. So the nice thing about these complex... The CM curves, complex multiplication curves, they need to satisfy some equations. So as Antonio said, those pairing-friendly curves are rare. So they follow an algorithm, for example, the BLS algorithm, the BN, the KSS, the Freeman. So there are different families, but they are like just maybe less than 10. And these algorithms, they verify some equations. And there is one equation that is called the complex multiplication equation, and this complex multiplication equation has some parameters which are, again, discriminant of the complex multiplication, the finite field, the characteristic of the finite field of definition, the number of points, so the order. And when we talk about families, those parameters actually are not integers, but they are polynomials. So if they are polynomials, then I can just substitute, evaluate these polynomials in some seed, and then I have a curve. If I change the seed, I have another curve, and this is what defines the family.
+
+
+So what we did is we took those families we already know, which are the BLS, for example, 12, 24, and its generalization, the BN, the KSS, and we added a new criteria which is also another polynomial equation, which is basically the field of definition of the embedded curve will be the scalar field of the underlying curve. And this underlying curve, since it comes from a family, it can be expressed as a polynomial. So we just substitute this polynomial, which is a scalar field in the field of definition of the embedded curve, and then we have an equation. And we need to solve this equation. And to solve this equation, we do what we call half-GCD, which is basically we have, it boils down to having a polynomial which we need to express as a rational function of polynomials. And once we have this, we just evaluate and we have the equation of this new embedded curve order and this polynomial, we just check if it is irreducible or not. If it is irreducible, it means that it might give a raise to a prime-order family. This first equation when I was talking about the complex multiplication discriminant, we fixed this complex multiplication discriminant, but looking at the subfields, the quadratic subfields, and for example if we take the discriminant equal to 3, 4 or 6, we go over all the options. And for example, if the complex multiplication discriminant is for example D is equal to 3, we know that there are six twists. 
+
+
+So earlier Antonio was talking about a twists, but actually it depends on the discriminant. If the discriminant is random, there is just one quadratic twist. If it is equal to 3, then there is a quadratic twist, two cubic twists and two sextic twists. So we go over all those twists and we check if the polynomials are irreducible. And each time we give families based on all these orders. And at the end of the paper, we have, so constructions of a BN, BLS, KSS, and we can concrete examples following our algorithms of elliptic curves. For example, we have introduced a BLS12-380 and with its embedded curve that is endomorphism-equipped right.
+
+
+41:50: Nico Mohnblatt:
+
+
+Wow. Okay. So it's a lot of trial and error in the final stages.
+
+
+41:54: Youssef El Housni:
+
+
+In the final stages, exactly. I mean, in the construction, it's not trial and error because we have an algorithm, but then to find the elliptic curves, yeah, absolutely. I mean, because you need also to find the nice 2-adicity, the nice hemming way to have fast pairings and stuff like this.
+
+
+42:11: Antonio Sanso:
+
+
+And just to add what Youssef said, the reason that this works is because the base field that is the order of the pairing-friendly curves is a cyclotomic polynomial. And...
+
+
+42:22: Anna Rose:
+
+
+Cyclotomic polynomial.
+
+
+42:24: Antonio Sanso:
+
+
+Cyclotomic. Yeah.
+
+
+42:26: Anna Rose:
+
+
+Sounds like a cool band name. I like it.
+
+
+42:31: Antonio Sanso:
+
+
+Yeah, but that's basically like, it's a mouthful word, but it means it's a reducible polynomial with nothing fancy, but yeah, just mouthful.
+
+
+42:41: Youssef El Housni:
+
+
+But this is, I think, the most important thing that I forgot to say. It's because the scalar field polynomial is a cyclotomic polynomial, or derived from one.
+
+
+42:49: Anna Rose:
+
+
+What tools, when you're actually like doing that trial and error part of it, what are you actually doing? I don't know enough about the work you do. Are you doing it like each one, you're just trying them out? Are you running something? Like, what do you actually use to do this?
+
+
+43:05: Youssef El Housni:
+
+
+So we use SageMath, which is a Python-based framework to do math. But I think we have algorithms that we have from the community like Alpha from Inria in France to define these curves, to find this curve, to change the seed and stuff like this. So we already have the algorithms and normally they should be linked to the paper.
+
+
+43:31: Anna Rose:
+
+
+In this field, are there cryptography-specific tools and also are there like this kind of cryptography-specific tools or are you able to just use existing math, general math tools always?
+
+
+43:44: Youssef El Housni:
+
+
+SageMath is actually defines already these cryptographic tools. For example, you can do your own code, your own class in Python, but you need to define everything from scratch. But for example, when you use SageMath, or for example, there's also Magma, you can, for example, just type elliptic curve, you give the finite with GF, and then you give your number, and then you give the coefficient, and then boom, it gives you an elliptic curve. So, yeah, I mean, otherwise, it would be very difficult to write everything from scratch.
+
+
+44:14: Anna Rose:
+
+
+And then you use an algorithm to create multiples of these until they have the properties that you're looking for.
+
+
+44:20: Youssef El Housni:
+
+
+Yeah, so once we have defined those polynomials and we know that, for example, if a polynomial is reducible, then we know for sure that it's not going to give a prime-order because it is factorized. But if we know that it is irreducible, then there are chances. So we just have some seeds and for the seeds, we have some other parameters. For example, if we are looking for BLS12, we need all the parameters to be integers, right? But in some polynomials, we have divisions by some integers, so we need the seed to verify some congruence so that those polynomials give integers. If we need 2-adicity for example, we need some other congruence criteria, so we just have an algorithm that takes into consideration all those criteria. And then we iterate over the seed until one clicks.
+
+
+45:08: Antonio Sanso:
+
+
+These actually are just to complete things like, of course, cryptographers use these tools, but it's a tool for number theories. I mean, they are used as well, not only by cryptographers, but if you're all interested about number theory, that you don't care about application, you can still use this.
+
+
+45:23: Anna Rose:
+
+
+You can play with this.
+
+
+45:24: Antonio Sanso:
+
+
+It's pretty cool.
+
+
+45:25: Anna Rose:
+
+
+Cool.
+
+
+45:25: Nico Mohnblatt:
+
+
+I mean, for added context, this sort of work, finding curves with properties is sort of the boundary between what is pure math and what is cryptography. Like you're sitting on that boundary.
+
+
+45:36: Antonio Sanso:
+
+
+And actually, before you were… Actually joke on it, rightly, but actually this kind of area of cryptography, especially isogenies is by far the most mathematical area of cryptography. So it's like the majority of people who work in this area are number theorists or mathematicians more than pure cryptographers. Like really the part of... Cryptography is pretty big area, but if you see, this area of cryptography is the most theoretical one. Especially if you think about elliptic curves, there is intersection between many kinds of mathematics. You go from finite fields, of course algebraic geometry, but I don't know, something called imaginary quadratic fields. So it's really number theory things. It's sort of by far the best area of cryptography in my biased way.
+
+
+46:27: Anna Rose:
+
+
+Your opinion. Nice. I have a sort of a higher level question here, which is bringing it back to the Verkle trees or, is it Verkle trees or Verkle tries? Or is it just a choice of pronunciation?
+
+
+46:39 Antonio Sanso:
+
+
+Yeah, good question. I think it was like, I can't remember which one Dankrad use all the time because I've heard both.
+
+
+46:44: Anna Rose:
+
+
+You have heard both , yeah.
+
+
+46:45: Antonio Sanso:
+
+
+Yeah.
+
+
+46:47: Anna Rose:
+
+
+But my actual question here is like I sort of understand it in the Ethereum context, but Youssef you're working at Linea as an L2. I guess you will be able to use these Verkle tries, it'll make something better for you, but maybe you can give us that higher level use.
+
+
+47:03: Youssef El Housni:
+
+
+Yes. So for Linea as a zkEVM, we're driven by what Ethereum decides, right? So if you have on Ethereum... So for example, so we were talking at the beginning about these embedded curves to verify some signatures for instance, but for zkEVM, the signature is already defined on Ethereum and it is the ECDSA over a specific curve called secp-254. We cannot just use this paper with it, but we need to go with the decisions of Ethereum. For example, so I'm not sure about the Verkle trees per se, but we have a little flexibility that we did, for example, in Linea to use new elliptic curves, which is basically, so we're using a notion of embedded curve, which is what we call the 2-chains where we have first elliptic curve and the second elliptic curve where there isn't this mismatch. So the same thing as embedded curve, but on the other way. But the idea is basically, since we do not have this mismatch, we can aggregate a lot of blocks of transactions, a lot of proofs. And then at the end of the day, we have a proof of an elliptic curve that is not native to Ethereum. So instead we were doing things on Ethereum elliptic curve, we're doing it on our custom elliptic curves, so namely BLS12-377 and BW6-761. But at the end of the day, we cannot push this final proof to Ethereum. So here we do some non-native field arithmetic, where we force this proof BW6 to be on BN, which is basically having a final proof of BN254 proof of BW6. So the flexibility we have for Layer 2 is before pushing things on Ethereum.
+
+
+48:48: Anna Rose:
+
+
+And so then are you saying that like in a way this work like there's such a great use case for these curves that having the curves implemented on the base chain helps later because if you had these curves on the base chain, it would be better for Linea in a way.
+
+
+49:02: Youssef El Housni:
+
+
+Absolutely.
+
+
+49:03: Anna Rose:
+
+
+Okay. Interesting.
+
+
+49:04: Youssef El Housni:
+
+
+The other way around is the hack I explained, which is doing things the way we want and then incurring this final mismatch.
+
+
+49:12: Anna Rose:
+
+
+But when this new thing goes through, you won't have that problem.
+
+
+49:16: Youssef El Housni:
+
+
+Absolutely right.
+
+
+49:17: Anna Rose:
+
+
+But it's not necessarily its use in Verkle tries that Linea will take advantage of.
+
+
+49:22: Youssef El Housni:
+
+
+I mean, it can be used on Verkle tries, but it can be used on anything. I mean, I just gave the example of aggregation because this is what I've been working on on Linea, but it works also for Verkle tries.
+
+
+49:32: Anna Rose:
+
+
+Cool.
+
+
+49:32: Nico Mohnblatt:
+
+
+I have one last topic that I want to touch on, because we've talked about curves a lot throughout this whole episode, and I wanted to ask the both of you, how do you feel about the recent developments where things seem to be moving more towards the direction of STARKs and hash-based proof systems?
+
+
+49:48: Antonio Sanso:
+
+
+I feel bad. I feel bad just because I like elliptic curves too much. But I mean, of course, like STARK is great. Progress is inevitable, but I would really love to see elliptic curves as long as I can. So hopefully I'll be retired before this, because I'm too old. I'm in the 80s. But even if you think about post-quantum crypto, it's all about lattice. And that's why isogeny is the last attempt to keep elliptic curves into the game. If isogenies will not exist, you will not see any more elliptic curves in cryptography with post-quantum crypto. And so as an elliptic curve lover, I will hope that the SNARK will win Tower Star. 
+
+
+50:33: Anna Rose:
+
+
+Youssef, what about yourself?
+
+
+50:34: Youssef El Housni:
+
+
+I think I have a similar take as Antonio, which is it's too bad that elliptic curves are disappearing a little bit. But I mean, they're still there for some... For example, in some new schemes like in Nova scheme or for example in Zcash for Halo2, like those cycles of non-pairing friendly elliptic curves. So there is a still place for elliptic curves, but I agree that there is a lot of developments for hash-based SNARKs or STARKs. And I still do believe, for example, as a builder of zkEVM, there is place for both. Actually, and this is what we do because we have our own proof system, which is based on Orion, we call it Vortex, and it uses code-based cryptography. So it uses hashes and we use actually a lattice-based hash. And at the end of the day, we need an elliptic curve to go on Ethereum. So there is still place for both.
+
+
+51:28: Anna Rose:
+Cool. Well, Youssef and Antonio, thank you so much for coming on the show and telling us all about this work that you did, sort of the background on the work, how we can use it. I mean, this was definitely an episode that for me was somewhat deep in the weeds, but I'm glad that I got to also tease out a few questions I always wanted to ask cryptographers and got to ask you guys. So yeah, thanks.
+
+
+51:53: Antonio Sanso:
+
+
+Thanks a lot, Anna. Thanks a lot, Nico. I really appreciate it.
+
+
+51:55: Nico Mohnblatt:
+
+
+Thank you both.
+
+
+51:56: Youssef El Housni:
+
+
+Thank you very much, Anna and Nico.
+
+
+51:58: Anna Rose:
+
+
+Cool. So I want to say thank you to the podcast team, Rachel, Henrik, and Tanya, and to our listeners.

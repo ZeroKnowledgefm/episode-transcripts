@@ -1,0 +1,444 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+This week I chat with Michal Zajac and Albert Garreta from the Nethermind team. We find out about the origin story of Nethermind and the place it fills in the ecosystem today. We then dive into the research that the cryptography team has been doing, such as their work on proving the security of FRI the work, identifying security lost when using Fiat-Shamir, as well as exploring topics like ZK malleability, ZK aggregation, and the work they're doing to build SNARKs over rings. This is a pretty research heavy episode. It was fun to dig in with the team and better understand what security research looks like at Nethermind.
+
+(01:03):
+Now, before we kick off, I want to share that one of the top sponsors of our recent ZKSummit, Anoma is on the brink of launching Namada, a Layer 1 asset agnostic multi chain privacy solution that seamlessly integrates IBC and Ethereum. Namada needs you to try out private transactions on their testnet, so head over to blog.namada.net and join the Namada Discord to find out how you can help. And we'll add the link in the show notes. Now, Tanya will share a little bit about this week's sponsor.
+
+Tanya (01:32):
+Polygon CDK is the go-to open source chain development kit for building and launching your own ZK powered Ethereum L2. With a shared ZK bridge, Polygon CDK deployed chains tap built-in access to the liquidity on all CDK chains and public networks like Polygon POS and Polygon ZK EVM. Experience Unified block space with the security of ZK using Polygon CDK build chains precisely to your specs from level of decentralization to throughput to cost. And the core devs at Polygon Labs are on track to develop a type one prover. That means existing EVM chains will be able to be upgraded to Ethereum. L2s will Polygon CDK. This means more ecosystems, more cross chain applications, and an enhanced network effects. Polygon CDK is the raw material of Polygon 2.0, an ecosystem of interconnected chains that create a value layer for the internet. Check out wiki.polygon.technology/docs/CDK to start experimenting with your own ZK powered L2 today. So thanks again, Polygon. And now here's our episode.
+
+Anna Rose (02:38):
+So today I'm here with two members of the Nethermind team, Michal Zajac, and Albert Garetta, welcome to the show, both of you.
+
+Michal (02:46):
+Hi, it's great to be here.
+
+Albert (02:48):
+Hello. Yeah, nice to be here.
+
+Anna Rose (02:50):
+So the reason I wanted to invite you on was I really wanted to understand what Nethermind is. As an org I feel like maybe I've seen it through a number of iterations, but remember I've known the name Nethermind for a long time. I remember it being something around client development as Ethereum was trying to move from its ETH1 to ETH2 back in the day I've known Nethermind as a dev shop, and yet every time we do zkSummit, we get these amazing applications for ZK cryptography work from your org. And I also see some of your papers being featured in zkMesh, and so I just felt like it was a good time to figure out what are you guys doing and what is Nethermind?
+
+Michal (03:33):
+You are very right about Nethermind developing Ethereum execution layer client because that's how the company started in 2017. Basically, our founder, Tomasz StaÅ„czak wanted to code Ethereum client. He started by himself. Then in 2018 he got the grant from Ethereum Foundation and he was able to build a team of developers who were working on this huge project building the Ethereum client. Fun fact, the first company name was actually Nevermind because Tomasz didn't want to think about a name. But eventually it was changed to Nethermind what can be explained as a connection between .NET because the client is written in the .NET + Ether + mind . I'm not sure about this mind part, but it's here
+
+Anna Rose (04:36):
+Well, I guess that was the leftover from Nevermind
+
+Michal (04:40):
+Probably. Yes.
+
+Anna Rose (04:41):
+Cool.
+
+Michal (04:42):
+And yeah, fast forward to today, and we are company with over 200 people doing multiple things. So we have core developers that develop Ethereum execution layer client for Ethereum, but also for Gnosis. We develop Starknet ecosystem. So we have developers who work on Starknet client called Juno on blocks explorer called Voyager. In past we had Solidity to Cairo transpiler called Warp. We do formal verification. We do security audits in Cairo, in Solidity. We do DeFi and cryptography research. We do tech DD for investment funds, blockchain development for enterprises. Yeah, lot of things. And so here we are, we can only represent very tiny piece of the company called Cryptography Research.
+
+Anna Rose (05:50):
+Okay, got it. One question here though is are you also a dev shop? Could a team hire you to build out a part of their protocol if they needed to? Does that happen or would you say you're more hired for specific research projects or more for auditing?
+
+Michal (06:08):
+Research development and auditing, we have the various teams.
+
+Anna Rose (06:13):
+Okay. You do do all and you are building then, but would you also wear the dev shop hat then?
+
+Michal (06:19):
+Not us personally, but other engineers are.
+
+Anna Rose (06:22):
+Okay. So let's find out a little bit about the two of you and then we can talk more about the team, the specific team and the work that's come out of that team in Nethermind. Michal, why don't we start off with you. Tell us a little bit about your background also, when did you get involved in this company?
+
+Michal (06:38):
+So I started in academia. I was doing a PhD on cryptography at the University of Warsaw. I was working on something called leakage resilient cryptography. So basically I was analyzing what security guarantees we can have if part of our, for example, secret key got leaked. So say the adversary or some hacker learned part of the secret key. After that I switched to zero knowledge. I moved to Tartu in Estonia. It's like a very tiny, tiny town, but with a strong cryptography research group led by Helger Lipmaa. And I started to work on zero knowledge. That was 2016.
+
+Anna Rose (07:23):
+Wow.
+
+Michal (07:24):
+We worked on shuffle arguments, which are important building block for electronic elections. But then Groth16 paper came out, so we switched our gears to SNARKs. So I realized that I was always interested in security assumptions in modeling security of proving systems. And also there was another paper that came out in 2016, I think it's a bit less known than a Groth16.
+
+(08:00):
+It's paper by Bellare, Fuchsbauer and Scafuro, where they introduced a concept of subversion resilient zero knowledge proofs. So basically they were investigating what security guarantees we can have if the trusted setup that is often required for zero knowledge proofs is generated by a party that cannot be trusted. So they considered when the trusted setup was generated by approver, whether we can have any soundness in that case or when the trusted setup is generated by the verifier, whether we can have any zero knowledge, any privacy guarantees. So we had this paper, we had Groth16, so what we try to check is whether Groth16 is secure when malicious verifier generates the trusted setup for the prover. And long story short, it is secure.
+
+Anna Rose (09:05):
+Oh, it is secure, okay.
+
+Michal (09:06):
+Yeah, I always like to work in modeling security and also checking how much we can push a proof system until it's got insecure.
+
+Anna Rose (09:20):
+Got it. And I have this feeling that this is also reflected in some of the other work we're going to talk about.
+
+Michal (09:26):
+In 2019, I got my first crypto job in cryptocurrencies as cryptography researcher. And I joined a company, I was working on a system called ZEF, which was, we tried to build Zcash on Ethereum. So I can say that I was working on ZK roll-up in 2019.
+
+Anna Rose (09:54):
+But not quite or was it quite, what was the missing piece then? Actually, why would that not have been a roll-up back then? What was the part you were missing?
+
+Michal (10:04):
+I would say it was an up specific roll-up
+
+Anna Rose (10:07):
+Okay, okay.
+
+Michal (10:08):
+It was not like general computation. And then at the beginning of 2022, I joined, Nethermind to build cryptography research team.
+
+Anna Rose (10:20):
+Nice.
+
+Michal (10:21):
+Here we are.
+
+Anna Rose (10:22):
+Cool. Albert, tell me a little bit about your background, what you were doing and when you joined Nethermind.
+
+Albert (10:28):
+Yeah, also come from academia. I was in academia doing mathematics. My PhD was on studying equations on algebraic equations in all sorts of structures like rings, groups, also monos, mostly non-competitive stuff. I spent several years studying algebra equations there. The problems are related to Hilbert's problems, which it's a famous problem where you have to find out if there's an algorithm that solves the equations in that structure. And basically it turns out that in most cases there's no algorithm.
+
+Anna Rose (11:04):
+Okay
+
+Albert (11:05):
+Yeah. And then on 2020 I was doing these things and I was proposed to join the Blockchain and Crypto Economy Masters a new Masters program that was formed in my university and I started teaching cryptography there.
+
+Anna Rose (11:21):
+Where were you studying?
+
+Albert (11:22):
+I was in the University of the Basque Country at that point.
+
+Anna Rose (11:26):
+Okay, cool.
+
+Albert (11:27):
+And I did the PhD in New Jersey at Steven's Institute of Technology.
+
+Anna Rose (11:31):
+Nice. And at what point did you join industry and what made you make that leap?
+
+Albert (11:36):
+I got slowly pulled into the blockchain world while I was teaching cryptography at this Blockchain Masters. I started getting acquainted with the area and I learned about zero knowledge and eventually approached Nethermind and joined Michal's team in 2022.
+
+Anna Rose (11:55):
+Cool. What was it about Nethermind? Given your background, why would you not have gone to one of the just purely ZK focus teams? What led you to Nethermind?
+
+Albert (12:06):
+Well, Nethermind has this great internship program and I thought I'll join the internship program, it's 3 months. I'll see what happens. It's industry maybe I don't like it, I prefer to write papers, but I tried and it turns out it was super fun and I decided to stay.
+
+Anna Rose (12:23):
+I also wonder, do you feel like because of, I mean you already mentioned three ecosystems, you already work with Gnosis, Ethereum Starknet. I'm sure there's others. When you're working in an org like that, does it mean you can do ZK work for a much more broad project base where you're not necessarily tied to certain kind of decisions, whereas had you been part of a ZK focused company, you would be following the decisions made by that company?
+
+Albert (12:55):
+Yeah, I feel that Nethermind having this client-based approach allows to work on all sorts of projects and not take aside on some particular technique because sometimes a technique can become a brand. So at Nethermind we can be very partial with this and analyze whatever we believe is interesting to us and we don't need to commit to it for 5 years, for example.
+
+Anna Rose (13:22):
+Yeah. So when did you join Albert?
+
+Albert (13:25):
+May 2022.
+
+Anna Rose (13:27):
+Okay. So you guys have been there for a year and a half-ish or a year? A year and a half. Cool.
+
+Michal (13:33):
+Hey, we are working with Starkware, so there's so many interesting cryptography research problems there.
+
+Anna Rose (13:42):
+Nice. Okay, so I think we've covered somewhat what kind of company it is. What attracted you to it? You started to mention the different groups and teams. I actually was hoping we could do a bit of a broader look at what is the Nethermind world, what are all the types of projects and teams and ecosystems that you've been collaborating with or working with? And I think we've already mentioned Ethereum and Gnosis. You mentioned Starkware, Starknet as well. What else?
+
+Michal (14:13):
+Eigen Layer.
+
+Anna Rose (14:14):
+Eigen Layer. Okay. So that's a new one. Is this research partners or is this development partnerships?
+
+Michal (14:23):
+It depends. With Eigen Layer and with Starknet is both research plus development building tools, with Gnosis it's more development, with Ethereum we got some research grants from Ethereum Foundation as well. We also work with AlephZero, that's on the research side. We are building a private DEX with them. We are also working with concrete protocols within the Ethereum ecosystems like Lidar, Oval.
+
+Anna Rose (15:05):
+Cool. Alright, so that's a little bit of a map. Let's now talk a little bit more about your particular research group and the themes that you're excited about or interested in today.
+
+Michal (15:17):
+I think there is too many topics that excite us
+
+Anna Rose (15:21):
+Let's dig down then let's narrow it down to things that are related to the work you do around STARKs. So tell us a little bit about the latest research or work in that category to start
+
+Michal (15:33):
+In STARK related research, we work on security of FRI based STARKs or SNARKs. We worked on security laws that comes from Fiat-Shamir transformation. We worked on round by round soundness. We worked on non malleability of SNARKs. We worked on efficient proof aggregation of STARKs, which can be used for single slot finality in Ethereum.
+
+Anna Rose (16:07):
+And you're putting all of these still under the STARKS category, but some of them are SNARKs and STARKs. It seems like they're potentially also used for both.
+
+Michal (16:18):
+Fiat-Shamir ss both for SNARKs and STARKS because it's like a very, very general technique.
+
+Anna Rose (16:24):
+Yeah. Okay. So let's start with this security for FRI-based protocols. Tell us more about what you're doing there and what are you trying to prove?
+
+Michal (16:32):
+Let me start by saying that when we build a SNARK, we usually need some sort of polynomial commitment and two most often used polynomial commitments are KZG and FRI. And the thing is that FRI usually is not really a polynomial commitment.
+
+Anna Rose (16:57):
+So what you mean there is you have to twist it into that format, right?
+
+Albert (17:01):
+Yes. The thing is that FRI can actually be used as a polynomial commitment scheme, a PCS. If you configure it in a way that makes it very slow, very inefficient. So if you configure it in a way that you are inside the so-called unique decoding radios, then it's a PCS, but otherwise it's not. And the issue is mainly that FRI is a protocol that is supposed to allow you to prove that a map is a low degree polynomial. That's the ideal world, but it doesn't really work like that. It allows to prove that a map is close to a low degree polynomial so that it coincides with a low degree polynomial on a big set. So the issue is that if you want to use FRI in efficient ways, you can only prove that a map is close to some low degree polynomial. So you prove that a map is close to a low degree polynomial. And moreover, there are several low degree polynomials that are close to the map and for technical reasons, this makes it not a polynomial commitment scheme. So if you have a so-called PIOP a polynomial interactive Oracle proof, you can't just put FRI in there and compile it into a succinct argument because of that, and that's one of the issues we tackled in this work.
+
+Anna Rose (18:27):
+What do you have to do then to make it work? You're saying you can't just plug it in as is, you have to do something.
+
+Albert (18:36):
+Yeah, so what we did was we described a certain class of IOPS or PIOPs. So for this white class, this white class includes protocols like STARKs and Plonky2. In this case, if you use FRI instead of a polynomial commitment scheme using FRI preserve the security of the PIOP or IOP.
+
+Anna Rose (19:00):
+Okay
+
+Albert (19:01):
+With the price we paid is we had to take a specific form of IOP. And for this specific form, it turns out that you can compile it with FRI, but in general it's unclear that you can take any IOP and compile it with FRI.
+
+Anna Rose (19:18):
+And you're talking about the security of these. So what you're describing right now is just sort of how it works, but was it not secure before and you had to prove that it was secure? Yeah. What's the security side of this?
+
+Michal (19:34):
+So to prove security means usually that you have some assumption that is widely believed to be secure and you show that if your adversary, if some bad guy that tries to break your zero knowledge proof system that tries to break FRI by, for example, providing a polynomial of a high degree, the probability that the adversary breaks the system is bounded by the probability of the adversary breaking the security assumption. So if the adversary breaks your system, then you can use that adversary to break some well-known security assumption.
+
+Anna Rose (20:19):
+What was there before? You also sort of mentioned that it affects STARKs and Plonky2. So I'm guessing this work came after the release of both of those? Yeah, I'm just trying to, I mean it sounds like what the work was was just to add an extra layer of security and sense basically showing formally why it is secure, whereas they would sort of assumed to be secure. But I'm still trying to exactly understand what the assumption was before how that was created without having proven it.
+
+Albert (20:47):
+Yeah, so it was widely believed to be secure and as you say, our work is not a surprise because everybody was operating under the assumption that the security is what it is for the case of STARK of the STARK protocol, the issue with FRI not being a PCS that was already dealt with. So that's not something that applies to like what I just described, these considerations about FRI not being a PCS doesn't apply to STARK because in the STARK documentation they already dealt with this difficulty and in fact our techniques built up on some of the work of Ben-Sasson and his collaborators and also Ulrich Habock when it comes to analyzing FRI
+
+Anna Rose (21:36):
+Oh yeah, from Polygon.
+
+Albert (21:37):
+Yeah, he has a very nice summary of FRI. The thing that was not true for the STARK protocol was that it is secure after the Fiat-Shamir transform. It was believed to be secure, but it was not proved formally. When it comes to Plonky2 for example, it was not formally proved that FRI could be used as a PCS. You could argue that Redshift is an academic work that analyzes how to use FRI as a PCS in a PIOP. However, the security bound provided by Redshift on Plonky2 wouldn't be usable because the security bound of Redshift is exponential on the width of the execution trade. And in Plonky2, the execution trace is very wide.
+
+Anna Rose (22:24):
+Okay, so let me see if I can sort of paraphrase here. So Redshift was the first work that Plonky2 had taken. It was sort of using some of the ideas that Redshift had proposed, but Redshift had only created its security bound of a certain size. I guess once you created Plonky2, you had a wider, I don't know if that's the correct term, but you had a different security bound that you then needed to prove what they did. Unlike STARKs, which is like STARKs built around FRI from the ground up, the whole thing has FRI in mind, whereas Plonky2 is taking SNARKs and adding FRI, using FRI as the polynomial commitment scheme, which you're saying at times can be a little wonky. And so what you were doing here was trying to say actually even though it's using Redshift and it's using FRI, the way it's been constructed remains secure because of X, Y, Z.
+
+Albert (23:22):
+Yeah, that's mostly correct. I wouldn't say that Plonky2 uses Redshift. I think it uses, it has a subtle difference between from Redshift. It's not exactly Redshift, I would say it's more similar to the STARK protocol than to what Redshift describes. And because of that it is secure actually because of reasons similar to why STARK is secure when it comes to FRI of using FRI as a PCS.
+
+Anna Rose (23:50):
+I see. Yeah. And the only part you were proving here is FRI. You were not talking about any other parts of the system, just the fact that they're using FRI as a PCS in their system or was this also an audit of Plonky2?
+
+Albert (24:02):
+It wasn't an audit per se, but we did prove its security and I think it was a gap before it was not known.
+
+Anna Rose (24:11):
+Okay, cool. Why would you work on that exactly? I guess I'm trying to understand the motivation for this work in a way. Does this come through client work where folks are like, we'd like to prove this or is this curiosity? Is this the open source ethos? I am just curious what prompted it?
+
+Michal (24:28):
+I would say it's curiosity
+
+Anna Rose (24:29):
+Really?
+
+Michal (24:30):
+It's like you see that there are missing parts in the security analysis and you wonder whether is this thing really secure or not? What are the assumptions that are used here? What is the level of security? What is the security loss that comes if I apply Fiat-Shamir transformation, what happens when we apply Fiat-Shamir transformation to parallel repetition of protocol? So these were the questions we tried to answer and for example, for Fiat-Shamir security laws, we found answers in some paper, but I think in general the security laws that comes with Fiat-Shamir transformation is not very well known to the community. So I also think that let's make people aware that actually when they design a protocol and they show security in an interactive model before, well the protocol is compiled to non-interactive using Fiat-Shamir transformation, they actually should have some security margin because Fiat-Shamir transformation, it's quite a considerable chunk of their security.
+
+Anna Rose (26:01):
+Is this sort of a bit of a warning that you're saying or highlighting that even though Fiat-Shamir can be secure and even though the system underlying can be secure if you're combining the two of them, there could be some security vulnerability added?
+
+Michal (26:15):
+Exactly. We just need to be aware that Fiat-Shamir transformation is not perfect in the sense that the security of interactive protocol does not usually translates one-to-one to the security of Fiat-Shamir non-interactive protocol that there is some loss that can be quite substantial.
+
+Anna Rose (26:40):
+Are there certain systems in that work that you did because you also analyzed security loss of the Fiat-Shamir transformation in that work, did you find some systems suffered more than others and what were their properties?
+
+Michal (26:52):
+We found a very nice paper by Attema, Fehr and Klooss that analyzed security loss of Fiat-Shamir transformation applied to parallel repetition of protocols. So I would say that if we have protocols that are run in parallel, then this Fiat-Shamir transformation costs like a bigger security loss. So maybe I can explain why we want sometimes to run protocols in parallel. So these things from, for example, using small fields, sometimes there are different ways of using small fields in STARKs or SNARKs. Sometimes we can design a SNARK or STARK that does not provide the required level of security, but some smaller level and by parallel composition of the SNARK we can get a security boost. So the security is actually better when we run the SNARK in parallel. So the idea is that instead of having prover running a single execution of a SNARK, we ask the prover to run 3 instances in parallel where challenges are take into consideration that the whole transcript of all threats all executions.
+
+Anna Rose (28:16):
+But this improves the security of the system pre Fiat-Shamir transformation, right? You're talking about without the transformation it improved the security. What's an example of this? Is Nova an example of this or Halo2, an example or Halo1 maybe?
+
+Michal (28:33):
+Plonky2. It can be one of the examples. However, they do also some tricks that additionally boost security. I can imagine folding scheme being composed in parallel if we use some very small field and very small groups, but usually we observe parallel compositions in protocols that utilize FRI, not the billionaire pairings. And I think this is mostly because in FRI we or with things like Halo where we use inner product argument, our design space is much wider. So we have much more freedom of saying, okay, I want to work over this group, I want to work over this field. While usually in billionaire curve based proof systems, there's a number of proofs that we pick from. So the design space is actually much more limited. And usually when you work over these curves, you are say secure, say by default because these curves have a lot of margin for security.
+
+Anna Rose (29:59):
+But I want to go back to what you were saying. So you have these parallel composed protocols which you add the parallels to improve security, but then doing the Fiat-Shamir transformation can reduce the security. Does it reduce it? What was the analysis? What did you learn?
+
+Michal (30:14):
+So say that you have an adversary that breaks your protocol with probability P. Okay. And by breaking protocol could mean either that the adversary can convince the verifier of a false statement or maybe the adversary can convince the verifier over a statement that the adversary doesn't know a witness for. We have this probability P, when we do parallel composition of interactive protocols, the security of such composed protocol is boosted to P to T where T is the number of parallel repetitions, right? So since P is smaller than 1 P to T is much smaller than P. So what Attema et al found out is that where you apply Fiat-Shamir transformation for such protocols for some class of such protocols, the security is not actually P to T but is Q to new P...
+
+Anna Rose (31:26):
+A totally different one.
+
+Michal (31:29):
+There is a big, big security loss that comes from the fact that well the adversary can start the protocol and try multiple challenges by randomizing some parts of protocol.
+
+Anna Rose (31:43):
+I don't know if I can follow the nitty gritty of the reasons, but I guess the takeaway is yes, there is some security loss potentially.
+
+Albert (31:52):
+Can I give a rule of thumb of what's the security loss of the Fiat-Shamir repetition protocol?
+
+Anna Rose (31:58):
+Sure.
+
+Albert (31:58):
+So suppose the protocol has new rounds and your repetitive times you need new times more repetitions to achieve the same level of security as compared to the non Fiat-Shamir case. So if there's 3 rounds and you repeat it 3 times in the interactive part, the security is speed to the 3.
+
+Anna Rose (32:22):
+Okay.
+
+Albert (32:23):
+If you then apply the Fiat-Shamir transformation, the security is P, it doesn't increase.
+
+Anna Rose (32:28):
+Has it taken away any of the benefits of that parallel composition in a way?
+
+Albert (32:34):
+Roughly speaking yeah, it's like if you didn't do parallel repetition all it's more costly to attack, but as synthetically speaking, it's as if you didn't do any parallel repetition. If you want achieve PQ security, you have to repeat it 9 times if you are going to apply the Fiat-Shamir transformation if there's three rounds.
+
+Anna Rose (32:57):
+Okay, so you've found some sort of lower threshold where if you go over that in terms of the parallel composition and the number of rounds that you run it, then you actually do see some benefit even through a Fiat-Shamir. But then it's like the Fiat-Shamir just removes any benefits that you've come to achieve through this parallel composition.
+
+Albert (33:19):
+Yeah
+
+Anna Rose (33:19):
+Okay.
+
+Albert (33:20):
+But this is our rule of thumb for some particular protocols, maybe what I just said, it's not exactly true, but in general for most parameter configurations, that's what we found.
+
+Anna Rose (33:31):
+Interesting. The reason I find this cool is to also understand the type of work you're doing. You're kind of looking for I guess optimal applications of certain techniques, the number of times which ones go together best. It's like you have a lot of different tools, but if you use the wrong tools together, you're going to negate each other's benefits. You have to sort of think a little bit deeper about how you're combining them. Let's go to another problem or area of research that you've been working on. You sort of mentioned also the malleability of proof systems. Tell us a little bit about that and what kind of research are you doing around that?
+
+Michal (34:15):
+We usually want to have our SNARKs to be non-mallable. That means if someone sees a proof for a given statement, then this person shouldn't be able to coin for example, a new randomized proof for that statement or even like to build a new proof or some related statement. And this is important in applications where we use SNARKs to show knowledge about something. So one of the examples could be for example, TornadoCash. So in TornadoCash when you want to withdraw your money, you need to show that some particular secret nullify your end and some secrets related to a coin you have in the pool. So if SNARK that you are using to show that if the SNARK was mallable than someone who eavesdrops over the network can take your proof and change it in such a way that actually the proof would send money to his account instead of your account.
+
+Anna Rose (35:45):
+It's the malleability of the proof. But is it the malleability of the note the actual digital item that you're using as a proof would be altered or is it the proof itself is altered?
+
+Michal (35:58):
+That's a very good question. So you may want to alter either the proof itself or the instance and the proof. So instance is what you are proving using the proof. So for example, in the TornadoCash example in your instance is the nullifier of your note. So this value that make sure that nobody can double spend cash in TornadoCash. It's a public information regarding the tree where the notes are stored and it's a value which is Ethereum address where the funds should go. So you built a zero knowledge proof for that showing that you know a secret corresponding to a note with particular nullifier bank in particular tree and the transaction should be processed to the address that is stated in the instance as well. So if you could mall this instance and proof pair for example, you could change the address where the funds should be sent to some other address.
+
+(37:22):
+So the attack would be that you eavedrop communication in the network, you see that someone tries to withdraw their funds, you pick the accompanying proof and you modify the instance and you modify the proof such that the money goes to your account instead of the account of the person that wanted to withdraw. So fortunately in TornadoCash it was used Groth16 proof system, which is to some extent malleable, so for example, you can generate different proof for the same statement. You can randomize the proof, add some randomness, but you cannot change the instance. So fortunately in the TornadoCash example, no one could steal your funds, but it was not shown that this proof system Groth16 is actually non mallable.
+
+Anna Rose (38:25):
+But what was the work then that you were doing? Were you showing that it is non malleable or that certain systems are non malleable?
+
+Michal (38:33):
+I was working on different proof systems. I was working on the PLONK Marlin, so let's say the next generation of proof system and we were showing that they are non malleable in a very strong sense that you cannot even randomize the proof. Well what gives a good security guarantees, especially when you use your zero knowledge proof to show knowledge and maybe you have a system where showing knowledge about some secret gives you access to some data, right? So in that case, if the proof system is malleable, for example, if you use Groth16 and you want to get access to the data and some adversary can take a proof generated by an honest user and just change few bits, add some random elements, and also get access to the data protected by this proof system other than FRI security and all these STARK security Fiat-Shamir non malleability. We also work on say a bit more constructive things like not only analyzing security of existing schemes and one of such projects is a joint proof aggregation for STARKs.
+
+Albert (40:08):
+Yeah, we are working on this with a couple people from Yerevan State University around Aram Jivanyan and Hayk Hovhanissyan, I apologize for having butchered their names I had to practice more, sorry. And the idea is the following. So recently there's these folding schemes that came out and there's FRI based protocols that are incompatible with these folding schemes because all these folding schemes use an negatively homomorphic vector commitment scheme or polynomial commitment scheme,
+
+Anna Rose (40:45):
+Which this is specific to KZG. This is like a property that KZG offers but that FRI doesn't.
+
+Albert (40:52):
+Correct. Yeah, it's not specific of KZG, but it's something that FRI doesn't have because FRI uses Merkle trees for the vector commitments and those are definitely not dimorphic. So you cannot just use these holding schemes on FRI protocols. But however, we are working on some aggregation methods for FRI based protocols. The key observation here is that the FRI part of the protocol is very aggregatable and this is thanks to the so-called batch FRI, which is an amazing protocol that allows you to take two functions, take a random linear combination of them, and then if you apply FRI on the random linear combination and you pass, you can be certain that the verifier can be certain up to negligible probability that the two original functions are close to a polynomial.
+
+Anna Rose (41:45):
+What was the name of that? Was it batch FRI, batch like batching? Yes.
+
+Albert (41:50):
+Yeah, basically you want to prove that a collection of maps is close to a polynomial or is a polynomial. As I said, we would like that FRI proofs that things are polynomials, but it only proves that they are close. So what you do is you take a random linear combination of these maps and apply FRI on them, this is reminiscent of a folding scheme because you have several statements and you produce a new statement and if you verify the new statement, all the previous statements are true.
+
+Anna Rose (42:23):
+Why did you call it batching FRI? Not folding FRI.
+
+Albert (42:26):
+Well we didn't call this, this is a Starkware word.
+
+Anna Rose (42:32):
+Okay, well someone should make the folding FRI then. It sounds good.
+
+Albert (42:38):
+It came out when folding was not trendy so
+
+Anna Rose (42:42):
+Name. Okay. There was actually a folding / accumulation wording battle. It meant the same thing. And I think folding has sort of like the people who created the accumulation line of work I think have accepted that folding is a little catchier, so they've gone with it.
+
+Albert (43:00):
+Technically speaking, the batch FRI cannot be considered folding if we get into technical talking, but it is reminiscent.
+
+Anna Rose (43:08):
+Okay, okay. It has echoes of it.
+
+Albert (43:10):
+Yes. So that's one observation for aggregating FRI based protocols, but FRI is a sub protocol of this big protocols like the STARK protocol uses FRI as a sub protocol. There's a check that checks that the state transition is correct and then there's batch FRI. This is basically the STARK protocol. So if you want to create two proofs, you can create two proofs that the two straight transitions are correct and then fall or batch the FRI part. And so with this scheme you can basically just fold all the FRI checks of several STARK proofs into a single one.
+
+Michal (43:54):
+Yeah. So all this SNARKs and STARKs have one thing in common really that the relations for them are defined over fields and that actually allows you to do very sophisticated mathematical machinery and you have your tool stack is really enormous for working on fields. However, we don't need to limit ourselves only to fields. Sometimes we don't want to represent our computational field elements because for example in CPUs it's quite natural to represent computation model law 2^64 for example, and operations model law 2^64, they don't make a field, they're actually operations over rings. So another topic that we are investigating are SNARKs where we are not limited to relations over fields but SNARKs for relations that are defined over rings.
+
+Anna Rose (45:08):
+When you say rings though, what do you mean ring signatures? What is rings? Is this the thing that Monero was built with or what?
+
+Albert (45:16):
+Yeah, so no ring signatures, it's algebraic structure is like a field, but not all elements have inverse. Multiplicative inverse. A field is a ring where all elements have multiplicative inverses, but the typical ring example is the integer. There's no multiplicative inverses in the integer except for 1 - 1 because the multiplicative inverse of 2 for example is one half, but one half is not an integer.
+
+Anna Rose (45:45):
+You're saying SNARKs over rings though, are you? Then what is integers the thing you're going over then? Or what other category of rings are you using?
+
+Albert (45:55):
+The main thing we are interested in is Z/2^64. So basically it's like field that method, but instead of using a prime for the modulo, we want to use 2^64 for the modulo. And the issue here is that not everything has inverses
+
+Anna Rose (46:13):
+Pretty in the weeds for me. I don't know if I'm fully following, but yeah,
+
+Albert (46:18):
+The main blocking points, if you want to work modulo, something that's not a prime is that you don't have, which means that polynomials can have a huge amount of roots instead of the number of roots being bounded by the degree. And you also don't have univariate polynomial interpolation
+
+Anna Rose (46:38):
+With this, I mean I sort of understand that you basically said I'm going to build a SNARK over just a different category of numbers and what numbers you're allowed to work with. But are you yourselves then just experimenting by building a SNARK over that and seeing what properties it has? Are you trying to make a more efficient SNARK? What's the point of doing that?
+
+Albert (47:00):
+The point is to create a SNARK that is reasonably efficient and gets around these limitations I just mentioned,
+
+Anna Rose (47:07):
+Which limitations?
+
+Albert (47:08):
+In an ideal world, we would be able to build a SNARK that works modulo 2^64 for example, and is as fast as the fastest SNARK or STARK can think of. Now if this happens, it means that we can prove computations modulo 2^64 without paying any overhead that currently you pay by transforming the program that works modulo 2^64 toward modulo P.
+
+Michal (47:36):
+The idea for building SNARK or STARK over rings is to have more efficient arithmetics model 2^64. So for example, that's how CPUs perform the operations usually. And currently we can do operations model of 2^64 in SNARKs and STARKs over fields, but with every operation we really need to check whether we got beyond 2^64. So every time we perform this operation, we need to check whether we need to reduce modulo 2^64 or not. And other application quite natural is also showing statements about fully homomorphic encryption for example, because fully homomorphic encryption schemes give cipher text, which are ring elements. So you don't need to translate these ring elements into field and then making operations over it, like proving statements with these translated elements. But you could work natively on the elements on the cipher text from some fully homomorphic encryption schemes.
+
+Anna Rose (49:05):
+Interesting. Where does this project come from on your side? Is this also a curiosity project? Is it sort of like, wow, if we could do this, we could do more stuff with FHE? What's the motivation?
+
+Michal (49:17):
+I would say motivation is showing statements about fully homomorphic encryption efficiently. So say you have some blockchain where you perform your operations in an encrypted way and you use fully homomorphic encryption to do that. So by using the scheme that proves correctness of computation of some operations over cipher text, you don't need to perform operations over cipher text in a blockchain because these operations for fully morphing encryption schemes can be very computationally heavy, especially when you do something called bootstrapping. But you can offload these computations and make a zero knowledge proof for the computation and verify, find disproof on chain. Right.
+
+Albert (50:13):
+Let me also mention another application which is for floating point arithmetic. Floating point arithmetic, it's much cheaper to model over a ring. So an area that relies on floating point arithmetic is ZK ML, for example. So if we want to prove statements about a model that uses floating points and you have a fast SNARK that works over one of the rings, then it's much better because you don't have to translate the floating points into the floating point operations into operations over a field.
+
+Michal (50:48):
+Interesting. So I think everything boils down to a point that we actually do a lot of computations over rings. Sometimes we don't do computations over fields, so it would be only beneficial to have a proof systems that natively works for rings and don't need to have all the ring elements translated to field elements.
+
+Anna Rose (51:14):
+Cool. We are close to time, but I feel like there's so much research to mention. Share a few more highlights maybe for us before we sign off.
+
+Michal (51:23):
+In the research team, we don't always work with zero knowledge, we also work with protocols. So we work for example with Lido, with Obol. With Lido, we are working on making Lido more permissionless, I would say. So currently when you want to be an operator in Lido, you need to be approved by the Lido operator and Lido wants to make this process more permissionless where everybody can join as an operator. And this actually raises a lot of security questions, questions about how to maintain the good quality set of the Lido operators. So in that project we were working on white labeling protection for Lido. So for Lido, it is essential that Lido operators run their validators on their own and don't use third party services because such services could be malicious against the protocol. For example, could steal MEV or could introduce a single point of failure.
+
+(52:42):
+So we were working on providing measures how to detect operators who use white label operators. With Obol, we are working on Obol V2. So in the current protocol, Obol allows you to create a cluster for distributed validator with notes you trust. So if some of the members of the cluster, some operators in the cluster is down, you can basically only politely ask the operator to pick up his job. And in Obol V2 actions of the cluster will be accountable. So the operators who perform correctly won't need, for example, to share the reward with an operator that is performing subpar.
+
+Albert (53:39):
+Right now we are collaborating with the Starknet Foundation on some open problems around the incentivization of the protocol and also cryptographic problems. And the cryptographic problems involve, for example, analyzing some conjecture level of security of the STARK protocol, analyzing how collisions in the hash function that is used, whether finding collisions is actually dangerous or not, how dangerous it is if you manage to find a collision. And also it's slightly related to our talk about rings, designing a protocol that can work over different types of fields because sometimes you want to combine statements about computations that happen on different fields.
+
+Anna Rose (54:24):
+Cool. So I feel like we're going to wrap up here, but I can tell from talking to both of you that there's so many more fits of research that you're starting to work on. Maybe want to mention, it does seem like the work of Nethermind is just really quite broad and I think it's pretty cool to see how much the org has evolved and the fact that you're so focused on the ZK community and the ZK topics. I think it's a great kind of addition to our ecosystem. So yeah, thanks for being on.
+
+Michal (54:52):
+Thank you. It was great fun to be here.
+
+Albert (54:54):
+It was a pleasure. Thanks.
+
+Anna Rose (54:56):
+I want to say thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.
+

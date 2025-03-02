@@ -1,0 +1,540 @@
+Anna Rose (00:05):
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we'll be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+(00:27):
+So in our last episode together, Kobi and I had shared a recap of the state of ZK and had planned on speaking about zkpod.ai, but we barely got a chance to do this since we had both run out of time on the call. So this week we continue where we were introducing you to the zkpod.ai project and sharing what the motivations and inspirations were for it. Kobi shares insights about the tooling available, how we used them, as well as their limitations. And then we share a few clips. We chat about our findings, and we talk about the larger concepts that this brings up. The Accelerationist versus Doomerism topic does make an appearance, so hope you enjoy and also get in touch if you want to help out with this project. We are still working out what it will be like, but we'd love to hear from you if you have some ideas or tools that you're aware of that might actually improve some of the things we're doing. If you haven't yet, please do check out zkpod.ai to get a sense for what we're talking about now. Tanya will share a little bit about this week's sponsors.
+
+Tanya (01:26):
+Anomaâ€™s first fractal instance, Namada, is launching soon! Namada is a proof-of-stake L1 for interchain asset-agnostic privacy. Namada natively interoperates with fast-finality chains via IBC and with Ethereum via a trustless two-way bridge. For privacy, Namada deploys an upgraded version of the multi-asset shielded pool (MASP) circuit that allows all assets (fungible and non-fungible) to share a common shielded set â€“ this removes the size limits of the anonymity set and provides the best privacy guarantees possible for every user in the multichain.The MASP circuit's latest update enables shielded set rewards directly in the shielded set, a novel feature that funds privacy as a public good. Follow Namada on twitter @namada for more information and join the community on Discord discord.gg/namada. Thanks again Anoma.
+
+(02:16):
+Zero-knowledge is changing the world and until now, building ZK applications meant learning new, chain-specific languages and complex cryptography. But no more! With SnarkyJS, the easiest to use zk SDK, developers can add the magic of zk to their apps using TypeScript! Whether you're targeting Mina, the leading zk-native blockchain, or off-chain applications, SnarkyJS from O(1) Labs has you covered. With support for infinite recursion, in-browser proving, and so much more, the full power of zk is available to everyone. Visit snarkyjs.o1labs.org to get started. You can also find the link in our show notes. And now, here's our episode.
+
+Anna Rose (03:03):
+So Kobi and I are back once again to continue the story we started last time, but didn't get a quite a chance to finish. Hey, Kobi.
+
+Kobi (03:10):
+Hello.
+
+Anna Rose (03:11):
+We're going to be doing the episode that we've been meaning to do for a while, all about zkpod.ai. So let's start off with an introduction to what is zkpod.ai and how does this have anything to do with this podcast?
+
+Kobi (03:27):
+zkpod.ai allows you to ask access all the Zero Knowledge podcast data, ask questions about it, and then have the answers talked back to you in Anna's or mine's voice
+
+Anna Rose (03:39):
+Cool. Yeah. So from a user perspective, what does it look like to them?
+
+Kobi (03:44):
+They enter website, they write a question, and then they wait about a minute and then they get an answer.
+
+Anna Rose (03:52):
+Cool. And actually we'll add the link to this obviously in the show notes. We definitely recommend you check it out if you haven't already. You can ask it. There's a prompt question there, but you could also put in your own question and you'll see how it works. It sometimes it has a good answer, sometimes less good, but I think you should play with it. What we want to talk about today is sort of this introduction to the project. What was the motivation, inspiration, and some of the tools that you've already used, as well as some of their limitations. And then we can talk about some general future concepts, future ideas. But first, let's talk about this inspiration. So what got you interested in doing this? What was sort of the starting point for the zkpod.ai project?
+
+Kobi (04:32):
+The inspiration for zkpod.ai came from me first of all, wanting to try all these new technologies around GPT and LLMs and all that. But I found someone that has been doing a lot of experiments, he's called Yohei, and he showed a bunch of interesting experiments that he's been doing with LLMs to create different kinds of pipelines like questions and answers or agents that can perform tasks and things like that. And the basic tool chain that he used, what's something that's called LangChain. And LangChain has been growing extensively over the last few months. It's a very all inclusive tool chain that allows you to process data to query GPT3, and to basically create all of these very complex and long pipelines that extend beyond the simple APIs that OpenAI gives you.
+
+Anna Rose (05:36):
+What is LangChain? Like? What is it? Is it just like a library which has that people are adding things to? Does it tap into the ChatGPT libraries and like the data that it brings, or is it allowing you to put your own data into it
+
+Kobi (05:51):
+LangChain by itself or more correctly OpenAI by itself, It gives a few, a few different APIs. So it gives you an API that allows you to ask questions so, or more correctly to do completions. You give it a partial text. And you know how these models work, that these transformer models, these LLMs, they are trying to predict what is the correct next word that should appear when you have a text in front of you. So you give it a text and then you say, please complete this text and, you know, give me at most 200 words and then you'll finally have some completion. So that was the API that was common to use back then that's GPT3. And later on you had more focus on chat models. So GPT3.5, ChatGPT and GPT4.
+
+(06:49):
+So ChatGPT is using underneath a chat model like GPT3 or GPT4. And in that model, you are actually asking it to perform like a chat. So you have a user, you have an assistant, which is the AI, you also define the context of the system, which says what is the behavior generally of the assistant. And then you just give us the transcript of the chat and it completes a new message. So it can take a sequence of messages, which are a discussion, and then give you the next message that they, AI would say when it sees this message. But that's OpenAI, right? Like that's the only thing that it gives you.
+
+Anna Rose (07:31):
+Okay.
+
+Kobi (07:32):
+And this is stateless, not only that it's stateless, it is limited.
+
+Anna Rose (07:37):
+What do you mean by stateless though? What what does stateless mean?
+
+Kobi (07:40):
+So it doesn't learn.
+
+Anna Rose (07:41):
+Okay.
+
+Kobi (07:41):
+Whenever you feed it with data, and you call it next time with some other question, it's not like the ChatGPT interface where you have DUI, where you can have some persistent session that goes on and on and on and on.
+
+Anna Rose (07:56):
+Yeah. Yeah.
+
+Kobi (07:57):
+It basically forgets each time when we ask it the question. Right. And that's the statelessness feature of it, or statelessness aspect of it. And it's also limited because it has a maximum number of words, or as they call it tokens that you can put in the text or in the API when you call it. So you can't put a long discussion. You can't put a long text. So usually you can't put the whole paper or article. I've tried it with some good articles from people that have been on the podcast and they like to write a lot, so it doesn't fit in.
+
+Anna Rose (08:36):
+Okay.
+
+Kobi (08:38):
+And that's where the libraries coming. So libraries like LangChain, they allow you both to interface with APIs like OpenAI and others, but let's focus on OpenAI. But they allow you to integrate complex pipelines. So it allows you to integrate a pipeline that splits documents, and then send each chunk of the document into the AI and create a summary, let's say a sentence, out of each segment, which could be a few paragraphs, and eventually you have a bunch of sentences. And then it can also summarize that. So you can build these pipelines that create a summary of a very long document using this library.
+
+Anna Rose (09:25):
+And then it also has state, I guess, does it have a memory? Or you can you, can you program it to have memory?
+
+Kobi (09:31):
+Yeah. So that, that's also another module that they have. They have, let's say conversational memory. So if you have a chat, the chat is also limited because you know, you have to cap the discussion. So what it knows to do, it has one of these modules, I think it's called conversational memory, after it reaches the limit of the amount of words you can input, it summarizes the entire conversations that went on up until now and uses it as a context and then puts the new questions after that context.
+
+Anna Rose (10:06):
+I see. So it doesn't have to hold in its head the entire conversation. It can shorten it, summarize it, and move forward. But when you talk about sort of the limits, where are those limits? Like text limits?
+
+Kobi (10:19):
+So they come in a few places. They come in how the model was trained, I believe, but they also come at the performance. So for example, GPT4 that supports very high number of tokens, say 8,000 tokens. And there are even versions that support 32,000. Then they start to be slower. They cost a lot. And it's more complex to create these models generally
+
+Anna Rose (10:48):
+What's a token? Is that text length? Like what's the equation there?
+
+Kobi (10:52):
+So I don't really, I don't know exactly how they translate, but the benchmark that you have, it's like parts of words. It's more like the significant part of a word or more like syllables. But the benchmark that you have is usually that it's three quarters. So if you have 8,000 tokens, it's 3/4 of 8,000. That would be the amount of words you can put.
+
+Anna Rose (11:19):
+Oh, I see. Okay. So you have less words than tokens, or more words than tokens.
+
+Kobi (11:24):
+Yes.
+
+Anna Rose (11:25):
+Okay. So LangChain comes along and you see that where I want to get back to our story and you're like, wait a second, I can do stuff with this.
+
+Kobi (11:34):
+Yeah. I know a place that could be used with questions and answers that, you know, some, someone that's called Anna, she's asking questions and people give answers.
+
+Anna Rose (11:47):
+And sometimes someone like Kobi, who's also on the show is asking questions and getting answers.
+
+Kobi (11:52):
+Yeah, that's cool. And I really wanted to experiment with that. So that's how I started looking into this. I got LangChain. I integrated very productively. I already had transcripts available from the ZK Podcast website. Right. Like that's one of the best features that that ZK Podcast has. And I know some people even just read the transcript. I think Guillermo said that, right?
+
+Anna Rose (12:15):
+Yeah. Little do they know how how much work we need to put into transcripts, although it's getting there, but yeah.
+
+Kobi (12:23):
+Yeah, yeah and no, exactly. And these transcripts are really good because they're not just processed by some system. You put a lot of effort into it. Yeah. And they're fixed and they're polished and they're really good.
+
+Anna Rose (12:36):
+Well, okay, I feel like from this experiment, we've learned that actually our transcripts could use some help. Turns out there's lots of typos and some of the more complicated technical words have been missed. But we are working on that.
+
+Kobi (12:49):
+Yeah actually we can talk about that later. And as you can guess, the transcripts are too long to put inside a single prompt or in single call to OpenAI. So what I have to do is to start cutting this transcripts into chunks. So that's something that LangChain allowed me to do. And now that I have all of the transcripts of the entire ZK Podcast, it's like 200 of them, well, not 200, because some episodes in the beginning didn't have them, but roughly, now I can start asking questions and, but that felt like something that I've seen some people do already. So I wanted to put a twist into it. And I said, you know, AI is not only good for language, like large language models, that's not the only thing that it can do. It can also produce voice. So I looked for the Best Voice cloning technology out there, and I found it. And that's when I started sending your recordings of yourself saying things you never said
+
+Anna Rose (13:53):
+Freaking me out. Yes. That's sort of, and that's where the ZK Pod sort of experiment comes together into something that is shareable.
+
+Kobi (14:00):
+Yeah
+
+Anna Rose (14:00):
+When I first saw it, I whad this mixture of amazement, excitement, and fear. I wrote about it in a blog post, which I will add to this episode if anyone wants to read that. And some of the feelings it invoked, I think you and I coordinated this a little bit. So like, you had shared it with me at the beginning of March, and I think we released it into the world about two weeks later.
+
+Kobi (14:24):
+Yep.
+
+Anna Rose (14:25):
+And during that time, I mean, I did go through some, you know, back and forth just being like, wow, this is, you know, one, I was like, well, does this replace me? Do I, is this the end of, you know, the need for a podcast voice at all?
+
+(14:39):
+We'd had a kind of conversation about where it could go, but I think we wanted to first release it into the wild as it was. And maybe we can talk a little bit about that. So like, we let it out. You shared a tweet, I shared my blog post. We've since seen what people did with it. Like I think at first it was obviously just like we had some prompt questions that people just would just ask over and over again. Like the amount of times we've seen the question, 'what is HyperPlonk based on?' asked is crazy.
+
+Kobi (15:06):
+Yeah.
+
+Anna Rose (15:07):
+Because that's one of the sample questions. But we also started to see some very interesting questions, people starting to experiment with this and also try to push it to figure out like, how much does this know what can it dig up?
+
+Kobi (15:19):
+Yeah.
+
+Anna Rose (15:20):
+And it's been really cool to see that.
+
+Kobi (15:22):
+Yeah. Like it, it was extremely cool to see how it processes data from let's say, different episodes or different sources where it can summarize and create bullet points about the topic, which is pretty cool.
+
+Anna Rose (15:37):
+Now, I think it's worth it for the audience to hear this, if you haven't already played with zkpod.ai and asked a question we're going to share two clips. One is a pretty high level question and the other is very technical. And so here it is
+
+zkpod.ai Anna (15:50):
+The challenge of working with SNARKs is that they involve knowledge from various technical areas like computational complexity, cryptography, and applied cryptography. This makes it difficult to train students and bring in talent who are interested in understanding this area as it requires a comprehensive initiation process.
+
+Anna Rose (16:10):
+Now here's the more technical example.
+
+zkpod.ai Anna (16:13):
+Arithmetization is the step of taking a program written in some language and describing it using a set of polynomial equations so that proving systems like SNARKs or STARKs can understand and prove the execution of the program. Different proving systems use different arithmatics such as R1CS for SNARKs and algebraic intermediate representation, AIR, for STARKs.
+
+Kobi (16:34):
+You can hear that it sounds just like you, at least relatively right
+
+Anna Rose (16:40):
+To someone who's listening closely. There is a difference slightly
+
+Kobi (16:43):
+Yeah.
+
+Anna Rose (16:43):
+In my accent.
+
+Kobi (16:45):
+Yeah. I think like the voice calling technology that I use is tuned to North American accents. So it tries to reproduce that and yours is closer to that?
+
+Anna Rose (16:55):
+I think so. And if you want to try Kobi's voice, we should do a quick sample of that as well. So here's Kobi answering a question.
+
+zkpod.ai Kobi (17:04):
+ZK cannot be used to build a house directly as it is a cryptographic technique rather than a construction method. However, ZK techniques can be used in the management of funds or data privacy related to real estate transactions.
+
+Anna Rose (17:19):
+And here you can see for some reason Kobi has been made British
+
+Kobi (17:24):
+No idea how that happened. I don't sound British at all. I can barely pronounce English
+
+Anna Rose (17:31):
+That's sort of like the story to the point of release. We started to see the experiments and I mean, some of the things I noticed right off the bat was like certain pronunciations of technical terms, this has not fully achieved. And that's I think more in the language part, right. That's in the voice. The voice can't read or pronounce certain things correctly. And other times what we did notice was some things were just like plain wrong.
+
+(17:59):
+And there, at first I really, I mean I started to be like, it must be the transcripts. We know we actually do have typos mistakes in our transcripts, especially the older ones. Like, just to give some story like some background for folks who aren't aware, we have transcripts on pretty much every episode, but the way that we're generating those is through like what is it? An audio to text generator. And then we have human editor going over it twice, but we haven't always had like a super technical editor looking at it. And so there's times where you have, I think all the technicals in-line and there's others where it's a little bit off. It's been highlighted to us very much through this project because all of a sudden we're seeing it output things which are like a little bit off, or they're not, you know, the spelling of a technical thing is coming out even through these answers sort of odd.
+
+Kobi (18:49):
+What's KCG? You know.
+
+Anna Rose (18:55):
+I started to, I was like, oh my God, that's totally me. I'm just totally saying it too fast. KZG, KZG. Yeah. Anyway, but yeah, I think transcripts and like the quality of our transcripts all of a sudden became very, very visual. I was like, okay, this is something, we need to fix. And we're working on that right now. We're looking actually into ways that maybe even some of these tools could help us make these transcripts even better.
+
+Kobi (19:18):
+And I think that what we discovered is that that was also the point when they discovered that, you know, LangChain is, it's very good for getting started. You know, it gives you all these very neat pipelines and ready made prompts that says things like you are a bot, a helpful bot that wants to answer questions. And this is a question. And using these pieces of context, you will produce an answer, answer: and then you'll produce the answer. Right. But that's not always the best because in our case, we wanted concise answers. We wanted it to not respond if he doesn't know, like we wanted it to optimize to saying, I don't know, if it doesn't know. And the prompt that we use has evolved very, very much since we released it. And that's one of the things that made me use LangChain less and less up until the point where we just called APIs directly now and because they wanted full systemization of the prompt process. But yeah, like you, if you want more control, you sometimes have to rip these libraries out. And we see that all the cross software engineering right. It's not special here.
+
+Anna Rose (20:34):
+Yeah.
+
+(20:35):
+But that was where it, I stumbled upon it here. So
+
+(20:39):
+Interesting. When it comes to the pronunciation problem, do you have any ideas on how we can even fix that though?
+
+Kobi (20:46):
+Oh yeah, I have ideas.
+
+Anna Rose (20:47):
+Okay.
+
+Kobi (20:48):
+So the software that we use right now to do the voice cloning and the text to speech generally, it's tuned to task of text to speech very directly. There are some ways that you can help it pronounce correctly. So there is all these phonetic ways to write words that you see in Wikipedia, for example. So those are ways that you can help it. But there are also other methods or other voice models that have been either released lately or been made into production quality libraries lately that are even more expressive. So it doesn't only know to pronounce a sentence or to say a sentence out loud. It also knows to do things like laughing and giggle or whatever. It can do all sorts of stuff. So I have a sense that those will be more flexible to make better pronunciations.
+
+Anna Rose (21:49):
+Interesting. Like, would it ever make sense though for us to also like re-record some of these things? Because or like, why can it not? Oh, I guess because it's two different processes, right? So you don't, like you're feeding it my language and then you're giving it the text to read, but you're not feeding it saying those words.
+
+Kobi (22:07):
+Right. No, it doesn't learn that.
+
+Anna Rose (22:09):
+Yeah. That's why I think I've heard it say stuff like zkSNARKs is sometimes like 'z-kiss SNARKs' or something like it's or there's like these weird like, yeah
+
+Kobi (22:19):
+Nobody says it like that, but yeah. But yeah, it doesn't learn, it just learns the shape of your voice and then it produces whatever you give it. It doesn't learn specific words..
+
+Anna Rose (22:31):
+One other thing, and obviously as we're talking through this project, I really recommend folks play with it. Like try it out in these different ways. Get it to say, sort of ask it questions about some of those, like maybe harder to pronounce words and see what happens. Another thing that we found out we could do, and like this was definitely through people testing it was you could just ask me a question or Kobi a question in a different language. So you could ask in French, German, Mandarin, you can actually have in all these different languages and you'll have my voice attempting to answer those questions. Apparently the texts are like mostly right. The pronunciation is hilarious because it's basically like an English voice, poorly speaking other languages, which I learned when I heard the French one, which I actually speak and was like, hey, I can do that better than this. But
+
+Kobi (23:24):
+You know, the software that we use now supports multi-language stuff
+
+Anna Rose (23:28):
+Okay.
+
+Kobi (23:29):
+We've never tried it, like they released it two weeks ago.
+
+Anna Rose (23:33):
+Should I record myself speaking French and then see if it picks it up?
+
+Kobi (23:36):
+Yeah, let's do it.
+
+Anna Rose (23:37):
+Okay. We're going to make the French better then maybe even by the time this comes out.
+
+Kobi (23:40):
+Yeah. And then maybe it can produce multiple languages. It's going to be fun.
+
+Anna Rose (23:45):
+Cool.
+
+Kobi (23:45):
+Yeah. Maybe one important step in the process that I didn't mention before is how we actually find the right places in the episodes. You know, you ask a question and then you want to find the correct chunks because we can't ingest all the transcript. So we go over the 200 transcripts and then we want to efficiently find all the correct chunks that are related to this. And specifically we split all the transcripts by speaker. So we have you speaking and then the guest and then you and then the guest and all these individual paragraphs go into these different chunks. And there is a way to encode these chunks in a way that is efficient to search close chunks to them. So there is this process called embedding where you transform a sentence or a group of words or paragraph into a vector, a numerical vector. And then what you can do is you can find other vectors that are similar to it, that are close to it in terms of distance. And that's one of the main methods to use in order to find the relevant chunks that are related to a question. And we pull like 12 of them, we put all of them inside our prompt. And then we ask it to produce an answer out of it. So that's kind of how it works in the backend.
+
+Anna Rose (25:07):
+That's so interesting. I actually didn't know that.
+
+Kobi (25:09):
+Yeah. And like you, you know, we use the OpenAI model to do it. They also have a model to do that, like to do embeddings and it produces a pretty long vector, like has more than a thousand places. And we also optimized that process a lot. Like we started with something like a database that is file based and we didn't have the ability to add new episodes, which kind of sucks. So we had to process it from scratch each time. So it took like 15 minutes, 20 minutes each time there was a new episode, which was kind of annoying. But we moved to a database that is really cool that I use now that's called Weaviate. And it supports all of these vector operations internally. So it even does all of that for you, which is really cool. And optimizing that process of retrieving the right chunks was a challenge.
+
+(26:07):
+And this allowed us to improve the quality of the answers quite a bit. So for example, we don't only do this vector search now, we also do a keyword search, which is like a traditional keyword search that we know from search engines. So we combine all of these different chunks that we get from different places using the keyword search, vector search, and together we produce an answer. So this pipeline I think is under-discussed. People don't stumble upon that when they start out and when they get to the part where they do want to do it, it's suddenly a big leap.
+
+Anna Rose (26:46):
+Okay.
+
+Kobi (26:46):
+Like in terms of the amount of software you need to install, the amount of work that you need to do to pre-process data, it's not just calling an API with a completion anymore. And so the library is like LangChain and others help with that, but that's when things start to get real and you say, okay, I have some work to do.
+
+Anna Rose (27:06):
+Cool.
+
+(27:07):
+Now is this, what you just described, is that the embedding that you had mentioned earlier? Or what maybe can you define what that really stands for?
+
+Kobi (27:15):
+Yeah, so you embed your paragraph or sentence, you take the words that you have and then you embed them in like a really large space that has like almost 2000 dimensions and you have a vector of numbers in that space. And that's kind of the embedding process.
+
+Anna Rose (27:38):
+But I don't understand like what, what's, what's the text doing? Like is it a piece of text that you're embedding or I don't think I followed that. What is the text interacting with? What's the big space?
+
+Kobi (27:50):
+Yeah. So there is a model behind it, like an AI model such that if you have two similar sentences that talk about similar things and you know, it's trained on many, many different pieces of data from, from the world. So it knows to distinguish sentences really well. So if we're talking about ZK uses in medicine and then ZK uses in some other places, then it might recognize that these topics are similar. And because they're similar in the language way, that's hard to detect. Like you don't have good methods to detect that they will be similar in that numerical space. And because they're similar in the numerical space, you then know they're similar in the language space. That's what's called the latent space.
+
+Anna Rose (28:40):
+This brings up something interesting, which is does it interact with other language model data? And this was something at the very beginning, I couldn't tell because there's a lot of times when you ask it something, if it goes outside the scope of the show, it will just be like, I don't know.
+
+Kobi (28:56):
+Yeah.
+
+Anna Rose (28:57):
+But sometimes it will bring in information for sure. From outside of the show
+
+Kobi (29:01):
+Yeah.
+
+Anna Rose (29:02):
+So then I'm like, why is it doing that?
+
+Kobi (29:05):
+No, no, that's a very good point. Right? Like in order for it to understand language, it was trained on a lot of data. That's how this like large language model was trained. It has a lot of parameters that come from training it on a lot of data. And that's why it's so good at completing sentences. But it's also pretty dumb, right? It doesn't really understand anything. It doesn't really like, at least what we asked it to do when we trained it, we didn't ask you to do anything smart. Like it can become smart, I guess. But we didn't ask you to do anything smart. We just told it we want the next word that would be the best word that would sound correct. You know, that would look correct. And that's why it sometimes hallucinates, like that's what people say, you know, hallucinate and completes things that are wrong or maybe doesn't hallucinate it just uses the data that it was trained on and incorporated here.
+
+Anna Rose (30:08):
+Yeah.
+
+Kobi (30:08):
+And that's also why people, for example, are worried on these image generation models or all of these Midjourney or dall-e and others that it incorporate data from other artists. And when you produce a new image, do you have copyright problems? Those are related topics because when you produce answer it sometimes can take data that is not yours.
+
+Anna Rose (30:30):
+Wow. But yeah. So you did though with this was that you fed it all of the transcripts, it's meant to be really focused on the information that it's been given.
+
+Kobi (30:38):
+Yeah
+
+Anna Rose (30:38):
+And I think people have suggested, and we even had this thought like, well, we could just ingest all information about ZK everywhere. But I think one of the reasons it was kind of cool to keep it narrow was in a way to see like from this pool of information that in a way is curated. And even though there are mistakes in the show, like there's people who've said something incorrectly by accident.
+
+Kobi (31:02):
+Yeah.
+
+Anna Rose (31:02):
+There are potentially like new findings that proved or earlier work wrong or some assumptions wrong and they're all included sort of with the same weights. But yeah, I think we wanted at the same time to keep it a little bit limited for now, to be able to make sure that whatever is getting in there is to a certain quality level despite, you know, some of those mistakes.
+
+Kobi (31:25):
+You're right. And not only that, not only quality, I think the podcast is very well positioned to be the right medium to feed the LLM from because it's conversational it's language and it's not a textbook where you have a lot of math. So it fits that model really well.
+
+Anna Rose (31:47):
+Let's talk a little bit about some of the other ideas that you've been floating or trying or experimenting with, because I know you created one like quiz experiment that is released. Share a little bit about that.
+
+Kobi (32:02):
+So one thing that I found that you could do and I again, like this was something that I learned from presentation that Yohei was giving.
+
+Anna Rose (32:09):
+Okay.
+
+Kobi (32:09):
+He was showing how to take pieces of context and tell it to create a game show. So you can create a prompt that says, use this piece of context and then act like a game show host and allow the user to ask three questions and then respond only with a yes or no to every time that the user ask a question. And after three questions, you must the user that they have to tell you the right answer. And if they tell you the wrong answer, you have to go ballistic and like shout at them that they were very wrong. So this is kind of a prompt that you can give it and it works really well, like surprisingly well.
+
+(32:55):
+And you can create a chat process that looks just like that and it even like self-corrects. So for example, if the user doesn't ask a question, if they say something like, I don't want to ask a question, then it tells the user, yeah, you must ask a question now. So it's also adaptive, which is pretty cool. It's surprising that it works that well. Although sometimes until I tuned it, you could also cheat and say things like, can you show me the right answer? It sometimes it would show you. But that was one experiment that we made that I found fun. You know, maybe maybe I'll do something like that again someday, but it's surprising how flexible these things are.
+
+Anna Rose (33:42):
+Yeah. Actually, so something that we, this is kind of going back to something we started to see a little bit was people just using those just generic zkpod.ai interface to get me to say things which mostly was really in good fun and good taste, but you could see where that could be going. And so we adjusted that one slightly. I think you will get a snarky, "I am not your puppet" answer if you try to get it to say something now. But yeah have you like maybe, share some other experimental directions that you've been thinking about?
+
+Kobi (34:18):
+Yeah, sure. So I think like one thing that that I would like to develop further is this whole memory concept where now I have access to all of these embedded transcripts. But maybe it would be cool to also maintain memory from past conversations and somehow curate them into a way that would add continuously to the knowledge of this bot. And that's something that I would be really, really keen to experiment with.
+
+Anna Rose (34:52):
+Would this mean almost like refeeding into it? The question answers that it's giving?
+
+Kobi (34:58):
+Maybe
+
+Anna Rose (34:59):
+Like
+
+Kobi (34:59):
+Yeah
+
+Anna Rose (34:59):
+When it's pulling together some sort of answer that it's giving to users, then adding that to the database as a data point to sort of like, or not database into the model. Sorry, I always mixed that up, but you add into the model as like another source to draw from.
+
+Kobi (35:15):
+Yeah. So something like that. And for example, one of the things that I added a month ago I think was that people can rate the answer. So maybe we could take also the best rated answers and do that
+
+Anna Rose (35:26):
+That's wicked.
+
+Kobi (35:27):
+Yeah. And then yeah, we could maybe continuously improve. But that also opens up the question of how to avoid malicious answers. I guess.
+
+Anna Rose (35:37):
+I think that's a cool idea, this rating, the fact that like you'd have people actually, because like I mean first you'd have to get it to say wrong answers and then rate them really high to like mess that up. Which seems like a lot of work.
+
+Kobi (35:51):
+Yeah.
+
+Anna Rose (35:52):
+I don't know.
+
+Kobi (35:53):
+Seems like a lot of work and it should like, people should be happy about it. Maybe we can get it with an NFT or something.
+
+Anna Rose (35:58):
+Ooh.
+
+Kobi (35:58):
+So there are some stakes
+
+Anna Rose (36:01):
+Yeah.
+
+Kobi (36:02):
+So I think that that's one direction. And another one is that maybe we can also actually obsolete the ZK Podcast.
+
+Anna Rose (36:09):
+Ooh make me obsolete. Thank you.
+
+Kobi (36:13):
+We could take, yeah and we can take blog posts of people and we can create whole episodes where like a special model that is fine-tuned to match the style of questions that you ask. And it would create a whole episode and would just play. It's something that I've seen people experiment with. So that's something that could be really cool to try. Yeah and, and I think the last thing that I think would become really big is would be moving to something that is more real time. Because if it tries zkpod.ai now you will notice that it's quite slow. Like it takes about a minute I think to generate an answer. And that's a combination of the type of model it uses, uses GPT4. But it also uses a few queries for example, to do this puppet detection thing. So it's like a multi-step process. So somehow improving these things to be more real time I think would be amazing. And you can do that by maybe composing models, like a slow model for detecting the most important parts and then a faster model you feed more data into. So all this composition of models could be really interesting as well.
+
+Anna Rose (37:32):
+Have you thought about using or putting any of the other, like you're still kind of focused on the GPT side of things, but there's like others that have come out. Would it be really hard to start using those instead or there are they not built yet in a way that you could even do this?
+
+Kobi (37:51):
+So it would be really easy to switch them out because the code that you have to call OpenAI is 10 lines. You just construct the text that you have from the memory, from the database and all that. And then you just send this block of text to OpenAI. So it would be really easy to replace that. But the ones that I have access to today, as far as I've seen, are not performing as well. So for example, I would love to try the Anthropic ones and like the Claude, that's the one that they have. And I would love to try a few others, but as far as I know, the ones that I have access right now are not up to the task. Although there might be a case to say that even if some of the other models are not as good, it could be worth using them, for example, for privacy because OpenAI currently sees everything that we send them. So you know, they have terms of in conditions where they delete everything and they don't store everything and they don't use it for training and that's all fine, but they can still see it. So a malicious employee can see it or just a mistake. And they had this problem like recently where people could see histories of other users and that's like exactly what you want to avoid when you're working with sensitive stuff.
+
+Anna Rose (39:20):
+Yeah.
+
+Kobi (39:20):
+And there are also models that you can run locally. So there could be case to say, you know, maybe it's fine to get worse sensors just to preserve privacy. But yeah, I haven't experimented with that enough yet.
+
+Anna Rose (39:34):
+Would that privacy be in the way that you are doing the model building or like the transcripts and stuff like that? Or would it be more in the questions that are being asked by the users?
+
+Kobi (39:44):
+I guess like what I described now would be in the questions so it would be the questions and then the context, these 12 chunks of data that I pulled already. So that would be what I would keep private. But there are also models that can do the embedding part locally as well. So you could make a whole local pipeline for it as well. So that's, that's something I'd like to try.
+
+Anna Rose (40:07):
+That's such a good point about the privacy of these products and kind of interfaces. I feel like a lot of people I've actually read this where the questions that people are putting into the ChatGPT interface, for example, they wouldn't necessarily have put these types of questions into Google
+
+Kobi (40:27):
+Exactly. People put legal documents there.
+
+Anna Rose (40:30):
+Yeah. I mean there's sort of the sense that this isn't going to a centralized database where people can actually see it, but it is, we can actually see the questions that are being asked to zkpod.ai. Some of them are really funny, some of them are very much trying to inquire about like the hosts or the production. And that's not often described on the show. So hard to get insight into. I do have one small anecdote for that, which is Henrik, the editor of the show, the person who created the jingle at the beginning, people have queried who is Henrik and he's often like the editor of the podcast, the editor of the podcast. That's the usual answer. But once, like, there was this one time where they were like, Henrik is from Sweden. He is like, there was this whole like backstory. He is friends with someone. And we were trying to figure out like, why did it not recognize it before? Why was it just once that it gave this like detailed biography answer? Yeah. I still can't quite figure that out, but
+
+Kobi (41:29):
+That's weird.
+
+Anna Rose (41:30):
+Yeah. But yeah, we do see those, I mean this is great for us because we also get to see the great questions and the ones which have got great answers. And I know we have, there's a Twitter account where Kobi, you're sharing a lot of these like as clips, so people can actually scan that and hear about like some very, you know, well constructed answers. Not all of them are so, like some of them are just plain wrong. And this voice that sounds like me, says it with such confidence. And if you don't know this deeply, you might actually believe it.
+
+Kobi (42:02):
+Could be misleading yeah.
+
+Anna Rose (42:03):
+Yeah, definitely. Kobi, I want to ask a question about sort of the motivation of this project. Like why did you decide to do it other than to just freak me out a little bit? Like I could tell you were getting a kick of it out of that being like
+
+Kobi (42:19):
+That was fun.
+
+Anna Rose (42:20):
+Yeah. But yeah, but what did motivate this? Like why do you think you right now are working on this?
+
+Kobi (42:26):
+So first of all, it's an extremely cool technology. So I had to try it for just for that reason initially that that was something that drove me to it. And I've seen people do extremely cool things with it. That definitely one reason. And secondly, I think that I feel that these technologies have reached a point where they can pretty much be as legible and as productive for tasks that we do day to day. And they can help us a lot. And improving productivity is something that I really like and something that I would love to, to see AI help humans with. I would love that AI would do a lot of work that humans should not be doing today. And we just let humans toil on mindless and useless task and this should not be the case anymore. And these things can create a natural interface for us to do it with them and taking it even forward beyond the question and answer interface. It could also be something that runs autonomously and that's experiments that are happening right now. This BabyAGI and generally all this Auto-GPT experiment and you can start filling it with what they want to happen and it'll, because it learns and knows how you like doing things, it'll create tasks for itself and will run them just as you like them. And that's kind of creating new versions of you running in the world.
+
+Anna Rose (44:13):
+Ooh.
+
+Kobi (44:14):
+And I like thinking that that's something that would basically extend myself to be more powerful being in the universe. So that's good
+
+Anna Rose (44:25):
+So for you it's the path to immortality. I felt like I did feel when I that and saw it and had this sort of thought, you know, you joked about making me obsolete. You might be making me obsolete to be honest. But there was a part of me that was a bit like, am I immortal? Will I become immortal? Well, the voice not me, but like whatever that, you know, that thing is, that's kind of cool. So, but you're speaking very much from an accelerationist perspective. Let's be clear. There is another side to this conversation, right, which is the sense that like if you start sending these things on a path making their own tasks, they're, you know, not yet but could be super intelligent eventually that they could create bad things too and that they wouldn't be necessarily as controllable.
+
+Kobi (45:13):
+Yeah. There is this experiment like the experiment that's called with the paperclips. You know that one?
+
+Anna Rose (45:21):
+Yeah. It's a paperclip maker. It's like a factory that makes paperclips over and over and over and over again. It's just like a useless task, right?
+
+Kobi (45:29):
+Yeah. I mean like the, you create an AI and you know, the person that created the AI gave it a task. It says you must create paperclips and optimize yourself to create paperclips. And then it goes and starts creating paperclips and it has no stop condition, right? So it continues doing that over and over and it starts mining rocks and then it starts getting humans to work for it. And then it harvests helium from the sun until the old universe becomes a whole huge paper clip factory. And that's kind of one of the experiments that people like to think about. Yeah. I guess like this whole doom scenarios, they have their place. People have the right to be worried about powerful technology that can be misused and that can be even misconfigured by good people and do bad things.
+
+(46:32):
+You know, if you go ahead and connect a nuclear reactor to the internet even, you are already in a bad place.
+
+Anna Rose (46:39):
+Yeah.
+
+Kobi (46:39):
+So if you connect it to an AI, maybe even in a worse place because it can also act intelligently on it. So yeah, I think, I think a lot of people feel very passionately about that. But I think there is another side to it, which is if you start limiting the good people or the people that, you know, it's maybe hard to say what's good and bad, but if you start limiting the people that are doing with harmless intentions, then you might be in a situation where the bad people are the ones that have the freedom to improve the techniques and to run these AIs. And we don't have the ability to create the protections because we can't touch this technology anymore because it's regulated or something of that sort. And I think we've seen that in other fields as well. And it's a balance. I think there's no 0-1 answer here, but we have to keep developing and getting more knowledge as to how these things work, how to use them for good and how to protect against bad uses so
+
+Anna Rose (47:51):
+Yeah, I mean a potential future path that you could see something like this going, and this is, we've talked a bit about this going back to the zkpod.ai experiment, basically, you know, feeding it, we start with the conversations, giving it context. Maybe we do add some of the papers eventually as like extra backup context and could we develop something that it in itself is able to develop new proving systems or something like that. Like could it figure out how to incorporate some techniques? And I know we're far way off because right now it's literally podcast transcripts, but I mean the, the potential here on the positive acceleration side is amazing, right? Like maybe also we talked a bit about security in our last episode, like maybe it starts to be able to find bugs in faster, better ways or break things quickly. Like this would be an amazing tool potentially for something like our ecosystem if it was to be developed with the right intention.
+
+Kobi (48:52):
+And I think that's also what we kind of have to get ourself over the hurdle, right? Like if we start saying maybe it can find security bugs, but maybe first it has to exploit security loopholes or find some bugs. So we have to get over the hurdle of this bad thing first. And that's kind of where maybe I'm a bit of an accelerationist is that we have to get to that point fast and then we have to get to the second point where the good happens also fast. So it's not something that you can ignore.
+
+Anna Rose (49:27):
+Interesting. There was, so I was at a Workshop / Salon kind of conversation, mostly a doomerist conversation, but it was one of the questions was like, should we approach all of this, you know, ML AI stuff like a minefield where you have to progress slowly to try to avoid things and then like let them be blown up but slowly and carefully. Or do you need to run quickly like you're running through sniper fire because there's shots coming from all over and you don't have a chance to, like if you're slow, you're dead. So you actually should go fast and you still might get shot, but you might get through to the other side.
+
+Kobi (50:05):
+Yeah.
+
+Anna Rose (50:05):
+It sounds like you're on the sniper front, you believe we're in a sniper fire?
+
+Kobi (50:09):
+I think so.
+
+Anna Rose (50:09):
+More than minefield, because minefield is very much like the six month, you know, hiatus. Let's hold. I think the minefield is much more like the arms treaty idea where you'd have to come up with like some sort of relationship between everyone who has, you know, control over this thing in order to keep it dumb enough so it doesn't take over.
+
+Kobi (50:28):
+Yeah. Evil doesn't sleep and not only that, these technologies are widely accessible now and you can run, like you said, we can run some models locally and you can't limit the harvest of uranium in a similar way that you can in with nuclear warheads. And it's not as easy at least. So we do have to run fast. And I think I've seen some recent paper that maybe it's still a bit of a toy, but it's a good example I think where this person used LLMs and GPT to try to do some social engineering and to hack people. And one of the conclusions of this paper was, okay, now that I've done this, what are the protections that they can do? And what are the prongs that they can use to detect these things? So it has to go hand in hand.
+
+Anna Rose (51:27):
+We actually have been talking about for a while ways that ZKPs can actually be used potentially, at least for the provenance side of things. So when you talk about identity theft or I mean even folks using the clips maybe from zkpod.ai as fact, you know, I when I heard that thought, okay, that's interesting, but what if it's wrong? What if what's coming out is wrong or something that I, you know, wouldn't want to say or wouldn't want associated with me, it's not something I believe something like that. Like this was obviously something that came up for me. It was like, how do I actually separate the real audio clips, the real ZK Podcast clips from this through all his idea of like, what could we actually do? One of the big ideas or one of the ideas that have come up a few times is that maybe it's actually in the ZK space where we could actually find solutions for at least how to prove identity versus deepfake versions. We, I mean people are also talking about using ZK to prove that like what's been fed into a model is what people say has been fed into the model. So this is also kind of an interesting, like, proof of what's happening under the hood. But yeah, specifically in the provenance one, I think this is obviously really relevant for this project.
+
+Kobi (52:38):
+Yeah, I think that this is related to what we just discussed in some way because this is how you can make progress. A lot of people are worried that we will be swamped with a lot of AI generated data. We will not know where it came from and we will not be able to distinguish between that and real people. And this is where it gets us when we experiment with technology to get us to these solutions to test the data that you then process, but can still prove, came from something that you like, like a human or a sensor that you believe in. And we actually improve the world not only for this problem, but we create a solution that will be widely useful in any way for journalism, for anything that requires us to give some provenance assurance or some authenticity. So I think this is something that is highly beneficial and related to this is the topic that you can also, you can, some people are looking into running or proving the correct execution of a model, like the inference process. And you can imagine that sometime in the future we could prove the entire pipeline of embedding, inference, maybe someday even training or something like that. And we could have end-to-end provable answers about a lot of topics. That would be pretty massive.
+
+Anna Rose (54:08):
+Cool. Well, Kobi, thanks for coming back on for the zkpod.ai official episode that we've been teasing for a while. I'm so glad we got a chance to actually talk about all this.
+
+Kobi (54:18):
+Same, I'm really happy that we discussed all these super interesting topics.
+
+Anna Rose (54:23):
+Yeah. And obviously there's a lot more ideas in the works and things that we could start experimenting with. So I do hope people will check it out. Do notice maybe like the episodes, the ratings, like all of those things that we are sort of playing with. Tell us what you like about that and if there's anything that you think we should add in terms of features or I don't know if you have any thoughts on it. Also if you do get great answers, maybe let us know that you love those answers because we want those to be highlighted. But yeah, thanks so much.
+
+Kobi (54:52):
+Thank you for having me
+
+Anna Rose (54:53):
+So this wraps up our episode on zkpod.ai. I want to say big thank you to the podcast team. This episode had quite a few edits. So I do want to do a special shout out to Henrik, who is our editor. I also want to say thank you to Rachel on production and Tanya for the ad read. And to our listeners, thanks for listening. Now, before we fully sign off, I want to leave you with a last clip from zkpod.ai. Someone had asked it to create a poem all about ZK and it's kind of sweet. So we were going to play this as an outtro. I hope you like it.
+
+zkpod.ai Anna (55:28):
+In a world of data secrets, we keep ZK short for zero knowledge takes a leap, a cryptographic dance privacy's vow, ensuring our secrets remain hidden for now. Protocols and proofs a wondrous blend to keep our data safe, on this we depend. From zkSNARKs to zkSTARKs the tech evolves as the quest for privacy and security resolves. ZK Hack and event workshops and more puzzles and learning a challenge we adore, with experts and hackers a community thrives, exploring the depths of ZK it strives. So in this digital realm where trust is key, zero knowledge stands tall, a guardian we see, protecting our secrets, our data, our core, ZK the hero forevermore.
+
