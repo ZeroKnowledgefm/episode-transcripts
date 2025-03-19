@@ -1,0 +1,710 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week I chat with Aayush from ZK Email. He brings us up to date on the project since he was last on the show in 2023, sharing different ways in which the ZK Email protocol is being used in the wild.
+
+
+If you remember, ZK Email is a system by which you can use ZK to prove that you've received a specific email, as well as to prove things about the content of that email. While the concept is quite simple, the ways in which it's been applied have been really interesting. ZK Email can act as a bridge between Web2 systems, systems like Venmo, Google and social media accounts, with Web3 systems like payment rails and account management. It has recently been used by existing wallets to provide account recovery, it's been used to allow for anonymous chat with proven reputation, and it's also been used in proving digital provenance. This episode was an exploration of novel ZK use cases, one of my favorite topics to cover, so I hope you enjoy.
+
+
+Now, before we kick off, I do want to just let you know about the zkSummit. zkSummit13 is coming up. It's happening on May 12th in Toronto. This is the second time we bring the zkSummit to North America, the first being all the way back in 2019, when we did one in San Francisco. If you've never been to a zkSummit, I definitely recommend checking it out. This is the spot to find out about the latest research, the newest applications, to find out who are the most important players in ZK today. It's also a wonderful way to get to know the larger ZK community. The application to attend is now open. Links, as always, are in the show notes, and I hope to see you there.
+
+
+Now Tanya will share a little bit about this week's sponsor.
+
+
+Tanya [02:09] You might already know of the ZK Jobs Board, a place where teams can share open roles with our community. But when it comes to key hires, finding the right fit in our niche space can be difficult. That's where Missing Link comes in.
+
+
+They're a talent team built for the Web3 era, helping projects across the ecosystem connect with the right candidates at the right time. They've worked with names you'll recognize, Ethereum Foundation, Matter Labs, Lido, Mina, Web3 Foundation and many more, filling critical roles that drive these teams forward. Whether you're an established project looking to fill a senior leadership role, or a startup searching for specialized talent to refine your product market fit, Missing Link can help. They've done it for some of the biggest teams in the space, helping them, and now you, find the right people fast. For more details, check out the show notes and visit their website at missing-link.io. So thanks again, Missing Link.
+
+
+And now, here's our episode.
+
+
+Anna Rose [03:11] Today, I'm here with Aayush from ZK Email. Welcome back to the show, Aayush.
+
+
+Aayush Gupta [03:16] Yeah. Glad to be back.
+
+
+Anna Rose [03:17] I'm so glad we get a chance to catch up again. You were on the show back in December 2023. There, we were talking about two projects, zkLogin and ZK Email. We were kind of doing a comparison. This time around we're going to obviously dive back into ZK Email. I'm so excited to hear about what's happened since we did that interview. But, also, I hope we get a chance in this to continue that exploration on ZK applications. You and I have been on a couple panels in the last year where we started to explore that. I also recently had the Cursive folks on the show, so I feel like this is a bit of an episode in that spirit.
+
+
+Aayush Gupta [03:54] That's awesome. Let's do it.
+
+
+Anna Rose [03:55] But let's start actually with a bit of ZK Email, and maybe a little bit of your own background. What were you doing right before ZK Email, and what have you been doing since you were last on?
+
+
+Aayush Gupta [04:04] So I guess maybe to recap a little bit also was kind of, we mentioned this briefly in the last episode, but I guess, you know, before ZK Email, I was mostly at MIT working on cryptography -- taking cryptography classes, working on cryptography research. My master's thesis was this thing called PLUME nullifiers, which I worked on with Kobi. So that became ERC-7524, I think, which I think that's a new update from the last time maybe.
+
+
+And so now it's like a standard and a bunch of people have implementations. I think Mina has implementation, Aztec has implementation. Like it's really useful for these ZK-focused companies to say, hey, you can have anonymous accounts on our system directly. So, it's been quite cool to see the adoption after we got an official ERC.
+
+
+So I did a bunch of PLUME stuff, and then I was just exploring zero-knowledge apps, and then at the 0xPARC Summer Residency in 2022, Sampriti and I came up with the idea of, oh, what if we can make proofs of signatures? And what's the most common signature today? Oh, probably emails. And we kind of cooked up an MVP in a week, sort of worked. 
+
+
+And then over the next few months we refined it, and then -- actually, I don't think I told the story last time I was on. We had implemented the initial version in Circom, and it was kind of okay, but it was a little bit slow. And maybe the Circom version took us 4 or 5 months to pull off, and the initial ZK Regex compiler and things like that. But we really wanted fast client side proofs. And so we were looking into Halo 2 and I was -- back then Noir didn't really exist. And so I was looking up Halo 2 and how to do all these different circuits like RSA and SHA, and I found a HackMD online from Japanese kid named Sora who become very relevant soon. And he'd just written about how to do Halo 2 RSA and I've read this HackMD and I was like, oh my God, this answers all the questions that I've been thinking about in the last like two weeks. And so I DM'd him.
+
+
+Anna Rose [05:53] Cool.
+
+
+Aayush Gupta [05:54] And our first call was maybe 5-10 minutes long. It was like that was kind of the limit of -- because he was living in Japan, like he wasn't really speaking English much. And so we'd -- like after 5 minutes we were like, well that's kind of the limit of our comprehension right now. And so Vivek was like, well, is this really going to work? Is this not -- Vivek from Cursive was, I had like live with him for many years. And then, we, Sora and I kept calling week after week, and then eventually our calls became an hour, two hours and we just started really working together quite well.
+
+
+Anna Rose [06:26] Wow.
+
+
+Aayush Gupta [06:26] And then, we finally met up in person three months later at the, it's like Vietnam Residency PSE ran. And then it was like, he was fluent in English. He was great. We started working super well together. And so then we were like, well, it makes sense to kind of start doing this together. And so, we sort of started running this ZK Email as like a much more kind of professional thing, and not like, okay, just one guy hacking in his room or something. Yeah.
+
+
+Anna Rose [06:50] But did you say like Sora had perfect English when you met him? Like, did he --
+
+
+Aayush Gupta [06:53] Not -- sorry. Sorry.
+
+
+Anna Rose [06:55] Did he not have perfect English before? Like, how did he fix that?
+
+
+Aayush Gupta [06:58] So basically, I asked him -- so when we first called, it was only 5 or 10 minutes because we didn't have that much comprehension. And I asked him at the Vietnam Residency. I was like, it's been like four months, how did you go from being able to hold a 5-minute conversation to being able to converse quite fluently? Like, okay, now I totally understand you. And it's kind of, I asked him and he was like, I learned ZK by listening to ZK Podcast and watching ZK videos on YouTube, and talking to you every week.
+
+
+Anna Rose [07:27] Oh, wow.
+
+
+Aayush Gupta [07:28] Like talking to me every week.
+
+
+Anna Rose [07:29] But wait, did he fix his English through that too? Like, or just --
+
+
+Aayush Gupta [07:31] He learned all of the jargon? Yeah. So it was kind of, like, also just a general structure of English I think he was able to pick up on.
+
+
+Anna Rose [07:38] Amazing.
+
+
+Aayush Gupta [07:38] And so, I was like, that's so great.
+
+
+Anna Rose [07:40] Cool. So ZK Email, kind of back to that story, at this point, you were -- there was two of you, and you were kind of building it into a real project. How has it been funded up? And actually then and now?
+
+
+Aayush Gupta [07:52] Yeah. So all the way from then to now, it's been almost like 90% plus, like almost entirely by Ethereum Foundation's PSE. It's like Privacy & Scaling Explorations group.
+
+
+Anna Rose [08:02] Yep.
+
+
+Aayush Gupta [08:02] And so that's really interesting because they are kind of this like, hybrid focus on weird research, weird products that people aren't necessarily thinking about that take a lot of upfront investment in technology and research to be able to even get to the next level.
+
+
+And the other cool thing is there's a ton of other projects that use the tech that we built within PSE. There's a lot of great collaborations. We built these RSA circuits, these SHA circuits, these Regex, all in ZK, and a lot of other projects use it. And then, we collaborate on certain things. For instance, oh, Verifiable Oblivious Pseudorandom Functions like (V)OPRFs are super useful for a ton of different projects, and we kind of like someone from our team is collaborating with someone from PSE to build those. And so, it's just like a really cool, wholesome research group.
+
+
+Anna Rose [08:45] Would you say like -- I mean, in that group -- I think in that group there's like the TLSNotary folks. Is that true? Is ZK -- this is actually a question, ZK Email and TLSNotary, is there some overlap between what you guys are doing? Have you shared anything? Or is it really just sort of clustered in a similar -- yeah. Because I feel like they're often used in tandem, or at least the zkTLS is often grouped together with ZK Email. And so now I've been like -- yeah. I wonder if I've confused things a little bit there, just because you're from the same group.
+
+
+Aayush Gupta [09:14] Totally. So, I mean, I talk to the TLSNotary guys like almost every month or more. So one thing is that TLSNotary doesn't necessarily have ZK as we know, like Circom circuits, like that kind of thing. They have like -- primarily, my understanding is that it's like an MPC assumption. So it's kind of the trust kind of comes from you and the notary doing an MPC key together. And then the notary basically says, yes, this information went through me, and here's some -- here's like, I'm going to redact something or the other.
+
+
+But you're kind of fundamentally -- for instance, when these systems are deployed in the wild, they can't say, oh, any notary can make a proof. Because then, somebody could just be a notary with themselves, and make a proof and post it. And now they've bypassed the system and they can post fake information. And so, it's sort of like, I would say, I wouldn't even call it zkTLS. Like I never really liked the name because it's not like really ZK. It's a MPC TLS.
+
+
+And so, yeah, we coordinate with them, and I would say there's like some overlap. For instance, I want to eventually incorporate ZK Regex once it's kind of really friendly on these large HTML bodies, and we kind of collaborate on, okay, what is the direction of like -- like do people like Chrome extensions? Do people like iFrames? There's kind of similar sorts of questions, but I would say they're different in the sense that it's -- we've learned some things from each other, but they're still totally different user flows.
+
+
+For instance, for the TLSNotary, MPC TLS version, they are often going to either have an app or an applet, like something they download, and they sign into their account, and then they fetch the information. Or it'll be like an iFrame that they sign in the iFrame, and then fetch their information. Or it'll be, they have a Chrome extension that fetches information like ZKP2P as this pure Chrome extension.
+
+
+But it's kind of like, I think with ZK Email, I think my focus has always been like, okay, how do we make this like as few clicks as possible? Like if you can just have a one-click sign in with email, it fetches all the emails for you, you select them, you prove -- or you even just reply to an email. Like I've kind of always liked that. Okay. One, it's totally decentralized. We don't have to allow list like a certain set of notaries to interact with the smart contracts or with the system. We can say look, anybody can upload the email, and as long as it has the right signature is good enough.
+
+
+And so I've always kind of liked that it was a little bit more decentralized, and a little bit more trustless to do the ZK Email thing. There's trade-offs, of course. Like with email you're restricted to information in your email relevant to your email address, which TLSNotary you can kind of call any API and that's the trade off you're making. And actually I think there's this neat kind of overlap which is called Signed Exchanges.
+
+
+This is something actually, I think, Vivek from Cursive and Jason from EZKL found and told me about originally, which is basically there was this standard where people did a signature on top of websites. And this was an asymmetric signature so you could prove it exactly the same way you prove ZK Email. And this is quite cool because I think there's a couple of random websites like Forbes Italy, for instance, uses SXG. And there's like a new version of this RFC, like RFC, I believe, 9741. And these kind of give you asymmetric signatures on websites which you can then use to get ZK Email like assumptions on a TLSNotary style website.
+
+
+Anna Rose [12:20] Wow.
+
+
+Aayush Gupta [12:20] And so that's pretty exciting to me. It's just the problem is not a lot of websites use it. And so that's one of -- I went to IETF last year because I was like, oh, can we push more asymmetric signature standards? Because then -- and we don't have emails, we can have lots of other stuff.
+
+
+Anna Rose [12:32] I think we should probably for our audience define a little bit more ZK Email. We've just talked a little bit about where it lives in the larger ecosystem, and how it connects to these things. But let's revisit ZK Email and how it works, from maybe a user's perspective. Like when they're using something that might use ZK Email under the hood, what are they actually getting?
+
+
+Aayush Gupta [12:51] Yeah. That's a great question. So basically, the idea is that ZK Email lets you prove any sent or received email, prove that the sender actually sent that email, because there's an RSA signature that the sender domain will generate, and then redact information as they wish from the body of the email, or from the content of the email address.
+
+
+And so, you could imagine something like, maybe I've received an email from -- and this is a ZKP2P case, maybe I've received an email from Venmo. And it says, congratulations, you sent $5 to Anna. And I say, cool. I don't want to reveal my name or my address maybe, or my handle, but I do want to reveal that I sent $5 to Anna. And so, I can kind of take that email, redact all the information out, I don't want to reveal. Prove certain things, okay, yes, it says, from Aayush to Anna for $5. And then, I can send that on-chain. And then now, the way ZKP2P kind of V1 worked was, you take this email, you escrow some money, and then the money can only be unlocked once either party provides the email saying, yes, the money's been transferred.
+
+
+Anna Rose [13:52] And maybe we should say, like when you say prove, you're not proving to the person you sent the money to. You're proving, in this case, to a smart contract.
+
+
+Aayush Gupta [13:59] So you could be proving to anybody. So you could be proving off-chain, you could be proving to any third party, you could be proving to a smart contract. But yeah, I mean, the person you're sending the information to doesn't really need this redacted proof, because they have all the information already. And so, the idea is that the person you sent it to can then take that email and prove it to whoever else they want, which could be a blockchain, which could be another individual or company or whatever.
+
+
+Anna Rose [14:19] And it's a very simple concept actually. Just proving that something, you've received an email proving something about that email.
+
+
+Aayush Gupta [14:27] And it sounds almost like boring or something. It's like, oh, well, okay, email is like what's kind of exciting about that? And then you think about it a little bit, and you're like, wait, there's a record -- like receipts of our entire life are in our emails. Like every service we use is in our email. Every sign in we do is in our email. Every event we go to, there's some sort of confirmation in our email. Everything we buy, we often get an email. And it's a crazy record of a person's history.
+
+
+Anna Rose [14:48] When you describe this, I mean, emails start to sound like signatures. So in this case, is the email a signature, or does the email have a signature associated with it?
+
+
+Aayush Gupta [14:59] Yes. Okay. So this is a great question. This was something that I didn't know until I started looking into signatures. But basically, to do spam prevention, all emails sent or received since roughly 2016, 2018, have a DKIM signature in them. And this is used because you want to say, well, if Anna from ZK Podcast sent me an email, I need to verify that ZK Podcast actually sent this email. It's not some spoofer.
+
+
+And so the idea is that, what happens is the sender domain will have some public private key for an RSA private key, every single email server in the world, and that RSA private key will sign every single outgoing email with a digital signature. Like an asymmetric digital signature of the content of the email. And that's incredible. The fact that that exists is totally insane. And now, for instance, with Gmail, if you receive an email that doesn't have this DKIM signature on it, it'll just get bounced.
+
+
+And so every single email has to have the signature. And that's what makes email so special, is that they have this kind of chain of provenance that you can trace back and then prove. And this isn't really the case for, for instance, Telegram or Signal. Like you don't get these kind of digital signatures. And so, I think that's quite special.
+
+
+Anna Rose [16:07] This makes me think, I mean, just going through that case again, where you'd be like, basically, relying on having received an email from a certain person from a place. Like in the case of the Venmo example, so it has to come from Venmo. It's the Venmo automated emails that say you've made a transaction. It's basically what you're playing on in that particular case.
+
+
+But I mean, we've also, especially lately, just seen this crazy influx of spam emails that have gotten around. Some of those things that you just described. Like how many Docusigns are you getting? I don't know if you've received this one, but like the, oh, your document is ready or whatever. And it's from random email. But then sometimes even the emails themselves are the correct email. Like, they've somehow done some intercept. Is that affected? Would that affect the ZK Email system? Like are there ways that -- yeah, the way that spammers are gaming email, like would that also game this?
+
+
+Aayush Gupta [17:05] Yeah. It's good question. So there's kind of two main ways that people get around these email filters. One is, if you look at the DEF CON talks, for instance, like the Las Vegas Security Conference, a lot of the people who report, okay, like, some email vulnerability, what they're doing is inherently they're disabling the DKIM check. They're trying to say, we're going to turn off DKIM somehow and get around the system, because we obviously don't have the private key, we can't generate a fake signature, but we can at least try to turn it off. And this is kind of why Gmail very recently implemented this change, where they're like, no, you need a DKIM signature, which kind of disabled a lot of those attacks.
+
+
+And the other question is, for instance, with the Docusign emails, it's always being sent from like a specific, whatever, info@docusign.com or something. And then the question becomes, how does Docusign verify your email address? Because the DKIM signature is still going to be from Docusign, you know, okay, this is an email from Docusign. But when Docusign is like, okay, Anna has sent you a document, they need to verify, okay, you're actually Anna. And the question is, are they doing that correctly? And so it sounds like, what's happening is ZK Email is still secure.
+
+
+I can still say Docusign said that this ID sent you some document. But the question is, is Docusign doing that verification correctly? You have to be a little bit careful about these guarantees. Like the email itself is valid and you can prove the sender is valid, but the content in the email, you have to figure out, to what extent can a user manipulate that? Am I parsing information that's really being verified correctly? And so, you do have to be a little bit careful when you're defining these values. And I think you have to be careful in any kind of verifiable system. I think this kind of holds. You should be careful about the assumptions.
+
+
+Anna Rose [18:27] I do also want to give -- like I want to sort of caveat the Docusign example, because a lot of those are actually really terribly done. They're just like pictures of what a Docusign normally looks like. They're not from Docusign at all. So I don't want to, like, say that that company is responsible for these.
+
+
+Aayush Gupta [18:43] I mean, another useful thing is that, like if you check the domain and it's from docusign.com, then you know it's at least coming from the real company. And if the DKIM signature verifies it, you know it must have come from the real company. And then the question is, does the body of the email look like a document that you actually asked to sign?
+
+
+Anna Rose [18:58] No. For sure. But yeah, I do know that it's becoming more sophisticated. And so here there is -- like going back to the Venmo example, like if Venmo somehow had its emails intercepted, or if there's some way that someone's able to send out those automated emails through them, then obviously, ZKP2P would be affected. But you're talking about an attack at sort of another level.
+
+
+Aayush Gupta [19:23] Right. So this -- if you then got an email that looked like it was from Docusign, it was actually from docusign.FakeURL.com or something, then the DKIM signature would fail, because you would check against the Docusign public key, and you'd be like, wait a second, this signature doesn't pass, and you wouldn't be able to generate a [?] ZK Email proof if, you know, you wouldn't see a verified check from docusign.com, and you would be able to detect that. And that's what kind of what DKIM gives you out of the box, is like this kind of spam prevention domain validation process. And we almost hijacked that for ZK Email.
+
+
+Anna Rose [19:54] Nice. We've mentioned the ZKP2P example. I actually want to just highlight that the team behind ZKP2P have been on the show. I'm going to add a link to that in the show notes. It was also a project that came out of ZK Hack Lisbon, our first hackathon. So that was kind of cool too. Since then, this is back in 2023, that I think they first started to use ZK Email, have there been any other projects that have emerged using ZK Email under the hood?
+
+
+Aayush Gupta [20:18] Yeah. There were a bunch. So I guess, so after we kind of did our initial email wallet launch at Devconnect, where the idea was you could kind of send tokens to any email address, or receive tokens from any email address without necessarily even having an account on the system. And the idea behind this was, okay, what if your email was kind of the way that you logged into your blockchain account.
+
+
+And then we kind of went one step further was like what if your wallet, your blockchain wallet, looked exactly, and felt exactly like a bank? You sign in with your email. When you need to send a large transaction, they'll check in with you, hey, are you sure you want to send a million dollars to this person? You have to confirm over email. When you lose your account, you can recover your account with the reset password flow, which is fundamentally going back to your email asking you to confirm resetting your password.
+
+
+And so kind of these three main things of look, logging in with email, 2FA confirmation with email, and email-based account recovery sort of became then our main focus. It was, hey, how do we really make wallets intuitive for new users? And if you're storing maybe hundreds of thousands of dollars, okay, go use like a hardware wallet. Maybe don't be using your email for all that security. But at least for intro users, or for users who haven't necessarily interacted with the system before, we thought that it would be like a quite intuitive way to use these systems.
+
+
+And so, one of our big focuses at that point was focusing on these ideas, and specifically email recovery. And so that we ended up launching with a couple of groups. One was with Soul Wallet, now called Elytro. One was with Clave Wallet. That launched on mainnet fairly recently.
+
+
+Anna Rose [21:50] That's cool. So you're providing -- basically using sort of the ZK Email concept, you're providing the account recovery. But are you recovering the other things as well, or just really the account recovery is the main.
+
+
+Aayush Gupta [22:03] So the idea is that the owner of the smart wallet gets rotated. So in Clave, for instance, you have a passkey signer, and that holds all of your assets in one place. And the idea is that you would rotate the signer on that wallet, instead of being one passkey to being some other passkey. And now with 7702, which is this new EIP which basically says, look, any EOA account can be connected to a smart contract and be a smart wallet itself. You don't need to necessarily have a passkey wallet. Now we could even just stick in a ZK Email account recovery into basically any wallet, which would be quite cool. So that's something we're also looking forward to.
+
+
+Anna Rose [22:36] Cool. Like is there anything like ZKP2P or did ZKP2P start to use you in different ways.
+
+
+Aayush Gupta [22:43] So ZKP2P also started to use this in quite interesting and diverse ways. One way was like a domain marketplace. So the idea is that all these emails you receive in your inbox, every time you do some kind of transfer, you can build a marketplace on top of them. So one cool thing they explored was hey, Namecheap sends you emails when you send a domain to somebody, and they just built a marketplace on top of that.
+
+
+So now the idea is that you can send ETH directly to a smart contract, and then you escrow it for this domain, and then the person who transferred the domain, both of you get the confirmation email. Either of you can upload it, and now the escrows automatically release them. So it doesn't have to just be on-ramp/off-ramp. You can make commerce on top of any system that sends you a confirmation email. Which is crazy.
+
+
+Anna Rose [23:21] Yeah. And these already exist. There are these centralized portals that act as -- they'll basically be the middleman when you need to do a purchase with a digital URL or something like that. You're trying to get it, but you don't want to pay the money until you for sure received it. But they don't want to send it to you, until they for sure receive the money. I know a couple of them actually, just in domain sales. Yeah. That's so cool though. In this case you're, just using like a -- you're basically cutting out that middleman.
+
+
+Aayush Gupta [23:48] Exactly. So you can get rid of that third party escrow service entirely.
+
+
+Aayush Gupta [23:52] That's cool.
+
+
+Aayush Gupta [23:52] You can make it trustless and decentralized and peer to peer and --
+
+
+Anna Rose [23:56] Yeah. And you can do that for all sorts of things actually. Right?
+
+
+Aayush Gupta [23:59] It's super exciting to think about. And the really cool thing is that as long as Namecheap is running, you can't kind of stop a transaction. It's kind of -- it's sort of this marketplace that will keep on running. And I think it's kind of -- this isn't necessarily the case if you're going to build a system, for instance, on top of like TLSNotary-based system, because you have to basically say, okay, these are the five notaries that are allowed to make proofs. And so if those five notaries go down, well, then you might have money or domain stuck in the system. And so, I think, it's really quite important to think about the trust assumptions of the system you're deploying and say, hey, is this really going to be robust in the long term?
+
+
+Anna Rose [24:34] Yeah. So with those examples, is it mostly just the wallet recovery, or is there other benefits that you're also offering using ZK Email?
+
+
+Aayush Gupta [24:43] Yeah. So I think we were really iterating through what this entire user lifecycle looks like. And so we shipped a bunch of really cool tools that people can use as kind of ready SDKs. One is, when you log in, you maybe don't want to give every app you log into access to all of your assets. And so, you kind of want this almost OAuth system that we build kind of to be crypto specific. Like, hey, I'm going to log in my email, but I don't trust this website very much. So I only want to give it 10 USDC worth of access for a day.
+
+
+And so, the idea is that when you log in, you'll be permissioning a local public private key pair, that's this kind of session key almost, to have scoped access to your account. And this is kind of a new way of thinking about OAuth almost in the context of crypto, but with the same kind of interface that you're used to for email-based OAuth. And I thought that was kind of a exciting way to think about, okay, how do you make your interactions with websites more safe? Like it's very upfront what the permissions are that you're giving. So that was quite cool.
+
+
+And then in order to confirm transactions, one cool thing is we built this thing where you can use emails directly as signers on Safes. And so, the idea is you can literally add an email address to your multisig. And then now, when anybody triggers a transaction from that multisig, your email will get an email saying, hey, are you sure you want to make this transaction? Here's a simulation that's independent of the front end. Are you sure you want to do all these things? There is or isn't a delegate call, you should watch out for these things. You just reply, "Confirm," and then now you've confirmed the transaction. You need that second transaction for that transaction to go through.
+
+
+And that's particularly relevant right now because front ends are -- we saw this recently, is that front ends are a vector of attack, a real vector of attack in crypto. And I think one way to prevent this is by having independent almost interfaces that people are interacting with multisigs, for instance, like Safe. And this, in my opinion, if they'd had an email signer on that multisig, I think Bybit could have potentially caught the hack before it happened, because it would have been an independent transaction.
+
+
+Anna Rose [26:31] Interesting. Are there any other examples of ZK Email being used in the wild, like other kind of paradigms that you've explored with this tech stack? Is ZK Email a tech stack, a library? What is it actually? Is it like a service? Is it a concept?
+
+
+Aayush Gupta [26:47] Yeah. It's a good question. So I would say with ZK Email, we've kind of tried to take the whole stack approach in the sense that I think it's important to think about on the deeper research side, like, hey, what does it look like to optimize proof systems? What does it look like to define these (V)OPRFs? What does it look like to invent regex compilers that work in ZK? And on the other hand, there's also product like, I don't think you can iterate properly or prioritize research unless you're also thinking about the product side. And so we kind of build the whole stack, okay?
+
+
+Anna Rose [27:14] You did, okay.
+
+
+Aayush Gupta [27:14] We're going to do the core research on ZK, then we're going to build libraries that developers can use. And that's our main focus, I would say the developer libraries. And we're going to iterate on products with users, so we know what to prioritize on the library side, and on the research side. And it kind of -- it's just kind of endless loop that's kind of, I think, quite compelling.
+
+
+Anna Rose [27:30] How much is there so far? Because that's sort of what you will be or what you are becoming. But what are you now?
+
+
+Aayush Gupta [27:36] Well, I would say that that is what we are today. We kind of do -- we've done all this research, we've published all these compilers, we have all these SDKs that people can use to do each of the things I just mentioned. And we've audited all the ones that are currently being used in production. We've had almost like 4 or 5 audits on ZK Email end-to-end, so it's really mainnet ready.
+
+
+And then we've -- products like account recovery is really, I would say like user-facing deployable, people can try it. I would say, Email Wallet, user-facing deployable, ZKP2P, the marketplace, like domain marketplaces, you know, products that are really deployed.
+
+
+So there are 2 or 3 interesting other directions I want to talk about, which is, one, how do you think about logins that aren't triggered by email replies, just general app logins? Two is, how do you think about anonymous speech and whistleblowing? And three is, how do you think about proofs of emails already in your inbox and making those really quickly. And that's kind of what we built a registry for and the civil platform we released last week. So maybe I'll go through each of these in order.
+
+
+Anna Rose [28:31] Cool. Cool.
+
+
+Aayush Gupta [28:31] So email replies are one way to deal with emails. And it's really nice because it's generic across all email providers, all emails. But sometimes users, it's slightly easier to sign in with Google. And so the idea is when you sign in with Google, they issue this thing called a JSON Web Token or a JWT. And this is basically Google issuing an asymmetric signature if you're doing a Gmail sign in, Outlook reading, Outlook sign in, saying, yes, this user has logged in and authorized that account.
+
+
+The really cool thing is with the exact same tech stack as ZK Email, you can do these ZK JWT proofs in your browser client side, and that allows you to kind of log into websites or even do slightly more interesting things with whistleblowing/anonymous speech. And so, okay, on one hand, you can use it to do all the things I mentioned before, these wallet things with email sign-ins, which is potentially a more intuitive UI for some people.
+
+
+But one of the more interesting things in my opinion is, well, you can do something like steal a JWT login you've use from any other site. For instance, I can take my ChatGPT JWT, and I can say, hey, you can prove -- this website proved that I logged in on that site. And now, this website that you're going to go to to prove your anonymous speech, you can now take this ChatGPT JWT, and you can make a ZK proof of it. And now I can prove, hey, I have an @mit.edu email or I have @google.com email, so therefore I work at Google. Or I have, whatever @company email or @whitehouse.gov email, I work at the White House. And now you can say something on behalf of that institution. And that's quite cool because --
+
+
+Anna Rose [29:59] Anonymously.
+
+
+Aayush Gupta [30:00] Exactly. Totally anonymously.
+
+
+Anna Rose [30:03] Yeah. In the past, if you have anonymous comments, they're literally coming from who knows where, and there's -- the only way to prove it is if you have a third party who's verifying, like the journalist or the -- 
+
+
+Aayush Gupta [30:12] Exactly.
+
+
+Anna Rose [30:13] But then you're also needing to trust that person. And so, you have these like anonymous tips. Here, you'd have sort of like anonymous, but somehow verified.
+
+
+Aayush Gupta [30:20] It's quite cool. And the first iteration we built of this was with the Nozee team in December 2022, where we were like, hey, you can do this proof. And we released a version that basically takes this JWT from any other site, and lets you make a ZK proof of it, and then use it on this discussion board site. And that's quite exciting because the discussion board site now has no idea who logged in. Like, they actually have no information about you, which is pretty cool. And StealthNote is kind of the Noir version of this, which we worked on with Saleel at Aztec and who also used to be on the ZK Email team. And that's kind of a kind of slightly faster client side version of doing that. Just client side version of that.
+
+
+Anna Rose [30:57] What are those -- what was the name of the first one? Like the --
+
+
+Aayush Gupta [31:00] So the first one was Nozee, like N-O-Z-E-E, nozee.xyz.
+
+
+Anna Rose [31:05] Okay. Nozee. And what was that built with if it was not with Noir?
+
+
+Aayush Gupta [31:07] So that was built with Circom client. So it's actually fairly performant, because we're under a million constraints. You can do that like under 30 seconds in a browser client side, which is super solid.
+
+
+Anna Rose [31:17] And now you've done a Noir one as well. That's cool.
+
+
+Aayush Gupta [31:19] Exactly. And so now -- I mean, I think, once Noir is audited in 3 or 4 months, I think these things will be really ready to go. But Noir is quite exciting because you can drop these proofs down even in the browser by a factor of like almost 3 to 4x, which is pretty exciting.
+
+
+Anna Rose [31:33] That's pretty cool. I'm just trying to picture what it's like on one of those boards, though. Is this like a message board? Like a message message board. Like you're just like, I'm from this place, but you don't know who I am. I can verify that I'm from this place, and I'm posting this comment.
+
+
+Aayush Gupta [31:48] Right. So there's a couple of ways to do this. So one is like, you build -- exactly. You build a whole bespoke forum message board where your IDs are identified by affiliations. You could also, for instance, plug this into Twitter. You could say, oh, I'm going to post this thing, and along with it I'm going to include a ZK Email proof that shows at the same time that I'm attesting to my -- you know, whatever, my identity, I'm going to be attaching this message, and kind of signing it at the same time.
+
+
+And now you could even attach this to any speech you have anywhere on the Internet, and will automatically kind of embed that proof within that speech on Twitter. So I think there's still a lot of exploration here that, it is quite unexplored, and I think, it's really cool to see where that could go.
+
+
+Anna Rose [32:25] What are these, though? Like you haven't actually built the message forum board. You just -- have you built like the structure that somebody could build it on top of or something?
+
+
+Aayush Gupta [32:35] So Nozee was an end-to-end message board.
+
+
+Anna Rose [32:37] Oh, it is. Okay.
+
+
+Aayush Gupta [32:37] You could go in and comment and post and upvote and do all these things. I think StealthNote is similar. You can go in, comment, post, upvote. And it kind of is this integrated message board, but I think it's more almost exciting to see how this interfaces with normal speech. Like if you interface with real people, who you kind of know on Twitter, and now people are able to chime in. And you could also kind of take this one step further. You don't just need to prove organization email. You can say, oh, well, I can take any ZK Email proof. I can say, oh, I was accepted into Y Combinator batch this year, and therefore I'm going to say this thing.
+
+
+Anna Rose [33:09] But I said no. But here is how I can prove it.
+
+
+Aayush Gupta [33:12] Sure. Yeah. Exactly. Exactly. Or you could say, oh, I got a term sheet from this person or oh, I worked with this company, and here's proof I did that, from this email. And now you can prove even more interesting statements than just your affiliation, and then make statements on behalf of that, which is quite exciting.
+
+
+Anna Rose [33:26] Interesting.
+
+
+Aayush Gupta [33:27] So I think combining ZK Email and the login proofs that way is quite compelling.
+
+
+Anna Rose [33:32] Cool. Because it's not only -- I think it was anonymous speech makes it sound like it's sort of silent, private, but actually it could be totally public. Just guaranteed [?].
+
+
+Aayush Gupta [33:43] Exactly.
+
+
+Anna Rose [33:44] This is how you can verify that I'm telling you the truth of my affiliation or what have you.
+
+
+Aayush Gupta [33:49] Exactly.
+
+
+Anna Rose [33:49] I feel like this is so needed. I feel like we're a little bit behind. It's needed now, but it's needed in a mass sense, and like understood, and packaged in a way that people understand it, can easily use it themselves.
+
+
+Aayush Gupta [34:02] Yeah. And I think as more people -- as we start seeing people post these on Twitter, and people being like, wait, is this real or is this fake? I do think that there might be this tipping point where one particularly prominent person says one particularly prominent thing, and then that people are like, oh, what is this? And then we kind of tip the scale from people not understanding to people being, oh, maybe this is like a valid signal.
+
+
+Anna Rose [34:21] Do you think this could also help with impersonations?
+
+
+Aayush Gupta [34:24] In what context?
+
+
+Anna Rose [34:25] Like this idea of being able to prove that you are who you say you are, prove that you're somehow coming from something.
+
+
+Aayush Gupta [34:31] I mean, I think it is quite compelling. Because for instance, maybe somebody's trying to impersonate me on Twitter, and bought a bunch of followers. Well, now how do you know which one is a real me? Well, one of them -- only one of them can post a proof from my public email address. Only one of them can prove that they have an email from this institution. And so it is -- yeah, it is a cool way to resolve impersonation, I would say.
+
+
+Anna Rose [34:49] I say this because, and actually like PSA to the audience, almost like, but we, members of my team, in the last month, all of the team have been impersonated on Twitter and on Telegram, and they've gone around actually asking people to come on the show. Really confusing.
+
+
+Aayush Gupta [35:07] That's crazy
+
+
+Anna Rose [35:08] To have to -- it's not even like, give us money. I don't really know what they want. But this is obviously like, just made me think, wow, we have these tools where we could possibly prove things, but in order to actually integrate it into our accounts, and make it like something that everyone could use, I think we're not quite there. But I like that you're working on it. That's awesome. Given that you're exploring a lot of this stuff, are there any other kind of explorations for ways -- yeah, like other paradigms?
+
+
+Aayush Gupta [35:37] Yeah. So I would say there's two really exciting ones. I'll start with the registry, which I briefly mentioned earlier. The idea that -- we've discussed a bunch, okay, these kind of one-off proofs. But what if it was really easy to make a new kind of proof, and update it as you went? This is one of the lessons we learned from ZKP2P is that people often change a few characters here and there, and you want it to be really easy to update and define a new kind of proof.
+
+
+Anna Rose [35:59] Oh, yeah. You mean characters in an email? Like emails change?
+
+
+Aayush Gupta [36:03] Sure, Yeah. Exactly. The emails change, and just ever so slightly.
+
+
+Anna Rose [36:05] Yeah.
+
+
+Aayush Gupta [36:06] And so the idea was, what if you made it super easy? Instead of having to write ZK circuits and choose, ah, do I want to use Circom or Noir, we make all those decisions for you. And we just say, look, you tell us, you upload an example of email, you tell us who the sender is, you tell us the text you want to parse out. And it's very simple. It's almost like a ten line configuration. It's like a five minute process on registry.zk.email. And then we'll handle all the compilation to all the languages behind the scenes, deploy endpoints for you, make it really easy for someone to use, deploy a frontend that anybody can sign up with email and prove those emails for you, because they really want it to be really easy for anybody to launch a kind of ZK Email proof.
+
+
+And so this is something we actually ended up doing with -- you know, putting into production with Jupyter Exchange two weeks ago was the idea that, well, you kind of want to tell are people real people or not, when they're, for instance, doing things in the crypto world that Sybil protection is quite an important thing. And so, one thing they did is they'd flagged all of these Sybil clusters, and they were like, hey, we want to know who's real and who's not. And so, we went in and we were like, hey, provide either a centralized exchange email, showing you did KYC on some centralized exchange, or provide an email showing you did human-like things, like you ordered something on Amazon, or you took an Uber, or you ordered something on Grab.
+
+
+And we added all these proofs in and we said, okay, either prove two human-like things, or one KYC on a centralized exchange. And it was really cool because each of these proofs only took us like, you know, 5, 10 minutes to define. And then boom, we had like 20 or 30 different kinds of emails people could use to prove their identity.
+
+
+Anna Rose [37:32] So cool.
+
+
+Aayush Gupta [37:33] And people would just go in, they would either sign in with Google, or upload the email file directly, and then now they could prove that they were kind of a unique person. And we would have people come to us and they would be like, hey, I'm trying to verify all these emails, and they're not working for all of my accounts. And we're like, yeah, that's the point. You're only supposed to have one account per email, right?
+
+
+Anna Rose [37:51] Yeah.
+
+
+Aayush Gupta [37:51] And so, people like it totally worked. And it was -- I was sort of shocked. We did almost 5,000 proofs over the course of one week. Like real ZK proofs of real ZK people. These aren't like -- these are people who had to prove they did something in the real world. These aren't like somebody who are botting the system. That's a really insane number to me.
+
+
+Anna Rose [38:10] So you're saying that we don't have to scan our eyeballs in order to prove that we're real people? That's amazing. I'm so happy.
+
+
+Aayush Gupta [38:16] I mean, look, I think I don't want to like speak poorly of Worldcoin's approach. I do think there is merit to saying, look, even somebody without any email address, without any digital footprint, like displays, people can still prove their humanity. I think that's still a compelling idea. I just think we want to give people all sorts of different ways to do it. If somebody doesn't want to scan their eyeball, then there should be a way for them to prove their humanity. And somebody -- if scanning an eyeball is the only way somebody can do that, I think they should have the option to do that. 
+
+
+So it's been quite cool because, yeah, we launched this thing. 5,000 real ZK Email proofs in a week is crazy. And we see all these kind of hackers that aren't that familiar with ZK Email putting up these new proofs. Like we see people put up like, oh, I got accepted to speak at Devcon, or oh, I got into this residency, or I merged a PR into GitHub, or I have a Netflix account, or I deleted my Ticketmaster account. This is one cool, like one ticketing site want to say, oh, if you delete your Ticketmaster account then you get a discount on our site or whatever, which is kind of fun. Or --
+
+
+Anna Rose [39:14] Wow.
+
+
+Aayush Gupta [39:14] And one really cool idea you can do here is, is taking back control of your data. Like you can say, hey, I'm going to trigger a data export from say Amazon or something, and then I'm going to prove with my Amazon emails, yes, I actually did those orders, and then now I can sell that data directly to say, machine learning companies who are going to train a model on this data, and I can get paid for my data directly instead of Amazon who took my data, and then made money off of selling it.
+
+
+And that's really cool, this data reclamation idea that by proving it's yours, because you have to export your own data via your email, you can reclaim it, and you can make the money off of it, not the platform, which is quite exciting.
+
+
+Anna Rose [39:52] Nice.
+
+
+Aayush Gupta [39:53] So the registry lets us verify emails we have from keys made recently, but these DKIM keys rotate. And so these old emails are often lost to -- like the verification is almost lost to time, because those public keys aren't archived or exist anywhere. And so one thing we poured a lot of effort into is building almost like the archive.org for public key infrastructure. Like, hey, how can we backup all of these old DKIM keys, so that in the future, if you want to verify an email, you can do that on an old key. And one problem is there's these keys that are lost to time from before we started this project. For instance, Hillary Clinton's email. If you try to graph it and verify all those emails, a good chunk of them, something like half of them, don't verify.
+
+
+Anna Rose [40:33] When you say that don't verify, what does that mean? It just means that you can't guarantee that those are real.
+
+
+Aayush Gupta [40:38] Don't verify, meaning we literally don't know the public key. And so, all this -- the signature is there, the hashes are still there, everything works, but we just don't know the verification public key.
+
+
+Anna Rose [40:48] Why would that be? Why is that?
+
+
+Aayush Gupta [40:50] So the way that -- the reason this is because the public key is posted at DNS. They'll post it on some DNS record, which is usually like selector.domainkey.gmail.com or whatever. And the idea is that that rotates. So after like six months or a year, they're rotated --
+
+
+Anna Rose [41:05] It's because it's out of date somehow.
+
+
+Aayush Gupta [41:06] It's because it's out of date, and now the old record is gone forever. And so one question is, is there even a way to verify these old emails? And one really cool thing you can do is you can take two old RSA signatures, do this GCD-like algorithm on them, and then reverse engineer what that public key should have been.
+
+
+Anna Rose [41:22] Wow.
+
+
+Aayush Gupta [41:22] Which is crazy. And so what we were able to do is reverse engineer public keys all the way back from the first time Gmail ever implemented DKIM. And now, we have all these old public keys that were previously lost to time. And we ran this massive scrape over tons of different domains and we have, I think, over a million keys now in this archive. Like,I'm willing to say this is probably the biggest public key archive on the Internet, of these DKIM email keys, which is crazy.
+
+
+Anna Rose [41:47] Did you go back and try to check the Hillary Clinton emails?
+
+
+Aayush Gupta [41:51] Yeah, yeah. We went by back and tried to verify a bunch of the emails, and now like a bunch of them do verify, which is crazy.
+
+
+Anna Rose [41:56] Wow. Weird.
+
+
+Aayush Gupta [41:57] Yeah. So it's super cool. It's like -- and this is like really useful even outside, totally outside of crypto is, like, hey, a lawyer could be like, oh, I'm going to bring this case to trial, and I want to prove this thing happened, and I have this email. And previously, they wouldn't be able to verify that it was actually sent, and now they can, which is super cool.
+
+
+Anna Rose [42:13] That's so cool. You and I have been on two panels in the last year. I sort of mentioned it at the beginning of the episode. One was at the Modular Summit, and one was at the zkSummit12.
+
+
+Aayush Gupta [42:24] Right.
+
+
+Anna Rose [42:24] The one at the Modular Summit did not have enough people there. It was such a good panel, but not enough people in the audience. I'm going to add a link in the show notes. I've been sort of plugging this video over the year because I thought it was just basically a conversation about possible applications. And then second, at ZK12, did get a better audience, bigger audience, and that was very cool as well.
+
+
+In those, we did spend a lot of time actually talking about the Cursive cases, like digital pheromones and narrowcasting. And I just recently did an episode with them, which I'll add in the show notes as well for folks who want to listen to that. But I thought maybe we could continue a little bit in that thread. I mean, you've already just -- in what you've just shared, with how a ZK Email could be used. You've shared all these really interesting, like rethinking the power of email to do a lot more than we thought it could. I really like that. But yeah, why don't we kind of continue on that thread? Is there anything that is outside of purely what ZK Email can do that you've been thinking about?
+
+
+Aayush Gupta [43:20] Yeah. So I think the broader version of ZK Email is like, can you zk-verify digital signatures or can you use digital signatures for general provenance ideas? One of the ways we explored a lot of these digital signatures, and what they can be used for is at The Signature Singularity Residency that we did last year in May 2024 in Osaka. This is something that Vivek from Cursive and I co ran. We've been friends for many years, and have been wanting to do this for a while.
+
+
+And at that residency, there were a ton of really exciting, weird explorations that people who just took a month to explore ideas that hadn't really necessarily been tried before. So some example ideas were, for instance, one digital signature that's underutilized is the signature called AppAttest, which is basically, you can kind of prove that an app binary ran correctly on your phone.
+
+
+Anna Rose [44:09] What would that prove?
+
+
+Aayush Gupta [44:10] Right. So exactly, for instance, on my phone I can prove, hey, I called the camera API, and took a picture. And then I called the location API, and got a location. And as long as you trust that this phone wasn't deeply jailbroken or, somehow compromised in some other way, you can prove that you executed some sequence of actions on an app, and there's a digital signature signed by Apple or Android or whatever saying, yes, these instructions were executed on this phone. Now you can prove, hey, I took this photo at this location with this metadata, and did this other thing in this app. And you can basically prove that you took some actions in an app, which is really interesting in my opinion.
+
+
+Anna Rose [44:46] That's also a little scary, what you just described though, for surveillance. I guess here you're thinking of it as optional, right? Like you would prove optionally to say, I have done these things.
+
+
+Aayush Gupta [44:56] Of course, it would be a user opt-in thing. And that a user is going to take this picture and prove, yes, it came from someplace. And this is -- I think, it also relates to some of the ZK Passport work, is that, you can now prove, hey, not only am I going to verify the NFC signature on the passport, which by the way, has asymmetric signatures in them, but also I'm going to verify that the person standing right in front of you just took a picture on the phone, and that the face matches. And you can do this almost like zkML face matching, which is also quite interesting and a project that somebody explored at this residency.
+
+
+Anna Rose [45:27] Yeah. I feel like generally in the ZK application experimentation space, it seems there's two categories that I'm seeing. One is where ZK or -- and when I say ZK, I'm using the royal ZK, all the kind of programmable cryptography. You're using it to mimic, emulate existing systems where there's possibly a third-party and you're trying to get rid of them. I think throughout this episode we've talked about a lot of examples of that where there may be actually systems that exist like that in the world today, but they're using some Oracle or some person or some entity that's going to be verifying. And then we can use instead programmable cryptography to replace that person.
+
+
+But then I think there's also these examples where it's really more out there. And, I think, you've also shared a few examples like that where we don't have an existing paradigm. And I think that's the space that feels like the greenest field. I feel like there's so much still to explore there. I'm really happy that you're looking into this stuff. I'm really happy that the Cursive guys are looking into this stuff. If you have more recommendations for people I should speak to who are looking into this kind of stuff, I would love to talk to them.
+
+
+But I also, I think it's really hard to do, because it's so, you don't know yet. Like you know some of the qualities of what this cryptography gives you, some of the benefits, some of the outcomes, some of the paradigms, but you don't really know how larger uses of this in certain contexts would actually play out. How are you even thinking about this stuff? Like how do you approach these? Are they sort of trial and error? Are you sort of forging a slow path and you're exploring kind of close to what you've already explored and then you're seeing it draw you further? Or have you actually just spent time brainstorming with your roommates or something, like trying to come up with these weird ideas? Or is it sci-fi that helps? I don't know.
+
+
+Aayush Gupta [47:17] I mean, sci-fi is great. I think that that's how you kind of think about the future a lot. I think the way that I am personally thinking about these ideas is that ZK, at least to me, is most powerful when paired with digital signatures. And the question becomes what digital signatures exist? And you can kind of almost constrain your ideation base to be like, well, I see this as a digital signature, for instance, on credit cards, when you talk about credit cards, you get an EMV signature. Now what can we do with that?
+
+
+And you think about, well, maybe we could build like a marketplace now on top of where you're directly using credit card to pay for something, you verify the credit card directly. Or oh, the passport case. What, wait a second, there's an asymmetric signature on passports. How can you use that? You can kind of think about, oh, there's asymmetric signature on apps. How can we use that? And it's kind of, at least the way that I'm thinking about so far is, okay, how can we find asymmetric signatures in the wild, and then how can we make proofs of those in ways that are provenant and interesting and wrapped in ZK? And then what do we want to anonymize or prove on-chain or whatever? And you kind of think from those ideas.
+
+
+And so that's at least how I've been approaching a lot of the ideation here. But you can also almost design systems that have these signatures built in. So one of the examples I've been thinking about recently is PROTEUS, which is the idea that in a world with super advanced AI systems, like generative AI systems, how do we -- like what is the role now of cryptography and ZK?
+
+
+And I think one argument that people have made is, oh well, AI is the most interesting thing. Does cryptography really matter anymore? And I would actually say to that, like in a world with AIs, cryptography is one of the only things that matters now for your humanity is because that's one of the few things that a large language model or that a huge AI system cannot do. They literally cannot come up with a fake signature from your account, but they can emulate almost anything else.
+
+
+Anna Rose [48:58] Unless they break it all.
+
+
+Aayush Gupta [49:00] Well, I mean, but that's the cool thing, right? That these proofs are -- like 256 bits are impossible. You have to use more atoms than whatever, like the -- I don't know what the numbers exactly, but it's like, you have to use an insane computational power that were order of magnitude off on earth to be able to break these systems. And it's not something that these systems can do anytime soon. And so the idea is that, hey, if cryptography is now so vitally important, how can we use that to start already, either offsetting the harms of or interacting with these AI systems?
+
+
+And we've already seen one example of, okay, proving your humanity. You could prove you did something in the real world that an AI system wouldn't be able to get a receipt of. But can we take this one step further? And I guess one idea that I was thinking about with some friends was like, hey, what does provenance look like for generated content? For instance, if you have a camera taking a picture, how do you prove that it's a camera taking a picture versus an AI generating an AI image at the point when these almost look indistinguishable.
+
+
+And there's been a couple of really exciting approaches here. One is Dan Boneh's proof of transformation where him and some PhD students figured out, hey, you can prove that you did some edits in Photoshop, and therefore that you make a ZK proof of all those edits, and you prove the image was transformed. But in my opinion, a lot of these edits aren't going to happen inside of a ZK editor. That almost seems a little far-fetched to me.
+
+
+Anna Rose [50:19] I think we -- and we've even tried to build those and they're pretty clunky.
+
+
+Aayush Gupta [50:23] It's hard. It's like, you want this to work with Photoshop on day one, you want this to work with Instagram filters. I doubt Instagram filters are ever going to add ZK provenance. And so it's kind of like, how do you think about, as a start image provenance in a world of mass information where you really want to know what's real and what's not.
+
+
+And one idea is, well, what if these image providers generated a signature on top of the image? And so this was what CGPA was trying to explore, was, hey, what if we just signed the raw pixels of the image? And cameras would sign it and AI models would sign it, and that's how people would map it back. And the problem was this is not really a robust solution because, okay, you sign the raw pixels, and then now you post the image to Twitter. Well, Twitter compresses it and now the signature is compressed. And the metadata is wiped, and the signature is wrong, and there's no way to verify it. And so ideally, you want to assign some property of this generated content that's not going to change, even if you make modifications to the image.
+
+
+Anna Rose [51:19] What could that be?
+
+
+Aayush Gupta [51:21] So in cryptography land, we have this concept of a hash, of like, hey, we have this value, we're going to hash it, and that's going to be the same as long as the value is the same. But imagine we had this kind of fuzzy hash, where it was like, oh, well, even if the images changes a little bit, the hash is mostly the same. And it stops being a cryptographic hash, and now becomes more of a, kind of a ML embedding kind of hash, like a representation of that image, for instance.
+
+
+So what we did is we looked at -- there's a bunch of these perceptual hashing algorithms that are called hashes that maintain similar while images are perceptually similar, and are different, when images are perceptually different. And the idea is there were a couple of these that were developed in the past. There's kind of like -- so one very simple example you can think of is imagine taking an image, and then downscaling it to a grid of 4 pixels by 4 pixels, and then making it grayscale.
+
+
+And now take each of those values, and that's like one example hash. Right? This is like, oh, if the image -- even if it was cropped by a couple of pixels, even if the colors change a little bit, probably this downscaled grayscale version would look almost the same.
+
+
+Anna Rose [52:21]  Yeah. Interesting.
+
+
+Aayush Gupta [52:22] But the idea is that you want to support much more complex transformation than that. You want to support mass color changes, you want to support cropping, you want to support compression, you want to support all these different ideas. So the idea is you're going to take this image, you're going to generate an embedding, then we're going to convert this embedding with another model into a number of bits, maybe 256 bits. 
+
+
+And then now the idea is you want to be able to privately match these images when you see them online. So, for instance, you don't want all of your camera images uploaded online, but you're maybe okay with homomorphically-encrypted versions of these perceptual hashes uploaded online. And so what we did is we built this FHE system on top of Phantom Zone and Lattigo where you can take these perceptual hashes as they are, and then homophobically encrypt them to a system that's then going to look them up on any query image.
+
+
+So I can see an image online, I can perceptually hash it, I can send it to the system, I can say, hey, dear FHE machines, do you see this image anywhere in your database? And they'll say, yes, this image looks very similar to one generated and uploaded by OpenAI 3 months ago. This image looks very similar to one generated by that camera from that New York Times photographer two days ago. And they can kind of map both provenance and timing and image similarity in a way that's private on both ends, where the system doesn't learn all the generated images that are being checkpointed in this database, and doesn't even 
+learn the user's image.
+
+
+And so, I thought that was quite a compelling idea of, hey, you can actually have provenance now over these generated images, or ideas and tell, hey, was generated or not. And it worked across social media. People can post it, image can be modified, and you can still tell, oh, is this the image that was signed by that organization?
+
+
+Anna Rose [53:56] It's without trying to ZK each transformation, which is pretty intensive.
+
+
+Aayush Gupta [54:00] Exactly. You don't have to ZK each transformation.
+
+
+Anna Rose [54:02] That's so cool. What's the ZK part in there, though? That's like modeling. Isn't that more like just ML stuff? You mentioned the hashing.
+
+
+Aayush Gupta [54:10] Right. So one is ML coming up with this kind of hash. It's not really a cryptographic hash, but like an ML hash. One is FHE of this matching system, and one is when the FHE system returns, hey, this is generated by OpenAI, you don't want to reveal the original perceptual hash of the original generated image because that might, for instance, lead to prompt leakage if someone can reverse engineer that hash. But what they want to do is say, hey, yes, the hash you queried corresponds to a signature that I have from OpenAI. And now, we're back to the thing we were originally excited about, which is ZK proofs of signatures. And so, that's kind of where the ZK comes in of, okay, yes, you want to verify the provenance without revealing all the original information.
+
+
+Anna Rose [54:45] I'm just curious what your involvement is with this project, because it doesn't really touch ZK Email per se. I totally get that it's in the same kind of category. Is this a project within ZK Email or is it something else?
+
+
+Aayush Gupta [54:58] So this, I would say, is under the broader umbrella of provenant research that I'm thinking about. This is kind of like, it was a project I was working on a little bit more before ZK Email. And then, now I've been kind of working with some friends and mostly kind of mentoring them in terms of, hey, how do we train these models properly? How do we get these ZK proofs to work? How do we get this FHE system to work? And the kind of output of that has been like a paper, basically. But, yeah, I would say, I think, it's just when you're thinking about systems like ZK Email, I think you just kind of naturally think about how can this provenance be used in all sorts of different ways. And I think you just kind of start exploring these other ideas at the same time. I mean, I would still say my main focus is ZK Email, but, yeah.
+
+
+Anna Rose [55:39] NIce. I think I saw a recent post about ZK Email and making airdrops more human. How does that work?
+
+
+Aayush Gupta [55:46] Yeah. So I feel like airdrops in the space have often been associated with this almost crypto kind of scammy vibe. And I've always kind of not really liked that. I felt like there's always quite a lot of potential in hey, being able to reward early users of your community. But the problem is it's kind of been co-opted by Sybil farmers and scammers to be like, hey, here's this thing that we can make money off of.
+
+
+And I think the real way to think about this is, hey, how can we -- airdrops are kind of meant to reward early contributors, or meant to help re-distribute equity in people who are actually using a product, or people who are actually invested in the future of this product, going in the right direction. Imagine, so far it's kind of been, oh, we're going to reward people with certain on-chain activity. But you can kind of reward anything, anybody that satisfies certain criteria, right? You can say, hey, we could do one like the proof of humanity via the passport proofs, or the ZK Email proofs, and then we could also do something which is like, hey, we can prove if you, I don't know, we're part of this group, or if you went to this in-person event, you can claim the thing, or if you contributed to this thing early on, you can claim the thing. Or if you like contributed as GitHub repo, you can claim the thing, or if you like --
+
+
+You can kind of selectively choose what are the properties of a person that I want to prove, and then those people can be the ones claiming the airdrop proving humanity. And then you also probably want to give this and incentivize people outside of crypto, right? You don't want to keep all of it in the same bubble. And now you can say, well, I want to give it to researchers who publish this paper, and all I have is their email address. Well, now you can directly give an allocation to the email address. They prove they own that email address, now they can claim the thing, and there's no crypto wallet involved.
+
+
+Anna Rose [57:15]  Interesting.
+
+
+Aayush Gupta [57:15] And so in my opinion, I think there's really a rich space to re-explore how airdrops can be used once again to benefit users, and benefit protocols in a way that's much more diverse than what we've seen so far. And I think that's also a quite exciting direction.
+
+
+Anna Rose [57:29] But how does it do it? How does the making airdrops more human actually work?
+
+
+Aayush Gupta [57:33] Right. So the idea is that, maybe some organization or protocol wants to support people who, say, committed early to certain GitHub repos and wrote some papers. So what they would do is, they would say, okay, we're going to hold some allocation for people who can prove with a ZK Email proof that they made a GitHub commit. And we're going to take that email of merging that commit, and we're going to use that to gate them in. And then maybe they'll say, and we're going to add these 20 email addresses to the list. And maybe I'll say anybody who published an archive on this topic before this date can claim. And now anybody who provides an email address can get them sent to the list.
+
+
+And then now when they claim, the token will directly get sent to an email wallet generated for their email address. And now the idea is if they want to send it to a centralized exchange to off-ramp or off-ramp with ZKP2P or whatever other service, they can directly send that token into that system, and then use that to kind of on-ramp/off-ramp, use that vote, whatever it is that they want to do.
+
+
+And so it's kind of, it brings back a lot of things we talked about in the beginning of, hey, both like combining the email wallet, or receiving tokens to your wallet, having your wallet be like a bank controlled by your email, and also, the registry ideas of, hey, defining these new kinds of proofs really easily, and then letting people prove that in order to get some kind of benefit.
+
+
+Anna Rose [58:43] How are the teams doing stuff like this today? Because, I know that like Aligned they did do -- there was like a GitHub contribution airdrop kind of thing. And I think I've seen other teams do that too. So how do they -- how is it currently done? Is it just done by sending your GitHub account handle, and then they verify it manually, or like they just check it?
+
+
+Aayush Gupta [59:06] Yeah. There's two ways this is kind of currently done. One is with TEEs, which are a whole nother rabbit hole we can get into, and one is with centralized verification. So I think, for instance in the Aligned case, I think they just verify, yep, does your GitHub sign in look good? Okay, yes. Then you can say this is your on-chain address, and then they'll give it to that on-chain address. But you have to already be a crypto user.
+
+
+Anna Rose [59:27] Yeah. But it's not that -- I mean, that's not that dangerous. I mean, you're still rewarding the GitHub activity.
+
+
+Aayush Gupta [59:31] Sure. But I think it's more about how granular can you get? So for instance, what Aligned said is these are the 100 GitHub usernames I'm going to give.
+
+
+Anna Rose [59:40] True. Yeah, yeah. They chose it.
+
+
+Aayush Gupta [59:41] Right. But you can define a more granular thing which is like, oh, anybody who committed to this kind of a repository before this date can get it. Or anybody who was part of this organization at this time can get it. Or anybody who -- I think you can define a much broader scope of the kind of person you can give to, which I think is quite exciting. And I think, yeah, centralized GitHub verification is a fine first step, but I think we can do a lot better than that. Or we can make the process easier, right? Someone can just say, oh, committed to a repo with ZK-related --committed Circom to a repo. That anybody who did such a thing can get it. And now you can define these kinds of rules and have it happen automatically.
+
+
+Anna Rose [01:00:13] That's cool. I mean, I think there is a trend in the teams that are really focused on research and the community. They are genuinely trying to find ways to reward people who really participated, and really have been doing things kind of behind the scenes for so long. I like this tool though that you just proposed, where you could do something a little bit more vague without having to track down which exact libraries. And I have also heard of situations where people had -- not in the cases we just mentioned, in past airdrops or what have you, where they had actually contributed something, but it just wasn't on that list that was chosen that time. And yeah, it's tricky. It's hard to capture everybody.
+
+
+Aayush Gupta [01:00:56] It is. And I think it is useful to be able to capture all that activity and say, yeah, we want to reward like a very diverse set of people.
+
+
+Anna Rose [01:01:03] Neat. Well, Aayush, that gets me to the end of my questions. Is there anything that people should be on the lookout for with ZK Email?
+
+
+Aayush Gupta [01:01:11] Yeah. With ZK Email, I think, we're -- so we kind of -- our focus in 2024 was really building MVPs of all these tools, and getting our stuff production ready audited. Now we're kind of sprinting production deployments. I think you'll see us release a lot of things over the next few months. And yeah, we're excited to work with anybody who wants to explore these ideas more deeply. Wallets, people who want to prove certain things about certain people, people who want to enable anonymous speech.
+
+
+Yeah. And also, I really just love jamming on these ZK proof of signatures. Even more weird cryptography ideas like witness encryption or FHE, I love jamming on these things. I think there's a ton of great opportunity, even like, indistinguishability, obfuscation. I mean, Sora, who started ZK Email with me, is focused a lot on that. I think there's just so many exciting things in cryptography that are very underrated.
+
+
+Anna Rose [01:01:59] I have to say, like our panel after this conversation, I would like us to jam on all sorts of things going forward. I have so many ideas for community stuff, but I don't know if I have the technical -- I have sort of the vague conceptual idea, but I don't really know how to get there in reality. I know what a lot of the programmable cryptography types can do.
+
+
+Aayush Gupta [01:02:22] Yeah.
+
+
+Anna Rose [01:02:22] But I don't know how far along we are, or how -- if there's any big blockers in some of these ideas ever coming to fruition. So it'd be great to talk to you about some of them.
+
+
+Aayush Gupta [01:02:31] One cool idea we could do is even just after this call or something, you and I can just sit, I bet 5 minutes in and out, we can define a new kind of ZK Email proof that you want to define. You can just scroll through your email and give me, like, oh, I want to prove I appear -- someone appeared on ZK Podcast. And then, we can put that up in five minutes, which is super cool.
+
+
+Anna Rose [01:02:46] That's so good.
+
+
+Aayush Gupta [01:02:47] Yeah.
+
+
+Anna Rose [01:02:47] Cool. Maybe something to work on in the future.
+
+
+Aayush Gupta [01:02:50] Yeah.
+
+
+Anna Rose [01:02:51] Nice. Thanks, Aayush. Thanks for coming on.
+
+
+Aayush Gupta [01:02:52] Yeah. This is great. Thanks for having me on.
+
+
+Anna Rose [01:02:54] I want to say thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.
