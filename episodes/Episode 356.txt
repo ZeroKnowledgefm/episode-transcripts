@@ -1,0 +1,680 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host Anna Rose. In this podcast we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I chat with Conner Swann. Conner is in the midst of building ProofLab, a project still in development that will be tackling ZK system benchmarking. So think comparing different zkVMs on various dimensions. Benchmarking in ZK has been consistently controversial. From the early proof system comparisons to the zkRollup benchmarks to the zkVM and now the zkML benchmarks, there's been a lot of debate and discussion in our channels about these topics. So it was really great to dive in.
+
+
+We talk about Conner's past work, what led him to be interested in the topic, some of the challenges of benchmarking, and how benchmarking can unintentionally be subjective. We then dive into dimensions on which benchmarks for ZK could be created, looking specifically at the zkVM case. Conner has also prepared a survey form, and given that benchmarking can be quite contentious, I thought this might be something listeners of this show may want to fill out, especially if they have strong opinions on the topic.
+
+
+Now, before we kick off, I just want to let you know about zkSummit 13, which is happening in Toronto on May 12. zkSummit is our bi-annual event, where you will learn about the latest in ZK research, the newest applications, and find out who are the most important players in ZK today. It's also a wonderful way to get to know the larger ZK community. So if you've never been to a zkSummit, I hope you'll join us. To check out the speakers program, more info about the event, and a link to join, please visit zksummit.com. I've added the link in the show notes.
+
+
+Now Tanya will share a little bit about this week's sponsor.
+
+
+Tanya [02:06] ZK is finally easy with Noir, the fastest growing zero-knowledge programming language. Built privacy-preserving apps without any ZK experience. Apps today all look alike, especially across chains. Noir gives you simple privacy tools to build something new. Noir is Rust-based, backend-agnostic and already used by leading ecosystems like Starkware, World and Aptos. Aztec Labs is running a 4-week program, Noirhack. With 200k in funding and grants, you'll get hands-on support from a dedicated team of 10 DevRels, weekly deep dives, partner workshops and a demo day where you'll pitch to judges from Base, a16z Crypto, IOSG Ventures and Paradigm. Applications close soon. Sign up now at noirhack.com. That's, noirhack.com. N O I R H A C K.com.
+
+
+And now here's our episode.
+
+
+Anna Rose [03:00] Today, I'm here with Conner Swann, who's building ProofLab. Welcome to the show, Conner.
+
+
+Conner Swann [03:05] No. Thank you for having me. It's really exciting to be here. It's actually my birthday today.
+
+
+Anna Rose [03:09] Yeah. It's so cool that we're having you on for your birthday. Conner, you and I know each other from having worked together back in 2021. We worked on the Plumo project. You, at the time, were at Celo, I was sort of like free -- I was freelance, helping out on a specific project, which was the launch of the trusted setup for Plumo, which was a very heavy trusted setup. And I think, originally, the scope of this project for me had been something like four months, but it ended up going on -- I don't remember exactly, but something like a year and a half, I think.
+
+
+Conner Swann [03:43] Yeah. In 2021, it was hard to build ZK. Let's just say that.
+
+
+Anna Rose [03:47] Exactly. But it was kind of a fun time because the group, like the crew that came together to do it, we really got to know each other. It was yourself, Kobi, Yaz was there, [?] Pranay[a] was there. And I know that there was also the amazing developers from the Celo team. What we would do is we'd actually, week to week, be running these trusted setups, like a lot of people running them in parallel. So there was a big social element to it.
+
+
+If the listener here doesn't know anything about trusted setups, I can add a link in the show notes to some episodes I did long ago discussing trusted setups. But, yeah, Conner, since then, I actually don't know that much about your journey. So what have you been up to?
+
+
+Conner Swann [04:27] Yeah. I mean, I've been on a journey since Celo. At Celo, I'm an SRE sort of by trade. And so, I ended up kind of bouncing around a couple of the different engineering circles over there. And I finally ended up on the bridging circle, which turned into Nomad. That whole story is history. But after Nomad, I spent a couple years in AI B2B SaaS land.
+
+
+Anna Rose [04:56] So you left. You rage quit crypto?
+
+
+Conner Swann [05:00] I mean, I rage quit crypto just like a lot of people did, I think, that cycle, after the whole FTX debacle.
+
+
+Anna Rose [05:05] 2022. 
+
+
+Conner Swann [05:07] Yeah.
+
+
+Anna Rose [05:07] But you didn't stay away, it seems.
+
+
+Conner Swann [05:09] No. You can't keep me away. And kind of the thing that really brought me back was zero-knowledge virtual machines actually.
+
+
+Anna Rose [05:19] Cool.
+
+
+Conner Swann [05:20] I had met the RISC Zero team at ETHDenver in 2022.
+
+
+Anna Rose [05:25] Yeah.
+
+
+Conner Swann [05:26] Shout out to Paul. And I wasn't really ready personally in my head of like, I wasn't a Rust engineer at that point. And I've learned a lot since then. And it got to the point where I really need to be working on this technology. Like this is kind of the game changing moment, I think the inflection point for zero-knowledge infrastructure.
+
+
+Anna Rose [05:46] Very cool. Who did you work with?
+
+
+Conner Swann [05:48] I spent some time at Succinct.
+
+
+Anna Rose [05:49] Okay. Cool.
+
+
+Conner Swann [05:50] And learned a lot about sort of benchmarking the concerns of distributed proving in the cloud. And that was all just really, really cool stuff to me. And went off to sort of work on my own thing, and that's sort of what ProofLab became. The thing that I'm really interested in is what makes ZK do the hockey stick thing. You know, if like ZK podcast had the developer report last year, and --
+
+
+Anna Rose [06:20] Oh, the ZK -- yeah. State of ZK, you mean?
+
+
+Conner Swann [06:22] Yeah.
+
+
+Anna Rose [06:230] Yeah. We do that every quarter.
+
+
+Conner Swann [06:23] Every quarter? Great. Yeah. And we're seeing the same sort of developer growth that we were seeing in AI in about 2015. And that was sort of buy signal in my head of like, okay, this is interesting. It's literally doubling month over month. And that's sort of important. And I think that's -- the catalyst for that is these programming abstractions that make it really easy to build ZK stuff. And I think ZK is the end game.
+
+
+Anna Rose [06:53] Cool. I'm curious now, Conner. What's your background? What part of the stack are you working at? Are you an engineer? Are you DevOps? Are you -- what kind of role did you train in and what part of this have you been working on?
+
+
+Conner Swann [07:12] That's a great question. I'm like, I call myself an SRE by trade, Site Reliability Engineering, sort of a thing that was popularized by Google. And that's sort of the person that comes to a team of engineers when some metric isn't up to snuff.
+
+
+Anna Rose [07:30] Okay.
+
+
+Conner Swann [07:30] And it involves sort of picking apart the pieces of the system that you're dealing with and identifying core optimizations, or bottlenecks, and addressing that so that the user-facing need is addressed. So I came to ZK with this sort of mental algorithm already built out of like, we need to focus on the users and providing business objectives, and not necessarily like -- I don’t have a PhD. I don't know, I didn't study cryptography in college. I just I'm a generalist computer scientist that really likes to optimize.
+
+
+Anna Rose [08:02] Cool. You sort of just mentioned this hockey stick. And maybe we should talk about what you mean by that. Because I think what you mean is growth. Right? Like you mean adoption, like the adoption dream that we have.
+
+
+Conner Swann [08:16] Yeah.
+
+
+Anna Rose [08:16] That at some point, these systems are going to be so easy to use, so common that it's powering so many of the, maybe the world systems. Right now we don't really have that. We do have some interesting cases where they've gotten lots of users, but it still feels a little bit outside of the mainstream infrastructure powering the Internet, for example. But what does that look like? What would that even be if ZK so permeates the world?
+
+
+Conner Swann [08:46] So I'm not a fortune teller. I don't have a crystal ball, and I can just look in and understand what will ZK do? But what I can do is look at the past, and sort of understand what patterns have occurred in the recent past that -- and what sort of maps to ZK. And that case in point example for me is AI. Like we just kind of talked about.
+
+
+And what happened with AI is you had a set of infrastructure application cycles that occurred over the course of a decade or more. How did it get to the point where there was a large language model in every single iPhone. And that was like a slow process that sort of took a bunch of research and then product breakthroughs. And I don't have a strong answer for what does ZK look like, but I do know that the thing that unlocked AI for the world was actually PyTorch, in my opinion. It's a software library, came out of Google.
+
+
+Anna Rose [9:47] What year?
+
+
+Conner Swann [9:48] That was 2013, 2014, I believe. There was a couple of minor major versions of it. And Vitalik actually had pretty cool blog post called the Glue and Coprocessor Architecture, where he sort of looks at the way that modern computing is developing. And you've kind of got these easy to understand glue layers that a typical engineer can sort of interact with, and it plugs in with these highly-optimized coprocessors for -- to use Vitalik's terminology. 
+
+
+And in AI, this was PyTorch, and then highly optimized CUDA GPU kernels to do highly parallelizable vector multiplication. And we saw that, first for neural networks like RNNs, things like that. And really what was required to make this thing go mainstream was the large language model. And obviously, we saw how that happened, and that was an emergent phenomenon. That wasn't really planned for. Some exec at OpenAI was like, we need to release this right now, and let's make ChatGPT, and it changed the world.
+
+
+Anna Rose [10:55] Totally.
+
+
+Conner Swann [10:56] And so, I think ZK is going to do something similar, and the zkVM is the catalyst for that.
+
+
+Anna Rose [11:01] Wow. So is the zkVM the PyTorch?
+
+
+Conner Swann [11:04] zkVM is the PyTorch. Yeah.
+
+
+Anna Rose [11:05] Oh. Interesting.
+
+
+Conner Swann [11:06] zkVM is ZK's PyTorch moment.
+
+
+Anna Rose [11:09] Cool. There was also, though, in AI -- and so I'm not that deep in it, but I do at least vaguely remember that there were these moments of extreme hype, and then marketing, and then a little bit of disappointment when it didn't quite do things that people thought. There was this sense it was going to be magic. It wasn't quite magic.
+
+
+I mean, I'm just thinking like, I don't know how long ago this was. 7 years ago, 8 years ago, where this really interesting AI, kind of character comes on Twitter or something. They managed to turn it racist within like 20 minutes or something. It's just sort of -- it's like this toy that's going to get fooled. It wasn't quite at a state where it was magic, and started to be solid. And that's post PyTorch. So there's these hints of what was coming, but they didn't quite make it. Do you think we're also seeing something like that here?
+
+
+Conner Swann [12:03] Yeah. I think that's a product problem. It's not really a core tech problem. It's that there's not very many people on the planet in 2022 and 2023 that had any experience building product experiences for normal people that had large language models at the core. And I think that we're just now getting to the point where the AI shops or the AI labs, and the product organizations are getting to the point where they're actually building cool stuff that is worth using. Because -- I don't know, I think we're all sort of familiar with the idea that you need to sell a vision in order to raise investor capital. And I think time and time again, the vision necessarily doesn't match the reality. And I think it's okay. We just have to come in with reasonable expectations.
+
+
+Anna Rose [12:48] But then in ZK, are we still in the selling the vision, but we don't yet have our product ?
+
+
+Conner Swann [12:55] Emphatic yes.
+
+
+Anna Rose [12:57] Okay. That's what -- that's fair.
+
+
+Conner Swann [12:57] I think that we're at the point where we need to lose a little bit more money before we can make some money in sort of distribution and adoption. Yeah.
+
+
+Anna Rose [13:07] Damn. I now want to talk about the -- I mean, the topic that I wanted to cover with this show ,and I think, one of the topics that you cover with ProofLab, which is benchmarking. At what point did you start to think about benchmarking in the ZK context?
+
+
+Conner Swann [13:22] I have idle hand syndrome. I can't not build toy projects and things. So one of the things I was working on over the summer is like a zkSQL coprocessor that you can run against any normal Postgres database that gives you verifiable data querying and data insertion.
+
+
+Anna Rose [13:44] Is that a bit like what Lagrange did? I feel like they used.
+
+
+Conner Swann [13:47] Well, there's a couple people that have done this. Space and Time database is another one. And proving time is so slow that it's not even worth trying to ship a product around that right now. And we're at the point where SP1 on a single GPU will do like 1.4 MHz. And that's like a Casio watch, you know.
+
+
+Anna Rose [14:10] Slow or fast?
+
+
+Conner Swann [14:10] And that's like the Apollo lander. Very slow. Like so slow? In terms of the amount of under like the actual native performance is just orders -- like many orders of magnitude, 10,000 times faster. And so, we're at this point where year over year, the provers are speeding up 10,000 times. It's actually incredibly fast. It's the Moore's Law, [?] more eat your heart out, like the rate of development is so incredibly fast right now.
+
+
+Anna Rose [14:38] Cool.
+
+
+Conner Swann [14:39] But we're still in like the 80s when it comes to compute throughput equivalency.
+
+
+Anna Rose [14:44] Interesting.
+
+
+Conner Swann [14:46] So that's what got me into understanding the tradeoff space here. Like zkVMs are so much more complicated than a normal computer. And maybe I'm over-complicating something trivial. I think somebody who's got deep compiler and software computing experience may not think it's that complicated. But I think to a normal person, arithmetization and memory arguments and polynomial commitment schemes, that's really complicated stuff. And there's a bunch of different tools to choose from. It's really hard to reason about. So that was sort of where I started off on my journey of figuring this stuff out 
+
+
+Anna Rose [15:23] And looking at benchmarks. I mean, was it -- and I think so far, we have mentioned primarily like the zkVM benchmarks. I mean, the reason for this episode in a way, is the conversations around benchmarks, and the announcements that teams have made showing benchmarks have created at times quite a lot of controversy in the community or conflict.
+
+
+What will often happen is a team will have done something. They will have optimized something. They create a report, a blog post that showcases, look at this optimization we've done, and look at how we now compare to other peers of ours in terms of performance, in terms of speed. What will often happen is those other teams will say something like, well, the choices you've made in running these benchmarks really show you in a great light, but we have all these other great things that you're not showing. And then a debate will ensue.
+
+
+Conner Swann [16:18] Yeah.
+
+
+Anna Rose [16:18] And eventually it will die down, but it kind of comes back, like if another team releases another metric, another benchmark, which showcases its talents in a slightly different way. And I do think even before the zkVM benchmark kind of conversation, there was also the zkRollup benchmark conversation.
+
+
+Conner Swann [16:40] And before the zkRollup benchmark conversation, there was the bridge benchmark, and the bridge wars of the 2022 bull market. And I don't know, I come from a place in crypto where this is not foreign to me. And the marketers at all these companies would say, no press is bad press. This is actually great for us. Let's keep doing it.
+
+
+Anna Rose [17:00] Yeah. You want to be included in the benchmarks at the very least. Right? You don't want to not be included.
+
+
+Conner Swann [17:04] Ideally, you're at the top, but if you're in the top 3, it's still good. The issue, I think, is in reproducibility. That's maybe one of the top sort of five core things that I think is amiss in terms of ZK benchmarks in general.
+
+
+Anna Rose [17:22] So far.
+
+
+Conner Swann [17:23] Yeah. And I come at it from a pretty particular point of view. The SRE in me forces me to consider the user first, and not necessarily the theoretical architecture, the polynomial commitment scheme of it all. And I think that that has some pretty practical, valuable additions to sort of the discourse here. Some people, like the academics of the ecosystem, would tell you that there's no point in benchmarking any of these things because they're all so wildly different. It's like comparing apples to oranges. But the SRE in me would say, that's both fruit. People need to eat fruit.
+
+
+Anna Rose [17:59] And people are going to reach for one fruit, probably. And so, they should know kind of what they're getting.
+
+
+Conner Swann [18:04] People are going to reach for one fruit, exactly.
+
+
+Anna Rose [18:05] Yeah.
+
+
+Conner Swann [18:06] And in my experience with Nomad, if you're not familiar, you should go Google it. It's not what this podcast is about.
+
+
+Anna Rose [18:12] We did do an episode on Nomad many years ago, I think.
+
+
+Conner Swann [18:15] Yeah.
+
+
+Anna Rose [18:15] Before pre the big hack.
+
+
+Conner Swann [18:19] The thing with Nomad is that the theoretical security guarantees of a system are only as good as its implementation. And Justin Thaler would agree with me. He's written a lot about how implementations are confounding factors. And they're -- shouldn't necessarily be used for practical evaluation of a system. And I kind of disagree with that. I think that actually there's a middle ground here of theoretical understanding. Formal verification, for example, is really important here. And then there's the practical implications of how do I put this in, and how do I run a business on top of this system? Like ZK Verifiable computation is like the next iteration of the Internet, in my opinion. And if it's going to be that core to the way that we transmit data on a massive planetary scale, it's really important to understand the tradeoffs and like the actual performance profile.
+
+
+Anna Rose [19:20] I mean, I should -- I almost wonder if we should pick one category that is being benchmarked. So we've talked a lot about zkVMs. I think you know a lot about that. So we can start there. Looking at zkVMs, when they're being compared, what are the different dimensions upon which they're being compared today?
+
+
+Conner Swann [19:37] I mean, there's the way it's built, which is important. But to me personally, the thing that is the most important is speed and cost.
+
+
+Anna Rose [19:48] Okay.
+
+
+Conner Swann [19:48] These are the two things that the user cares about.
+
+
+Anna Rose [19:53] And on which kind of compute environment, right?
+
+
+Conner Swann [19:55] Exactly. The availability of compute is directly related to speed and cost. If we're using like a Ingonyama --
+
+
+Anna Rose [20:04] ASIC.
+
+
+Conner Swann [20:04] One of their crazy ZK chips, ASIC, yeah, exactly. Like can I even get that chip? The ProofLab benchmarks that I'm building, we're running on very typical publicly available cloud hardware.
+
+
+Anna Rose [20:17] Okay.
+
+
+Conner Swann [20:19] The Google approach is to benchmark everything on commodity hardware. Like they built Hadoop, like the distributed storage system that Google uses is all run on commodity hardware. And I think ZK benchmarking should be based in generally available stuff.
+
+
+Anna Rose [20:33] But would it be CPU and GPU?
+
+
+Conner Swann [20:36] Yeah. I think that's super important to understand sort of the performance profiles, especially in a world where Meta has bought out all of the Nvidia GPUs for the next 10 years, might not actually be possible to acquire those. So how do we --
+
+
+Anna Rose [20:52] So you're even saying like average GPUs not the highest level of GPUs either.
+
+
+Conner Swann [20:57] Yeah. Well, the interesting thing is the highest level of GPUs is taken with respect to AI and AI inference. So memory is actually extremely important in the AI use case. But that's not necessarily as important in the ZK proving use case, where it's actually cycles, compute cycles. How many floating point operations can I get in a span of time? Because the overhead in ZK proving is in the virtualization, the emulation of the trace generation, kind of all of that side of things, the ZK component. And that's basically compute limited.
+
+
+Anna Rose [21:35] The thing you're benchmarking for, what you've just said is it's speed, it's cost on commodity hardware, GPUs, CPUs. But before this, you had mentioned this reproducibility as something that's key to a benchmark, like a benchmarking report. How do you, when you're doing this, do you then have to make sure that this is reproducible for others? Because, I mean, you have your configuration, you've set it up from your location with your servers. How would you make sure that what you're doing is actually also reproducible?
+
+
+Conner Swann [22:05] Yeah. Before I sort of talk about what I do, I think that it's really important to sort of plug teams that are doing this already in probably a much more sophisticated way. Powder Labs and OpenVM, for example, make it really possible -- not just easy, but possible to write code once, and then run it in any of a number of zkVM backends. And that's very sort of in line with Vitalik's Glue and coprocessor model. 
+
+
+Just being able to swap out the underlying precompiles, the underlying coprocessors, the underlying whatever, as things sort of develop and move forward. So reproducibility to me is being able to run the same code on any of these benchmarks. A benchmark report is a declaration of performance.
+
+
+Anna Rose [22:49] Okay.
+
+
+Conner Swann [22:50] And what you're saying to the person who is reading that report is, if you run this code, you get this. So reproducibility is sort of like in line, it's spiritually understood that you should be able to get this result. And it's marketing, it's trying to get somebody to use your thing.
+
+
+Anna Rose [23:08] Yeah.
+
+
+Conner Swann [23:08] And I think that sort of the reproducibility, the transparency, the honesty in all of that is the only important thing from that perspective. And all of this comes from people who have done it for 30 or 40 years. So the semiconductor industry, SPEC, has producing -- it's an industry group that has been producing benchmarks for the purpose of evaluating things like CPUs, virtual machines, like the JVM.
+
+
+People have been warring over benchmarks for my entire lifetime and then some. And people will continue to war over benchmarks in perpetuity. So it's important that sort of, I think the ZK community bands together and built a set of universal benchmarks. I don't know, ProofLab can be the start of that, but it's not gonna be the only sort of contributor there.
+
+
+Anna Rose [23:56] But the way that it's working right now, isn't it almost like every team is creating their own benchmark report, and their own benchmark strategy, and then they are optimizing based on what they're benchmarking?
+
+
+Conner Swann [24:09] Yeah.
+
+
+Anna Rose [24:10] I want to just share -- I mean, I'll try to link to this, but I posted something last week about benchmarking being a point of contention. I got a lot of great answers. I'm actually going to link to this in the show notes. On that post that I shared, Paul, who you'd mentioned earlier from RISC Zero, actually posted a little comic with three frames.
+
+
+The first one is situation. There are 14 competing standards. And then in the middle, someone is like, this is ridiculous, we need a universal standard. And then situation. And the third panel is there are now 15 competing standards. Now you could just replace benchmarking report styles there. And I think you have what we have in a way. So why is that different? Why is what you're doing -- or why do you think we actually do need some sort of industry standard? Won't we just fall into the same problem?
+
+
+Conner Swann [24:58] In supply chain, we call this the profit disincentive for cooperation. Where individual actors, rational actors are disincentivized to work together to grow the total amount of revenue in the system. And I think that is just exemplary of what's going on here. What the semiconductor industry learned is that verticalization enables growth.
+
+
+Anna Rose [25:20] Okay.
+
+
+Conner Swann [25:21] So because you've got these giant companies that sort of specialize in one thing, you may have 2 or 3 other competitors, but to grow the pie, you can't be fighting with each other. You need to be cooperating when it counts. So one of the ways that, for example, the semiconductor industry has band together to fix -- maybe not fix, but address the problem, is through industry organizations that set standards. Standards making bodies are there for a reason, and it's to enable commerce. And, as long as we're bickering on Twitter about benchmarks, we're not working and growing the pie, and we're not growing and onboarding users.
+
+
+Anna Rose [26:02] Although, aren't we getting to better benchmarking? Isn't it sort of a process of like, well, maybe we've been too academic, or maybe we've been too focused on CPUs, and we are moving closer towards specialized hardware for these things. I feel like there's a few different arguments that I've heard from teams who would argue that a benchmark isn't done quite correctly.
+
+
+Conner Swann [26:26] Yeah. So the approach to benchmarks internally at a lot of these organizations is we are subject matter experts on our thing, our prover system, our prover, our hardware or whatever. And we are not subject matter experts on the other competing things. So we will take, maybe, the example project from a competitor and then, we will optimize the hell out of our own project, and then ship that entirely. And it's like, well, your doc said this, so we just copied it verbatim and it's like, it's a bad faith example of performance.
+
+
+Anna Rose [27:02] Yeah.
+
+
+Conner Swann [27:02] And I think, a great example of a sort of industry aligned thing that does this right is Ethproofs. Justin Drake has been working on that at the Ethereum Foundation. And that is a system that is designed to prove Ethereum blocks. Yeah. I think they prove every hundred blocks or so, and groups that are building provers, it's on them to come and implement their best case solution, as long as it fits a set of constraints. We're not allowed to distribute those along many computers. It's got to be one instance, one GPU, whatever. And I think that that is like a normalizing -- that's a regularizing force in an industry where there's a lot of sort of froth.
+
+
+Anna Rose [27:45] That's Ethproofs that you just mentioned. I actually hadn't --
+
+
+Conner Swann [27:48] Yeah. Ethproofs.org.
+
+
+Anna Rose [27:48] Yeah. I'm not exactly -- the goal of what they're doing is they're serving a purpose. It's not just for benchmarking. It's like they're doing something where you can start to see how these proving systems are working, how effective they are. I'm guessing. But can you explain exactly what they're trying to do? Just like what is their -- what's the core goal?
+
+
+Conner Swann [28:09] Yeah. So the first -- call it battlefield. The first battlefield of ZK, it seems, is the zkRollup. The whole point of ZK in sort of our social scene is its ability to scale a blockchain and to produce the amount of --
+
+
+Anna Rose [28:28] Well, it used to be privacy and it still could be privacy, Conner.
+
+
+Conner Swann [28:31] I think it's still -- I think privacy is the big one. But put that aside for a second and let's just discuss rollups, because that's where all the money -- that's where the revenue is going to be coming from, is that the Layer 1s and the Layer 2s are going to pay fees to get their blocks SNARKed or STARKed. And understanding the performance profile of that particular thing is really important when you're a rollup operator, and you're picking which proving system to use, or you're the ETH Foundation, and you're trying to figure out what proving systems to support at Layer 1, maybe. What Ethproofs is doing is -- I'm going to explain the zkVM use case. But if -- you could build a custom circuit for this and it hasn't been done. In a zkVM, you take maybe Helios or Reth, REVM, you take a consensus client, and you shove it inside a zkVM.
+
+
+Anna Rose [29:28] Okay.
+
+
+Conner Swann [29:28] You take the Rust code, you compile it for the zkVM. You take the inputs, which are maybe the last block header, the current state route, the next block, and you put it as input into the zkVM. zkVM executes the code and then generates a proof of that code.
+
+
+Anna Rose [29:46] Okay.
+
+
+Conner Swann [29:47] And obviously, that's the thing. When we're talking about a zkRollup, that's what we're talking about. We're talking about generating proofs of correct block transitions. And that's really cool, because you can take that proof and you can verify it, and you don't have to recompute the transition yourself.
+
+
+Anna Rose [30:01] Yes.
+
+
+Conner Swann [30:01] That's literally what we were working on at Celo back in 2021. Was being able to do exactly this, verify block headers, and do a quick sync.
+
+
+Anna Rose [30:11] But Ethproofs is doing -- you were saying it's sort of using these systems. Like I want to understand how it's benchmarking.  How is it -- actually, I want to understand what it's doing, because it's not a rollup.
+
+
+Conner Swann [30:23] It is proving Ethereum blocks full stop.
+
+
+Anna Rose [30:26] Full stop. Not rollup blocks, just like --
+
+
+Conner Swann [30:28] Just Ethereum mainnet blocks, because rollup blocks, if EVM is EVM, it's going to have similar performance, overhead, profile, whatever. And it takes one out of 100 blocks, sends it to a prover, has it prove it, records how long it takes, and then computes a relative cost. It's on this type of AWS instance, for example, you can compute based on how long it ran, that's how much it costs. And so speed and cost, those are the two things that are important here.
+
+
+Anna Rose [30:57] Who's doing that? Who's sending it over there? And are they using different systems at the same time? Are they using -- are they proving it in parallel multiple times with different systems just to kind of see which one performed in a certain way?
+
+
+Conner Swann [31:10] The current three provers that are supported are Succinct, Snarkify and ZKM. And just looking at the website right now, it doesn't actually look like all three have been reporting proofs the last, call it, a hundred blocks that have been proved on here. So still a little bit sparse. And I think that what is required here is more VM organizations, more prover builders really caring about what the optics are of ETH block proving, for example.
+
+
+Anna Rose [31:42] Yeah. I mean all of this benchmarking, who is the audience for it really? Is the audience the person who uses an application deployed on those VMs, or is the audience meant to be the developer who's potentially going to build their application on using these VMs?
+
+
+Conner Swann [31:59] Yeah. It's definitely the dev. What is happening is this ecosystem is just competing for the mindshare of the same 200 developers right now. And I think it's okay.
+
+
+Anna Rose [32:08] Although isn't the mind -- shouldn't that number be higher? Because the easier these things are, the easier it is to just build an application. Shouldn't that market actually be quite large? Like you don't need to know ZK that well to do some of these things, right?
+
+
+Conner Swann [32:22] That's the goal. And I think the product organizations – Succinct is doing a great job. RISC Zero is doing a great job at producing frameworks for this, like zkRollup frameworks. You're already going to probably hire a Conduit for example to run your ZK blockchain and sort of, it's important to understand their performance profile. I don't think that the Ethproofs block proving use case is like the end-all be-all of benchmarking, but I think, it's a really good example of an industry organization that is aligning incentives, that is sort of standardizing a benchmark that is relatively understandable, that doesn't require a PhD in cryptography. And I think that is a net good thing, but we need to do better. We need to do more than that.
+
+
+Anna Rose [33:07] Interesting. I think they're almost --it needs to be a spot that people are paying attention to in choosing. Maybe in the way, I sort of said this in that post, but it was like, the L2BEAT for overall rollups, that was like it became a source of information for a lot of people into how things are performing, where they were on certain metrics, this sort of scale of how much of a roll up they are. So how much of a zkRollup they are, what have you. What features did they have? They had built some sort of dashboard that helped you compare it.
+
+
+And I haven't so far seen anything that quite does it in such a easy to understand way on the ZK front in the benchmarks. And also, I mean you could do it maybe for zkVMs, but there are other dimensions that people also seem to be exploring. Like the recent benchmarking conversation was about zkML. So I don't know.
+
+
+Conner Swann [33:59] Yeah. So I think that that's a really sage observation that you just made in that the benchmarks that are most relevant are the ones that are closest to the real-world use case that is developed. I think that you can implement zkML in a zkVM. You can implement zkTLS in a zkVM, you can implement ZK Email in a zkVM.
+
+
+And if you can do that in a portable way, you get a really nice zeitgeist relevant benchmark that speaks to users that -- like they understand how zkTLS works, and that just kind of natively makes sense. That's what the SPEC has been doing forever. They're doing weather simulations, and they're running like actual real life workloads, because that's the whole point of doing a benchmark, in my opinion. It's not just to run Fibonacci to the millionth digit or whatever.
+
+
+Anna Rose [34:52] Yeah. So what is ProofLab then? Because you're not -- it's not Ethproofs. I guess you're not doing what they're doing. So what are you doing?
+
+
+Conner Swann [35:00] The goal is to be that L2BEAT style. Like I can look at a nice little radar chart, and I can sort of make a relative size estimation judgment call of like, should I choose this one to build a prototype, or should I use this one to build a prototype?
+
+
+The approach that we've taken thus far has been to try and build an SDK that makes it easy to write portable code. Not necessarily at the compiler level. I think that's kind of overkill right now considering how much churn and how high velocity things are. Compiler toolchains are all over the place. So just make it really easy. Write one Rust program, pop it into SP1 or Jolt or RISC Zero. And that's like the benchmarking use case. We've got, I think, maybe 10 or 15 benchmarks.
+
+
+And then, sort of the secondary goal here is to produce that breakdown of, we get the benchmarks, which is like the real-world workload assessment. We've got like system-wide security analysis, which is really important. Understanding what parts of the glue and coprocessor architecture are like -- affect the trusted computing base, and as these things change, the only thing -- the only people that are reading most of this code are the people that wrote the code and the auditors.
+
+
+And I think that building a solution, a project team that is just focused on doing some of that work is not only valuable, but important to the longevity of this industry. But the key components here are the workload pattern analysis, like understanding, for example, memory access. One of the things that I've been working on this week actually is creating a worst case scenario for Ethproofs.
+
+
+Anna Rose [36:39] Okay.
+
+
+Conner Swann [36:40] Basically getting Keccak256 hashing is really inefficient inside of a ZK circuit. So if you can get a block to do a lot of that, and force the prover to generate a bunch of hashes, you can create a worst case scenario for relatively cheap, because the ETH client natively has no problem running these hash functions, because it's built inside of a precompile or whatever. But the prover has no such optimization right now, because we're early. They will eventually, but they don't right now. So you can 3 or 4X the proving time or more, might be able to create an out-of-memory sort of situation, for relatively cheap. 25 bucks, 6 million gas.
+
+
+Anna Rose [37:22] Interesting. So you're pushing this. You're kind of making it really awkward for these systems to use for the zkVMs to actually do fast. You're making it uncomfortable.
+
+
+Conner Swann [37:31] Yeah.
+
+
+Anna Rose [37:31] As uncomfortable as you can.
+
+
+Conner Swann [37:33] Yeah. Literally, it's called ZKarnage: Stress Testing ZK Systems Through Maximum Pain.
+
+
+Anna Rose [37:40] Cool.
+
+
+Conner Swann [37:40] And the reason for that is like I'm not trying to be mean here, but it's better that me, a researcher, does this, than some bad actor from North Korea because there's some economic incentive later. And I'm not making any statements around sort of the actual incentives or why you would do this.
+
+
+Anna Rose [37:58] Yeah. Or it could just happen accidentally but at the worst time possible. Like that's the other -- that's almost the more likely way that those things happen. There's some --
+
+
+Conner Swann [38:07] I've experienced that personally.
+
+
+Anna Rose [38:09] Yeah.
+
+
+Conner Swann [38:10] Yeah. The last kind of two big ones are sort of implementation tradeoffs. Like are you trading off security for speed? It's really important to know. And then sort of the last one is like, is there an integrated verification framework. Formal verification is really important here. Formal verification is something that the semiconductor industry leans on for shipping all of their chips. A lot of these chips that they ship are formally verified before they even hit the production line. And that's of the utmost importance. And I think that, if I wanted to shout out a particular team, RISC Zero is doing a great job of that. They're spending a lot of time and money and energy trying to get their circuits verified.
+
+
+Anna Rose [38:50] Formally verified.
+
+
+Conner Swann [38:51] Yeah.
+
+
+Anna Rose [38:51] Will that then be a must, do you think, for all the teams? Eventually, that is something that they're going to have to do.
+
+
+Conner Swann [38:56] Another blog post for the show notes is going to be, Justin Thaler, just released, I think last week or two weeks ago, his idea of what the stages should be. We got stages for rollups.
+
+
+Anna Rose [39:09] Yeah.
+
+
+Conner Swann [39:09] Maybe we need stages for thinking about zkVMs.
+
+
+Anna Rose [39:13] Interesting.
+
+
+Conner Swann [39:14] And a big chunk of that, maybe 50%, is around sort of the verification posture. Is it possible to verify the claims made by the developers of a system?
+
+
+Anna Rose [39:24] Wow. Do you think -- this is a bit of an aside, but I'm just realizing like the zkEVMs, the rollups, the initial idea was -- I mean, it was like there's the EVM. We need to extend the EVM, we create a ZKP version where we compress it, and we use it for scaling. But once zkVMs emerged, it totally takes on a whole new way of thinking about these systems, right? You're not extending -- like the base of Ethereum, if everything was built still on Ethereum, which we don't know, but the Ethereum base could stay EVM, but everything that comes off it could be whatever, like more real-world languages, and more real-world systems almost. And it is such a paradigm shift.
+
+
+Conner Swann [40:06] Yeah. I think, I personally find that really exciting. The thing about the zkEVM is when you scope down the use case of the virtual machine you're building, it gives you a lot of opportunity for optimization. So I think that a lot of the zkEVM implementations will probably be better for an EVM use case than a zkVM in the long term, because you are just focusing on EVM use case.
+
+
+Whereas RISC-V is a larger instruction set, it allows for more, in my opinion, more expressive systems, and applications. And I'm not making any claims around how I think a zkVM should replace the EVM underneath to generate proofs. I don't necessarily think that that's true. I think that what I am most bullish on is the zkVM's ability in bringing off-chain data into an on-chain context, and allow for entities that maybe distrust each other to trust the data that they're transmitting.
+
+
+Ben Fisch had a great tweet, from Espresso, recently around how verifiable computation is the most useful when you've got greater than, call it, a hundred untrusted parties that are looking to verify your claims. So enterprises, maybe not necessarily the best use case, because they can negotiate. They got lawyers, they can negotiate these trusted information channels. But I think the killer ZK use case is going to be probably privacy in the small and medium business context. That's my Nostradamus prediction. Maybe hash that, put it on-chain and we'll talk about it in a year.
+
+
+Anna Rose [41:43] Nice. Going back to that post, I mean, I had some people answer when I asked like, is it possible to do these benchmarking or is it too complicated? Some were like it's easy. But others did say it's actually really complicated, because there's all sorts of different points of benchmarking one could do. And here's a few that were listed. I just wonder what you think of them.
+
+
+You could do prover time, proof size, verifier time, proving key size, verification key size. Is there a trusted setup? Which I think mostly not, but say there was. Memory usage, I think you did mention the hardware that it works on. Single versus multi-threaded choice of crypto library. Have you thought of any of those?
+
+
+Conner Swann [42:23] Yeah. So like the answer is yes, I have thought about a lot of these.
+
+
+Anna Rose [42:28] By the way, just shout out to Alin from Aptos who posted that. I want to give him some credit.
+
+
+Conner Swann [42:32] The important thing here is to build a multivariate analysis framework that takes into account sort of all of these things. So some of the things that you mentioned are in regards to the performance of the system. So what sort of hardware do I need to buy to run this thing? And some of the crypto libraries choice, the formal verification.
+
+
+So let's talk about proof size in a second. The implementation choices are really important from a security perspective. Supply chain vulnerability perspective. North Korea is making commits into open source software these days. So it's really important that you choose correctly, and you check yourself on a regular basis. And then, there's kind of the integration concerns of like proof size for example.
+
+
+Proof size is really important when you're integrating with a blockchain chain. Groth16 is currently the de facto standard when it comes to SNARKs to put on-chain, but all of these zkVMs are producing SNARKs that then have to be wrapped. So there's an extra recursive component of generating proofs that go inside of other proofs, and that has a whole performance component to it.
+
+
+So the ProofLab benchmark currently looks at literally all of those things. We look at proof size, we look at the different kinds of proofs, we look at the proof time, we look at verification time, we look at proof sizes. And I can tell you that we've got ECDSA, we've got EdDSA, we've got Fibonacci like everybody, we've got the Helios light client. I can do Ethproofs style block proving, JSON parsing, Keccak, regex, RSA 256ri, sep, SHA, Tendermint, like all of these things like when I'm talking about real-world benchmarks, this is what I'm talking about.
+
+
+Anna Rose [44:15] What do you have to build to benchmark that?
+
+
+Conner Swann [44:18] All you got to do is import a library a lot of the time. That's the best part.
+
+
+Anna Rose [44:23] You're like, I got this, I got that, I'm like, what have you built, Conner? Okay. Okay.
+
+
+Conner Swann [44:27] Yeah. So in doing the research for that ZKarnage kind of project attack experiment, was reading the Revm and Reth code base and understanding, for example, did you know that the EVM as it exists in the Reth code base uses a ModExp as a precompile inside of it. It does a modulo exponentiation or something. It uses crate, a Rust crate that was written by the NEAR team.
+
+
+Anna Rose [44:57] Oh.
+
+
+Conner Swann [44:58] Like in the same way the EVM can just import code and run it, that's literally exactly what is going into a zkVM.
+
+
+Anna Rose [45:05] Okay.
+
+
+Conner Swann [45:06] It's just the exact code compiled for the zkVM, executed, and then proved.
+
+
+Anna Rose [45:11] Are you trying to build a tool set where anyone can run their own application on these different systems in one-go, and then you see the comparison? Is that the goal of ProofLab?
+
+
+Conner Swann [45:25] Yeah. What PyTorch and what transformers did for AI is very much what I would love to contribute here to ZK, which is, Hugging Face Transformers allows you to swap out any sort of LLM. You know, DeepSeek comes out with a new Nvidia disruptor. You just drop it into your pipeline, it works exactly like it did yesterday, but it's just now better. And calling back to Vitalik's glue and coprocessor architecture, the idea here is to make it so you don't have to rewrite all of your code. You write using the ProofLab SDK, and it slots it into the most efficient prover for that particular use case.
+
+
+Anna Rose [45:59] Whoa.
+
+
+Conner Swann [46:00] Maybe you've got security concerns, we're not gonna choose the most risky one. Maybe you've got performance constraints. Maybe you want to prove on a Raspberry PI for some reason. You know, choosing the back end for that would facilitate that use case is important. And that's where ProofLab kind of sits right now.
+
+
+Anna Rose [46:18] Interesting. So are you like a middleware?
+
+
+Conner Swann [46:20] You could say that. I think I'm just glue.
+
+
+Anna Rose [46:23] That's such a dirty word, actually.
+
+
+Conner Swann [46:24] I'm just glue.
+
+
+Anna Rose [46:25] You're glue. Okay.
+
+
+Conner Swann [46:26] I'm the glue.
+
+
+Anna Rose [46:26] You're the glue. That's interesting. Do you think by creating a system like this, I mean, if it became popular then, would people be competing for those use cases to be used on their systems in a way? Or would you think that they're just -- all the teams should continue to build along the metrics that they're optimizing for, they will find potentially use cases that will fit their optimizations, and that they shouldn't worry about the other ones kind of.
+
+
+Conner Swann [46:52] Yeah. So I think maybe like rephrasing what you just asked, where does the money come from in ZK? What are people competing for? And yeah, people are competing over zkVM performance, but really what they're trying to do is capture users to accrue value to their prover network. This enables that. We're still going to need to distribute your proof generation.
+
+
+Today, in 2025 and probably 2026 and 2027, we're not going to be talking about prover costs because it's distributed, but you're not going to be able to prove that locally in, maybe a zkVM given the current overhead. So making that switch easy, for example, being able to switch between Boundless or SP1 prover network or Fermah or one of the other, you know, Lagrange prover network, any of these sort of existing or soon to be mainnet systems, developer choice is important. And that's one of the things that I really care about.
+
+
+Anna Rose [47:46] Going back to your initial idea, the application developer doesn't really care who's doing the proof where. They're just creating an application that is supposed to have a certain speed, performance, et cetera. What you've described is that it would be sort of a switcher between those things, depending on the case. So that's why I'm wondering if you're actually interfacing with the prover networks, then.
+
+
+Conner Swann [48:09] Yeah. I think we're going to get to a point where, like right now the cloud cost of ZK infrastructure is not factored into the cost of proof generation, that's currently being subsidized by venture capital. Sometime in the next three years, we're going to see the fee get switched on, and we're going to have real competition for pricing.
+
+
+Anna Rose [48:30] Price. Wow.
+
+
+Conner Swann [48:31] And the exact same math here for AI inference, LLM inference is the same for prover cost.
+
+
+Anna Rose [48:39] Interesting.
+
+
+Conner Swann [48:40] So just like we saw commodification of inference, and a race to the bottom, we're going to see a race to the bottom with proof systems, and proof networks, and proof generation, and being able and having agility in capturing that value is, it's incumbent upon any startup founder to make sure that they have that ability.
+
+
+Anna Rose [48:59] Why does this open up more people? Like why does this open up the space to more people joining? Kind of like going back to the initial thing you were talking about, wanting the hockey stick, and wanting the more users, because right now, sometimes I look at this and I think it's an amazing system, but there aren't that many users. And it's still sort of a theoretical use in a way. It's like theoretically, there's going to be users, therefore we're going to build this, so that it can handle all of this. And a lot of the economic modeling is based on that idea as well, that there will be a lot.
+
+
+There's a few examples where we have seen that happen. There are certain applications that do need a lot of proofs, and we see what they're using that for. But I'm just kind of wondering how if by creating benchmarks, or by creating even more efficient systems where you're getting the right zkVM for your use case, why does that create the hockey stick?
+
+
+Conner Swann [49:52] I don't think it necessarily creates the hockey stick, but it is a required feature of maybe the soil environment for the plants to grow.
+
+
+Anna Rose [50:02] Okay.
+
+
+Conner Swann [50:02] So the plants here are developers, and developers need to be able to make informed decisions. And if they can't make informed decisions, they're not going to build anything.
+
+
+Anna Rose [50:10] Yeah.
+
+
+Conner Swann [50:10] What Hugging Face did for the AI ecosystem circa 2016, is what enabled that hockey stick growth. You need these applications, these systems, these businesses that are focused solely on the consumer use case. And it became clear, like Hugging Face kind of seemed like a stupid idea until ChatGPT came out.
+
+
+Anna Rose [50:29] Wow.
+
+
+Conner Swann [50:29] And it was like, oh, man, this is a great idea. You're a genius. But it took them like 5 years, 4 years to get to that point.
+
+
+Anna Rose [50:36] Wow. Because, were they building – they were building like the grand hall for an audience that had not yet arrived kind of situation.
+
+
+Conner Swann [50:43] They were pitching a vision to VCs.
+
+
+Anna Rose [50:45] Yeah.
+
+
+Conner Swann [50:45] And I think that their business model is still sort of in flux and in question, because their valuation is $4.5 billion. But I think the similar environment needs to exist. So we're still waiting for ZK's ChatGPT moment, but when that occurs, I think ProofLab will be an extremely valuable tool.
+
+
+Anna Rose [51:04] Cool. Well, Conner, thanks so much for coming on the show.
+
+
+Conner Swann [51:09] Wow. Thank you for having me.
+
+
+Anna Rose [51:10] Thanks for sharing with us all of your insights into benchmarking, a topic that's obviously very key, very important, very much discussed in our community. And it was really fun to catch up.
+
+
+Conner Swann [51:19] Yeah. Seriously. Maybe you'll have to get out to a zkSummit sometime soon.
+
+
+Anna Rose [51:23] Yeah. There's one coming up. Toronto.
+
+
+Conner Swann [51:24] Oh. Go figure.
+
+
+Anna Rose [51:26] All right. Thanks again. And I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners. Thanks for listening.
+[a]I think so but unsure
