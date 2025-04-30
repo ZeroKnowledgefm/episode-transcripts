@@ -1,0 +1,937 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Nico and I chat with Vadim Lyubashevsky, a cryptographer in the Security group at IBM Research. In this episode, we dive into lattice-based ZK systems. We discuss Vadim's initial interest in the space, how he got involved, the evolution of lattices, as well as the state of the art in lattice-based ZK systems.
+
+
+We learn about the challenges of mapping lattices directly into existing SNARK constructions, how lattices work differently from existing optimization techniques, and how instead researchers often need to develop new lattice-specific techniques in order to achieve interesting and efficient SNARK systems.
+
+
+Now, before we kick off, I just want to let you know that zkSummit13 is happening on May 12th in Toronto. The event is coming up fast, and if you haven't yet bought your ticket, we do encourage you to do so. Also, we do have some student tickets still available. So if you would like to apply for a student discount, you can do so over on our website, zksummit.com. Hope to see you there.
+
+
+Now Tanya will share a little bit about this week's sponsor.
+
+
+Tanya [01:35] You might already know the ZK Jobs Board, a place where teams can share open roles with our community. But when it comes to key hires, finding the right fit in our niche space can be difficult. That's where Missing Link comes in.
+
+
+They're a talent team built for the Web3 era, helping projects across the ecosystem connect with the right candidates at the right time. They've worked with names you'll recognize, Ethereum Foundation, Matter Labs, Lido, Mina, Web3 Foundation, and many more, filling critical roles that drive these teams forward.
+
+
+Whether you're an established project looking to fill a senior leadership role, or a startup searching for specialized talent to refine your product-market fit, Missing Link can help. They've done it for some of the biggest teams in the space, helping them, and now you, find the right people fast.
+
+
+For more details, check out the show notes, and visit their website at missing-link.io. So thanks again, Missing Link.
+
+
+And now, here's our episode.
+
+
+Anna Rose [02:36] Today, Nico and I are here with Vadim Lubashevsky, a cryptographer in the security group at IBM Research, Europe. Welcome to the show, Vadim.
+
+
+Vadim Lyubashevsky [02:44] Thanks, Anna and Nico. Nice to be here.
+
+
+Anna Rose [02:46] Hello, Nico. How are you doing?
+
+
+Nico Mohnblatt [02:48] Hello. Hello. All good, thanks.
+
+
+Anna Rose [02:49] So, Nico, we've wanted to do this episode on lattices for a while now. I think it was the end of last year, in our closing year-end episode, we kind of predicted we're going to do it.
+
+
+Nico Mohnblatt [03:00] Yeah.
+
+
+Anna Rose [03:01] It's taken us four months. We finally set it on course. This topic came up in an episode I did in November with Dan Boneh. He mentioned -- he sort of covered briefly some of the recent work on lattice-based SNARK systems. And it sort of piqued our interest.
+
+
+So I'm very excited to have you on, Vadim. I'm so excited we're going to get a chance to dig into this with you.
+
+
+Vadim Lyubashevsky [03:23] I'm very happy to be here and answer all your questions.
+
+
+Anna Rose [03:26] Cool. I think actually, as a starting point, it would be really great to understand what got you interested in cryptography, kind of back to the beginning, and specifically what got you excited about lattices.
+
+
+Vadim Lyubashevsky [03:38] Yeah. So if you're expecting some deep answer about me loving privacy or loving cryptography --
+
+
+Anna Rose [03:43] You've always wanted to be a cryptographer.
+
+
+Vadim Lyubashevsky [03:46] Yeah. No. No. Nothing like -- unfortunately, nothing like that.
+
+
+Anna Rose [03:49]Okay.
+
+
+Vadim Lyubashevsky [03:49] I arrived as a grad student at UC San Diego, and there was a professor there, Daniele Mich Antio, who was one of the experts on lattice cryptography. And that's just what we ended up doing.
+
+
+It turns out later that, hey, actually, I do enjoy it very much. I do enjoy the parts of it that are more practice oriented, and there was a lot of open problems in terms of practice and the theoretical stuff that were not answered yet. It was a very young field. And I just took it from there.
+
+
+Anna Rose [04:22] Very cool. Lattice -- sort of lattices as a concept, I'm assuming this is a field that's broader than just cryptography. Cryptography is like an application for it. But can you share a little bit about the history of that field? Maybe even before it joins forces with cryptography?
+
+
+Vadim Lyubashevsky [04:40] Yeah. Sure. So mathematically, it was -- I guess, in the 1900s, it was Minkowski who created this field called the Geometry of Numbers. So he realized that actually, if you look at some number fields, you can actually look at them, which are very algebraic in nature, you can actually look at them geometrically, and you can get results on them by looking at their geometry. So that was something that drew the interest of mathematicians.
+
+
+And then let's say in the 1980s, lattices became a cryptanalytic tool. So the famous LLL algorithm by Lovasz, Lenstra and Lenstra was used to attack certain proposed cryptosystems. And even to this day, that algorithm and its descendants are used to attack things like RSA.
+
+
+So it was a cryptanalytic tool in the 80s, basically, because you could find short vectors in lattices. Not very short, but short enough to be interesting cryptanalytically. But then in the 90s, it was begun to use for cryptography because -- and actually, it was so Miklós Ajtai.
+
+
+He said, hey, actually, the shortest vector problem is NP hard because people didn't even know that. I mean that's not enough for cryptography. But even that was not known before. And actually, there is this interesting random distribution which is as hard as some lattice problems.
+
+
+And this got a lot of people interested in cryptography. And I should, obviously say, Miklós Ajtai was at IBM Research as well, in Almaden.
+
+
+Anna Rose [06:18] This is interesting. So lattices were first used to attack systems, and then they realized some of the characteristics could be used within systems, I guess.
+
+
+Vadim Lyubashevsky [06:27] Right. So it was used to attack. But then the problems were still hard enough that you couldn't solve them completely. So then you can base cryptography on the kind of harder versions of the problems that you could solve. So, yeah. It is kind of interesting that it's both --
+
+
+Nico Mohnblatt [06:41] We saw the same with pairings that were quite familiar in our ZK landscape. At first, it's a way to attack discrete log-based systems. And then, we start using them to build new stuff.
+
+
+Vadim Lyubashevsky [06:53] Right. And this is not so uncommon for example in isogenies now, something my colleagues work at IBM on. The signature scheme they're using, a big part of the algorithm, was an attack against their encryption scheme. So this happens a lot. I don't know why, but it just, yeah.
+
+
+Anna Rose [07:15] So after, I mean you sort of talked a little bit about your academic work. What led you to work at IBM?
+
+
+Vadim Lyubashevsky [07:22] So of course, there were some personal reasons for moving to Zurich. But also, I really enjoyed that there is this academic, yet a bit more urgent than academic, outlook in an industrial research lab like IBM. So you're allowed to work on research, but you're also encouraged to make sure your research has some middle-term applications.
+
+
+Anna Rose [07:47] Practical applications?
+
+
+Vadim Lyubashevsky [07:49] Yeah. Yeah. So something like five years. And this is what I really enjoy the most. It allows you -- like this 5 to 10 year window allows you to kind of think of work on interesting problems, but also something that you can actually -- you actually can see people use.
+
+
+Nico Mohnblatt [08:04] I guess that ties in nicely with IBM's effort in recent standardizations from NIST.
+
+
+Vadim Lyubashevsky [08:10] Right. Right. So we did, along with other collaborators, propose some algorithms at the start of the NIST standardization process in around 2016.
+
+
+So NIST wanted to create the next cryptographic suite to replace the discrete log and factoring and elliptic curve-based methods. And so, it went through all this -- I don't know. NIST didn't want to call it a competition, but whatever it was, this process.
+
+
+And so, the two things that we submitted were chosen as the primary standards, and they are based on lattices. So kind of lattices, from that point on, I think it became much more mainstream. People said, hey, this is the most efficient thing we can do, at least for encryption, for signatures.
+
+
+You know, there's lots of tradeoffs, and it seems to be pretty well studied. So this could be the future. Well, we have to see, of course.
+
+
+Anna Rose [09:09] I think we're sort of just using the term "lattice-based", "lattice-based". But maybe it would help the listener, who isn't familiar with lattices in general, to describe kind of what are they? What do they look like? What do they seem like? How are they constructed?
+
+
+And maybe, I mean, we can think of a more basic version of one, maybe just so that we can start somewhere. And then, we'll understand more how it's being applied.
+
+
+Vadim Lyubashevsky [09:34] Okay. So whenever people ask me this question, "what is a lattice problem?" I actually don't give them a lattice problem. I don't even explain what a lattice is. I just give you a problem that is much easier to understand, and kind of ignore the fact that you won't know what a lattice is from this problem.
+
+
+So this is called the knapsack problem. So this is something that dates from the 70s, the 60s. And this is actually a problem that optimization people want to solve in practice.
+
+
+So let's say I give you, I don't know, 1,000 numbers, a random number. So I generate 1,000 random numbers and each has 1,000 digits. And then, I pick 500 of them at random, and I sum them up. And I give you the sum. And then I ask you, which 500 numbers did I sum up? Or maybe if there's more than one set of 500 numbers, find any set of 500 numbers, I don't care. This is the knapsack problem.
+
+
+And this is actually also a lattice problem, because a solution to this problem is a shortest vector in a lattice. And I'll define a lattice. And this is what I mean by this geometry of numbers thing. So what I gave you, this knapsack problem, seems like a completely combinatorial problem, yet it's actually a geometric problem that is solved using this LLL algorithm, for example.
+
+
+So a lattice is an infinite grid generated by a basis. So I give you a few vectors, let's say, the vector (3,1) and (4,2). And I say, okay, all the linear combinations of these two vectors, they generate my lattice. And now from these two vectors, well, you say, okay, fine, so that's an infinite grid. Now I can ask you, okay, so what linear combination of these two vectors will give you the smallest possible vector?
+
+
+So maybe -- I don't know, maybe you can somehow combine them together to get something much shorter than (3,1) or (4,2). Maybe like (1,1). I don't know if you can, but whatever.
+
+
+And so, in two dimensions, okay, it's an easy problem. But now, if it's in a thousand dimensions, with 1000, let's say vectors in this basis, now it becomes a hard problem. And actually, if you can solve that problem, then you can solve this knapsack problem.
+
+
+Because the knapsack problem is a linear combination that sums up to that number that is actually quite short, because it's a 0 or 1. Because I chose 500 numbers, so I either picked it or didn't. So these are the 0 or 1. And that actually, you can reformulate that problem as a lattice problem.
+
+
+Anna Rose [12:08] When you're using it as a hard problem though, are you trying to find something in that lattice?
+
+
+Vadim Lyubashevsky [12:15] Yeah. A short vector. It doesn't have to be the shortest, but something short. So when I give you a bunch of basis vectors, like when I gave you maybe (4,2) and (3,1) wasn't a good example. Maybe like (100,37) and (12,49). Find me a short vector in this lattice.
+
+
+Nico Mohnblatt [12:32] And how is this problem known? What's the name of this problem?
+
+
+Vadim Lyubashevsky [12:34] So this is the shortest vector problem. It is a very uncreative name, but that's what it is. We have --
+
+
+Nico Mohnblatt [12:42]  It says what it does.
+
+
+Vadim Lyubashevsky [12:43] Exactly. No. Yeah.
+
+
+Nico Mohnblatt [12:45] And so, is this problem the basis of most lattice-based cryptography?
+
+
+Vadim Lyubashevsky [12:48] Yeah. So shortest vector, or perhaps a close vector problem, sometimes I may say, okay, don't find me -- because the shortest vector, you can think of it as finding a vector close to the origin. I can also say, hey, can you find me a vector close to some random point in space? So that's the close vector problem.
+
+
+So there's basically two of those. There's, of course, some nuance. Like the close vector problem becomes easier if I'm promised to be, actually, very close to the lattice and it becomes kind of hard. Kind of its complexity -- computational complexity changes a bit depending on that.
+
+
+But the best algorithm for all of these close vector, short vector, this close vector when you're with a promise, it's all the same. It's all this extension of this LLL algorithm from the 80s which has been refined, has been improved upon. 
+
+
+But yeah. So that's why I say that really in lattices, we have kind of one problem, or at least we have one algorithm that attacks all these problems that are a little different, but really quite related to each other.
+
+
+Nico Mohnblatt [14:00] We often also hear about the learning with errors problems, LWE. Is that related to shortest vector?
+
+
+Vadim Lyubashevsky [14:07] Yeah. It's really, basically, the close vector problem because -- so learning with errors, the way it's usually defined is, you have a matrix, a random matrix. You multiply this matrix by some vector. So you get a linear combination of this vector. And then you add an offset.
+
+
+So basically, if I give you a product of a matrix and a vector, and I ask you, hey, can you find me this vector that I multiplied by, that's actually very easy in most cases because that's Gaussian elimination if this matrix is square, let's say. So that's not a hard problem.
+
+
+But if you then actually multiply it by a vector, and then say, okay, I'm not going to give you the exact product, I'm going to move myself off from it a little bit, that becomes a hard problem. And that's actually the close vector problem as well, because you're not quite on the lattice, but you're a little bit off.
+
+
+Nico Mohnblatt [15:00] Great. So if I manage to get this error off, it becomes easy.
+
+
+Vadim Lyubashevsky [15:04] Yeah. Exactly. Exactly. So it really is finding the close vector to the lattice is this learning with errors problem.
+
+
+Anna Rose [15:10] Why is this kind of construction considered post quantum, or hard for quantum computers? I don't know, in the description you shared, it doesn't make it clear why it would be harder than elliptic curve cryptography or something else.
+
+
+Vadim Lyubashevsky [15:24] Yeah. Of course, that's the million dollar question. And a lot of people have been thinking about it. Actually, I would say that a lot of modern lattice cryptography came from the quantum world.
+
+
+So this learning with errors problem, it was first defined by Oded Regev, who actually wanted to find an algorithm, a quantum algorithm for this problem, but he could not. And he actually could show that if you could solve it, then there is a quantum algorithm that can find vectors in all lattices.
+
+
+And then he said, okay, this is very similar to what Ajtai did with his kind of version of the lattice problem. And so, we got cryptography out of it. But a lot of people in the quantum algorithms world have been trying to solve this problem. And the best answers to why we think it's hard is exactly that.
+
+
+It's that a lot of people in the quantum world have been trying to solve this problem. They actually -- it's gotten to the point where they actually base some quantum theorems based on the assumption that this is hard. So, for example, they say, hey, we can prove that something is doing quantum things under the assumption that this problem is hard.
+
+
+Anna Rose [16:44] You know, we recently did an episode on quantum engineering, but I think I still -- I don't quite understand how cryptography and quantum engineering, like how people reason about it. Because it feels like you're trying to imagine a system that wouldn't be broken by a quantum system that might not exist yet.
+
+
+You know what I mean? Or in what you just said, it's like you're assuming a quantum system is working in the way you think it's working based on a thing that could be broken somehow.
+
+
+Vadim Lyubashevsky [17:15] So the thing about quantum computers is, while they don't exist yet, we know once they exist what they will do. Like how to write code for them, what code they will be able to run. So just because we don't have a supercomputer doesn't mean we don't know what it's going to do.
+
+
+Like a supercomputer that's more powerful than today's supercomputers, whatever that means. So once a quantum computer is built, it's not going to give us any surprises. We will be able to -- if it's good enough, it will be able to run the code that the algorithms we expect it to run.
+
+
+Now, in terms of do we have confidence that better algorithms won't be invented? Of course, we have less confidence in that than in classical algorithms, but just because it's a newer field and less people are writing algorithms for quantum computers.
+
+
+But that's kind of all you can say. I think an interesting point is that in the 90s or 2000s, so I heard that they did a survey at theoretical conferences asking people, do you think factoring is in polynomial time? And 50% of the people said yes.
+
+
+And this was back when the Number Field Sieve was coming out. So factoring kept getting easier and easier and people thought, well, maybe it'll never stop. I mean, the Number Field Sieve is not the right algorithm for it. Something better will be invented.
+
+
+So there is always doubt, and that's unfortunately how cryptography has to work. Public key cryptography cannot exist based on information theoretic hardness assumptions. So until we have proof that one-way functions exist, we cannot have 100% certainty of any cryptographic assumption.
+
+
+Anna Rose [19:05] I want to move on to how lattices start to combine with ZK. Over the years, people have started to just kind of describe SNARKs in these different components and modules like IOPs, polynomial commitment schemes. There's sort of -- yeah, kind of a description. What do we call this, Nico?
+
+
+Nico Mohnblatt [19:24] Maybe a recipe of how to build them. No.
+
+
+Anna Rose [19:26] A recipe.
+
+
+Nico Mohnblatt [19:26] A blueprint. Yeah.
+
+
+Anna Rose [19:26] Yeah. That's a nice way of putting it. But when it comes to lattices, I'm sort of curious like which part of the SNARK are lattices actually replacing? Are lattices currently being used when you start to build SNARKs using lattices? Are they being used instead of the polynomial commitment scheme that we usually use? Are they being used as something more fundamental underneath -- like the underlying, I don't know, problem that everything is built on top of?
+
+
+Nico Mohnblatt [19:55] Maybe we can formulate the question in the negative of why is it hard to make lattice-based zero-knowledge proofs? Why can we not just port everything we know from elliptic curve land to lattice land?
+
+
+Vadim Lyubashevsky [20:07] Okay. So that's a good question. So first let me just say that I will start answering this question by using zero-knowledge proof in the original meaning of zero-knowledge proof. So a proof that does not reveal any information about the witness. Okay?
+
+
+So even the very, very basic zero-knowledge proof. So what's the most basic zero-knowledge proof that exists? I would say a Schnorr signature. So a Schnorr signature, you're just proving knowledge of an exponent. And so, why can't lattice -- so if we want a lattice-based signature, why can't we just port that?
+
+
+It turns out that this is quite messy. So the reason is, so a lattice problem, you can formulate it as I did a knapsack problem. Here's another simple way to formulate it, is I'm given a random matrix. Let's say it's matrix with -- I don't know, 500 rows and 1,000 columns, whatever. And then I multiply this matrix by let's say a (0,1) vector. And I give you the result. So now the hard problem is to find the (0,1) vector.
+
+
+So now you can think of it, it's almost like the knapsack problem, except instead of adding integers, I'm adding vectors. I chose a subset of vectors instead of subset of integers. Okay?
+
+
+So this is the one-way function that plays the same role as, let's say, the discrete log function in classical cryptography. So now, why not just be able to prove that you know a (0,1) vector? So the problem comes in exactly because of this restriction of smallness.
+
+
+That I have to prove, not just prove to you that I know a vector S so that AS equals T, I actually have to prove that S is short. And this is very different than in discrete log, where you just have to prove some sort of algebraic relation. Whereas here you have to prove an algebraic relation, and the fact this geometric thing that something is small.
+
+
+And of course, to prove that something is small, it becomes kind of a higher degree equation. You can think of to prove something is (0,1), you can prove that X times 1 minus X is 0. So now it becomes more difficult, and maybe this also comes back to how is this different than all these discrete log pairing things? Why can't quantum computers break this?
+
+
+Well, quantum computers, they can do, let's say, these algebraic things, but there's this geometric part in here that seems to stumble them. But it also stumbles -- is a stumbling problem for --
+
+
+Nico Mohnblatt [22:37] Protocol designers. yeah.
+
+
+Vadim Lyubashevsky [22:38] Protocol designers. So even a lattice-based signature, this is the thing that got standardized by NIST recently, ML-DSA. So before it was called Dilithium. It is so much more messy than just the Schnorr protocol.
+
+
+So you do kind of the Schnorr thing, then you say, ah, but now the vectors are too big. So let's not send all of them. And then you know, yada, yada yada, there's a big mess. And even then, even the signatures, they don't quite prove what we know.
+
+
+So in Schnorr, you know an X to the G to the X equals Y. You prove that I know X to the G to the X equals Y. That's it. Here in the lattice-based signatures, I know an X, so that AX equals Y. I don't prove an X has (0,1) coefficients, for example. I don't prove to you that X has (0,1) coefficients.
+
+
+I prove to you that there is a some small X maybe with coefficients that are up to 1000. So a much more relaxed thing. And not even -- I don't even prove to you that AX equals Y. I prove to you that AX is some multiple of Y. So we're proving something much, much weaker.
+
+
+And now, when you want to do zero-knowledge proofs, when you actually do care about proving the (0,1), like let's say I'm trying to give a zero-knowledge proof of, I don't know, how much I have in my wallet, or something that the sum of 2 dollar amounts is -- I need an exact thing. I can't say, well, it's approximately this.
+
+
+And then it becomes much, much more complicated. And this is something that even this basic, basic thing, just proving this one-way function up until, let's say, 7 years ago, just the proof itself -- we're not doing any SNARK. This is nothing. We're just asking for a linear sized proof, it was already megabytes long.
+
+
+And then, only recently we said, okay, there's lots of other techniques that we can do, we can apply, we can kind of invent, that will allow us to reduce these megabytes to something on the order of kilobytes.
+
+
+And so, the thing that I really like, kind of goes back to your question of what do lattices do, what do they replace, is that we have to, instead of applying generic techniques -- so we could, of course, say, oh, lattices is just a hash function. It's just a commitment scheme. Replaces the Merkle tree --
+
+
+Anna Rose [25:02] Yeah. FRI or something.
+
+
+Vadim Lyubashevsky [26:03] Yeah. Exactly. It replaces the Merkle tree and blah, blah, blah. Okay. You can obviously do that. And this is something that we did do as a first step saying, hey, can we do it? But this generic thing never results in something optimal.
+
+
+So what I like, I like to think that, hey, you have to actually use some, I don't know, lattice-y techniques to kind of get the most out of lattices. And this is what led to a lot of recent improvements in lattice constructions and zero-knowledge proof. So let's say up until 3 or 4 years ago, we could barely do linear sized proofs with any sort of efficiency, and now we can do SNARKs.
+
+
+Anna Rose [25:45] Interesting. Okay. So what I'm hearing from you is like the way we think of SNARKs, where there's this sort of plug in, plug out, like there's -- you sort of choose a type of cryptography. I mean, you could use FRI or you can use KZG commitment. Basically, you can take things like FRI, and that could replace KZG. Yes, you have to alter it, but you can kind of fit it in.
+
+
+In the case of lattice, it sounds like you actually have to rethink, maybe at a more meta level, what you're trying to accomplish with the overall system. This is sort of what I'm getting from you, that you can't necessarily just plug and play.
+
+
+Vadim Lyubashevsky [26:21] So you can, because the same cryptography primitives you can get from lattices, and so of course, you can plug them in. But you won't get something that's interesting.
+
+
+Anna Rose [26:30] Or something that works well, that's efficient.
+
+
+Vadim Lyubashevsky [26:33] Yeah. Well, to me, those are the same thing. So for example, let me say this. Why are lattices -- why are they interesting, and give you something like FHE? So if you think about pairings, or whatever your exponentiation, you take -- it's some map that takes a number and maps it into a group. A pairing takes something, maps it to some group, and you're kind of done. You cannot keep doing this operation.
+
+
+Whereas with lattice operations, this AX equals Y, I'm taking a vector, and I'm just mapping it to another vector. And so, the algebra of the range is pretty similar to the algebra of the domain. And this is what you have to take advantage of if you want to kind of get the most out of lattices. Because this is, I think, their special feature.
+
+
+So this is what a lot of -- this is what is done in a lot of constructions. You compute some that this function, this lattice function, so the A times X. And then, now you have another vector. The only difference is now it's -- instead of having small coefficients, it has big coefficients. So, if you do this again, now it's no longer a hard problem.
+
+
+Nico Mohnblatt [27:46] I guess from the perspective of a verifier, we need to know that the composition was done correctly. And so, that would add extra steps of proving and verifying.
+
+
+Vadim Lyubashevsky [27:56] Yeah. That's right. That's okay.
+
+
+Nico Mohnblatt [27:58] Okay. Like that's not too much of a problem?
+
+
+Vadim Lyubashevsky [28:00] Yeah. Because we can always binary decompose, and that's just a linear operation. So if we can prove linear relations and smallness, we can prove as many of these hashing, binary decomposition, hashing, binary decomposition. Okay? So that's nice.
+
+
+And the other nice thing is that when you map into -- because it retains its algebraic structure, now you can again do these linear -- you can linearly combine all these results, and maybe you can prove something about the linear combination of them instead of each individually. Now you don't need to store everything. You can just store linear combination.
+
+
+And again, this is where the fact that the algebra of the outputs is basically the same, the simple algebra of the input, really helps us out.
+
+
+Another thing is, I'm just listing all these things that we put into our toolbox in the last couple of years. So proving that something is small. It's proving that the norm is small. And the ring over which we work in lattices for efficiency is not the integers, but it's a polynomial ring.
+
+
+So you can work over the integers, but it's much more efficient over polynomial rings. All the NIST standards are over polynomial rings.
+
+
+And the nice thing is that, hey, over polynomial rings, that's our basic operation. If you want to do inner product, well, that's actually the product of two polynomials if you just look at the first coefficient. If you kind of transform them correctly. So we can even describe the norm, the kind of this basic thing that we need as a lattice operation.
+
+
+Nico Mohnblatt [29:37] Right.
+
+
+Vadim Lyubashevsky [29:37] Another thing is to prove shortness, you can use something called the Johnson–Lindenstrauss lemma. It was used for reducing the dimensionality of data. So basically, if you have a lot of points in high dimensions, you can actually say, hey, I'm going to look at a linear -- I'm going to look at some logarithmic number of dimensions, and basically the norm is going to be preserved. It's going to be scaled but preserved.
+
+
+So that's something we can do for lattices as well. We can say, hey, look, to prove that something is small, let's actually prove that when you apply this random transformation into a much smaller dimensional space, if that's small, then your original thing was small too. And that's kind of pretty crucial if your hard problem relies on this norm.
+
+
+But of course, this causes a problem. I think this is something that maybe was mentioned by Dan Boneh, that now if you're multiplying by this matrix, now it's very long. So now the verifier cannot be efficient. So that's something maybe we shouldn't do if we care about efficient verifiers, but maybe sometimes we don't care about efficient verifiers. So we can do that.
+
+
+So these are all these new techniques which didn't exist with anything else just because they weren't needed there.
+
+
+Anna Rose [30:57] Are these being introduced in once you combine it with ZK, or once you're trying to get it into FHE?
+
+
+Vadim Lyubashevsky [31:03] So FHE did not really use much of that. Of course, they use polynomial rings, but not that. But if you want to start proving things in ZK, then you start actually caring about proving shortness.
+
+
+Anna Rose [31:17] Got it.
+
+
+Vadim Lyubashevsky [31:19] And yeah, so these techniques are very much related to these proof systems. They were developed for this purpose.
+
+
+Anna Rose [31:26] I do want to double check because I think my initial question was about a SNARK. You're talking more about ZK and lattices, but not necessarily SNARKs and lattices, so. But are lattices being used to construct SNARKs as well?
+
+
+Vadim Lyubashevsky [31:41] Yes.
+
+
+Anna Rose [31:41] Okay.
+
+
+Vadim Lyubashevsky [31:42] So once we got these techniques in the toolbox, then you could say, okay, what else can we do? And actually we can get something that is fairly SNARKy. So there was this --
+
+
+Anna Rose [31:53] Okay. Resembles a SNARK kind of?
+
+
+Vadim Lyubashevsky [31:55] Yeah, yeah. Right.
+
+
+Anna Rose [31:56] Got it. And this is why again, maybe we don't replace one to one. Okay.
+
+
+Vadim Lyubashevsky [32:01] Yeah. So because SNARK, again, means different things to many -- to different people. Like some people say it has to have an efficient verifier, some people say it doesn't, things like that.
+
+
+So I want to be maybe a little precise so that maybe there was a very efficient scheme proposed by two colleagues at IBM. So LaBRADOR by Ward Beullens and Gregor Seiler. And this actually uses a lot of the things that were developed in this toolbox that I was talking about to come up with very short proofs.
+
+
+So the verifier is still linear size, but the proofs are, let's say about 50 kilobytes. So they'll never beat pairing-based proofs, but they will beat hash-based proofs in size.
+
+
+Nico Mohnblatt [32:50] What is it asymptotically?
+
+
+Vadim Lyubashevsky [32:52] Asymptotically, I think it's almost log (log n) I think.
+
+
+Nico Mohnblatt [32:58] Okay. Lovely.
+
+
+Vadim Lyubashevsky [32:59] Yeah. If you look at their paper, the size of the proof barely increases with the number of constraints. Maybe it goes from 50 to 55 as you go from like 1,000 to a billion constraints. So it's short.
+
+
+But the interesting thing is, okay, can you make the verifier efficient? So now there's these other ideas that maybe are using more traditional zero-knowledge tricks like --
+
+
+Anna Rose [33:22] Folding?
+
+
+Vadim Lyubashevsky [33:24] Folding. Right. Right.
+
+
+Nico Mohnblatt [33:26] Recursive composition as well.
+
+
+Vadim Lyubashevsky [33:29] Exactly, exactly. Until recently, it's really been two different groups of people that were working on these lattice things and the zero-knowledge thing. And now they're being slowly merged. And I think you have the zero-knowledge people learning the lattice techniques, and you have the lattice people learning the zero-knowledge techniques, and you should be able to get things that are more efficient.
+
+
+So for myself, for example, I think even before getting to SNARKs, there's a lot of interesting things that one can do. For example, all the anonymous credentials and identity solutions thing that doesn't require SNARKs, or at least doesn't require efficient verifiers, because the statements are not very long.
+
+
+It does require small proofs, because you don't want to output too much, but efficient verifiers is not something crucial there.
+
+
+Nico Mohnblatt [34:18] Yeah. Simply because we don't get to big problems. Right?
+
+
+Vadim Lyubashevsky [34:21] Right.
+
+
+Nico Mohnblatt [34:21] So it doesn't matter.
+
+
+Vadim Lyubashevsky [34:23] Right. So you can do everything with lattices. The only question is, can you do it efficiently?
+
+
+Anna Rose [34:28] Yeah. And is it better than what already is being used there?
+
+
+Vadim Lyubashevsky [34:31] Yeah.
+
+
+Nico Mohnblatt [34:32] Actually, you've touched on two things that I now wanted to inquire about. It's efficiency, like actually, how do these things compare to discrete log-based systems? And practically, like how do we deploy these kind of systems, and how do we write these sort of proofs?
+
+
+Vadim Lyubashevsky [34:48] Okay. So at a low level, I would say that lattices should be a lot more efficient than anything else, even the classical stuff. So as an example, so in the NIST competition, so we have the current standard that was chosen, ML-KEM, it is faster than any other encryption scheme.
+
+
+So in terms of computation size, it is maybe orders of magnitude faster just because these polynomial operations are so fast. And especially if you can take advantage of the parallelism in hardware, which you can. There's AVX2, AVX-512 now. So this all helps us enormously.
+
+
+It's bigger though. So if transmission is an issue, then now you have to count what saves you more. The high efficiency of your local computation versus the transmission. So in terms of that, lattices are great.
+
+
+Nico Mohnblatt [35:46] So I was asking about efficiency. I was also curious about practicality, like how do we deploy these proofs? How do we write anonymous credentials, systems that use lattice-based cryptography?
+
+
+Vadim Lyubashevsky [35:57] Yeah. This is hard. These proofs are, let's say, not trivial. The building blocks are quite messy of these things.
+
+
+Something that I've been trying to do with my colleagues here is to actually write these basic building blocks, and then have a nice interface so people can use them. So this is -- so we have this Lazer Library that we've been working on.
+
+
+So it allows you to prove some relations in zero knowledge, and then, in Python, you can just call these lattice operations, call these proofs. And let's say in 50 to 100 lines of simple Python, you can actually write your anonymous credentials, your blind signatures, things like that, your aggregate signatures.
+
+
+But I would say a lot of the research, and maybe this is not even like zero knowledge related, but once you get to anything past encryption and signatures, I feel like a lot of research should be on verifiability. You need some code or some logical system to verify that what you've written is actually correct. Because these systems are very, very complicated.
+
+
+Nico Mohnblatt [37:15] So just to be clear here, you mean like some kind of formal verification of the code?
+
+
+Vadim Lyubashevsky [37:19] Yeah. Exactly. So formal verification is, I think, one of the more important areas of cryptography, because -- there's an argument now between kind of the English-speaking countries and non-English-speaking countries. I don't know why it broke down this way, but that's the argument. That's how the borders were drawn. That, in the new quantum-safe cryptography world, once you start using these quantum-safe schemes, do you use them in conjunction with the classical ones — in hybrid mode — or do you just say, look, the classical ones we don't care about, we are confident in the quantum-safe ones, let's just use the quantum-safe ones?
+
+
+So, let's say the non-English-speaking world, and this is a perfectly valid argument, says, hey, look, we trusted these classical schemes. It doesn't harm anyone to keep using them in parallel with the newer quantum-safe ones. The other side is saying, hey, look, actually, combining the two, even though it's trivial theoretically, actually that's where all the mistakes happen in the real world.
+
+
+So, even for something so trivial as just combining two schemes together, people are afraid that mistakes will be made. So, even if that is kind of a worry, then I would worry a lot about these extremely complicated pieces of software being rolled out, that, let's say, not many people are looking at, to be honest. Right? How many people look at these hundred thousand line --
+
+
+Nico Mohnblatt [38:54] Oh, you're talking at a community of people who write billions of lines of code and no one's looking at it. And we love it.
+
+
+Vadim Lyubashevsky [38:59] Right. Right.
+
+
+Nico Mohnblatt [39:01] But yeah, there's a lot to be checked here.
+
+
+Vadim Lyubashevsky [39:04] Yeah. But I would say that that's maybe verification is the more urgent research area. Because we have a lot of cryptography. Cryptography, we can do everything with it.
+
+
+Anna Rose [39:16] But do we have enough cryptology or attack techniques?
+
+
+Vadim Lyubashevsky [39:20] Exactly. Attacking, that's an area that needs a lot more research, needs a lot more people to go into it, and formal verification. But those are not the -- I don't know. These are not the cool areas, not the sexy areas. You want to be designing efficient SNARKs. You want to be doing this, and no one wants to do this auditing almost, if you call. This is a bit of an issue, but it's been like that all the time, so.
+
+
+Anna Rose [39:49] I want to go back just one step to some of the techniques that you were -- that we were talking about. I think we started talking about lookup arguments which are not something that's being explored right now. But you did mention folding, and you mentioned -- so Nico, you mentioned recursive composition.
+
+
+I feel like we kind of moved away from that in the conversation, and actually, I think we might be covering this on a future episode in more detail. But I did want to just briefly talk to you about how is folding being used alongside lattices. Do lattices have certain qualities that make them extra easy to fold?
+
+
+Vadim Lyubashevsky [40:23] Yes. I think lattices are very easy to fold because of their algebraic structure. Like I said, if you just apply the lattice function, this AX equals Y, now you can just break up your X into two parts, linearly combine them. That's basically your folding. So, to prove that you know this Y, you can just break up X into two parts, linearly combine them, and because all our functions are just linear, it's essentially folded.
+
+
+Anna Rose [40:54] Nice.
+
+
+Vadim Lyubashevsky [40:54] The hard part is always proving smallness. The messy part is always proving smallness. So, you can even try this as an experiment yourself. Let's pretend that the hard problem is there's no smallness involved. You don't have to prove smallness. I think these SNARKs will be trivial to design just because it lends itself so naturally to folding.
+
+
+I could even tell us the story when Gregor and Ward were working on LaBRADOR. I mean, their first kind of drafts, they were working off Bulletproofs, and trying to get the folding from there. And then they were trying -- and this is something I was involved in before as well, in some theoretical paper. And we kind of said, okay, we're going to try to mimic Bulletproofs.
+
+
+And this is kind of what you were saying before, like have you tried these techniques? And I was saying, ah, we should try the lattice-y things. So when trying to put lattices into the Bulletproofs --
+
+
+Anna Rose [41:54] Construction? Yeah.
+
+
+Vadim Lyubashevsky [41:54] Pigeonhole or whatever. Construction, yeah, yeah. The technique -- you could get something. But then, eventually they realize, hey, this folding is just so natural to lattices. We don't need any -- we don't even need to think about Bulletproofs when we do it. Just this linear combination thing is, in retrospect, almost obvious.
+
+
+And I think that's what's being used kind of in all these other papers as well. And like I said, the hard part is, how do you prove smallness?
+
+
+I like that there's a lot of different techniques now for proving smallness, lots of ideas. There's the Sumcheck way, there's the way we were doing the Johnson-Lindenstrauss way. And the interesting thing is that it is very nicely composable, because you could start with one technique, which, let's say, leads to an efficient verifier, and you switch to the other technique, which actually leads to small proofs. Because after the first step, you don't care about efficient verifier anymore.
+
+
+And I think this composability is -- my prediction is this is the way it's going to be done with lattices. We're going to start with one technique, and then move over to possibly something like LaBRADOR at the end.
+
+
+Anna Rose [43:04] You kind of highlighted a few things that lattices bring. We talked about like they're post-quantum. They, in certain cases, can perform better. But I did wonder -- I think the first time I heard about lattice-based ZK was actually in the context of FHE.
+
+
+Would another benefit of using lattices just be that you could then start to do like combined FHE and ZK in an easier way, because you're using some of the same maths underneath?
+
+
+Vadim Lyubashevsky [43:35] For sure. For sure. This is something that is pretty important for designing efficient schemes, that you want the algebraic structure to be the same. So for example, this is why when designing anonymous credentials, we want to prove some lattice relations. And it makes sense to use lattice-based zero-knowledge proofs to prove these relations because the algebra is compatible. So that absolutely helps.
+
+
+You could, of course, do -- you can just use FRI to prove some lattice relation. And people have tried it, but it's extremely inefficient, just because the algebra, you have to convert --
+
+
+Anna Rose [44:15] Convert it. Yeah.
+
+
+Vadim Lyubashevsky [44:15] -- one output to the other, and it doesn't match. So yes, of course, if you have FHE which uses -- which is basically using the same ring structure, maybe bigger rings, but the ring structure is the same, and you want to prove something about it, it makes a lot of sense that you will use lattice-based ZK techniques to prove it.
+
+
+Anna Rose [44:34] That's cool. 
+
+
+Vadim Lyubashevsky [44:36] So that should definitely help.
+
+
+Anna Rose [44:38] Nice.
+
+
+Nico Mohnblatt [44:39] One thing I did want to ask, and we sort of touched upon different techniques and different protocols throughout the episode, but I wanted to ask what does the state of the art look like for lattice-based ZK and lattice-based succinct proofs?
+
+
+Vadim Lyubashevsky [44:53] Okay. So, I would say we're still in a very, very early stage of succinct proofs. So currently the state of the art, if you just care about succinctness in terms of proof size, then it's the LaBRADOR scheme, which is, I would say about 50 kilobytes for arbitrary sized proofs.
+
+
+Then if you care about succinct verifiers, there's now been a lot of work on this. There's the kind of Greyhound addition to LaBRADOR, whi ch came out maybe two years ago. Now there's LatticeFold, LatticeFold+. You know, I mean, it's -- whatever.
+
+
+Anna Rose [45:32] A lot of folding.
+
+
+Vadim Lyubashevsky [45:33] I don't know if it's how confidential it is, and I'm on the committee for the crypto conference, and there's tons of papers being submitted about ZK lattice-based SNARKs. And you can see that it's really -- some of it is by lattice community, but some of it is by the zero-knowledge community trying to learn lattices.
+
+
+And you see that they're not quite there on the literature, just like the lattice people are probably not quite there on the ZK literature. But it's very hopeful to me. I'm very happy to see this, that it's clearly an area that's going to grow like hash-based systems for example. I mean, they've had a 20 year head start, perhaps.
+
+
+So I'm quite optimistic that if we spend another 5, 10 years, lattice proofs will be even more efficient than they are now.
+
+
+Anna Rose [46:19] Cool. You just mentioned the hash-based side of things. When you were talking about lattices -- they're post quantum, they're like secure against quantum computers. But hash-based SNARKs, at least, are also supposed to be safe against quantum computers. Are lattices better? Are they more safe? Is there any sort of comparative there? Is there a reason why, at least on that metric, lattices would be preferred?
+
+
+Vadim Lyubashevsky [46:47] So in terms of safety, I would say the hash-based schemes require you to assume much less. They just require to assume that something like SHA or AES is hard. And these problems have very little structure, and we do believe that SHA and AES are hard. So in terms of assumptions, hash-based schemes are definitely preferable there.
+
+
+Lattices on the other hand, they do require some algebraic structure. And maybe there's a way that quantum computers can latch on to some structure, this algebraic or geometric structure, to break them. So the assumptions, if I were to bet -- if anyone were to bet, they would, of course, bet on hash based having a smaller chance of being broken than anything like lattice-based cryptography.
+
+
+So that's where hash based is better. But because lattices have these algebraic assumptions, the math behind them is, let's say is easier to implement. So they're going to be faster. So lattices, I believe, will win on efficiency, whereas hash based wins on --
+
+
+Anna Rose [47:57] Security.
+
+
+Vadim Lyubashevsky [47:57] No. The probability of being broken.
+
+
+Anna Rose [47:59] Interesting.
+
+
+Vadim Lyubashevsky [48:00] It's hard to say that they win on security, because they both could be equally hard. It's just that if you're going to bet, and somebody tells you one of them is -- somebody tells you one of them is definitely broken, well, it's going to be lattices.
+
+
+Anna Rose [48:13] All right. Is it just because they've been around like not as long? They haven't been battle-tested?
+
+
+Vadim Lyubashevsky [48:17] Hash functions?
+
+
+Anna Rose 48:18] No. Lattices. Lattices in this context?
+
+
+Vadim Lyubashevsky [48:20] Oh, no. I would say even for classical algorithms, discrete log, pairings, those are much more likely to be broken than anything hash based.
+
+
+Nico Mohnblatt [48:30] Is this structure versus unstructured thing likely?
+
+
+Vadim Lyubashevsky [48:32] Exactly, Nico. Right? Because lattices and all these other discrete log assumptions, they're all structured, they have something that quantum computers can latch onto. But it's always about the efficiency, and this is where the structure helps.
+
+
+Nico Mohnblatt [48:48] I will throw a little spanner in the works though, which is that all our hash-based proofs are only proven secure in the random oracle model. Is that also the case with lattice-based proofs, or?
+
+
+Vadim Lyubashevsky [48:59] Yes. Yes.
+
+
+Nico Mohnblatt [48:59] Oh, it's also random oracle?
+
+
+Vadim Lyubashevsky [49:01] All the -- anything interesting is going to be in the random oracle model.
+
+
+Nico Mohnblatt [49:05] Okay. Yeah. That's super interesting that lattice-based proofs are still in the random oracle model because with discrete log and pairing-based proofs, we do have systems that are in the structured reference string model, but no random oracles involved at all.
+
+
+Vadim Lyubashevsky [49:19] Okay. So, now, I could be saying something very wrong, but I think there could be a way to not have random oracles if you make some crazy assumptions. And in the pairing world, nothing has -- at least nothing that I know of, as somebody who's maybe not very deep into it, but just an outsider, that has gone wrong with these crazy assumptions.
+
+
+Whereas in the lattice world, things have gone wrong. So there's been a very interesting recent paper that showed a lot of knowledge assumptions where you say, ah, the only way for you to do this is if you know this. Basically, if you know how to do this, then there is an extractor that can extract this information from you, that people tried to make about lattices and it turns out to be completely broken, quantumly.
+
+
+Nico Mohnblatt [50:09] Interesting.
+
+
+Vadim Lyubashevsky [50:10] So yeah. So it is a bit -- and these knowledge assumptions, these unfalsifiable assumptions, I think they are quite important in the ZK world if you're going to not use maybe random oracles or something like that. But they are dangerous to make for lattices. So I would much rather go with random oracles. I don't see a big problem with them, rather than these assumptions which have not shown themselves to be very stable.
+
+
+Nico Mohnblatt [50:43] Yeah. Fair. So you've been involved in the development of standards for encryption and signatures for NIST, and we've mentioned them a bit earlier, ML-KEM and ML-DSA. Can you tell us a bit more about them and how they work and how they compare to existing encryption and signature techniques?
+
+
+Vadim Lyubashevsky [51:00] I think the best way to understand what the difference between lattice and discrete log is to think about the key exchange. So Diffie-Hellman key exchange. So Diffie-Hellman, you have g to the x equals -- g to the x1 equals y1, g to the x2 equals y2, and then you have g to the x1, x2 is the shared thing. So with lattices, you don't have that, because the equivalent of like g to the x is the LWE function, like a times x plus an error.
+
+
+Nico Mohnblatt [51:30] Right.
+
+
+Vadim Lyubashevsky [51:31] And now, if you have a times x plus error and the other guy has some x1 times a plus error, you can do the appropriate thing. But now you end up with errors. You now end up multiplying by the errors as well.
+
+
+Nico Mohnblatt [51:43] Right. We have these cross terms sort of that start appearing.
+
+
+Vadim Lyubashevsky [51:47] Yeah. Exactly. Exactly. These cross terms which you don't know about, because I don't know your error, you don't know my error. So we don't know what the cross terms are.
+
+
+Nico Mohnblatt [51:53] And we, obviously, cannot reveal our errors to each other, otherwise it's all broken.
+
+
+Vadim Lyubashevsky [51:57] Exactly. Exactly. So Diffie-Hellman key exchange is actually something that does not work. This [?] key is quite bad for LaB. You can do it, you can set the parameters so that it works out with high probability, but then it becomes really terrible.
+
+
+But with public key encryption, it's not so bad, because there we are not -- there is some interaction involved. Whereas Diffie-Hellman key exchange, there's no interaction. Here, basically, we can do something. But it's again about clearing out these errors.
+
+
+So, this is what ML-KEM is. It's how you naturally apply ElGamal, how you translate ElGamal to lattices, and then you take care of the errors. And that's the messy part.
+
+
+The ML-DSA, this is something we mentioned before. I said, okay, you're trying to do the zero-knowledge proof, and you try to do as efficient a zero-knowledge proof as possible, proving something that's good enough. It's good enough for signatures. And this is -- it's like you take Schnorr and you say, okay, what goes wrong when I try to apply it with lattices? And then let's keep fixing it up and optimizing it. So that's ML-DSA.
+
+
+So if you actually look at that tutorial, and you look at ML-KEM and ML-DSA, you don't need to know what a lattice is to understand what they are, because it's just matrix vector operations.
+
+
+Nico Mohnblatt [53:11] Do you think the whole of lattice-based cryptography is going to end up in a space where people don't need to know what a lattice is?
+
+
+Vadim Lyubashevsky [53:18] So for cryptanalysis, you do need to know what a lattice is. But I think we could end up in a scenario where, kind of similar to the pairing scenario, where people know what pairings do, but they have no idea what pairings are, or what is underneath.
+
+
+Nico Mohnblatt [53:33] I mean, even with elliptic curves, we have a group and we don't even need to think about the curve.
+
+
+Vadim Lyubashevsky [53:39] Right. So it could be distilled enough to say, okay, look, we have this -- I mean, where lattices really come in, the trapdoor function. So you do need to kind of know what a lattice is there, but you could distill it and say, here's a matrix, you get this preimage, and don't worry about it, it's good enough.
+
+
+So we could get to this point and that would be really good. But I think, right now, the research is not quite there. I think if you're going to do research, you're going to come up with something more efficient, you should know what a lattice is.
+
+
+Especially for cryptanalysis. I mean, there, it's much more complicated, and I think you still need to understand what the cryptanalysis is, what the lattice that people will be attacking in your scheme are going to be to design the most efficient scheme.
+
+
+Nico Mohnblatt [54:26] So that means specific to the parameters chosen?
+
+
+Vadim Lyubashevsky [54:29] Yeah, yeah. I mean, there are scripts, of course, that say, okay, if you can use parameters this. But I still think you have to understand. There's too many mistakes that one can make just trying to apply things without any understanding. We're not there yet. But I don't see why eventually we will not be.
+
+
+So now in terms of encryption and signatures, I would say we're in a pretty good state. We have standards, people are deploying them. Of course, it's hard work. You're replacing all the current algorithms with quantum-safe versions because, first, you have to find where the cryptography is. And actually, a lot of work being done by my colleagues at IBM is really on that, trying to be able to upgrade these systems.
+
+
+But now, I actually have a question, maybe for you guys. So in your space, in the blockchain-SNARK space, there's a lot of stuff that is not quantum safe. And so, what do you think the urgency is, or what do people think about upgrading to quantum safe?
+
+
+So something that -- the reason that you want to upgrade to quantum safe, I think there are two reasons. One is harvest and decrypt. So everything that's encrypted now using classical cryptography can be stored and then decrypted later. So the secrecy part is gone. So, I think that's the main thing people worry about.
+
+
+But I think in the blockchain, like your space, there's a second one that you can actually deploy systems now that really have no path for migration. And as an example, I can give you a very simple example like digital cash with blind signatures.
+
+
+If you get somebody to sign random things now, and these are my tokens, once quantum computers come about, what do I do with these tokens? The signatures are invalid. So, okay, anyone can forge them. So, you can't sort of allow these to exist, but you also can't just say, well, everything is invalid because now everyone lost all their money.
+
+
+So now, that's what I mean. But there's really no path to migration. There's nothing you can do. So what is --
+
+
+Anna Rose [56:43] Well, that's interesting. Yeah.
+
+
+Vadim Lyubashevsky [56:43] Yeah.
+
+
+Anna Rose [56:43] I'm going to split what you just said into two parts, because I think on the blockchain payment side, I know one project that's trying to help with the migration to a post-quantum system, but it's not within the cryptography of the system itself. It's actually in creating like a parallel quantum-secure blockchain that would have some benefit of migrating over. Hard sell for some people, but it is a possibility. That's on the blockchain payments side.
+
+
+But what you were talking about was also like the ZK, basically any of the systems that are still using elliptic curve pairing-based cryptography. And a trend that's actually happened in our space was, especially in the last two years, it's like there's been a movement towards more systems being hash based, because there was the desire to scale. That's where a lot of the funding was coming from.
+
+
+So it was like small fields, proving server side, privacy doesn't matter. Let's go hash based, throw a bunch of compute at it. It's kind of quantum secure-ish. But, there is now recently this move to return to client side. And there, you're seeing pairings still being kind of relevant.
+
+
+But my sense -- and Nico, I wonder if you're following this closer. But my sense is, there's often transformations along the way where maybe a quantum-secure version could be introduced. If you're doing recursion, or if you're doing like -- can you just kind of add a quantum-secure system? Would it make the whole thing secure, or does it actually not help at all?
+
+
+Nico Mohnblatt [58:10] So, for all our proof systems, we're fine because we do have these hash-based proofs, and it's just a matter of tweaking the parameters to make sure that we're secure against quantum adversaries. What Vadim was also talking about is all our signature-based systems. So our Layer 1s that are using just ECDSA, how do they fare, and how do we upgrade them? And we discussed this actually in another episode of the podcast with Or Sattath.
+
+
+Anna Rose [58:37] Oh, yes.
+
+
+Nico Mohnblatt [58:38] And he talks about super interesting techniques like signature lifting. And this idea that -- okay. So right now what we're doing is we take some kind of seed, we hash it, get a private key, and then we publish the public key. A quantum computer will go from the public key to the private key, but cannot reverse this hash. And so the idea there is to use the seed as our private key and the hash of it, which would have been the private key before, as our public key now.
+
+
+Anna Rose [59:06] Oh, wow.
+
+
+Nico Mohnblatt [59:07] And so, that's one way to sort of save these legacy systems. It's not very pretty, but it allows you to sort of in an emergency, transfer your funds away. And otherwise, you have to build from the ground up with post-quantum secure primitives.
+
+
+Anna Rose [59:21] Yeah. And just encourage, incentivize people to move it over. There is a project, Project 11. My friend Alex Pruden just joined. They're doing exactly that. We might get them on the show at some point, but it's a tougher -- it's more like a social challenge to just convince people to move to a new chain, or to trust it.
+
+
+Nico Mohnblatt [59:41] Yeah. Also harvest now, decrypt later, this is a big deal because I do see a lot of people talk about, oh, let's encrypt medical data and put it onchain.
+
+
+Anna Rose [59:50] I know.
+
+
+Nico Mohnblatt [59:51] No. No.
+
+
+Anna Rose [59:52] So dangerous.
+
+
+Nico Mohnblatt [59:52] Please do not. Even if you do it with post-quantum secure algorithms, you never know what's going to happen in the future. So just don't do it. Put a commitment onchain. Those are perfectly hiding, and we're okay with that.
+
+
+Vadim Lyubashevsky [01:00:04] Yeah. So I think what you brought up is very -- it's kind of similar to what I was thinking. You don't need to do a lot now to get your system to the point where you actually can migrate later. So these, like the signature thing you were describing. It will not work once we actually do have quantum computers, because that still can be -- you know that part, once the seed is expanded, then you can start forging.
+
+
+You can still use everything until quantum computers are built normally. And then once they exist, you can say, hey, look, I still have this information that could not be cracked by quantum computers. Let me now do something with it. Let me exchange it, let me -- whatever.
+
+
+So there are very simple things you could do without actually becoming quantum safe. So we sometimes say it's a quantum ready. You can, at least, have a path for migration.
+
+
+Nico Mohnblatt [01:00:53] Well, quantum ready almost by accident. It's like, I'm ready, but I didn't know it was going to be.
+
+
+Vadim Lyubashevsky [01:00:57] Well, yeah. Okay. So in that case, yes. But there are some things like what I described with like --
+
+
+Nico Mohnblatt [01:01:02] Yes. Of course.
+
+
+Vadim Lyubashevsky [01:01:02] With the blind signatures. There, you do have to do one little step to become quantum ready. And these are very cheap things. So I'm just wondering if the community is saying, okay, look, we don't want to implement ML-DSA right now because we don't know if it's going to be needed in 5 or 10 years. Let's kind of push everything back as far as possible, but maybe we should have a path to migration.
+
+
+Nico Mohnblatt [01:01:27] I almost get the feeling that when it feels easy to migrate, people don't take the threat as seriously. It's like, oh, it's fine. It's easy. We'll figure it out when we get there. And maybe you need a bit more fear.
+
+
+Anna Rose [01:01:39] Well, every time there's big quantum announcements, people, for a second, scramble to check.
+
+
+Nico Mohnblatt [01:01:44] Yeah. For a second.
+
+
+Anna Rose [01:01:47] So Vadim, before we sign off, is there anything -- maybe you can share what you're working on today? What can people expect in terms of research coming out of your group?
+
+
+Vadim Lyubashevsky [01:01:57] Yeah. So, I think we've touched on many of the things that we're working on. So one thing is, of course, trying to get more compact SNARKs. Another thing is to try to get zero knowledge -- actual zero knowledge in the way it's used.
+
+
+Anna Rose [01:02:13] Privacy?
+
+
+Vadim Lyubashevsky [01:02:14] Privacy. Yes, privacy.
+
+
+Anna Rose [01:02:15] ZK, zkSNARKs.
+
+
+Vadim Lyubashevsky [01:02:17] Yeah. Yeah. ZK ZK. Okay. I didn't know that was the terminology.
+
+
+Anna Rose [01:02:20] No. No. I'm just joking.
+
+
+Nico Mohnblatt [01:02:21] Non-official.
+
+
+Anna Rose [01:02:21] Like zkSNARKs is supposed to have ZK in it. It just gets kind of misused.
+
+
+Vadim Lyubashevsky [01:02:27] Right. So with lattices, it turns out, let's say, there is some added complexity when you actually want to add ZK to SNARKs. So we're trying to work that into now our LaBRADOR system, for example, and try to make it as efficient as possible.
+
+
+And that, of course, like I said before, that will not just be particular to LaBRADOR, because I think later you may want to combine -- have it be the lower level of your full protocol LaBRADOR. And once you have the top layer using whatever you want, and then you kind of feed the result into LaBRADOR, you want that part to be zero knowledge as well, if you care about privacy, which I think we do.
+
+
+Because a lot of it is also like anonymous credentials, identity solutions, this central bank digital currency, stuff like that, this is something that is on the radar that does require all these privacy-based solutions. And that's something that interests me right now.
+
+
+But of course, also reading these new results that are coming out of the zero-knowledge world about fast verification, about using all these techniques that we haven't used yet when we're developing the lattice toolbox. And obviously -- I'm going to go on, not a very dangerous limb to say, obviously, this will be somehow combined together, and we will get something much better when these two communities come together.
+
+
+So this is something that I'm definitely looking forward to --
+
+
+Anna Rose [01:03:54] That's awesome.
+
+
+Vadim Lyubashevsky [01:03:55] -- seeing in the next couple of years. Yeah. Personally, I feel like the field is going in a really good direction. So there's a lot more work happening, so maybe some people would be stressed out, but you have to keep up with a lot of it.
+
+
+But on the other hand, as somebody who's worked and who cares that this is going in the right direction, I'm actually quite happy and more relaxed at saying, hey, look, maybe it won't be me who does it, but it will be done. So I'm very, let's say, very optimistic for what's going to happen in the field.
+
+
+Anna Rose [01:04:23] Vadim, thank you so much for coming on the show.
+
+
+Vadim Lyubashevsky [01:04:25] Thanks a lot, Anna and Nico. That was --
+
+
+Nico Mohnblatt [01:04:27] Thanks.
+
+
+Vadim Lyubashevsky [01:04:27] -- really good questions, really nice conversation.
+
+
+Anna Rose [01:04:29] And I'm so glad we got a chance to do a proper deep dive into lattice-based ZK systems, something we've wanted to do for a long time. Maybe not even only the ZK side of things, just lattices in general. This has been great.
+
+
+I want to thank Dan Boneh for the intro. He basically recommended we get in touch with you, Vadim, for such an episode. So thanks again, Dan.
+
+
+Nico Mohnblatt [01:04:51] Thanks a lot, Vadim, for coming on the show. This was super enlightening. Looking forward to seeing our research communities merge a bit more.
+
+
+Anna Rose [01:04:57] Yeah.
+
+
+Vadim Lyubashevsky [01:04:58] Yeah. Me too.
+
+
+Anna Rose [01:04:59] All right. I want to say thank you to the podcast team, Rachel, Henrik and Tanya. And to our listeners, thanks for listening.
