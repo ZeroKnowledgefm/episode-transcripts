@@ -1,0 +1,631 @@
+Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+This week, Nico and I chat with Matthew and Albert from Nethermind. We cover some of the research topics they are exploring at Nethermind. Before diving back into the topic of lattice-based ZK systems, Matthew and Albert have been implementing LatticeFold, a folding scheme that is built using lattices. And in this conversation, we tease out some of the challenges and opportunities that such a system introduces.
+
+Quick note! I'll be taking the next two weeks off the show, and will return with regularly scheduled episodes on June 4th. In the meantime, do check out our YouTube channel. There you can find the videos from zkSummit13. So if you missed the event, or just missed a few talks while you were at the event, you can see them there. And do remember to subscribe.
+
+There is also another event coming up. There is a ZK Hack Hackathon happening on June 20th to June 22nd in Berlin this summer. So, if you're looking to jump into ZK and actually start building with this stuff, this would be a great place to check it out. Find out more at zkberlin.com.
+
+Now, here is our episode.
+
+Today, Nico and I are here with Matthew and Albert from Nethermind.
+
+Welcome to the show, Matthew and Albert.
+
+Matthew Klein [01:32] Great to be here.
+
+Albert Garreta [01:33] Thank you. It's a pleasure to be here.
+
+Anna Rose [01:35] Amazing. Hey, Nico.
+
+Nicolas Mohnblatt [01:36] Hey, Anna. Hey, Albert. Hey, Matthew.
+
+Anna Rose [01:39] So, we recently did an episode on lattice-based ZK systems with Vadim from IBM Research. And in that episode, we really did an intro to lattices, and how bringing them into a SNARK context is a challenge, but also has some amazing payoffs.
+
+In today's episode, we're going to be diving a bit deeper into some of the cutting-edge constructions. We're going to talk about LatticeFold, a folding scheme that relies on lattices in a major way, the challenges of implementing these types of lattice systems, and hopefully do a deeper look into where the space is moving.
+
+I think a way to think about this is the first episode was from the lattice perspective looking into ZK, and this time, I think we're coming more from ZK looking into lattices. I also know that at Nethermind, you've been producing a ton of great research. So, hopefully, we also get to talk a little bit about that later on in the show.
+
+So let's jump in.
+
+I think a good starting point would be some quick intros. Albert, you've already been on the show. You were here actually talking about the security of FRI. We're going to be talking about something quite different this time. So it might make sense to just share with the audience what you've been working on, kind of what your focus is today.
+
+Albert Garreta [02:50] So, when I was at the podcast the first time, besides talking about the Fiat-Shamir security of FRI and STARKs, we also talked about proving statements over rings, for example. This is one of the problems we've been working on over these 3 years.
+
+And recently, we published our conclusion to this work, which is called Zinc. It's available online. We are quite excited with it. We have also been working on, well, lattice-based folding. We implemented LatticeFold. We've been doing some internal research around it.
+
+We also looked at lookup arguments and how to fold them. We published a folding scheme for lookup arguments called FLI with Ignacio.
+
+We are also working on zkML. We have several ongoing projects. We are working on it from different sides. We are trying to do proof of inference via folding, because in ML, there's lots of repeated computations. So the circuit in a large language model or a machine learning model, it consists of a lot of layers, and each layer is the same as before, but with different inputs. So it's very amenable to folding. So we have an engineering team on that right now.
+
+Nicolas Mohnblatt [04:01] That's really cool. If I remember correctly, there was a product called Zator that did this, back with the very first version of Nova and R1CS. So, there's a lot of new tooling sense. It would be super interesting to see what you guys get up to.
+
+Albert Garreta [04:13] Yeah. We are also exploring other ways of doing things like inference of ML, but without actually proving the entire ML model. Like trying to be a bit smarter rather than just proving the whole thing. Because for some applications, proof of inference will never be fast enough.
+
+And let's not talk like, if we go into proof of training, then that's a complete mess. So we are trying to look at smarter ways to go about it, to achieve a similar result without actually proving the entire thing. And we've continued looking at several security questions around FRI.
+
+Nicolas Mohnblatt [04:51] And very important, you recorded a ZK Whiteboard Session.
+
+Anna Rose [04:53] Oh, yes.
+
+Albert Garreta [04:53] Yeah. That was the highlight of these 3 years. Yeah, for sure.
+
+Anna Rose [04:59] We can link to that as well. It came out in Season 2, just recently.
+
+All right. Matthew, this is the first time we're meeting. Why don't you share a little bit about the work you've been doing, what your role is at Nethermind, and kind of maybe your interaction with lattice-based systems as well.
+
+Matthew Klein [05:14] Hi, my name is Matthew. I'm a cryptography engineer at Nethermind. I joined as an intern just after I graduated last year, and they've been kind enough to keep me on.
+
+When I was an intern and also towards the beginning of my full-time tenure, I worked on the LatticeFold project. So very much to do with lattices and the folding techniques we hope to be discussing later. I also did a bit of work researching the PQ signatures, the post-quantum signature work that we're doing.
+
+And, as of late, I've been working on the Zinc project with Albert. It's a new proof system that's currently online as of 2 months ago.
+
+Anna Rose [05:48] Nice.
+
+Nicolas Mohnblatt [05:49] So, the first thing I wanted to ask you guys is sort of what does the landscape of lattice-based ZK look like today? Is it all folding, or is there very different techniques? And in general, how does it compare to pairing-based or hash-based techniques?
+
+Albert Garreta [06:04] Okay. So this is a long question to -- it's a question that has a long answer.
+
+Anna Rose [06:10] The short question with a long answer.
+
+Albert Garreta [06:12] Yes.
+
+Nicolas Mohnblatt [06:13] Good.
+
+Albert Garreta [06:14] And there's two questions in it. There's, what has been done so far and how does it compare to other existing schemes? You could write papers about how lattice-based schemes compare to elliptic curve-based schemes or hash-based schemes, so. But let's try to answer.
+
+So, there's one area of development where that's related to folding. There's all these new schemes that are based on lattices. They are folding schemes based on lattices, which I think they have kind of become a hot topic lately in the space. I hear a lot of people mentioning them, and I see there's a lot of interest in them.
+
+Outside of folding, I'd mention LaBRADOR and Greyhound as very exciting developments.
+
+So, LaBRADOR is a SNARK that relies on lattices. The main feature of LaBRADOR is that it produces very small proofs, and the main drawback is that it has a linear time verifier. So, it's not a succinct proof system. But if you care about succinct, this LaBRADOR might be a great wrapper around something that is succinct.
+
+Nicolas Mohnblatt [07:17] That's very reminiscent of Bulletproof-style things in the discrete log setting, where you have tiny proofs but a linear time verifier.
+
+Albert Garreta [07:24] Yeah. LaBRADOR, in fact, is some kind of Bulletproof scheme but ported to lattices, which uses a very interesting technique which is called Johnson–Lindenstrauss lemma for proving norm bounds.
+
+Greyhound is a polynomial commitment scheme that uses LaBRADOR as a wrapper to reduce proof sizes. And Greyhound, I think, is an extremely exciting -- well, I find Greyhound a very exciting PCS. It's a PCS based on lattices. It has -- the numbers published in the paper are really good, both in terms of proving time, verifier time, and proof size.
+
+Nicolas Mohnblatt [08:01] And I think this is one Dan refers to mostly in his episode, end of last year on lattices.
+
+Anna Rose [08:06] Can I just do a quick word check? And maybe I do know this, but PCS, what does that stand for?
+
+Albert Garreta [08:11] Yeah. It's a polynomial commitment scheme.
+
+Anna Rose [08:13] Oh, okay. Got it.
+
+Albert Garreta [08:15] Yeah. The polynomial commitment scheme is kind of the key piece of a SNARK. It's the most complicated one to design. It's usually the most expensive to run, et cetera. So if you have a nice PCS, you usually can build a nice SNARK.
+
+Anna Rose [08:31] Nice. I do know a polynomial commitment scheme, I'm familiar with. I wasn't fully getting the short form, but I'm glad you shared.
+
+Nicolas Mohnblatt [08:38] This is deep down in the lingo of ZK.
+
+Albert Garreta [08:41] Yes. I have a pajama with the PCS words on it.
+
+Anna Rose [08:47] You're not wearing it right now, but that's --
+
+Albert Garreta [08:49] No. No.
+
+Anna Rose [08:50] Good to know. The two that you just mentioned, LaBRADOR and Greyhound, those are -- as far as I understand, aren't those quite like -- they're quite lattice-y. But then you have things like LatticeFold. Is LatticeFold also a continuation of that work? Is it an implementation of that work? How does that kind of compare?
+
+Albert Garreta [09:10] LaBRADOR is a proof system. It's not a SNARK because it's not succinct. It's a proof system that produces very small proofs. And Greyhound is a polynomial commitment scheme which can potentially be used inside a SNARK based on lattices. Okay?
+
+Then LatticeFold, and LatticeFold+, and Neo, and Lova are folding schemes. So, folding schemes are not proof systems. A folding scheme is different from a proof system in the following sense.
+
+A proof system allows you to prove that certain computation was performed correctly, as listeners probably know. Or, actually, it allows you to prove that you know a witness to certain NP relation, for an instance of an NP relation.
+
+A folding scheme is different in that it allows you to take two instance witness pairs, or two instances -- so two computations, and produce a new computation, a third one, so that if this third computation is correct, then the previous two were correct, except with negligible probability. So LatticeFold is a lattice-based scheme, but for solving a different problem.
+
+Anna Rose [10:20] Okay.
+
+Nicolas Mohnblatt [10:20] What do you mean by a different problem?
+
+Albert Garreta [10:22] Well, the problem of designing a folding scheme or the problem of designing a proof system for an NP relation.
+
+So, LatticeFold designs a folding scheme and LaBRADOR designs a proof system for NP relations. And Greyhound is a PCS. You can use it to compile a PIOP over a lattice to get a succinct argument for lattices.
+
+Nicolas Mohnblatt [10:45] Right. So you could use LatticeFold to combine a bunch of problems into one, and then use something like Greyhound, LABRADOR to prove that one problem.
+
+Albert Garreta [10:52] Exactly. Yeah.
+
+Nicolas Mohnblatt [10:53] And you'd have a full lattice-only stack?
+
+Albert Garreta [10:55] Yes.
+
+Anna Rose [10:56] Interesting. But could you also use things like LryptographiatticeFold within existing systems? Do you have to have a lattice-based system in order to use that folding scheme?
+
+Albert Garreta [11:06] No. You can potentially use LatticeFold to fold instances of your relation. And then when you are done, use a different proof system to prove the folded relation. That's actually one area we are looking in.
+
+One problem we have been studying is the problem of how to do folding in the context of STARKs. So, say your whole pipeline are STARKs. You want to use your STARK proof system for proving your statements, but you also want to do folding, maybe to reduce proof sizes.
+
+So we've proposed some frameworks that rely on lattices. So you use lattices to do the folding, and then you use your STARK proof system to prove the folded instance.
+
+Yeah. There's another natural way of going about it, which is, using these hash-based folding schemes that appear recently, namely Arc, and this new one which is called WARP, I think. I think it came out on Monday, I'm not sure because there was the blackout, so I was out of ePrint.
+
+Nicolas Mohnblatt [12:10] So we've talked a lot about different lattice schemes, and we have the proving schemes, the folding schemes. What does the tooling look like right now? Say I'm a developer and I want to work with lattices. I've done a bit of -- I don't know, worked with Arkworks maybe in the past, or Plonky2, 3, and now I want to work with lattices, what can I do?
+
+Matthew Klein [12:29] Well, so there are existing implementations of all of the basic cryptographic primitives that you'd want to.
+
+So, let's say you want a signature scheme. We do have the NIST finalists all have to submit an implementation, but those implementations do exist. There is some limited work going on which is like porting those schemes to new languages. That's very, very much emerging work. And the same could be said of all of these schemes that we're talking about.
+
+So LaBRADOR has its implementation. We've done the implementation of LatticeFold. These are very much emerging works, and the implementations are very much proof of concept implementations. If let's say you want to -- I don't know, you want to use it on Android Blaze platform, there's a heck of a lot of work that's going to need to be done before we get these implementations out of the academic space.
+
+So I would say that in general, if we're talking about lattice-based ZK or lattice-based cryptography, the tooling is rather limited at the moment. The caveat I would add to that, the area of cryptography or lattice-based cryptography that has attracted the interest of major tech companies is homomorphic encryption, which we can talk about later, and that has a much more developed infrastructure, and more developed tooling.
+
+Nicolas Mohnblatt [13:40] Okay. And so, in the case of LatticeFold, do you guys start from scratch, or are you trying to normalize things?
+
+Matthew Klein [13:48] So we did use Arkworks libraries to a certain extent, but a lot of the work was done completely sort of hand implementations of stuff. So, Arkworks has a field library well known to anyone in the cryptographic engineering. So we used their field stuff.
+
+We had to work over rings, because this is lattices and all the structured lattices work over rings, not over fields. So we had to hand implement a lot of functionality. That's a lot that's open. So that's in our STARK rings library. And then, of course, the LatticeFold stuff, it's fresh out of the academic press. So that was all hand implemented.
+
+Nicolas Mohnblatt [14:24] So, maybe before we dive a tiny bit more into the implementation, can you guys give us a quick overview of LatticeFold? Like what are the main components, and how to think about it from high level?
+
+Anna Rose [14:34] The folding technique. Maybe where does it come from if it's taking from any other previous system as well?
+
+Matthew Klein [14:41] Right. So the folding technique, I think, was introduced by Valiant in 2008. And before, it has been ported into the post-quantum space. So, via lattices, it had some work via elliptic curve-based schemes called Nova, and Hypernova as well. I think.
+
+Anna Rose [14:56] Yeah. We covered those on the show.
+
+Matthew Klein [14:57] Fantastic. So those works very much inspired LatticeFold, but again, because it's all elliptic curve based, so not post-quantum secure.
+
+So LatticeFold was the first lattice-based folding scheme in the hope that that is post-quantum secure.
+
+Nicolas Mohnblatt [15:11] My understanding was that it's a variant of Hypernova that's made sort of lattice-friendly. But I'm not sure what that means, and sort of how to think about it.
+
+Albert Garreta [15:20] Yeah. I think that's a correct take. Let's unpack it a little bit. So, let's start with Hypernova.
+
+So in Hypernova, there's lots of shenanigans going on. And then, there's a very important thing that happens, which is that you take linear combination of the commitments to the witnesses. So witnesses are always committed. And when you are done folding, you linearly combine the witnesses into a new witness.
+
+Nicolas Mohnblatt [15:42] Yeah. So we do witness plus something random times the other witness.
+
+Albert Garreta [15:45] Yes. And the verifier gets a commitment to this new witness using the fact that group-based commitment schemes are homomorphic. And this means that the sum of two commitments is the commitment of the sum. So, if you commit to two vectors, and you sum them, you get the commitment to the sum of the two vectors.
+
+Matthew Klein [16:04] I was going to jump in with the nitpick that they're additively homomorphic, for anyone who understood that they're additive.
+
+Nicolas Mohnblatt [16:10] Yeah.
+
+Albert Garreta [16:11] So we say that the commitment is additively homomorphic because the commitment to the sum of two vectors is the sum of the commitments to the vectors. And if we replace sum by multiplication, then we say that the commitment is multiplicatively homomorphic.
+
+Nicolas Mohnblatt [16:26] But those we don't use, right? We're just focused on additive here.
+
+Albert Garreta [16:29] Yeah. In folding, we use additive homomorphic commitments. And if they are both additive and multiplicatively homomorphic, then it's fully homomorphic, and we are very happy. But it's hard to be on those, so.
+
+Okay. So, if a verifier has commitments to two vectors, and the commitment is additively homomorphic, it can get a commitment to a random linear combination of the two vectors by randomly combining the commitments.
+
+Nicolas Mohnblatt [16:54] And this is super cheap to do because it's just I'm adding commitments together and life is good. I don't need to look at long vectors.
+
+Albert Garreta [17:01] Yes. So this is done in Hypernova. It is a crucial step. But it is a step that's very small in Hypernova because it's extremely simple, because of this homomorphism.
+
+Now, in lattices, you have a natural commitment scheme, which is called Ajtai commitment, that works as follows. So if you want to commit to a vector of field elements, the commitment is the result of multiplying a matrix by the vector. That's a commitment.
+
+Matrix multiplication is a linear operation. So this suggests that this commitment scheme is additively homomorphic. There's a small issue, which is that because of the properties of lattices, the commitment is only binding -- so it's only secure if the vector you are using has small entries.
+
+Nicolas Mohnblatt [17:46] Okay. So there's some maximum limit on how big my numbers can be. And if I go too big, I lose security.
+
+Albert Garreta [17:52] Yes.
+
+Nicolas Mohnblatt [17:52] Okay.
+
+Albert Garreta [17:53] So, if you take a random linear combination of your two vectors, then the resulting vector might have large entries. Because you are adding the first vector and then adding a random multiple of the second vector. So you have a vector with arbitrarily large entries.
+
+So you can no longer use additive homomorphism as easily as in Hypernova when you use this commitment scheme, because you might end up working with vectors that have entries that are so large that the security of the commitment scheme is lost.
+
+Nicolas Mohnblatt [18:26] Right. And so most of the work in LatticeFold is to fix this problem?
+
+Albert Garreta [18:30] Exactly. Yeah. So LatticeFold, you just do the whole Hypernova over rings or lattices, a different structure, plus extra steps to make sure that you are never committing to vectors whose entries are too large.
+
+Matthew Klein [18:44] And in the paper, that's called the decomposition step.
+
+Albert Garreta [18:47] Yeah. There's the decomposition step, and there's also a norm check step, because you need to make sure that it's not only about the composition, it's also proving that the norm of what you are committing is small.
+
+Nicolas Mohnblatt [19:01] And so, how does all this extra work affect sort of performance of these schemes?
+
+Anna Rose [19:06] Yeah. Is there an improvement because of this, or does it actually hurt it?
+
+Albert Garreta [19:10] Well, so you have to do more work, because you have to do the whole Hypernova. And then you have to do extra things to make sure that you don't go beyond a certain magnitude in the entries of your vectors. So, in this sense, this adds overhead.
+
+On the other hand, the Ajtai commitment is particularly cheap. So there's several pros to using Ajtai commitments and lattices that might outweigh the fact that you have to do extra work because of this non-homomorphicity.
+
+Anna Rose [19:40] When you say cost, are you talking speed? Is it sort of like the Ajtai part makes it very fast, but then there's some slowdowns because of these other workarounds, basically, you need to make?
+
+Nicolas Mohnblatt [19:52] The prover has to do more work.
+
+Anna Rose [19:53] Okay
+
+Albert Garreta [19:53] Exactly. Yes. So, in Hypernova, it turns out that the boons of the Ajtai commitment are not enough to compensate for the extra work that the prover does. But if we start talking about LatticeFold+ and Neo, or a combination of both, it seems that we get something that's possibly more performant than elliptic curve-based folding schemes.
+
+Anna Rose [20:18] Oh, cool.
+
+Nicolas Mohnblatt [20:19] So, I was going to ask, actually, about the implementation itself and sort of what are the lessons that come from it. And it sounds like we're kind of skipping ahead to this, which is great.
+
+I know you also gave a talk about this topic, Albert, recently. So, let's go straight to the lessons of this implementation. How does it compare to, I guess, folding schemes that we already have in the discrete log setting? And then, how does it compare to just the, almost like, more brute force-ish, like I'll just do recursion of STARKs, you know?
+
+Albert Garreta [20:46] The thing is it's kind of difficult to compare because there's lots of dimensions you might look into. So, first thing we can say is we can talk about plausibly post-quantum security.
+
+So the elliptic curve-based folding schemes are not post-quantum secure, but the lattice-based ones are, plausibly, and also the hash-based ones are. And you could argue that hash-based ones are more post-quantum secure than lattices, just because these lattice-based schemes rely on cryptographic assumptions that are less understood, or they are less --
+
+Anna Rose [21:26] Less battle-tested?
+
+Albert Garreta [21:27] Exactly. Less battle-tested, yeah. Exactly. That's the word. They rely on these lattice-based cryptographic assumptions on structured lattices which they are not that battle-tested.
+
+There's another angle, which is the arithmetization part of things. The elliptic curve-based folding schemes work over particular fields. So they are very rigid on what your computation can work on. Elliptic curve-based schemes force you to work over a large field of about 250 bits, at least, because you need an elliptic curve and possibly a pairing on it. So a pair of elliptic curves.
+
+And this leads you to work with large fields because there's no small fields and pairs of elliptic curves. So working with large fields can force you to work with circuits that are larger than what you would like to, because maybe you want to prove some computation -- so, a CPU computation, which is not naturally written over a large field. So you have to rewrite this computation over a large field, and then you end up working with large circuits.
+
+So, even if maybe your folding scheme is very good, it's elliptic curve-based, and for a fixed witness size, it's very performant. But then it turns out that for what you want to prove, you end up with very big circuits, and then maybe it's not worth it.
+
+The hash-based schemes allow you to work on smaller fields, but still they force you to stay on a field, which can also lead to large circuits. But small fields are easier on the CPU.
+
+Nicolas Mohnblatt [23:01] Yeah. And you don't have this sort of overhead effect that you were talking about.
+
+Albert Garreta [23:04] When you actually run the algorithms.
+
+Nicolas Mohnblatt [23:6] Yeah. 
+
+Albert Garreta [23:06] But the circuit might also be bigger depending on what you are computing. Everything I said is not specific of folding schemes. It applies to any ZK system you can think of.
+
+Nicolas Mohnblatt [23:17] I want the real numbers from the implementation. I want to know the meaty stuff.
+
+Albert Garreta [23:20] Okay. Let me shut up then and give numbers. Okay. So, the Ajtai commitment scheme is very fast.
+
+Nicolas Mohnblatt [23:29] So when you say fast, you mean compared to Merkle trees, or compared to these multi-scalar multiplications that we would do with KZG or Pedersen commitments?
+
+Albert Garreta [23:39] I mean, compared to both.
+
+Nicolas Mohnblatt [23:41] Okay.
+
+Albert Garreta [23:42] So, we can compare it with hash-based commitments. The main commitment scheme we compare it to is Merkle trees, because if you are using hashes, you're using Merkle trees, at least nowadays.
+
+And there's two types of Merkle trees. There's Merkle trees where the hash is a classic hash, like Keccak, and there's Merkle trees where the hash is an algebraic hash, like Poseidon2. If you are using folding, the hash is likely Poseidon2 because you want to recursively prove that the folding is done correctly.
+
+Nicolas Mohnblatt [24:14] So we need it to be circuit-friendly, and therefore, we have one of these arithmetic hashes.
+
+Albert Garreta [24:17] I'm reading some of our benchmarks. So, I see to commit to a vector of size 2 to the 19 with a blowup factor of 2 -- so we do a Reed-Solomon encoding of the vector, which is also you need to do when you work with hash-based schemes. With the Merkle tree using Poseidon2, it took us, in our benchmarks, 1.8 seconds.
+
+Now, committing to 2 to the 19 field elements with Ajtai commitment took us around 600 milliseconds.
+
+Nicolas Mohnblatt [24:48] By the way, are these benchmarks, can we also run them? Can we have a link to it and put it in the show notes?
+
+Albert Garreta [24:54] I don't think we have the link right now, but we can provide it.
+
+Nicolas Mohnblatt [24:57] That'd be amazing. Okay. So the commitment is a lot faster.
+
+Albert Garreta [25:00] It's faster if you use Poseidon2. If you use Keccak -- so committing to 2 to the 19 field elements with a blow up factor of 2, with Keccak is 387 milliseconds in our benchmarks. So, it's half the time of Ajtai. But Ajtai is potentially recursive-friendly because it's very simple algebraically, and Keccak is not recursive-friendly.
+
+And when I say that Ajtai is simple algebraically, I mean that if you write a circuit where you compute that the Ajtai commitment -- so the circuit is true if the Ajtai commitment was computed correctly. This circuit is much smaller than if you write a similar circuit for the Keccak hash function. So it's not very practical to do recursion if you are using Keccak hashes.
+
+Nicolas Mohnblatt [25:44] So do you also have end-to-end comparisons of folding many things together, seeing how long that takes, versus recursively proving stuff with hash-based schemes?
+
+Albert Garreta [25:56] No. We don't have comparisons.
+
+Nicolas Mohnblatt [25:58] Okay. I guess that'll be the next steps for those interested in contributing, right?
+
+Albert Garreta [26:02] Yes. By the way, we welcome contributors, and maybe we can go over a list of projects we have ongoing. We are really happy to -- if people is interested in tagging along and we are completely open source, so just reach out to us, and we'll be really happy to collaborate. Also, on the research side of things, not only on engineering side of things.
+
+Anna Rose [26:23] On the lattice front, are you doing research at Nethermind or are you doing mostly this implementation?
+
+Albert Garreta [26:29] We are doing some research.
+
+Anna Rose [26:31] Oh, so we may eventually see a paper come out where you've created one of these techniques or a new system or something.
+
+Albert Garreta [26:39] Yes. We actually spent some time thinking of a lattice-based scheme -- folding scheme that doesn't use sumcheck. But we eventually dropped it because we thought it wasn't going to be that much faster than LatticeFold. So we dropped it.
+
+Nicolas Mohnblatt [26:55] Sumcheck is hard to beat, huh?
+
+Albert Garreta [26:57] Yeah.
+
+Matthew Klein [26:57] We'll see where the new ones go. Where LatticeFold+, Neo, I'll be interested to see if they have implementations, if and when. We'll see how fast they can go.
+
+Anna Rose [27:05] Who's the group who wrote LatticeFold actually? Who is it?
+
+Albert Garreta [27:08] It's Dan Boneh and Binyi Chen.
+
+Anna Rose [27:10] Oh yeah, nice. Oh yeah. We had them on. We talked about that. I wonder, do you know if they're doing more work in that direction? Because you also -- you mention LatticeFold+? Actually, maybe we can just quickly talk about, what's the difference there? What was the "plus", and which one did you implement?
+
+Albert Garreta [27:26] Yeah. We implemented LatticeFold because at the time, well, LatticeFold+ didn't exist. I think implementing LatticeFold+ and Neo shouldn't be a big headache right now because of all the machinery we developed for LatticeFold.
+
+Anna Rose [27:42] What's the difference?
+
+Albert Garreta [27:44] LatticeFold+ is simpler conceptually than LatticeFold.
+
+Anna Rose [27:48] Oh, wow.
+
+Albert Garreta [27:48] LatticeFold is quite messy. So, the difference between LatticeFold+ and LatticeFold is how the range check is done. So in LatticeFold, as we mentioned, there's this extra work that the prover has to do to make sure that you are never working with vectors that have large norm. So large norm means large entries. Okay? If I say large norm, that's what I mean.
+
+So in LatticeFold, that's done. You write a grand product. So, basically you write a polynomial of the form x minus 1 times x minus 2 times x minus 3, and so on, up to x minus the largest entry you want to allow in the witness. And then you prove that when you replace x by your witness, this is always zero. So when you replace x by any entry of the witness, you get a zero.
+
+Nicolas Mohnblatt [28:41] Yeah. This is our good old, vanishing polynomial and zero-check kind of thing, right?
+
+Albert Garreta [28:45] Yeah. It's a grand product relation, grand product constraint. And then you use a sumcheck of high degree to prove that this holds for all the entries of the witness. That's how it's done in LatticeFold, and that turns out to have huge costs.
+
+So the polynomial has a big degree, unless you have witnesses whose entries are very small. Say that you want to allow witnesses to have entries up to 2. Then the polynomial has degree 3. x minus 1 times x minus 2. And then you run a sumcheck on a polynomial of degree 3. But if you want to allow the entries to have, say, size 2 to the 16, then you are running a sumcheck on a polynomial of gigantic degree, and this sumcheck is extremely expensive.
+
+Nicolas Mohnblatt [29:34] And why would we want bigger norms?
+
+Albert Garreta [29:37] Because at each step of the folding step, you have to decompose your witnesses into chunks with small norm and prove that these chunks have small norm.
+
+Nicolas Mohnblatt [29:47] So the bigger norm, the fewer chunks?
+
+Albert Garreta [29:49] Exactly. You want big norms because you have few chunks. But big norm gives you a polynomial of huge degree, and are extremely expensive sumcheck. So you have to reduce the norm. But then you have a lot of chunks and you have to commit to each chunk.
+
+Nicolas Mohnblatt [30:03] In the implementation -- sorry. I'm just going to take a little tangent while we're there, how do you deal with this tradeoff, and how did you find optimal parameters for this?
+
+Matthew Klein [30:13] I wish we could say we did it better than trial and error, but we, essentially, trial and error. So we did benchmarks over as many combinations as we can think of to come up with good parameters.
+
+Nicolas Mohnblatt [30:23] Nice.
+
+Albert Garreta [30:24] We made a grid search. It's quite complicated to optimize the thing by hand, or --
+
+Nicolas Mohnblatt [30:29] You can say numerical methods if you want to sound fancy about it.
+
+Albert Garreta [30:32] Yeah.
+
+Nicolas Mohnblatt [30:33] Okay. So in LatticeFold, we have this tradeoff, and now you're about to tell us how it disappears in LatticeFold+, right?
+
+Albert Garreta [30:39] Yeah. In LatticeFold+, you can actually just stick to large norm, and you end up making two decompositions on -- like decomposing into two chunks only.
+
+Anna Rose [30:47] How do they do that?
+
+Albert Garreta [30:49] It's quite technical, but what they do is they leverage the algebraic properties of lattices to create a smarter range check. So instead of doing this naive approach, I would say where you write a grand product, and then run a sumcheck on this grand product, they use tricks that are specific to lattices.
+
+Nicolas Mohnblatt [31:09] This echoes very nicely with our previous episode on lattices with Vadim Lyubashevsky, who was saying, if you take existing techniques and put lattices into them, it is going to work, but you won't have something super efficient.
+
+If you really want a good lattice-based scheme, you have to design it from a lattice thinking. And it sounds like this is what happened with LatticeFold to LatticeFold+.
+
+Albert Garreta [31:31] Yeah. That sounds exactly like that. Yeah. It's a very nice trick where you take your witness and you commit to a new vector where the witness appears on the top of a variable. So before you had a witness, a normal witness, and now you put your witness on the top of a variable.
+
+So each entry of the vector is x. So if your witness is v1, v2, v3, and so on, you commit to a new vector where each entry is x to the v1, x to the v2, x to the v3, and so on. And then you use some tricks related to these lattices. Lattices are basically rings of polynomials, so you use some polynomial magic to prove range checks.
+
+Anna Rose [32:16] This is a bit of a tangent here, but you had earlier mentioned about combining folding and lookups into a construction. And we actually asked Vadim this as well. And maybe there's two questions here. One is, can you use lookups with lattices? And the second is, could you use folding plus lookups in lattices?
+
+Albert Garreta [32:33] So I think the first question, the answer is definitely yes. Yeah.
+
+Anna Rose [32:36] You can use lookups within lattices?
+
+Albert Garreta [32:38] Yes.
+
+Anna Rose [32:39] Or with lattices rather?
+
+Albert Garreta [32:41] Yes. I haven't worked out the details or thought about it at all, but I'm pretty convinced you can adapt lookup arguments to work on lattices.
+
+Anna Rose [32:50] Do you think it would help? Do you think it would actually be useful? Or, do you think there'd be speed up? Or, do you think it's like lattices are so different, such a different beast, that it doesn't make sense to kind of experiment with that technique?
+
+Albert Garreta [33:02] Well, if we have a polynomial commitment scheme that's better than all others, and it's based on lattices, let's say that exists, then you want to go to lattices, probably, because you just have the best PCS over there.
+
+Another reason you'd like to go to lattices is if you are proving lookup statements pertaining objects that live in lattices. For example, if you want to do lookups in the context of FHE, then you want a lattice-based lookup.
+
+Anna Rose [33:31] Interesting. So you're saying there's some app -- certain cases where you do want to use lookups, and it would obviously help if you have a great lattice system to also use this new technique of lookups in tandem with it. Okay.
+
+Albert Garreta [33:46] And since sumcheck works over lattices, and there's lookup arguments that are based on sumcheck, for example, Lasso, and we have polynomial commitment schemes for multilinear polynomials over lattices, I'm guessing that you can just write Lasso over lattices and compile it with these PCSs.
+
+Anna Rose [34:08] What about the second part of that question where it's like you do folding plus lookups plus lattices? The folding plus lookups work that you did, could that be applied within a lattice context?
+
+Albert Garreta [34:19] Yeah. I think so. But I think that folding and lookups are difficult to combine, even outside of lattices.
+
+Anna Rose [34:25] Okay.
+
+Albert Garreta [34:26] So one way to think about the difference between Nova and Hypernova is that, in Nova, you fold before you do anything. And in Hypernova, you run a bit of a proof system and then you fold.
+
+Anna Rose [34:38] And then you fold. So it's later in the process.
+
+Albert Garreta [34:40] Yes. So for folding lookup arguments, you either run almost an entire lookup argument and then you do a folding at the end.
+
+Anna Rose [34:49] Okay.
+
+Albert Garreta [34:50] Or you do it at the beginning, which is the work we did at Nethermind with Ignacio. It's this FLI scheme that's in ePrint. And the folding step in this case is if you do it at the beginning, the folding step is very cheap for the prover.
+
+But because of the nature of how lookups are expressed, when you want to prove the folded instance, it becomes complicated because you have -- in our paper, there's a quadratic blowout. We discussed some ways of mitigating this quadratic blowout when you are at the proving stage, or the decider phase, using another terminology. But still, it's a tricky subject. I'm not sure folding lookup arguments is a fully solved problem.
+
+Anna Rose [35:34] Maybe we need to figure that out first before we start applying it into a lattice context.
+
+Albert Garreta [35:38] Yeah. I think so.
+
+Anna Rose [35:39] Unless, do you think lattice -- I mean, this is very hypothetical, but would lattices -- you talked about some of this lattice magic, like the stuff, the way that lattices are built, actually open up new paradigms. Do you think there could be anything in there that could actually make such a combo easier?
+
+Albert Garreta [35:55] That's an interesting question. Maybe, yes.
+
+Anna Rose [35:57] Maybe that's a research question.
+
+Nicolas Mohnblatt [36:00] I think you guys should hire Anna to give you research projects.
+
+Albert Garreta [36:03] Yeah.
+
+Anna Rose [36:04] To combine words and suggest ideas. Folding, lookups, lattices.
+
+Albert Garreta [36:10] Yeah. Yeah, maybe.
+
+Anna Rose [36:11] Make it happen.
+
+Albert Garreta [36:12] Yeah, maybe.
+
+Anna Rose [36:13] You have mentioned Neo just a couple times through the conversation. It sounds like it's a new step -- actually, I think at the start, you did define what it was. But can you tell me again, what part of the stack is Neo? Is it a system? Is it a folding scheme? Yeah. What is it?
+
+Albert Garreta [36:30] So Neo is this paper by Wilson Nguyen and Srinath Setty
+
+Nicolas Mohnblatt [36:34] The usual suspects?
+
+Albert Garreta [36:35] Yeah, usual suspects.
+
+Anna Rose [36:37] Nova to Neo. Yeah.
+
+Albert Garreta [36:39] So they take LatticeFold and change a bit the way that you commit to the witness. So if you want to use LatticeFold to fold witnesses whose entries are field elements, Neo proposes a better way to do it.
+
+In particular, it proposes a way where when you commit, you pay per bit. So if your witness has small entries, which happens a lot in many applications, when you do the commitment, you just pay for the bits that are in these entries.
+
+In LatticeFold, you basically commit to random elements, and because of that they have very big entries. I'm not sure what's the speedup of Neo. We haven't sat down and tried to make estimates. We have made some estimates on the benefits of LatticeFold+, we haven't done that for Neo yet, but I think it is a really exciting work.
+
+And something that's particularly exciting about it is that LatticeFold+ and Neo are not enemies. They are actually completely orthogonal. They are attacking two different things. LatticeFold+ is improving the range check of LatticeFold, and Neo is improving the commitment, the way you commit to field elements.
+
+Nicolas Mohnblatt [37:43] So you could combine them and get like a LatticeNeo+ fold?
+
+Albert Garreta [37:48] Yeah.
+
+Nicolas Mohnblatt [37:49] Nice.
+
+Albert Garreta [37:50] Yeah. I'm sure there's subtleties, but it seems very doable.
+
+Anna Rose [37:55] Cool.
+
+Albert Garreta [37:55] Yeah.
+
+Anna Rose [37:56] How far off is an implementation of something like that? Given what you've already implemented, can you again use what you already have, or would you have to sort of rebuild a lot?
+
+Matthew Klein [38:06] I definitely would be able to use a large part of our machinery, which is all open source. So as Albert mentioned, we're talking about two different parts of the implementation. So you'll just be able to sort of fork ours and sort of change where you need to inside.
+
+Anna Rose [38:20] Nice.
+
+Nicolas Mohnblatt [38:20] You mentioned other work at the beginning of the episode. What else have you been working on and do you want to talk about with us now?
+
+Matthew Klein [38:26] Albert, should we talk about as well the signature stuff, which is also kind of more relevant to lattices as well?
+
+Albert Garreta [38:33] Right. Yeah. Our engineering team is working on aggregation of signatures for Ethereum finality purposes.
+
+Nicolas Mohnblatt [38:42] So lattice-based signatures.
+
+Matthew Klein [38:44] Exactly. Right. So work that's going on is the -- we are working on post-quantum signatures. So the concern is at the moment, obviously, we're quite a heavily Ethereum-leveraged company. So we're highly concerned about the sort of the advent of quantum computers and current Ethereum signatures. The BLS scheme are not post-quantum secure. So we're looking at ways, plausibly, that Ethereum could go post-quantum.
+
+Anna Rose [39:12] Hey. Cool. The reason I'm kind of excited about that is we just did like two episodes on quantum computing, quantum communications, and we did talk about a few of those ideas of how to transfer. We also actually talked about it in the Vadim episode, like how to move, how to migrate, how to make existing systems safe in the new world.
+
+Matthew Klein [39:34] Yeah. A lot of them, as Nico said before, is just taking previous ideas and adapting them, putting them in matrices and calling them lattice-based schemes.
+
+Falcon, I would say, is of that ilk, and that's what we're working on at the moment. And we also think it's a very good candidate to be the new Ethereum signature scheme. So Falcon's what we're focusing on. Essentially, a Falcon signature consists of a vector that satisfies certain constraints. And when we're looking at aggregating signatures, maybe to go back and aggregating signatures means signing multiple things and verifying them at the same time in one shot.
+
+So there's two approaches that we're looking at. One is the LaBRADOR scheme over Falcon signatures. Essentially, if we have multiple of these vectors which are valid signatures, we can prove knowledge of multiple vectors at the same time using a lattice-based proof scheme.
+
+And there's a paper which discusses how to use LaBRADOR as a wrapper around Falcon signatures to make an aggregation of Falcon signatures. And we're actually looking as well at folding Falcon signatures, these Falcon vectors together so that you'd be able to create from multiple signatures, one new signature.
+
+Nicolas Mohnblatt [40:47] I was about to ask. It sounds like there's synergy here between folding and aggregate signatures, right? You have many problems and you want to one shot verify them.
+
+Matthew Klein [40:56] Yeah. At the moment, the performance is probably not where it needs to be in order to be like a real solution to the post-quantum Ethereum signatures. But definitely, step of progress.
+
+Nicolas Mohnblatt [41:06] How come the interest in Falcon over ML-DSA? And I'm asking because we also talked about ML-DSA with Vadim in that episode we keep referring to.
+
+Matthew Klein [41:14] First is, ML-DSA that's a signature scheme or that's a key --
+
+Nicolas Mohnblatt [41:19] Yes. No. No. It's the signature scheme. It's, I think, the Dilithium scheme.
+
+Matthew Klein [41:24] Oh, sorry. Yeah, sorry. I know it as Dilithium. I think, originally, we were very interested in looking at this paper, the LaBRADOR wrapper around Falcon. So that sort of was literature that already existed, and that's why we sort of decided to do some engineering on that paper.
+
+Many of these papers come out without inbuilt implementations. Just if anyone is interested in getting involved in these, you can pick a paper and implement it. That would be your contribution to the lattice cryptography world. So that's basically why we started focusing specifically on Falcon, and from that, spawned the Falcon folding idea. So I usually call it ML-DSA Dilithium.
+
+Nicolas Mohnblatt [42:01] Yeah. I think Vadim was also making a conscious effort to call it ML-DSA now that it's been standardized, so that people can stick with that.
+
+Matthew Klein [42:08] This is like the difference between SHA-3 and Keccak, right? It's the same thing.
+
+Nicolas Mohnblatt [42:11] Exactly. Yeah.
+
+Matthew Klein [42:11] All right. Okay. Fine. Understood.
+
+Nicolas Mohnblatt [42:14] It's rather than using the name of the algorithm or the family of algorithms, we use the name of the standard.
+
+Albert Garreta [42:18] So, I would like to mention two projects we are very excited about. One is in the area of ML. So as I mentioned at the beginning, when you do proof of inference -- well, proof of inference is just proving that a certain ML model outputted certain output given certain input. Okay. You might want to do that, for example, if you want to authenticate that.
+
+Say you want to guarantee your users that they are talking to ChatGPT. So you could create a proof of inference to convince your users that that's the case. But it is extremely expensive. It is a really massive computation, and right now, we are not ready to make such proofs in a reasonable amount of time.
+
+Kind of a philosophy we are taking in our team is to try to come up with light zkML solutions. So I call them light zkML solutions in the sense that instead of proving entire computations, which are massive, we try to come up with smaller computations such that proving them achieve a similar goal as the goal we had in mind initially.
+
+So let's continue with the example of authenticating a model. So now let's say that instead of doing full proof of inference, we fingerprint, we watermark the model. So in this case, a watermark -- an example watermark would be, for example, we have OpenAI or the model owner, divide all words into two lists, a green list and a red list.
+
+And then we bias the model so that it outputs words on the green list more often than on the red list. You can do that, and then run some tests, and you will see that the model you get -- you end up with is comparable to the original model. You don't lose much quality.
+
+Nicolas Mohnblatt [44:06] Okay,. But it's identifiable in the words it chooses.
+
+Albert Garreta [44:10] Yes. So now you want to keep the list hidden, because anybody who has the list can then create a model and bias it towards the green list and pretend it's OpenAI's model. So what you can do, you have OpenAI or the model owner sign the list, then it creates the inference and it creates a ZK proof that there's more green tokens than – green words than red words in the output.
+
+And this way, whenever you see such a proof, you can be certain that whoever ran the model knows the green list and the red list, which means that it's the claim owner.
+
+Nicolas Mohnblatt [44:49] And I guess you can even have a public commitment to that green list, red list, and make sure the proof verifies against this commitment every time, right?
+
+Albert Garreta [44:59] Exactly. Yeah. That's the idea.
+
+Nicolas Mohnblatt [45:00] Super cool. That's super cool.
+
+Albert Garreta [45:02] And you end up doing a proof of membership, basically, a lookup argument. You just do a lookup argument.
+
+Nicolas Mohnblatt [45:07] Is this something that you've released already?
+
+Albert Garreta [45:09] No. We are implementing it right now.
+
+Nicolas Mohnblatt [45:11] Wow. Super interesting.
+
+Albert Garreta [45:12] More academic research direction we are really excited about and we've put a lot of effort in this direction is Zinc. Zinc is a succinct argument, or you may also call it a framework for building succinct arguments for constraints that are expressed with integers. Instead of field elements, they are expressed with integers.
+
+Nicolas Mohnblatt [45:32] Why is that desirable?
+
+Albert Garreta [45:33] Because writing constraints with integers -- so you can think arithmetic programs where the circuit values are integers instead of field elements. This is desirable because it allows you to write constraints modulo -- any moduli very cheaply.
+
+So you can take any circuit that uses any modular arithmetic you can think of, and write it as a circuit that uses integer arithmetic. And the circuit is essentially the same size as the original one.
+
+Nicolas Mohnblatt [46:04] Okay. Super interesting. So we don't have all this foreign field arithmetic issues that we usually have.
+
+Albert Garreta [46:10] Yes. And you can use different moduli -- so you can have circuits that use different moduli at different parts of the circuit, and lift it to the integers and the resulting circuit is almost the same size as the initial one.
+
+Nicolas Mohnblatt [46:23] Okay. Very interesting.
+
+Albert Garreta [46:24] Yeah. We are very excited about this because we think that there's a lot of cost being paid right now because of this foreign field arithmetic.
+
+For example, say you want to prove a zkVM instruction, and you are not doing it with lookup arguments. VM instructions usually deal with bitwise operations and mod 2 to the n operations. And these operations are usually not easily writable over a field.
+
+But you can write them over the integers very cheaply, very easily. So, if you want to prove VM instructions over a field, you end up proving statements of circuits that are maybe 16 times larger than the actual circuit you would write if you had integers.
+
+Nicolas Mohnblatt [47:12] Okay. And is there also an implementation underway and sort of benchmarks?
+
+Matthew Klein [47:17] Yeah. So, absolutely. We're coming towards the end of our implementation effort. We do have some benchmarks. We're going to publish them relatively soon.
+
+Albert, do we have a date when we want to publish them?
+
+Albert Garreta [47:27] I can actually just give some numbers now.
+
+Nicolas Mohnblatt [47:30] Sneak preview for the ZK Podcast.
+
+Anna Rose [47:33] Although by the time this comes out, they might be out. But --
+
+Albert Garreta [47:38] Yeah. Let me mention also that this scheme works with hash -- it relies on hashes. There's previous work for proof systems over the integers due to Campanelli and Hall-Andersen. It is a framework, and when they instantiated the framework, they used hidden-order groups. But hidden-order groups are quite slow. I don't want to spend too much time on that. Our scheme is --
+
+Nicolas Mohnblatt [48:01] Yeah. It's a whole other bag of beans. We've had lattices, curves and hash. Let's not open a new section right now.
+
+Albert Garreta [48:07] But let's say that hidden-order groups are a no-no for efficiency in this context. They are absolutely terrible. That's everything I will say. So we managed to use hash-based techniques. And it turns out that the actual scheme is very similar to other hash-based schemes that are, I would say, state of the art or close to being state of the art.
+
+So for example, our polynomial commitment scheme for integer polynomials is able to commit and evaluate a polynomial with 2 to the 16 with 16 variables in a bit over 200 milliseconds. And for comparison breakdown, polynomial commitment scheme for the same number of variables on a fixed field, like the standard breakdown with a bit different code, takes 125 milliseconds in our benchmarks.
+
+So, our work is less than twice more expensive. But on the other hand, it has all these arithmetization benefits I talked about.
+
+Nicolas Mohnblatt [49:12] Yes. So a 2 to the 16 circuit is going to do a lot more work than one in over fields, right?
+
+Matthew Klein [49:19] Yeah. We believe that it equates to a 2 to the 4, 2 to the 5 speed up in comparison. So being double as -- as taking double as long is negligible in those terms.
+
+Anna Rose [49:30] I think we are at the end of the episode. I want to say thanks so much, Albert and Matthew, for coming on the show, revisiting lattices, talking about the benefits that lattices can offer to folding schemes or vice versa.
+
+And also, a lot of this new work you've been doing. Actually, I think one of my favorite parts of this episode, just FYI, was the lay of the land of lattice and SNARKs. Because I don't think we actually really did that in our previous episodes. So for me, this has been really helpful.
+
+And you can also see a bit of a trajectory, like a research line. LaBRADOR, Greyhound, LatticeFold, LatticeFold+, Neo. And wait, you also mentioned Lova. Is that a continuation on the same thread, or is it something else?
+
+Albert Garreta [50:13] Lova is a -- it's quite different from LatticeFold, LatticeFold+, and Neo. It is modeled as Nova. So it's Nova analog for lattices, but it doesn't work on R1CS relations. It works on a different type of relation, which I forgot which one it is. But it's still NP. But I'm not sure it's usable in practice.
+
+Anna Rose [50:34] I see.
+
+Albert Garreta [50:35] I'm not sure.
+
+Anna Rose [50:36] Cool.
+
+Albert Garreta [50:36] And it works on so-called unstructured lattices, which are supposed to be more secure than structured lattices.
+
+Anna Rose [50:45] Oh, that's cool.
+
+Albert Garreta [50:46] But are less efficient.
+
+Anna Rose [50:47] Okay. The tradeoff. Well, yeah. Thank you so much for all of that. It's been really helpful to dig back in with you, and congrats on all of this work that's happening at Nethermind too. It sounds very exciting there.
+
+Yeah. Thank you guys so much for coming on and sharing all of that with us. It was wonderful.
+
+Albert Garreta [51:05] Thanks a lot. It's absolute pleasure to be here.
+
+Matthew Klein [51:07] Thanks so much for having us.
+
+Nicolas Mohnblatt [51:09] Yeah. Thank you both. This was super enlightening.
+
+Albert Garreta [51:11] I'm glad.
+
+Anna Rose [51:12] All right. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai.
+
+And to our listeners, thanks for listening.
