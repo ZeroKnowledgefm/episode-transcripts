@@ -1,0 +1,865 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I chat with Maddy from Reclaim about the topic of zkTLS. We discuss how he started working on the problem that is central to zkTLS, that is proving something about info displayed on websites or other online content in a secure but private way using ZK.
+
+
+We cover some of the earlier research on this, the implementation attempts, the limitations they faced, and how more recent breakthroughs in ZK allowed this technology to become performant enough to be used in the real world. We discussed the different techniques used in the Reclaim zkTLS system, the different levels of security of these systems, and other trade-offs to consider when building systems like this.
+
+
+We wrap up the conversation covering tangible use cases for zkTLS, and how this helps to break ZK out of the Web3 bubble and introduce it to the larger online world.
+
+
+Now, before we kick off, I just want to highlight our upcoming ZK Hack Berlin event. It's our 5th ZK-focused hackathon. It's happening on June 20th to 22nd in Berlin. This is part of the Berlin Blockchain Week. And so, if you're looking to jump into ZK and build using the amazing tools we sometimes cover on the show and win prizes while doing so, be sure to join us. You can apply and find out more info over at zkberlin.com. Hope to see you there.
+
+
+Now here is our episode.
+
+
+So today I'm here with Maddy from Reclaim. Welcome to the show, Maddy.
+
+
+Madhavan (Maddy) Malolan [01:58] Anna, thank you so much for having me. Big fan of ZK Podcast. Whenever I feel like I want to feel stupid a little bit, I probably go back and listen to your podcast. There's so much information on ZK Podcast, pretty consistently.
+
+
+Anna Rose [02:14] Cool.
+
+
+Madhavan (Maddy) Malolan [02:16] Yeah. It's amazing that you're doing this on a regular basis. Thank you so much.
+
+
+Anna Rose [02:20] Oh, you're welcome. Well, thanks for being on. So yeah. This episode, I think what we're going to be doing is jumping back into the topic of zkTLS. We have touched on that. I don't know if we called it zkTLS when we talked about it, but we have touched on similar concepts in the past.
+
+
+Recently, I did some episodes on ZK Email, and with the projects that the Cursive folks are doing, all dealing with Web2 to Web3 kind of proving something about Web2 to Web3 or websites. And I think that's probably what we're going to be digging back into today, if I'm right. If I remember correctly.
+
+
+Madhavan (Maddy) Malolan [02:57] Yeah, yeah. Absolutely. No, no. Absolutely. I heard the episode with Aayush from ZK Email. He's wonderful. We work very closely with him. Cursive guys as well. I think you had the ZKP2P guys on as well.
+
+
+Anna Rose [03:08] Yeah.
+
+
+Madhavan (Maddy) Malolan [03:10] So, yeah. It's a small, almost a ZK Podcast mafia that's beginning to form. So yeah. 
+
+
+Anna Rose [03:16] True, true.
+
+
+Madhavan (Maddy) Malolan [03:17] Very honored to be here. Yeah.
+
+
+Anna Rose [03:18] Cool. So, I think as a starting point, do you want to share a little bit about your background and specifically how did you discover this problem space?
+
+
+Madhavan (Maddy) Malolan [03:28] For sure. I think we'll have to roll back a little bit to answer this question in the specific. So in 2020, we had launched this product called Questbook. So Questbook, even today, is one of the larger grant management platforms out there. So Arbitrum, Compound, ENS, all of these guys use Questbook to give out grants.
+
+
+As soon as we launched in late 2020, our first customer was Polygon. So Polygon back then was, of course, very, very hot. A lot of developers started applying to these grants.
+
+
+One thing that we heard again and again was, hey, we want to apply to these grants, but we want to apply pseudonymously. And the grant managers were like, okay, fine, these people are claiming they worked at Microsoft, they have contributed to Ethereum, but how do we know for sure? Because these people are obviously not revealing their identity.
+
+
+So that's kind of the problem that came our way almost serendipitously. And the initial solution that we had, it was called Questbook Identity. It was a very stupid solution. The solution was you just dox yourselves to us, and we would pass on the information to the grant managers.
+
+
+Anna Rose [04:31] So basically, you be the third party who proves you are who you say you are.
+
+
+Madhavan (Maddy) Malolan [04:35] Yeah. Exactly. So that was obviously not a good solution. And, of course, I was aware of the existence of zero-knowledge proofs as an industry. So I started diving deeper into, hey, can we solve this problem using zero-knowledge proofs?
+
+
+And it was in a conversation with Eli from Starkware, actually. I was discussing this zero knowledge for identity and stuff like that. He mentioned, hey, why don't you try to generate these ZK proofs from HTTPS certificates? It should be technically possible. And that is what led me into this rabbit hole.
+
+
+In all fairness, this was early 2022 and the DECO paper, obviously, had come out in 2020, I think. I was not aware of it. I discovered the paper only in 2022. I reached out to the authors of that paper, Deepak, in specific, and we tried to hack around a few prototypes using DECO itself.
+
+
+Honestly, we couldn't get it to work because it was computationally too heavy, following the exact specs that were written out in DECO.
+
+
+But one thing that was interesting is in the DECO paper itself, in the appendix, there's one paragraph that says, maybe you can get a bunch of optimizations if you use a proxy. And that is where we were like, okay, there seems to be something that we could try next, at least. And we tried to prototype that and that worked.
+
+
+Although back in the day in 2022, it used to take like 15 minutes to generate one ZK proof on your mobile phone. But at least it worked. At least it worked. Over the next few years, it's just been about optimizing, optimizing, optimizing.
+
+
+Anna Rose [06:14] That paper, DECO, It's been cited a couple times. What year was that actually released?
+
+
+Madhavan (Maddy) Malolan [06:19] I think it was 2019 or 2020.
+
+
+Anna Rose [06:21] Oh, so it's earlier.
+
+
+Madhavan (Maddy) Malolan [06:22] Not 100% sure. Yeah.
+
+
+Anna Rose [06:23] But that sort of makes sense that the kind of concepts that they're working with at that point might not be -- I mean, in those years after that was published, so much research, so much optimization happened just in ZKPS in general. It makes sense that maybe -- nowadays, it makes more sense to implement it.
+
+
+Madhavan (Maddy) Malolan [06:41] Yeah. I think two or three things happened together. I think the group that published the DECO paper had previously also worked on something called Town Crier, and probably also something before that, basically trying to solve these same problems using different tools. I think Town Crier was using TEEs to solve the same problem.
+
+
+Anna Rose [06:59] Interesting.
+
+
+Madhavan (Maddy) Malolan [07:00] So I think there was that trajectory that was already ongoing. But around the 2019, 2020 time period, zero-knowledge proofs also kind of matured a little bit, and the tooling around it matured a little bit. So maybe they took another stab at it using zero-knowledge proofs instead of TEEs. So that thread is like a --
+
+
+Anna Rose [07:19] A little longer?
+
+
+Madhavan (Maddy) Malolan [07:19] A long ongoing thread.
+
+
+Anna Rose [07:20] Yeah.
+
+
+Madhavan (Maddy) Malolan [07:21] And, in fact, the first idea, at least that I know of, was by Dan, who is now at TLSNotary. He put out a post on BitcoinTalk back in 2013. But that was nothing to do with TEEs, nothing to do with ZK proofs in particular, but at least the concept was the same. Like, hey, can we use the HTTPS certificates to prove the authenticity of certain data coming from a source?
+
+
+Anna Rose [07:46] Interesting.
+
+
+Madhavan (Maddy) Malolan [07:47] So it's a long thread of events that led up to what we were able to do.
+
+
+Anna Rose [07:49] That first implementation though, is that using the HTTPS certificates or is it using a different part of the website at that point?
+
+
+Madhavan (Maddy) Malolan [07:57] No, no. It always had to be the HTTPS certificates because that is the one thing that is going to tie the data to the source. That's the only thing rather in the HTTPS thing that can even broadly map it back to the source. So always it has been using the HTTPS certificates.
+
+
+Anna Rose [08:16] Are those certificates like, do they have a structure like signatures? Is it like a signature of the page?
+
+
+Madhavan (Maddy) Malolan [08:22] Actually not. It's a symmetric key. At the end of the day, so it's this -- okay, fine. You use the HTTPS certificate or the SSL certificate to derive a symmetric key. Now this symmetric key is what is used for the encrypted requests and responses on the HTTPS connection.
+
+
+The key problem is that this key is not asymmetric. It is symmetric for reasons that we can dive deeper into, but largely to do with the optimizations that are possible on low-end devices. So symmetric keys was important, otherwise, it won't work on low-end IoT devices and stuff like that, so.
+
+
+It uses symmetric key, but the problem with symmetric key, obviously, is that you cannot tie it back to the source. What that means is, let's say I open google.com and we have a symmetric key -- I have a symmetric key with google.com. Both me and google.com have the same symmetric key. So we are both encrypting using the same key and decrypting using the same key, more or less.
+
+
+So it is impossible to say -- if there's a piece of encrypted data, it is impossible to say whether Google encrypted it or did I encrypt it. So that is the challenge, that's the provability challenge that we had to overcome. That's what zkTLS is all about.
+
+
+Okay. Fine. We have this encrypted channel already. Can we use the same cryptography that's already being used in this HTTPS connection to add provability on top of the data that is being transferred? That's the problem that zkTLS in specific tries to solve.
+
+
+Anna Rose [09:55] What are you -- so you're kind of saying though you need to show it would be bad if two entities could have created this or could have somehow been behind it. But if you're using one of these SSL certificates, what's the problem if two parties could have written it? Do you need it to come from one party always?
+
+
+Madhavan (Maddy) Malolan [10:17] Yeah. Okay. Let's probably take a slightly different example, not google.com. Let's say, citibank.com.
+
+
+Anna Rose [10:23] Okay.
+
+
+Madhavan (Maddy) Malolan [10:23] Now, on citibank.com, what I'm trying to prove is I have a bank balance of whatever, $10,000. Now, if that is a claim that I'm making to you, Anna, as a third person, I am claiming that, hey, look, this is the data that came from citibank.com and it says, I have $10,000 in my bank. I show that to you. There's no way for you to believe this because you don't know was this encrypted by citibank.com or was it encrypted by me, myself, which makes the whole exercise meaningless.
+
+
+Anna Rose [10:52] Because if it was just by you, then you could have just made it up, encrypted it, and said, this is proof. But you want to know that it was encrypted by them, I guess.
+
+
+Madhavan (Maddy) Malolan [11:01] Yes.
+
+
+Anna Rose [11:01] Okay.
+
+
+Madhavan (Maddy) Malolan [11:01] So what HTTPS is trying to do is make sure that I am connecting to the actual citibank.com and there's no man in the middle or some stuff like that happening.
+
+
+So that is what HTTPS actually tries to solve for, but it's not useful if I am producing this as a proof to a third person. If I'm giving you this encrypted data, I'm saying, hey, this is the encrypted data that came from citibank.com. You can also see that, okay, this is being encrypted by a key that was derived from the correct SSL certificate. Even that is not enough because even though it has been derived from the correct SSL certificate, you still do not know whether the data itself was encrypted by Citibank or by me, which makes the entire proof kind of meaningless.
+
+
+Anna Rose [11:47] So how do you work around that?
+
+
+Madhavan (Maddy) Malolan [11:48] Yeah. So there are multiple ways to work around this, obviously. There are two modes in particular that I'll probably touch on.
+
+
+The first is the proxy mode. The proxy mode is what we have in production right now. What we do is whenever you're opening citibank.com, instead of routing the data packets directly to citibank.com, we say, hey, we're going to route it through an HTTP proxy.
+
+
+This HTTP proxy is going to look at the encrypted data in the request and the encrypted data of the response, and given attestation. Okay. This is the data that I actually saw transfer over the wire in this specific direction. And once I have that attestation, then I can generate a proof on my end that, hey, this is the data that exists in this encrypted packet, and it was actually the packet that came in this direction, attested by the proxy.
+
+
+Okay. Now you know that, hey, Maddy is not just claiming that this data has so and so information, but we also have an attestation from the proxy saying that, yes, this was actually the data that was transferred over the wire by citibank.com.
+
+
+Anna Rose [12:55] Okay. I mean, I want to hear the second one, and then I want to dig in a little deeper to some of these and see if I can break them a little, but --
+
+
+Madhavan (Maddy) Malolan [13:04] Yes. Yes. Of course.
+
+
+Anna Rose [13:04] Keep going. Yeah.
+
+
+Madhavan (Maddy) Malolan [13:05] Cool. The second mode is called the MPC mode, which is actually what the original DECO paper was, and it's also the implementation by TLSNotary. That's the most popular implementation out there.
+
+
+And what they do is, when you are establishing this HTTPS connection, you have to do this TLS handshake. After the TLS handshake is when the symmetric keys are established. Now the claim that TLSNotary and the MPC-TLS makes is, what if the user never knows the key?
+
+
+So there's an MPC protocol that executes on behalf of the user. You do the TLS handshake and you get a symmetric key. But that symmetric key is a part of it is with the user, a part of it was with a notary. And only both of them put together can either encrypt or decrypt data.
+
+
+So now you can say that, hey, whatever encrypted data I am revealing to you is actually correct because it was a process of the MPC -- like I do not have the key myself. So there is no way that I could have generated that encrypted packet myself without colluding with the notary.
+
+
+Anna Rose [14:17] Interesting.
+
+
+Madhavan (Maddy) Malolan [14:18] So does that make sense? I'm happy to dive deeper.
+
+
+Anna Rose [14:20] It does. But there's something you just mentioned that I think we should define as well, which is that TLS handshake. Because I think you're making an assumption there that I know how TLS works perfectly, which I don't. So.
+
+
+Madhavan (Maddy) Malolan [14:32] Okay. Sure. Sure.
+
+
+Anna Rose [14:322] I think the MPC part actually makes sense. But it's the part before, like why does the TLSNotary, why is it's kind of portion of the MPC so provable. I think between that and the symmetric keys, that's the part that I don't quite understand.
+
+
+Madhavan (Maddy) Malolan [14:49] In the MPC mode, you have to trust the TLSNotary. It's a trusted party. So in the Diffie-Hellman key exchange -- no, that's a random that is being selected by the client as well as the server, and then they do this Diffie-Hellman key exchange, and then come up with a key
+
+
+Now, to overcome the problem that I should not have the key myself at the end of this procedure, what I would do is the random that is being selected is being selected through an MPC with the TLSNotary. So, I do not know the random, the TLSNotary does not know the random in full. We both know like parts of the random. And only when we work together will we be able to determine what the entire key is.
+
+
+Anna Rose [15:31] This is the other side. So together, you become the client.
+
+
+Madhavan (Maddy) Malolan [15:35] Yes. Together we become the client. So this converts --
+
+
+Anna Rose [15:36] And that makes you trust -- but how does the TLSNotary -- I still don't understand where the TLSNotary is even getting into this flow.
+
+
+Madhavan (Maddy) Malolan [15:45] Yeah. So while doing the TLS handshake itself, so the server is going to be doing the TLS handshake with "a client". But the client in this case is going to be a combination, an MPC, of the browser as well -- or the user and the TLSNotary.
+
+
+Both of them together are one entity that are going to be participating in this TLS handshake. And both of them have parts of the key. So whenever you're going to send an encrypted request, both of them have to work together to create a request, and when they want to decrypt a response that came back from the server, they have to work together to come up with a response.
+
+
+Anna Rose [16:24] And you just mentioned, so the TLSNotary side is trusted party. So because you trust the TLSNotary, you can trust that the client has not acted inappropriately in signing that that is their bank account, if we go back to that example.
+
+
+Madhavan (Maddy) Malolan [16:38] Yeah. So the way that TLSNotary, that specific project approaches this is the verifier itself. Let's say you want to verify whether I have over $10,000 in my bank account. You would run the notary yourself. So that's kind of the architectural assumption that TLSNotary specifically makes. But then there are other projects that build on top of TLSNotary which provide this notary as a service almost. So you can trust the entity that is providing the service of a notary.
+
+
+Anna Rose [17:10] Yeah, yeah. And you don't run it yourself?
+
+
+Madhavan (Maddy) Malolan [17:11] Yeah. Yeah.
+
+
+Anna Rose [17:11] Okay. Interesting. Okay. So those are the two modes you mentioned; the proxy mode, the MPC mode. Before we go back to those two modes, I think I want to hear a little bit more about your story. Because in the story you were telling, the last we heard you'd implemented DECO, kind of just seemingly for fun, I guess. I don't know if you were doing it as a prototype, but what happened in your story since then?
+
+
+Madhavan (Maddy) Malolan [17:36] So yeah. Look, so DECO, it was not for fun per se, but we were trying to improve our identity solution that we had. We were trying to see if we can avoid the developers who are applying to these grant program to not dox themselves even to us. So we didn't want to be the custodians of their identity.
+
+
+So that's kind of the motivation. So DECO was a serious attempt to try to solve this problem using zero-knowledge proofs.
+
+
+Anna Rose [18:04] Go it.
+
+
+Madhavan (Maddy) Malolan [18:04] Okay. That was our motivation. And as I was saying, the initial implementation just couldn't work. It was the MPC mode, so we couldn't get it to work, at least, using the specification that was there on the DECO paper.
+
+
+We implemented the proxy mode that worked. It used to take 15 minutes to generate this proof. And from 2022 through to probably early 2024, we've just been optimizing. Trying to get that number from 15 minutes as low as possible. And finally, in early 2024, that proving time came down to about 2 seconds on the latest iPhone and maybe 5, 6 seconds on a mid-end Android phone.
+
+
+Anna Rose [18:43] What did you have to pull out of DECO and replace it with? I'm curious if it was a different proving system. Was it using any of the work that's come out since then?
+
+
+Madhavan (Maddy) Malolan [18:53] Yeah. Of course. I have to admit that we are standing on the shoulders of giants here. A lot of things contributed to this. The first is, initially, we were on Circom. We moved to Narc. That gave us a lot of improvement, but that was also still not all of it.
+
+
+The underlying systems also -- Narc also improved, Circom also improved. So we got a lot of those benefits. But the thing that we had to really optimize is what is the minimum amount of data that we need to prove so as to prove the authenticity of the data that we are revealing.
+
+
+So let us -- okay, so in specific, what that boils down to is let's say you open Citibank's webpage. Now Citibank's webpage probably like a few KBs in length, but all of that is being sent as packets in 64 bytes each. So what is the smallest amount of data that we need to decrypt so as it contains the required information.
+
+
+And doing a lot of engineering to make sure we are generating these ZK proofs on as little data as possible was probably another major source of our optimization. So instead of generating a ZK proof on the entire 100KB response that is coming from citibank.com, we are probably now just doing this operation on 128 bytes of data.
+
+
+Anna Rose [20:22] But was that a generic answer, or was that specific to specific websites? Were you picking websites and then optimizing for them for their case? This is just how websites work. Or how websites -- is it like website types?
+
+
+Madhavan (Maddy) Malolan [20:37] No. These are completely independent of the website itself. So there are two major implementations which are AES and ChaCha20. So these are the two encryption schemes that are popularly used in HTTP -- and they're also part of the standard.
+
+
+Actually, I should mention that another big performance boost we got was using ChaCha20 instead of AES. So initial implementations was using AES. Now, we moved to ChaCha20, which is also supported by most of the websites out there.
+
+
+But, again, to your particular question, this is not website specific at all. All of them adhere to the HTTPS standards because those are the standards, otherwise your browser will not be able to render them. So we built a solution that works now for both AES as well as ChaCha20.
+
+
+Anna Rose [21:27] Cool.
+
+
+Madhavan (Maddy) Malolan [21:27] So this was completely agnostic of the website.
+
+
+Anna Rose [21:29] Nice. When did you found the company itself? Was that at the end of that journey in 2024 or was it like at the start?
+
+
+Madhavan (Maddy) Malolan [21:37] No. I see. That's a tricky question. The company itself was --
+
+
+Anna Rose [21:41] Is it a project? Is it a company?
+
+
+Madhavan (Maddy) Malolan [21:43] I mean, the company is the same entity that built both Questbook as well as Reclaim Protocol.
+
+
+Anna Rose [21:50] I see. Okay.
+
+
+Madhavan (Maddy) Malolan [21:50] So the company technically started in 2020, I guess. So it's the same company that now has like two product lines.
+
+
+Anna Rose [21:57] Nice. What would you say Reclaim is today? So you talked a lot about these kind of implementations, but when you talk about a product like this, is this a library, tool stack, interface? Is it something that an end user would ever interface with? Or is it really more for devs? What is Reclaim?
+
+
+Madhavan (Maddy) Malolan [22:14] Yeah. I think I have a hot take here. That is, I think zkTLS itself is already commoditized. It's an open source library, whatever that resides underneath. Okay. Fine. You can now generate proofs from any website which is over HTTPS. So that's great.
+
+
+Now what we are building as a company is verticalized solutions on top of this. That is, we, in fact right now, counter intuitively, are seeing a lot of traction from the Web2 world. In the Web2 world, people need to verify stuff like, hey, what's your education history? What is your employment? What is your financial background? Stuff like this.
+
+
+So these are like the three main categories that we focus on. And building a verticalized solution just for these three use cases, because when we are selling to, let's say, Web2 enterprises, they don't really care about ZK. What they care about is, hey, are you solving the problem that we have? And they need a full stack solution.
+
+
+And that is what I think we are increasingly putting our focus on, is there's a full stack solution for education verification, employment verification, financial background verification. That's what I would say the product itself is now.
+
+
+Anna Rose [23:34] Interesting. In each of those cases though, I think of examples, and even actually the original case used of Chase Bank, all of them require a password to get into. Or there's a paywall. There's like a block. They're not just automatically served websites where you just are browsing and you land on it.
+
+
+Because that example of where you're just seeing something, it seems really intuitive about how you would prove that you're there, that you saw it, that something's on that website. But if you have to log into something, how would you, as an external kind of partner or product, see into there?
+
+
+Madhavan (Maddy) Malolan [24:11] Oh, so the user obviously has to log in into the required system. If it's education, you need to log in into your university, if it is employment, into your payroll system, whatever. And our product that we sell to these companies is an SDK. Now this SDK pops up in our browser.
+
+
+Anna Rose [24:30] Okay.
+
+
+Madhavan (Maddy) Malolan [24:30] And that is the browser that we control. And all that this browser really does is, instead of sending the request directly to the website, it routes it via HTTP proxy. And once we are able to do that, we get the attestations. And if you have the attestations from the proxy, you can generate a zero-knowledge proof on the client side.
+
+
+Anna Rose [24:49] I guess if you're selling B2B, this kind of makes sense. So it would be like -- I'm just trying to picture who this is. So if it was the employer, they would have access to this salary portal or something, or some sort of employment portal, they would log in, they would use your tool to prove something about what's inside it.
+
+
+But if it was an individual who's like, I want to prove that I work there or have worked there -- or maybe use a bit more of a general example. When I thought of employment, I thought it was like your LinkedIn account or something like that. But maybe just explain that flow a little bit more clearly.
+
+
+Madhavan (Maddy) Malolan [25:26] Yeah. So let's take an example of a job marketplace that we're working with. Now, on this job marketplace, you are saying, hey, you worked at Microsoft, you worked at Google. Now, if there are people who are hiring you based on the experience that you have listed on this job marketplace, how do they know for sure that you actually work there?
+
+
+Anna Rose [25:44] Yeah.
+
+
+Madhavan (Maddy) Malolan [25:44] So using us, you could add a button that says, okay, it says Microsoft on my profile, and there's a button next to it that says verify. Now, when you tap on that verify button, as an individual, this pop up comes up. You log in into your Microsoft payroll system, and we can generate a proof that, yes, you are indeed paid by Microsoft in the last 30 days, and send that proof to the job marketplace server. They can verify it and give you the check mark on the --
+
+
+Anna Rose [26:10] And then you get a check mark or something. Oh, cool. I like that. So it's the user, it's the individual, potentially, not like the employer. It's the individual who could be proving this about themselves, but using one of these tools.
+
+
+Madhavan (Maddy) Malolan [26:22] And I think that's also the reason that the product is called Reclaim Protocol, is because historically, or rather the incumbent way of doing this right now is, in the US, the monopoly is with Work Number by Equifax. So you as an employer would hit up Work Number's database and ask the question, hey, is Maddy employed at so and so? And it would respond yes or no without any user interaction.
+
+
+And the assumption over there is Microsoft is sharing the data of all its employees with the Work Number. And they have these deals, and that's why that costs anywhere between $40 to $120 per verification. And that is exactly what our market opportunity is. That is, we go in and say, hey, these verifications don't need to cost so much. The user could prove it about themselves and you could do it for like --
+
+
+Anna Rose [27:19] Pennies.
+
+
+Madhavan (Maddy) Malolan [27:19] Yeah.
+
+
+Anna Rose [27:21] Interesting. Okay. I want to go back to your -- so because I think we dug into a fair bit of the MPC mode, there's a few questions I had on that proxy mode you had explained earlier. I do want to understand, though, with that MPC mode, is that sort of the future step? Because it sounds like you first tried MPC, then decided, nah, it doesn't work, let's do proxy. But are you planning on going back to MPC?
+
+
+Madhavan (Maddy) Malolan [27:46] That's kind of an open question at this point. So, in production, right now, we are on the proxy mode.
+
+
+Anna Rose [27:51] Okay.
+
+
+Madhavan (Maddy) Malolan [27:52] So, internally, we keep prototyping the MPC mode because there are better trust assumptions on the MPC mode, and there are a few other optimizations that are possible in the MPC mode. But the problem right now, at least from our internal prototype so far, is it takes about 30 to 35 seconds to generate a proof. And much worse if it is on a 3G connection, stuff like that, which is where a lot of our users are. So that does not work for us in production.
+
+
+But credit where it's due, that's also fast moving. So in fact, TLSNotary recently made a major improvement with this implementation called Quicksilver, which improved it significantly. But still not good enough for a Web2 use case where anything more than a second or two is too much friction in the Web2 world. So I don't think it's production ready, at least for our use cases at this point.
+
+
+But we do keep a close eye on it because there are some benefits that we could get if that proving time -- if today you say, hey, both of them take exactly the same amount of time, I would pick MPC.
+
+
+Anna Rose [29:01] You would pick MPC. Let's talk, though, about those security assumptions. Like proxy mode, kind of going back to what exists today. You walked us through it. So you're using a proxy who makes an attestation. One of the things I thought as you said that I'm like, what happens if the proxy gets corrupted? Or who is the proxy? Who controls this thing? So dig in a little bit to the proxy. And also, why do you consider that a lower security degree than MPC?
+
+
+Madhavan (Maddy) Malolan [29:30] From that particular lens, that's not where the security differences are. Whether it is the proxy or the TLSNotary, the trust assumptions are exactly the same. That is the notary and the proxy, both of them are not colluding with the user to help generate these proofs. So in that aspect, it is absolutely identical, the trust assumptions. 
+
+
+The place where it gets a little tricky, and this is more practical than theoretical, is now if the data is being routed through a proxy to, let's say, citibank.com, now, citibank.com is always going to see that all the requests are coming from this particular IP address. And most likely this IP address is that of an AWS server or something like that. And Cloudflare and all of these firewalls actively block out requests that are coming from AWS.
+
+
+So if you're using the proxy, we need to do one more step. That is, after the proxy, there's going to be a residential proxy layer so that we are able to mask the IP address of the AWS server. And that is where the trust assumption comes in. That is, you need to trust the residential proxies to be not compromised.
+
+
+More than the security trust assumption, I think it's not the neatest solution. That's like one more entity that not only you need to trust for security reasons, but you also need to kind of rely on for the functioning of the product itself.
+
+
+Anna Rose [30:57] In the MPC mode, what is it, Cloudflare and so, what do they see for that? They don't see everything coming from AWS, I guess.
+
+
+Madhavan (Maddy) Malolan [31:05] Oh, on the MPC mode, the nice thing is all of the data will appear to be coming from the user's IP address itself.
+
+
+Anna Rose [31:13] IP -- which is what you want?
+
+
+Madhavan (Maddy) Malolan [31:14] Which is what we want. Yeah.
+
+
+Anna Rose [31:15] So it sounds a bit like the proxy mode, you're kind of -- maybe in the style of like ZKP2P has done, where it's you're relying on a system existing as it does, but you're also kind of working around the Web2 entities that are kind of trying to actively block actions like what you're doing. And so, inevitably, there'll be like a cat and mouse game that you're kind of playing against.
+
+
+Madhavan (Maddy) Malolan [31:38] It's kind of yes and no. The reason that we would get blocked by a Cloudflare is not so much that the servers don't want us to do zkTLS in specific, but it is more of all these bots that try to do DDoS attacks are usually AWS -- or something like that.
+
+
+Anna Rose [31:51] You think AWS -- yeah.
+
+
+Madhavan (Maddy) Malolan [31:53] So that is what they're really trying to defend against, and we get kind of caught in that blanket protection.
+
+
+Anna Rose [32:00] Yeah. What did you call -- you said that there was this other proxy. What did you call it? Like residential or resident.
+
+
+Madhavan (Maddy) Malolan [32:06] Yeah. Residential proxy. So a residential proxies --
+
+
+Anna Rose [32:08] Residential. So is that something that lives closer to the bank's interface? Is it on a different server? Why would that allow this sort of message or these things to go through?
+
+
+Madhavan (Maddy) Malolan [32:19] Yeah. So residential proxy, the way that works is anybody in the world can join this residential proxy system and route traffic through it. So think of it like Tor. So anybody can spin up a Tor server on their computer, on their phones or whatever, and now data is being routed through their IP address.
+
+
+Anna Rose [32:39] So a residential proxy is just like creating an IP address so it doesn't look like it's coming from --
+
+
+Madhavan (Maddy) Malolan [32:43] It's an IP address that belongs to a consumer device in specific.
+
+
+Anna Rose [32:48] I see, I see. Is it yours? Would you be running that, potentially?
+
+
+Madhavan (Maddy) Malolan [32:53] Potentially, yes. So this is still an open question. I think that we are still trying to figure out whether we want to invest in owning that residential proxy layer ourselves. But that is also subject to the question around, does the MPC mode get fast enough for our productivity --
+
+
+Anna Rose [33:10] That you don't have to. Yeah.
+
+
+Madhavan (Maddy) Malolan [33:11] Yeah. So we don't have to.
+
+
+Anna Rose [33:13] Interesting. Cool. I'd sort of asked a little bit about this. Could you corrupt the proxy? Or could the proxy be captured? I do kind of wonder, maybe the proxy doesn't get captured, but could you talk a bit about this proxy, and then the residential proxy which gives you an IP address. But is there ways for something to get in between there? Just the fact that there's these hops, does that actually offer more attack space?
+
+
+Madhavan (Maddy) Malolan [33:42] It does. It does. So there are two attacks that are possible. The first attack is a DNS compromise. So the proxy itself, it does rely on using the correct DNS server for facilitating the requests and responses.
+
+
+So there is an attack called the ARP Poisoning Attack, which basically says if you have physical access to the proxy while it is booting up, in that small window of those few seconds, there is a possibility to do an ARP poisoning attack and corrupt the DNS that it is using for this procedure. So that is an attack that is possible.
+
+
+The second attack that is possible is something called the BGP hijacking. So basically, all the TCP requests that are routed over the Internet use something called BGP routes. Now, every node on the Internet -- whenever you're sending a request to whatever website, citibank.com, it's anyway going through like six or seven hops before it reaches citibank.com.
+
+
+Now, how does the packet know which route to take? That is defined by the BGP route. So each node knows where to send this packet so that it reaches citibank.com at the end. And there is a way to "announce." So it's called a BGP announcement, saying that, hey, the route to citibank.com has changed because, let's say, the transatlantic wire broke. So you have to now take this new route. So that is the use case for the existence of a BGP hijack -- sorry. The BGP announcement.
+
+
+Anna Rose [35:16] Okay. But it could be hijacked.
+
+
+Madhavan (Maddy) Malolan [35:19] Yeah. So you could use that BGP announcement to say, hey, instead of routing all of these packets to the actual citibank.com, route all of these traffic to this fake citibank.com, and that's like --
+
+
+Anna Rose [35:32] Yeah, like proof.
+
+
+Madhavan (Maddy) Malolan [35:32] There's a proof and so on. There are a lot of nuances to actually pulling off this attack, but it's very, very impractical.
+
+
+There are two things I would just highlight on why we consider it impractical enough to bother about it is, number one is, BGP announcements usually take several hours to propagate throughout the entire Internet. And even if they do propagate, most of the important nodes in this route only accept announcement from trusted sources.
+
+
+So it's very, very unlikely in our kind of use cases that we have to bother about this problem. People are trying to prove that they worked at Microsoft to a job marketplace.
+
+
+Anna Rose [36:19] They are not -- yeah.
+
+
+Madhavan (Maddy) Malolan [36:19] If they're willing to do a -- it's nation state level attack to hijack the BGP. I mean --
+
+
+Anna Rose [36:26] Seems extreme.
+
+
+Madhavan (Maddy) Malolan [36:27] Yeah. Seems extreme.
+
+
+Anna Rose [36:28] Fair enough.
+
+
+Madhavan (Maddy) Malolan [36:29] So you probably need to be a state actor to do a BGP hijack, and it has happened in the past. Just to be completely fair is, there was this BGP attack, I think through the state actor in Russia in which a bunch of nodes on the routes were compromised and --
+
+
+Anna Rose [36:45] Interesting.
+
+
+Madhavan (Maddy) Malolan [36:46] Some attack happened.
+
+
+Anna Rose [36:47] I mean, I think it's worth mentioning this too because like yes, the use cases you've talked about don't seem highly sensitive, but if technology like this gets propagated and used much more, you could see it starting to be used for much more sensitive information.
+
+
+Madhavan (Maddy) Malolan [37:01] Yes. Yes.
+
+
+Anna Rose [37:01] Or what you're always trying to do is prove something about something. So massive fraud maybe becomes worth it at some point.
+
+
+Madhavan (Maddy) Malolan [37:09] I think there's always going to be this trade-off between user experience and security. And my take is if there are use cases that are very sensitive to these kind of attacks, I think it might be worth spending 30 seconds to generate the proof instead of 2 seconds.
+
+
+Anna Rose [37:26] On an MPC.
+
+
+Madhavan (Maddy) Malolan [37:28] So you could just use MPC for that.
+
+
+Anna Rose [37:30] Yeah. Fair enough. I'd asked you a little bit about how the user kind of gets behind the paywall. You'd said like, well, you do have to log in. Is there ever login information that's flowing through something there? Is there any sort of information leakage possibility? Or they just logging in themselves and then making the proof. I'm just wondering if they're going through any other kind of application or something that you are building.
+
+
+Madhavan (Maddy) Malolan [37:54] No. No.
+
+
+Anna Rose [37:55] No. Okay.
+
+
+Madhavan (Maddy) Malolan [37:56] No, no, no. So this is just a web in app browser, and they are logging in into the regular browser just the way that you would log in into a browser. And we, obviously, see none of that data. The only thing that we see is the encrypted request and the encrypted response.
+
+
+Anna Rose [38:12] I see.
+
+
+Madhavan (Maddy) Malolan [38:14] And just to be fair for the listeners is there's a trust assumption. There's a trust assumption that we have not added any backdoors in a web browser so that we can get access to your login information. But the code is open sourced and it's been audited.
+
+
+And also to be fair, there is a lot of restrictions that is imposed by the Apple and Google SDKs itself. So there's only limited things that we can do. But that is a trust assumption that the SDK that is being used is not sniffing for any of this information.
+
+
+Anna Rose [38:48] Cool. I have one more question here which is about the website itself. I always thought with this, and maybe it's because I have a bit of a ZK Email mental model where it's like you're looking at exactly how an email is formatted and then grabbing information from that.
+
+
+And I realized with zkTLS, it's not, because it's more to do with that SSL certificate and it's more about these sort of code that's attached to the website. It's not really about the website itself.
+
+
+But I did have this question about what happens if a website changes or if the website gets corrupted. So maybe we'll start with what if the SSL certificate changes? I guess then, does it matter?
+
+
+Madhavan (Maddy) Malolan [39:28] The SSL certificate, even if it changes, it will also be changed on the certificate authority. So we can always verify that this SSL certificate belongs to this particular domain name as of today. I think that's a slightly different problem that I think ZK Email has in which the -- I think it's called the DKIM keys which get rotated over time.
+
+
+Anna Rose [39:49] [?] What's really based on the formatting, I think, often. Isn't it?
+
+
+Madhavan (Maddy) Malolan [39:52] Yeah. So in DKIM, certificates or DKIM keys always get updated, I think every three months or something like that. And once it has been changed there's no way to go back and check if is the DKIM keys that belong to that actual sender. But in zkTLS we don't have that problem because we are trying to check the certificates as of today, not in the past. So we don't have the problem even if the SSL change.
+
+
+Anyway, that brings us to the second part of the question, which is, what if something changes on the email for ZK Email's case, and for the website on our zkTLS's case. There it is cat and mouse game. That is, you need to make sure that you are always using the latest response types that is coming from that website. So if that changes, you need to quickly adapt and say that the website changed and now here's the new configuration on how to generate a proof.
+
+
+Okay. So given that, it poses a big challenge for pushing this into production. So there are two approaches that we take. The first is we try to use APIs. The APIs change much less often. The UI might keep changing like once in a while, but the APIs don't change as often. But that's not to say that never change. They do change sometimes, but at least it's far and few. And that's one.
+
+
+The second, and this is the more ambitious effort that we are undertaking, is we have an AI that automatically figures out --
+
+
+Anna Rose [41:16] Yeah. I was about to say.
+
+
+Madhavan (Maddy) Malolan [41:18] It automatically figures out that the website has changed. We know that until yesterday we were able to generate a proof from here. So we know the structure as it was yesterday, we know the current structure. So the AI is the --
+
+
+Anna Rose [41:30] The AI knows what you're trying to find, and then looks for it again in a way.
+
+
+Madhavan (Maddy) Malolan [41:34] Yeah. And creates this configuration on the fly, and then generates a ZK proof for it. So --
+
+
+Anna Rose [41:38] Interesting.
+
+
+Madhavan (Maddy) Malolan [41:38] I would say this is where we have the edge right now in the sense -- I'm not talking about it from the competitive perspective, but we have the ability to be able to sell to a Web2 enterprise because stability is extremely important for them.
+
+
+So not only are we saying that, hey, these website's APIs don't only change very infrequently, but also, even if they do change, we have this AI mechanism that will quickly fix it on the fly and your users will not be affected.
+
+
+Anna Rose [42:10] Interesting. This makes me think though, when we talk about those different websites, we've talked mostly about the SSL part of things, just the certificates. But you are always looking for a particular type of information as well. You're not just proving, oh, I've logged in. I have a relationship with this bank. You're trying to prove a number.
+
+
+Madhavan (Maddy) Malolan [42:26] Yes.
+
+
+Anna Rose [42:27] And so, how do you initially -- do you have to go for each major website portal? Do you, the company, Reclaim, have to go and kind of understand the APIs of all of those beforehand before a user can actually interface with it? Or is it the minute someone tries to engage with the system, it sort of maps it? I guess with the AI, it could map it. But right now, how are you doing it?
+
+
+Madhavan (Maddy) Malolan [42:53] I have to give you a very nuanced answer to this. There are multiple takes here. The short answer is yes. For every single website, you need what we call a provider that needs to be defined for that website. Only if there's a provider, we can generate a ZK proof for it.
+
+
+Okay. So the short answer is yes, we need to go figure out the provider for each of these websites. Of course, you can't go do this -- you can't do it as an exercise for all the websites in the world. So, okay, answer number one that I have for this is we've built something called a Devtool in which you're not dependent on us to add this provider, but anybody in the community can go and add this provider themselves. And we have a pretty elaborate tooling for that. So that's answer number one.
+
+
+The answer number two, as you pointed out, is using AI and the AI, of course, theoretically speaking, it should be able to figure this out. It's a problem that I do suspect will be solved very soon, but as of today, it's not good enough. So we use these AI systems only in the three verticals that I mentioned. That is education, employment and financial background verification.
+
+
+So because we know very specifically that for education you need to accept this is what web pages usually look like. So we are able to really fine tune our prompts or whatever to make sure they're able to get high enough accuracy. But for an open-ended problem, I don't think the AI is there yet.
+
+
+Anna Rose [44:18] Got it. And that's why even the example you had initially given was, in that case, you already had some sense for the template or whatever, like the API is supposed to work like, and then the AI could go in to understand the change. But it's quite defined.
+
+
+Madhavan (Maddy) Malolan [44:33] Yes.
+
+
+Anna Rose [44:34] And now -- and you're saying if you focus that AI on the three verticals, then it's doable. But if you try to go outside of it with current capacity or current -- it's also, I feel like it would get really expensive at some point.
+
+
+Madhavan (Maddy) Malolan [44:45] Okay. At this point, let's ignore it.
+
+
+Anna Rose [44:47] If you try to map the Internet with AI.
+
+
+Madhavan (Maddy) Malolan [44:49] Yeah. Let's ignore that cost for a moment. But I think, as you mentioned, as long as the problems are more structured in the sense that it worked till yesterday, now it does not work. That's a very structured problem. Or we are looking only for, let's say, graduation year or something like that. Very structured problem. AI is really good at it.
+
+
+And just to double click, this is something that is working in production right now. It's not in the future. The open-ended AI is what is probably in the future in which you give it any website and say, hey, extract so and so information and it automatically tries to figure out how to do it. I think we're a little bit far off from that.
+
+
+We have internal prototypes, but that's at some 50, 60% accuracy, which is whatever. But for education, employment, where it's very structured, we get like 93, 95% accuracy.
+
+
+Anna Rose [45:35] Cool. I want to move on now to some of the use cases. You've mentioned the ones that you're focused on, but I actually like just looking at some of the material that Reclaim has released. I also saw an overlap with DeFi, talk of prediction markets.
+
+
+You mentioned very non blockchain use cases in the form of education, proving something about your employment history, or credit score. Although I feel credit score could also be somewhat onchain.
+
+
+But let's talk about all these use cases. What's the focus right now? And do you actually see this as sort of a blockchain -- or like a Web2 to Web3 product? Or is it more like a Web2 to the world product, just proving stuff about websites?
+
+
+Madhavan (Maddy) Malolan [46:18] I think I look at this as one of those technologies that crypto is exporting to the world. I think I feel so, not specifically for zkTLS, but ZK in general. I don't know if you saw the news.
+
+
+Anna Rose [46:34] Yeah. It goes beyond.
+
+
+Madhavan (Maddy) Malolan [46:35] Yeah. Google Wallet now has integrated ZK proofs to show your age in the bar or something like that.
+
+
+Anna Rose [46:44] We may or may not have them coming on the show soon.
+
+
+Madhavan (Maddy) Malolan [46:47] Okay. Awesome. That's --
+
+
+Anna Rose [46:48] A little alpha for the listener. Yeah.
+
+
+Madhavan (Maddy) Malolan [46:51] Awesome. Yeah. So --
+
+
+Anna Rose [46:53] Cool.
+
+
+Madhavan (Maddy) Malolan [46:54] Okay. I have an interesting anecdote here. We have been talking to a lot of large Web2 enterprises. These are Fortune 500 companies. Now, my job in all of these sales cycles is to go whiteboard with their engineers and teaching them ZK.
+
+
+I should probably just introduce them to ZK Podcast maybe. But I'll keep that in mind next time. But my job is to just go educate that, hey, ZK is a thing. It looks magical, but it actually works. And those are conversations that I was having for like weeks at these enterprises. And the moment the Google announcement came out, I sent that blog to all of these people that I was talking to and immediately --
+
+
+Anna Rose [47:35] Yeah. You're like, see, it's doable.
+
+
+Madhavan (Maddy) Malolan [47:39] Yeah. From a business standpoint, those sales cycles have visibly progressed. The question that they were asking even like one or two days before that announcement are very different. Okay. Now they're like, okay, fine. Okay. We get it. Zero-knowledge proof work. Now how do we implement this?
+
+
+Anna Rose [47:56] It's also very -- I mean, it's such a validation in a way. Like it's a vetting.
+
+
+Madhavan (Maddy) Malolan [47:59] Yeah.
+
+
+Anna Rose [47:59] Just the fact that it's been kind of -- it's passed through all of those checks in such a big company. Oh, that's so exciting to hear.
+
+
+Madhavan (Maddy) Malolan [48:07] Yeah. So coming back to your original question on the use cases. So we are right now focusing, as I said, on those three verticals as a solution offering. And then, we ask ourselves the question, hey, who are the people who need these three offerings? And right now, our focus is again on three verticals, that is, job marketplaces, background verification companies, and lending. These are the three categories that we work on. And this is --
+
+
+Anna Rose [48:39] Although, wait. Didn't you say education too? You didn't list that.
+
+
+Madhavan (Maddy) Malolan [48:42] Oh, yeah. So we do education verification, employment and financial background verification. So those are our product offerings. And the use cases that we are going after are background verification, job marketplaces and lending.
+
+
+Anna Rose [48:56] Got it. Okay. Okay.
+
+
+Madhavan (Maddy) Malolan [48:57] That's where this data is actually being used in that sense.
+
+
+Anna Rose [48:58] Understood.
+
+
+Madhavan (Maddy) Malolan [48:59] As I was saying, this is like I look at ZK as a way to export whatever we've invented in the blockchain space to the world. So internally at the company, we do not have any categorization as is this a Web2 company or a Web3 company. We care about, hey, is this in the lending space? Like we work with Web2 lending companies. We work with the Web3 lending, like 3Jane for example, is a Web3 lending company.
+
+
+But from an internal ops perspective, they're the same. For us, it's a lending company and they need very similar kind of data. They need credit scores, they need income verification, they need accredited investor status. So it's the same set of information that is required for use cases across the board, whether Web2, Web3. So we don't distinguish between that internally. But these are the three verticals that we go after, agnostic of Web2, Web3.
+
+
+Anna Rose [49:51] Very cool. I want to talk quickly about the competitors, because I feel like there's been -- I mean, so the team that I feel we did the sort of deepest dive into this topic with so far would have been Pluto. And this was a while ago. And they are -- their Web Proofs are similar to what you're describing.
+
+
+Other competitors that I've seen listed would be Opacity, Primus Labs and zkPass. Maybe there's others as well. But I'm just wondering about that competitive landscape, and how you see yourself differentiating if you also see them kind of aiming to solve similar things or different things.
+
+
+Madhavan (Maddy) Malolan [50:27] Yeah. To be fair, I think from a technology standpoint, all of us are trying to solve the same problem. That is, hey, how can you make data over HTTPS verifiable. For us, I think the most important thing that I think, at least on the outside what it looks like, is we are focusing more on Web2 enterprises as compared to the others a little bit. So we are, I think, building very verticalized solutions.
+
+
+Again, going back to my hot take, that is, zkTLS is already commoditized. My view is there's no business to be made at the zkTLS layer itself. You can't sell zkTLS and make money because it's already commoditized. If nothing else --like we are open source, TLSNotary is open source. I mean, it doesn't make any financial sense to use a service that is actually charging for that service.
+
+
+Our take internally at the company is, this technology exists as a base layer, but the question becomes, what is the vertical solution that we can actually provide to Web2 enterprises that they can plug and play into that service? And it needs to solve the use case very, very specifically. Something as stupid as being able to retry by sending them an email if something fails, those are things that a Web2 company would care about, and being able to do that. And also, the AI system that I'm talking about.
+
+
+Okay, fine. The zkTLS thing exists, but do you support all the 25,000 universities that exist on the planet? If not, I can't use you. It's no use going to a job marketplace, and saying, hey, we can verify if the student went to Stanford. Wow. That's not helpful.
+
+
+Anna Rose [52:05] But nothing else.
+
+
+Madhavan (Maddy) Malolan [52:06] Yeah. But nothing else.
+
+
+Anna Rose [52:07] Is that true, by the way, that fact there's 25,000 universities worldwide, roughly.
+
+
+Madhavan (Maddy) Malolan [52:10] Yeah. Yeah.
+
+
+Anna Rose [52:11] Oh, interesting. Cool. I didn't know that.
+
+
+Madhavan (Maddy) Malolan [52:12] At least that is the number that we have been able to support so far.
+
+
+Anna Rose [52:19] Cool. Wow. Amazing.
+
+
+Madhavan (Maddy) Malolan [52:21] And the same is true for the number of payroll systems. Of course, they're not in the order of tens of thousands, but maybe 5,000, 6,000 payroll systems, at least 200 tax portals. So having that verticalized solution, I think is extremely important.
+
+
+And I would really wish that not just our competitors, but also crypto as an industry would take that more seriously. That is, okay, fine, you're solving this problem with a particular technology, but it's not really sellable unless it's a verticalized full stack solution. And we can't just test our hands off saying, oh, we've built this amazing infrastructure layer --
+
+
+Anna Rose [53:01] We've built the infra.
+
+
+Madhavan (Maddy) Malolan [53:02] Yeah, yeah. Go figure out what to do with it. I think we --
+
+
+Anna Rose [53:04] [?] the story of this industry.
+
+
+Madhavan (Maddy) Malolan [53:09] Yeah. We have to be extremely opinionated about -- so for example, we know that there's one more category that we care about, which is, loyalty and shopping history of users and stuff like that. And we explicitly had to say no to that and saying, okay, we know this demand exists, but we're not going to focus on it, because we're focusing on verticalizing the products for these other three. I think that is the kind of discipline that is required to make this happen, especially in the Web2 world.
+
+
+Anna Rose [53:39] Yeah, cool. So you talked about using AI with zkTLS in order to define some of these websites, but could zkTLS also be used in AI? Could you use any of these tools to sort of prove things about what is happening within an AI platform? Or maybe you don't need the website stuff for that. I'm almost like bordering into zkML here, but --
+
+
+Madhavan (Maddy) Malolan [54:03] But I have a broader take on this which might answer your question. Look, zkTLS is a stopgap solution. That is, we want to verify information, but right now there are no asymmetric keys that are being used for providing this information over the Internet. So we have to almost figure out a way to come around it.
+
+
+In an ideal world, you would have all of this data being signed at source. So whether it be, let say, an RFC called RFC 9421, I think, which is, all these APIs should respond with a header that also gives the signature of the data that is being sent. If that exists, then the ZK proofs are very, very simple to create on the client side. But, of course, there are a lot of reasons why it's not being implemented already, but that would be the ideal future.
+
+
+So now coming back to your specific question of how do you prove that an AI is operating correctly, there are two ways to do it. As you mentioned, one is zkML, which I think is honestly very, very far from being practical. The other is using the zkTLS on the HTTPS connection that is used for the API calls so that you know at least that it's coming from Claude and not from --
+
+
+Anna Rose [55:22] That specific thing. Yeah. Interesting.
+
+
+Madhavan (Maddy) Malolan [55:23] Yeah. For that you could surely use it.
+
+
+Anna Rose [55:25] Although you can't look within the model with that. You're just sort of saying like the call is coming from there.
+
+
+Madhavan (Maddy) Malolan [55:29] Yeah. At least you can trust that this came from Claude, and it's not something that you've built yourself. Even on that, I'm not super bullish on that either at this point because there's already this effort inside the AI circles to add digital signatures to the responses, and in fact, it's already been launched.
+
+
+Anna Rose [55:48] So then you don't need it. Yeah. Okay.
+
+
+Madhavan (Maddy) Malolan [55:50] It's already been launched on Claude, for not exactly the inference itself, but at least for the chain of thought reasoning. They have a signature that's already coming, so --
+
+
+Anna Rose [56:02] That's awesome.
+
+
+Madhavan (Maddy) Malolan [56:02] Yeah. I hope they do the signature for the final inference as well very soon. But that is what I'm more bullish on. I think before zkTLS scales on all of these API requests at global scale, I would expect OpenAI, Claude, all of these people, to just add a signature.
+
+
+Okay. Probably there's a good way to end this is, if we do a phenomenal job over the next 5, 10 years, we will make ourselves irrelevant. That is, if we've done a good job at making the case that, hey, the user's data should be provable, and if we've made a case for that very strongly, people will probably just start signing data at source, thereby making zkTLS itself kind of irrelevant, and we can just go on to the more fun parts further up in the stack.
+
+
+Anna Rose [56:57] That's so interesting. I love this kind of -- it's sort of doing a bit of a throwback to what we were talking about last year with like attested sensor data, which was very real world, but this would be signatures on websites, signatures on sort of these portals or whatever, so that it's serving the same purpose.
+
+
+The minute you have that signature is the minute you can do more advanced cryptography on the thing without having to do these workarounds to transform it into a state where you can do the advanced cryptography on it.
+
+
+Madhavan (Maddy) Malolan [57:25] Yes, yes.
+
+
+Anna Rose [57:26] Fascinating.
+
+
+Madhavan (Maddy) Malolan [57:26] The cryptography will probably still have to be the same, but the trust assumptions will be much stronger. It'll be much more efficient. Yeah.
+
+
+Anna Rose [57:34] Amazing. Maddy, thank you so much for coming on the show and sharing with us your journey into sort of the zkTLS world with Reclaim, how it's been used, but also just digging in deeper to this topic in general. I feel like for me, it's been a little bit of a black box until now. So, I really appreciate that you helped to sort of open that up.
+
+
+Madhavan (Maddy) Malolan [57:55] It's a big honor for me to be in the position to help you navigate some concepts in this space, whereas I use ZK Podcast to navigate the space myself. So thank you so much for having me. It was really fun.
+
+
+Anna Rose [58:05] Oh, cool. Sounds good. All right. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai, and to our listeners. Thanks for listening.
