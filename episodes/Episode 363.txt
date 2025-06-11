@@ -1,0 +1,556 @@
+Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+This week, Nico and I chat with Abhi Shelat and Matteo Frigo. Abhi and Matteo are engineers at Google and are part of the team that built the ID features in the Google Wallet product. Abhi is also a professor at Northeastern, and both have been long standing researchers in the ZK space and beyond. They are the co-authors of the Anonymous Credentials for ECDSA paper, which is the system that is powering the ZK component of the Google Wallet ID product. 
+
+This is the clearest case of ZK breaking into the mainstream, by having it be used and publicized by one of the largest companies in the world. It definitely feels like a step change. And this announcement has made waves in our community.
+
+In our discussion, we cover how a user engages with this system, the technical details behind the implementation, and then we dive into the details of the ZK system within the Anonymous Credentials for ECDSA paper. Through this, we cover the other works that inspired this construction, their unique requirements, the challenges of translating between legacy cryptography and new systems, and look at how ZK in this case is being used in its original sense, that is, to provide privacy for sensitive information.
+
+Now before we kick off, I just want to highlight our upcoming ZK Hack Berlin event. This is our 5th ZK-focused hackathon, and it's happening on June 20th to June 22nd in Berlin. This is part of the Berlin Blockchain Week. And so, if you're looking to jump into ZK and build using some amazing tools we cover on the show, and win prizes while doing so, be sure to join us. Find out more at zkberlin.com.
+
+Now Tanya will share a little bit about this week's sponsor.
+
+Tanya [02:04] Boundless is a universal zero-knowledge protocol developed by RISC Zero that lets anyone access abundant, verifiable compute regardless of the blockchain they're using. Boundless provides a network of nodes dedicated solely for execution, producing ZK proofs that the work was done correctly, verified on-chain at a low constant cost. By decoupling execution from consensus, Boundless lets every chain keep its native security with infinite scale. Learn more about Boundless at beboundless.xyz. So thanks again, Boundless.
+
+And now, here's our episode.
+
+Anna Rose [02:43] So today, Nico and I are here with two Google engineers, Abhi Shelat and Matteo Frigo. Abhi is also a professor at Northeastern.
+
+Welcome to the show, both of you.
+
+Abhi Shelat [02:54] Hi Anna and Nico. Thank you for having us.
+
+Matteo Frigo [02:56] Thank you. Great pleasure being here.
+
+Anna Rose [02:57] Nico is also here. Hey, Nico.
+
+Nicolas Mohnblatt [02:59] Hey everyone. Nice to be here.
+
+Anna Rose [03:01] So Abhi and Matteo are on the team that has built the ID features in the Google Wallet product. This announcement just happened recently. We've all been very excited about it, so it's very cool to get a chance to dig in. You've also been behind the ZK part of that ID. They're also the co-authors of the Anonymous Credentials for ECDSA paper, which is the ZK system that underlies the ZK part of the ID features.
+
+So why don't we start off with a quick explanation of what the Google Wallet is, and how adding ZK actually adds something for the end user. What does this enable?
+
+Abhi Shelat [03:35] Okay. So Google's mission is, of course, to organize the world's information, make it easy to use, and so forth. Google Wallet's mission is to organize your personal credentials, and make them essentially easier to use and simpler and safer.
+
+And your personal credentials involve three kinds. So there's essentially transaction credentials, things that you use to pay. There's identity credentials. That's kind of the thing that we focus on. And then, there are other type of credentials like passes and loyalty cards, et cetera. But it's the identity portion that we're basically working on. And what ZKP allows you to do is to make statements about your identity in a way that reveals nothing else. You can prove things like my age is over 18, or my ZIP code is 02445.
+
+Anna Rose [04:17] Yeah. Was Google Wallet also for credit cards at some point?
+
+Abhi Shelat [04:21] That's right.
+
+Anna Rose [04:22] Because that's the sort of association that I made with the term. That's why when I first saw this, I was like, is this to prove something about your credit card? But it sounds like it isn't really. It's kind of a new feature.
+
+Abhi Shelat [04:33] It is. It is.
+
+Anna Rose [04:33] Oh, it is?
+
+Abhi Shelat [04:34] So as I mentioned, it's like organizing all of your credentials. And, of course, payment credentials are also those type of things. So Google Wallet does let you do all of the tap to pay. So there's a bunch of payment transaction stuff that it supports. You can buy stuff and pay for stuff, et cetera, send money to other people. That's part of it.
+
+But your credentials are kind of -- your payment credentials, your identity credentials, and a bunch of passes, like for example, your airline tickets and your loyalty cards, all of those things are handled by Google Wallet. And one part of that is the identity part, and that's kind of the part we're working with and applying zero-knowledge proofs to.
+
+Anna Rose [05:11] Cool. So it's kind of funny. This announcement came out and it got so many people in our community, in the ZK community, also in the general blockchain community, very excited. Although, I think as we dug in, we realized like, it's more ZK than blockchain. Is there there a blockchain connection under the hood?
+
+Abhi Shelat [05:30] No.
+
+Anna Rose [05:31] Not at all. Okay. Cool. This is sort of where I see ZK somewhat splitting off, just in terms of usage and mindshare almost. This is kind of exciting to see this happening, that ZK is standing on its own. While I think a lot of the research and emphasis and financial support to ZK has come from blockchain, now we're kind of seeing it entering the world in a new way.
+
+Abhi Shelat [05:56] Well, you can look at it that way. I mean, the original paper from the 1980s and a lot of the theory from the 80s to the early 2000s was using zero knowledge for privacy.
+
+Anna Rose [06:07] True.
+
+Abhi Shelat [06:06] For privacy in the real world. And so, I've been working on ZK for a long time, since my PhD, and I think it's been great that the blockchain interest has put a lot of resources and moved the field quite a bit in the last 15 years.
+
+But I do think its original motivation was for privacy-enhancing tech, and people like my advisor, Silvio, and people like David Chaum have been working on it for -- on signatures for the type of things that we're building now in ZK in Google Wallet.
+
+Anna Rose [06:38] True. So it's almost like a return to its original goal.
+
+Nicolas Mohnblatt [06:42] Yeah. Back to the roots and back to the actual meaning of ZK, which is zero knowledge and privacy.
+
+Anna Rose [06:48] Yeah. So when this announcement came out, at first, it was actually tricky to understand who was behind it. And I'm going to give a little credit here to Wei Dai, who did some sleuthing on Twitter and basically discovered that the ZK system underlying this was the Anonymous Credentials for ECDSA, the paper that you had written.
+
+And then, I want to also say thank you to Muthu from Ligero, who was nice enough to make the intro to both of you so that we could actually get this episode going. So I feel like it was kind of interesting how, first, it was like Google uses ZK, and then it was like, how, what, where, like who? And eventually, this all kind of became more clear to us.
+
+Matteo Frigo [07:32] It may be helpful to give you some background information of what this project is all about and where it's coming from.
+
+Anna Rose [07:39] Cool.
+
+Matteo Frigo [07:40] Now, for at least a couple of years, possibly even longer, there has been a lot of work on the European Identity Wallets, the Digital European Wallets. This is a project of a European Commission to have other member states issue some kind of mobile app that stores your driver's license or your passport, some officially sanctioned equivalent of a driver's license that has legal value and it is, in all respects, equivalent to a normal government document.
+
+And as part of that, there was a lot of discussion, a lot of concerns about the scheme that was envisioned lacking privacy. It would leak information about you to the so-called relying party, to the receiver of a document in a way that allows the user to be tracked, and people didn't like that.
+
+So zero knowledge was suggested as a possible solution to this problem. And that's really the problem we have been trying to solve.
+
+So we are not really blockchain people. We've been working on this actually for a reasonably long time, and we are well known in that community trying to build the European Wallet. And we are as surprised as you are that somehow the blockchain community thought that this was kind of relevant to what they're trying to do.
+
+Anna Rose [08:58] Yeah. I saw a bunch of crypto press pick it up. It's like, you see, everyone's using the blockchain. And I'm like, I'm not sure.
+
+Matteo Frigo [09:08] This is not a mystery and you have to dig to find out who is behind it. We've been quite active in that European Wallet community and equivalent efforts in the United States for a long time at this point. And everybody in that domain is well aware of what we are doing. We have shown demos and they know what's going on.
+
+Anna Rose [09:23] For sure. And actually, the minute like looking over the work that you've done and the papers that you've released, we actually are familiar with your work in the ZK community that we've been building as well. Very familiar. But I think it was putting those two things together, the Google announcement and that it was you guys behind it.
+
+Let's talk a little bit about your backgrounds, and kind of what got you started. Abhi, you just mentioned you've been working on ZK for a long time. Micali was your advisor. I'd love to hear a little bit about that. Were you working on ZK back then?
+
+Abhi Shelat [09:54] Definitely. Yeah. So I've been -- I think my thesis is on non-interactive ZK, various constructions and been working on secure computation and zero-knowledge protocols for, essentially, the last 20 years.
+
+Anna Rose [10:09] Cool.
+
+Abhi Shelat [10:10] And Matteo, he has a very interesting background too. I'll let him -- he's like a very integral part to this project. He's brought a lot of the engineering discipline and focus to make this system as performant as it is, so.
+
+Matteo Frigo [10:24] Yeah. So I'm not a cryptographer by background, but I was actually a teaching assistant to Silvio Micali back in the day at MIT, so.
+
+Anna Rose [10:33] And you as well. Wow.
+
+Matteo Frigo [10:33] So, I know Silvio pretty well, even from before Abhi, I think. I've been doing all sorts of things in my life. I've worked a lot in cloud. I was the architect of the Elastic File System at AWS. I was one of the people who started the Oracle Cloud. So I have a lot of experience in building and managing and shipping cloud services.
+
+Separately, I also have an interest in applied math. So I worked in various medical devices and software radios, and I wrote a Fourier Transform library called FFTW that is very popular, and I think many people are still using it after 25 years.
+
+So I have a separate interest in applied math, which turned out to be completely relevant, completely necessary for doing this kind of ZK work. So a couple of years ago, I bumped into Abhi and he said, look, I need help to do this thing, and here we are.
+
+Nicolas Mohnblatt [11:29] I saw that you've also been writing Chess Engines.
+
+Matteo Frigo [11:33] Yes. So if I tell you the story of my life, we will never end, so.
+
+Anna Rose [11:39] Lots of things. Had you worked together before on anything?
+
+Abhi Shelat [11:44] No. We had a few people in our social circles, and that's how I kind of ran into Matteo. And then, as soon as I realized that -- I knew about FFTW for a long time, so I didn't realize there's a chance to hire Matteo.
+
+And that's like it's critical. The number theoretic transform, as you guys know, is very critical component of all of the ZK systems, both the succinct ones and the zero-knowledge ones. And that's also true for our system, and Matteo's insight to these things. We have a few things coming out soon, hopefully. Some papers to write about our interpretations about some of these FFTs and NTTs.
+
+Nicolas Mohnblatt [12:24] Yeah. This paper itself is full of these gems, and talking about the FFT is also on my list of questions for later down the line.
+
+Abhi Shelat [12:31] Great.
+
+Anna Rose [12:31] So when did your involvement with Google start? When did this project actually start?
+
+Abhi Shelat [12:37] It's hard to pick a time. We were working on something else. We were in Core Labs, kind of a research aspect of Google for a while, and we were working on some other projects. I would say the application of zero knowledge, as Matteo said, to the European Wallet, I think it's less than two years.
+
+Anna Rose [12:54] Okay. So why don't we dive into Anonymous Credentials and the paper that underlines it? I mean, something I'm really curious here is how did you choose which systems to kind of be influenced by? Because there is a lot of material out there. But why don't we just start with what it is?
+
+Matteo Frigo [13:12] Yeah. So how do you choose which system? The answer is actually pretty simple. You pick the only one that works.
+
+Anna Rose [13:17] Okay. Well, that's an easy one then.
+
+Matteo Frigo [13:19] So, yes, there is a lot of stuff out there, especially in the blockchain community. But you have to keep in mind that our problem is very different from the normal blockchain problem.
+
+So, specifically, in the normal setup of a theory of zero knowledge, the prover is the computationally powerful part, and the verifier is kind of a wimpy portion. Whereas in the problem that we have, the prover has to run in the phone. And so, everything you need to do needs to be optimized for prover's time. And if you look at all systems or most of the systems that are out there, they're all optimized for verifier time, which is not the problem that we have.
+
+The other thing that we need to do is this is meant for the wallet credentials. So for some kind of digital driver's license or passport that the government gives to you that is bound to the phone. And it has to be bound to the phone, because otherwise people can copy from one phone to another, and then the whole scheme breaks down. So there needs to be some kind of hardware mechanism to make sure that you can only use the document if you actually have the phone.
+
+And that's done by means of ECDSA signatures produced by the secure element on the phone. And once you start looking into that, then that's inescapable because there is a piece of hardware that does ECDSA. It will take years to upgrade all those pieces of hardware in the field if you want to do anything different. So that's kind of the other constraint. So you need to come up with some proof system that can handle ECDSA.
+
+So, once you actually start putting all the pieces together, there aren't many solutions that work, and we have assembled together a bunch of techniques that somehow solve the whole problem.
+
+Abhi Shelat [15:07] I'll add one more constraint that we added, which is that since we knew that we wanted to deploy this globally, we didn't think that there could be a trusted parameter setup.
+
+Anna Rose [15:17] Yes. No trusted setup then was the requirement.
+
+Abhi Shelat [15:20] No trusted setup for many reasons. Not -- first, that because it would be very hard to get the whole world to agree on some trusted parameter. And second of all, those trusted parameters are pretty big. And basically making people store a gigabyte or half a gigabyte string on their phone isn't something that simply can't be deployed. So that's a major constraint.
+
+As both of you know, there are many designs for zero-knowledge systems or succinct systems. Some of them require the trusted parameter setup and those are very small proofs and very short time to verify. So they have some natural features, but it's not applicable to our scenario. So that's another constraint.
+
+Anna Rose [15:59] Got it. And, actually, if you think those, like the hash-based ones, they have larger proofs, faster verification, no trusted setup. But, I guess, you couldn't use those because of this proof issue.
+
+Abhi Shelat [16:10] Ours is a hash-based proof system.
+
+Anna Rose [16:13] Okay.
+
+Abhi Shelat [16:14] So I'll tell you the other constraint, which is, we originally started from this Hyrax design, which is essentially like a sumcheck-based interactive proof, and you commit to the transcript of an IP, and you basically then give a small zero-knowledge proof about that commitment. So that's roughly our design. But originally, we had a sort of discrete log-based commitment, and we received a lot of feedback that people were uncomfortable with deploying things that weren't post-quantum secure, or purportedly.
+
+Anna Rose [16:43] So there's another one. That's another requirement then.
+
+Abhi Shelat [16:46] So that's another requirement that came exogenously, which is that people would be more comfortable with the proof system that didn't rely on an assumption like discrete log. Even though the underlying signatures today do require that, they didn't want to layer a zero-knowledge proof that also required that.
+
+Nicolas Mohnblatt [17:00] I was going to say that's interesting, right? Since ECDSA anyway is not post-quantum secure.
+
+Abhi Shelat [17:07] That's right. Yeah. So although the underlying theorem still requires that, that comes from a hardware restriction. Given choice, you'd prefer a system that didn't require a discrete log assumption for the zero-knowledge layer as well. And so, indeed, our system only uses a hash-based commitment. So we use a Ligero as an outer layer that wraps a sumcheck transcript.
+
+Matteo Frigo [17:30] And part of the requirement comes from the need to standardize. So remember, this is a system for official use, and governments -- this is not blockchain. Governments will need to have some kind of standard. And standard bodies are really not that happy to standardize today something that is not post-quantum.
+
+Anna Rose [17:48] Yes.
+
+Matteo Frigo [17:48] So irrespective of whether or not it makes sense to combine a post-quantum thing with ECDSA, there is still the problem that building a non post-quantum proof system requires a standardization that won't necessarily fly.
+
+Abhi Shelat [18:03] So it goes back to what Matteo said. When you put all of these things together, there's only a handful of possible options. And then, we think ours is kind of the most performant and the simplest. And we've tried a bunch of other things.
+
+Nicolas Mohnblatt [18:16] From a high level, can you explain how the Anonymous Credential system works? What ECDSA signature are we verifying, and what does it attest to?
+
+Abhi Shelat [18:26] Good. So Anonymous Credentials has sort of multiple meanings. So instead of getting into the technical weeds about exactly what that is, essentially, at a very high level, there are a few components. You receive, or your phone receives essentially a digital signature from, let's say, the state of Massachusetts, where we are.
+
+And Massachusetts maybe signs a document that says, my name is Abhi, I live in ZIP code 02445, and my birthday is X. And maybe a few other details. They sign a document in a specific document format like that. So they also include in that signature to do what that -- to what Matteo was talking about with device binding. In addition to signing all of those things, they sign a public key.
+
+And so, when I onboard my driver's license to the wallet, what my phone does is, it actually creates in its secure enclave, it creates what's called a device public key, for which the secret key lives only in that secure element.
+
+So, essentially, that device public key goes to the state of Massachusetts. Massachusetts already has my details. So they basically make a document with all of my private -- my identity details as well as this device public key. They sign that, and they send it back to the phone. So now my phone basically holds a signature from the state of Massachusetts, with all my identity attributes and a signature of the device public key.
+
+And so, now let's say that Nico, you're a relying party, and you'd like to check that my age is over 18. So what you do, I go to your website, let's say, and you basically form a request. And one of these protocols that we use today is this CredMan API. It's one of the things Google has proposed, and it's being standardized, but it allows browsers anywhere to kind of ask for these identity credentials.
+
+So your browser will basically ask, hey Abhi, please give me a digital credential that shows that you're over 18. And, essentially, Chrome and my phone will basically work together to say, uh-huh, here's what I'll do. I'm going to give you a zero-knowledge proof that I hold a signature essentially signed by state of Massachusetts on a document. A part of that document basically asserts that my age is over 18, and another part of that document asserts a device public key. I'm not going to tell you the device public key, but then I'm also going to give you a signature under that device public key of this transcript that we just negotiated.
+
+So this transcript is kind of a nonce for the liveness of this interaction, so you can't replay these things. And so, essentially, that's a zero-knowledge statement that I hold a signature signed by Massachusetts on a document. Part of the document says I'm over 18, part of the document has a device public key, and I also have a signature by my device using this device public key on the current transcript that we just discussed.
+
+I send you that proof back, you verify it. And then, all of a sudden all you've learned is that Massachusetts says that I'm over 18.
+
+Nicolas Mohnblatt [21:24] And that you own the device that I'm interacting with.
+
+Abhi Shelat [21:27] Yes. To be more pedantic, essentially, Massachusetts issued a signature for Abhi to a device. That device was used to essentially produce the zero-knowledge proof that states blah blah blah.
+
+Matteo Frigo [21:39] And it's important to notice that without ZK, the device public key would be a tracking identifier, because now it's your unique identifier of your phone that will -- if you provide the document as is that contains the device public key, and then people can track you.
+
+Anna Rose [21:55] Interesting.
+
+Matteo Frigo [21:56] So, the zero knowledge is precisely the mechanism to avoid this issue.
+
+Anna Rose [22:00] Wow.
+
+Nicolas Mohnblatt [22:01] And so, here as a verifier, the only public data I need is the Massachusetts public key, and this sort of nonce negotiation that we have at the beginning?
+
+Abhi Shelat [22:10] Right. And so, this protocol is end-to-end encrypted. So this transcript includes a Diffie-Hellman key exchange. And let me add one more detail to this, which is that, it's also possible for me to hide which state I'm in.
+
+So, essentially, as a verifier, you would hold all the root keys of all of the state DMVs. And basically, my proof will be slightly different depending on what use case. There are several ways to deploy this, but it's possible to deploy it in a way that allows you to hide which state you're from as well.
+
+So, essentially, all you learn is that I have a US identity document that stipulates I'm over 18.
+
+Anna Rose [22:50] But if you need to hold -- going back to your example, you have the public key of Massachusetts, potentially. Wouldn't somebody be able to track that?
+
+Abhi Shelat [22:58] Well, I mean, that's public information.
+
+Anna Rose [22:59] Yeah. So could they match that somehow?
+
+Abhi Shelat [23:02] Again, the public key of Massachusetts is just, it's something Massachusetts has issued, and my credential is just going to be signed by that. So everybody from Massachusetts will have a document that's signed by the Massachusetts public key. And if you formulate the ZK statement correctly, the verifier doesn't even learn that I'm from Massachusetts. It just learns that I'm from a United States region.
+
+Anna Rose [23:29] I wonder, like the actual process of doing that conversation with the Massachusetts entity, is that happening at the moment that you're creating this ID on the device? Like you're scanning, I'm assuming the -- what is it? NFC chip in the passport, and then a conversation is triggered.
+
+Abhi Shelat [23:48] So the onboarding process for how you get your digital license, I can show that to you because that's public. You can do that today. But let me just describe it, since it's a podcast. So it involves a few steps. So, indeed, there is a conversation between your phone and the DMV. And Google is actually just used as a proxy. It doesn't learn any of this information. It just is there to facilitate kind of back and forth, the Internet connections.
+
+But essentially, there's a ceremony where you basically take photos of your front and back of your driver's license. You do this ceremony that involves you to take a video. You kind of have to move your head in the right direction. It'll tell you move it up or move it down. It'll make a random choice to kind of make sure that people don't replay these ceremonies.
+
+And then, you do all of that ceremony. You take pictures, and you take a video of yourself. You upload that to DMV. The DMV, of course, has your picture and has your information. So it basically looks up their version of your information. It makes a determination whether the person that's in the video ceremony is the same person on the DMV.
+
+And if they agree that it's the same person, then they basically issue the signature, they encrypt it, and it goes all the way back through Google to your phone. And then, it's stored on your phone in a secure way using a bunch of encrypted primitives, and it's protected by kind of your biometric.
+
+Anna Rose [25:18] Cool. The example you're using is the driver's license, but are you also making use of the chip?
+
+Abhi Shelat [25:23] Okay. Right. So that's one flow. Thank you for that clarification. One flow is the driver's license, and the other flow is the ID Pass, which you can use your passport with. So anybody, if you have an Android phone today, you can kind of hold your phone to the back -- download Google Wallet, and hold your phone to the back of -- hold the passport to the back of your phone. And that essentially reads information.
+
+And then, again, there's a process that goes back and forth through Google to an issuing party. And then, essentially a credential that includes all of the information in your passport is issued by Google and stored in your phone. So Google is the issuer in the ID Pass.
+
+And that actually -- that flow, I did this the other day at San Francisco. Many airports, the TSA, allow you to use Google Wallet and your ID Pass to actually -- in the form of a real ID. So you can kind of go through TSA --
+
+Anna Rose [26:16] Already?
+
+Abhi Shelat [26:17] Yeah. Already using your Google Wallet with your ID Pass. So that's kind of one of the use cases of --
+
+Anna Rose [26:22] Was that even before the ZK incorporation that they were allowing this?
+
+Abhi Shelat [26:26] Yes. And just to be clear, the ZK has not been used for that TSA application. That's just the ID Pass. That's kind of a standard identity flow, because TSA is a high security flow where they actually need to know your identity. There's no -- ZK is not being used in that.
+
+But it's a reason to get Google Wallet, because for those applications, you can use it. And then, for Internet applications where zero knowledge is useful, you can also use it.
+
+Anna Rose [26:54] Cool. I think we've mentioned ECDSA a lot, and I think you slightly talked about this, Nico, earlier on in this episode, but it's not quantum secure. I've understood what you've said here is like a translation of legacy IDs with possibly limited cryptography to a more modern ID with modern cryptography. And is there a challenge in doing that or do you just sort of wrap it? Do you just sort of take what they have and then you just transform it, and then use what you got from that? Is there anything in that translation that's complicated?
+
+Abhi Shelat [27:26] Well, the complication comes from dealing with the shackles of legacy, the shackles of ECDSA with the P-256 curve and with SHA-256. So as a deployment, it's much better to take a legacy system that's already working, and just add a zero-knowledge process to the top of it. And it's layered in that way. So it's very easy to deploy, and that's why we're able to get this into Google Wallet and have it working this year.
+
+But the technical difficulty that introduces is twofold. So first thing is that ECDSA is a signature algorithm that's specified with a particular family of elliptic curves. There are many, many curves you can use. The people on Blockchain use one version of a curve. We use the NIST standard P-256 curve. And those curves essentially are defined by finite fields and parameters A and B for the curve.
+
+That finite field -- finite fields are wonderful, beautiful, elegant mathematical objects, but they have some constraints. So for example, the P-256 finite field, it has a property that it doesn't have the right roots of unity that are needed for performing a NTT algorithm. So that's a limitation.
+
+So other proof systems, like STARK or Ligero, or even ours, that need an NTT, that need to do a Reed-Solomon encoding on some sort of witness, the P-256 field is not a good field for that. It doesn't support those roots of unity. 
+
+So what other people have done to work around that is they build a ZK proof system in a finite field that's very convenient for them, that has all the right properties, and then they try to simulate the mathematics of P-256 in their field. And that involves a 100X blow up in the complexity.
+
+One of the things we've done in our paper that Matteo has been really critical in figuring out is how to build an efficient method for Reed-Solomon encoding with the P-256 curve. That's one of the things.
+
+So that's one of the problems of legacy, dealing with something that was unforeseen. ECDSA was invented in 1991 without ZK. It was actually invented to get around a patent that someone else had. And so, we're stuck with it. But because of that, it doesn't have a clean security proof. It has this weird one, but it hasn't been broken.
+
+So it's a bunch of compromises. And one of them is that P-256 doesn't have the right structure, but we can work around it. Another one is that you have to use SHA-256, which I know, Nico, you're going to get to. Basically, giving ZK proofs about SHA-256 is notoriously hard. Other people have skipped it, or gone to something like Poseidon. We can't do that --
+
+Anna Rose [30:11] You can't do that.
+
+Abhi Shelat [30:11] Because that's not what the spec is. So we have to basically bite the bullet and figure out how to do it. And we have, I think, the fastest version.
+
+There was a person from the Ethereum Foundation who's been benchmarking different proof systems on SHA-256. And we gave her our code, and we benchmarked it, and ours is like factor of between 10 and 100 faster than the other schemes that she's looked at, so.
+
+Anna Rose [30:37] Cool.
+
+Abhi Shelat [30:38] Yeah. We figured out how to do it and do it quickly. Again, one of the key insights there that Matteo has been critical to work on, and we also give Ben Diamond and Jim Posen credit for this, is basically identifying a very good finite field to use for SHA-256.
+
+Nicolas Mohnblatt [30:58] Yeah. This is great because you're highlighting a lot of the things I wanted to talk about. Reading through the paper, it's full of these interesting insights. The first --
+
+Anna Rose [31:05] Yeah. You're also highlighting a bunch of people who've been on the show. So we'll try to dig up some of those episodes too. We've had Jim on. I think we've had maybe Ben on. I think he's done study groups at least, but anyway. Cool.
+
+Nicolas Mohnblatt [31:17] Yeah. And the things I really wanted to talk about was the proof system itself with this sort of wrapping and this extra masking you have between one system and the wrapper. And this we can get to in a bit. 
+
+There's the arithmetization you were talking about. So you use circuits over two fields. One is the base field for P-256 with all the NTT stuff, and one is these binary fields like we have in Binius. And that's something I'm really keen to dig into with you.
+
+You've mentioned Reed-Solomon codes, then circuit design as well, because you're using Hyrax and these layered circuits. And I was wondering how did you get efficient layered circuits for signature verification, message parsing without, I guess, having a circuit that's too deep and that takes too long to prove? Where would you like to get started? What's your -- this is the menu. Where would you like to go?
+
+Abhi Shelat [32:07] Okay. So Matteo, why don't you talk about the -- I would say parsing is a very important idea. And so, Matteo, why don't you tell them about how the CBOR parser works? I think that's a key insight.
+
+Matteo Frigo [32:19] So one of the things I've not told you that you were -- about me, that I also done a little bit of hardware in my life. So I actually know a little bit about hardware design as well. I'm not necessarily a hardware expert, but I, more or less, know how that stuff works.
+
+So I, more or less, know how to make circuits of low depth that do various things. There is one particular insight that we have in the paper that I think is an idea that should be resurrected, which is that you can do parsing -- at least in certain contexts, you can do parsing through a circuit called a parallel prefix.
+
+And the parallel prefix is something that at least in some form, has been known since at least the late 50s. It is well known to all hardware people. They use it all the time. But it's not necessarily known to any software programmer or any blockchain expert or anybody.
+
+So for example, say I want to build a low depth circuit that computes the sum of n numbers. So you clearly build a binary tree that takes the sum of even and odd, and then whatever you remains, you take the sum of even and odds until you end up with a single element.
+
+Now a more complicated problem is, well, instead of wanting the sum of the entire array, I want the output of this circuit to be another array where the ith position is the sum of all elements less than i in the original array. So I want all the partial sums of the array.
+
+So this looks like it is an inherently sequential problem. You can do it by starting with zero and then keep accumulating and filling the array as you move to the right. But there is a very simple parallel way of doing it. And this is called the parallel prefix circuit.
+
+And this game has nothing to do with properties of addition. As long as you have any associative operation, you can adapt the same pattern to your problem. And this is well-known technology. It is used in all binary adders in CPUs. If you want to build a 64-bit adders, there is probably a parallel prefix circuit inside it that does the propagation of a carry.
+
+So the interesting insight here is that you can reduce many parsing problems that you have to parse the CBOR format or possibly even JWT to kind of an associative operation to which you can apply now the parallel prefix pattern, and you can build parallel prefix parsing circuits to solve that problem.
+
+So this is one, in some sense, innovation. In another sense, it's 50-year old technology. So maybe it's not that innovative, but at least it's one technique that we're using --
+
+Anna Rose [35:00] In this space.
+
+Nicolas Mohnblatt [35:01] Yeah. It's innovative for the space.
+
+Anna Rose [35:02] Yeah.
+
+Matteo Frigo [35:03] I want to mention that a friend of mine, Bradley Kuszmaul, and his wife Dana, maybe almost 30 years ago at this point, maybe a little bit later, they designed an entire processor according to this pattern. So it's a much more powerful technique than you would think. And that turned out to be applicable to our problem as well, and very, very useful.
+
+Nicolas Mohnblatt [35:26] Right. And in this case, you're doing the message parsing in a circuit over binary fields or over the P-256 base field.
+
+Matteo Frigo [35:34] We can do it either way.
+
+Nicolas Mohnblatt [35:36] Okay.
+
+Abhi Shelat [35:36] It depends on the size of the credential. So I tell you, one of the other insights we had was sometimes we have this MAC check. So, essentially, checking the signature, we kind of have to do in the P-256 field, because simulating the math, I told you, takes like 100x overhead. So we always have to run part of the circuit in P-256.
+
+And then, if the credential is very small, maybe we do the SHA and the parsing in the same field, in the P-256 field. Once the credential gets to a large enough size, it makes sense to kind of make another proof in a different field, and for example, the binary field for just those components, for all the non 256 components. And now the question becomes, how can you be certain that the prover is using the same instance in both the left and the right circuit?
+
+And in our paper, we kind of describe, again, a pretty old technique for checking the consistency of a witness across two different cryptographic protocols. And that's essentially to compute a MAC, a randomized MAC of the witness, and then verify that MAC in both circuits, which the MAC circuit can be much smaller. If the MAC circuit is much smaller than the big thing that you're trying to verify, then this technique basically has a purpose. So that's one technique we use.
+
+Nicolas Mohnblatt [36:57] Just for added context, a MAC?
+
+Abhi Shelat [36:59] It's message authentication code. So it's a symmetric key based -- a way to make sure that a message is authentic, or essentially the same in both left and right. And just to make something much simpler, it's a x plus b. So it's a two universal hash function where x is the thing that you're MAC-ing and it's just a times x plus b and a and b are essentially the key for the MAC. And we kind of make sure that no single party, the prover or verifier, control that key. We kind of just do a coin flipping to pick that key.
+
+So let me add just one more comment to what Matteo was saying. So Matteo's this parallel prefix is, I think, a brilliant idea for parsing the CBOR. And just to be clear, the constraints there, you can always take a circuit and flatten it to depth 1, Nico, to what you were saying. And, for example, Srinath Setty and other people at Spartan, other schemes do that. They basically take any circuit that you want and basically, squash it down to level one. And now, you just verify the level one circuit.
+
+That, unfortunately, has a problem in which it creates a lot of witnesses that you have to use in your ZK circuit. And witnesses are things that you have to commit to and commitments, naturally, take this n log n overhead, because you have to use some sort of Reed-Solomon encoding under the schemes that we're thinking about.
+
+One of the benefits of this parallel prefix algorithm, and essentially, our entire circuit design approach, we exploit the idea that this sumcheck-based IP does really well. It's linear time, and it does not require you to commit to intermediate values.
+
+So we try to design circuits that are roughly between depth 6 and 16 in order to reduce the size of the commitment. And that's a major factor for our performance. Whereas other circuits have to commit to millions or tens of millions of witnesses to handle problems like ours, our circuit, we end up committing to something like 80,000. And that's one of the reasons why our scheme is 10 to 100 times more performant.
+
+Matteo Frigo [39:06] And maybe to make it a little bit more explicitly, I think our major thesis is that sumcheck plus anything is better than anything.
+
+Anna Rose [39:17] I feel like Justin Thaler would like this.
+
+Abhi Shelat [39:19] Yeah.
+
+Nicolas Mohnblatt [39:19] Yes.
+
+Abhi Shelat [39:20] Well, Justin and I were on that Hyrax paper. We share the same exact approach. He's taken this to this Jolt idea. But I think exactly what Matteo said, that sumcheck of anything is better than anything. And we explicitly apply that to Ligero. We use Ligero to essentially verify our sumcheck transcript.
+
+Anna Rose [39:40] Interesting.
+
+Abhi Shelat [39:41] And that tends to be faster than just using Ligero for the original circuit, because we've done a bunch of benchmarks for that.
+
+Nicolas Mohnblatt [39:47] So, actually, this is a great time to talk about the proof system itself. You already described it a bit. So we said there are two components. Sumcheck plus anything is better than just anything alone. So in this case, sumcheck, can you describe a bit what's happening there, and why we've been talking about circuits with depth for the past 10 minutes, I guess?
+
+Matteo Frigo [40:07] So there are two general ways, I think, to attack the problem. One is to use a commitment scheme. And the commitment scheme will be able to verify simple operations over a set of committed values. And the problem with commitment scheme is that it tends to be on the slow side.
+
+On the other hand, we have another protocol called Sumcheck, which if you look at it, can reduce a certain set of claims to a bunch of wires -- on a bunch of wires to another set of claims on a different set of wires. So from that perspective, sumcheck is not self contained in the sense that it can only reduce one proof to another proof. On the other hand, it also does that reduction really quickly.
+
+So the whole idea here is, let's use a circuit that has some depth, not necessarily too large, because otherwise we have to run sumcheck for too long. But we have certain gates whose operation depends upon the values of other gates, and we use sumcheck to reduce the claim on the output of those gates to another claim on the input of those gates, and you do it a few times until you end up on a claim on the input wires that you actually have to do necessarily through the commitment scheme.
+
+And the whole claim, the whole property that we are exploiting is that there are many fewer input wires than the intermediate wires of a circuit because the circuit is computing something complicated like SHA-256. So the whole idea is we use sumcheck to reduce many, many claims very quickly to a smaller number of claims on fewer wires.
+
+Nicolas Mohnblatt [41:46] So visually, if I imagine my circuit has a bunch of gates, I have the inputs as the beginning layer, and the output is the end layer, and we can move through layers, and every layer is a sumcheck.
+
+Matteo Frigo [41:57] You have to do it backwards.
+
+Nicolas Mohnblatt [41:59] Sorry. Start from the --
+
+Matteo Frigo [41:59] You have to start from the output.
+
+Nicolas Mohnblatt [42:00] Yeah. From the output -- 
+
+Matteo Frigo [42:01] You have to start from the output, yes. And move towards the input because you reduce the claim on the output to the claim on the input. But that's the general idea.
+
+Nicolas Mohnblatt [42:09] And so this is why low depth, because we want to reduce the number of sumchecks that we are making.
+
+Matteo Frigo [42:13] Yes.
+
+Nicolas Mohnblatt [42:13] So then we have this, this wrapping layer. So in the paper, you talk about encrypting the transcript from all these sumchecks, and then wrapping this in Ligero. Can you tell us a bit more about it?
+
+Matteo Frigo [42:24] Yeah. So the other problem with sumcheck is that it is not inherently zero knowledge. So there are ways to make it zero knowledge, but they are complicated. And instead of making sumcheck zero knowledge, we kind of apply yet another level of recursion.
+
+So we are saying, well, instead of sending you the output that the proof produced by sumcheck, we actually translate the sumcheck verifier into a set of constraints for Ligero, and we use the zero-knowledge properties of Ligero to hide what the actual proof of sumcheck was. And that is done by adding a bunch of random numbers to all the field elements produced by sumcheck, and now, Ligero itself can verify that the sumcheck proof is in fact correct.
+
+So there are really two levels of proving here. One is, there is sumcheck proof. We encode a sumcheck verifier into Ligero constraints, and then Ligero produces the proof that it has executed a verifier for sumcheck correctly. You know, just to make it even more complicated, but that's the general idea.
+
+Nicolas Mohnblatt [43:30] I mean, it's something we're used to see. A lot of the systems we see in the blockchain world is sort of a hash-based proof that then gets wrapped into a Groth16 sort of ZK proof.
+
+Abhi Shelat [43:41] But I would say that that recipe is much older. So one of my favorite papers is this, Everything Provable is Provable in ZK. That's a paper from 1988, and it outlines essentially this recipe which is that you take any interactive protocol you have for some statement, you commit to it.
+
+And so, we commit to it by essentially encrypting it or XORing it with the pad. So you commit to it and then you, basically, give a zero-knowledge proof that the transcript committed in the commitment I just gave you, would have verified under the interactive protocols verifier.
+
+So if that makes sense, that's a kind of a cleaner way to think about the recursion that we're using Ligero to prove that the sumcheck transcript that we commit to verifies the claims that the circuit on input x produces output 0, let's say.
+
+Nicolas Mohnblatt [44:32] So in this case, what do you mean by commit to the transcript? Do you mean sort of our usual commit to every message and do our Fiat-Shamir or is this a different kind of commitment to the transcript?
+
+Abhi Shelat [44:39] For specific technical reasons, the commitment is basically a one-time pad encryption. And so, because we want this two-round protocol, and because we want to use Fiat-Shamir, the way we actually orchestrate it is, at the very beginning, the prover commits to a one-time pad.
+
+So the very first message of our protocol is you send a Ligero commitment to the input of the circuit as well as essentially this one-time pad that you randomly pick. You have to send that commitment, and then, essentially, the prover and verifier engage in a sumcheck protocol for the original circuit, and instead of me sending you the sumcheck message, I essentially send you the message XOR'd with the pad that I've committed.
+
+So you, essentially, end up with a one-time pad encrypted transcript of the sumcheck. And then, we finally finish with a Ligero proof that that one-time pad encrypted transcript would have verified. Now we can take that entire thing, which is interactive in many rounds, we can use Fiat-Shamir because every message of that was a public coin message. So we can use Fiat-Shamir. I hope that kind of explained why we orchestrate and why we use that commitment scheme.
+
+Nicolas Mohnblatt [45:55] And so to be clear, we only apply Fiat-Shamir sort of to the whole composed protocol, not to the inner part, and then, wrap again with something that's been Fiat-Shamir'd.
+
+Abhi Shelat [46:05] Exactly. Because otherwise, you'd have to make proofs about Fiat-Shamir queries, which we don't think is a reasonable -- if you don't need to do that, we don't want to do that.
+
+Nicolas Mohnblatt [46:15] Yeah. The security guarantees there are very different. Okay. So that's super interesting. And now this takes us to sort of the last thing I had on my little menu earlier, which is, all these proofs require efficient operations, things like FFTs or NTTs, I guess, some people like to call them. And we've been using these fields that don't naturally have FFTs. The field of P-256 and the binary field.
+
+In the case of the binary fields, we have an inkling of how that works, because Binius and that type of work has told us about additive FFTs. But how did you do it for the other curve, and how did you do it for your specific binary field?
+
+Matteo Frigo [46:53] Oh, well, it's actually fairly simple. So the P-256 field does not have the proper root of unity that are usable. You cannot do an FFT of size 2 to the k, which is what you really would like to do. However, the quadratic extension of a field does.
+
+Quadratic extension is -- in this case, it has a form of a complex -- you can pretend that a quadratic extension is an element of a base field plus square root of minus one times another element of a base field. So it looks like the complex field. This is not the general property of all fields, but it is true of this one.
+
+And it happens to have a root of unity. And it's actually kind of funny because when we figured this out, we thought it was kind of a cosmic coincidence that the quadratic extension happens to have, exactly, the thing that we need. 
+
+But thinking more about it, when cryptographers pick prime numbers to use, there are usually some big power of --some number times some big power of 2 plus or minus 1. And they use that so that the arithmetic on a normal processor, or the multi-precision arithmetic on a normal processor is easier to do because you're multiplying by a large power of 2. So there is usually no work to be done.
+
+And they happen to have picked the minus 1 case, which doesn't quite work for us. However, if that's the case, then the quadratic extension always has the plus 1, which now has the right power of 2, number of rules. So this is not a cosmic coincidence. I have a meta theory in my head that any prime number picked by cryptographers will support an efficient FFT. You just have to know which case you're in.
+
+Nicolas Mohnblatt [48:38] So this is very interesting because something similar is happening in this paper called Circle STARK. I don't know if you're familiar with it.
+
+Matteo Frigo [48:44] Yes. Yes, we are.
+
+Nicolas Mohnblatt [48:44] And the idea was to run -- okay. Great. How does that compare?
+
+Abhi Shelat [48:48] Well, so we have something to say about that. We've been in contact with Ulrich, and I think we have a much simpler explanation of what's going on in Circle FFT. So, we're going to write a very short paper on that, shortly. So we don't want to say too much about that, but --
+
+Nicolas Mohnblatt [49:05] Amazing. Looking forward to it.
+
+Abhi Shelat [49:06] Let me just point out one more thing which Matteo is a little bit humble about, but he's also figured out -- so there's a bidirectional FFT. That's kind of a new idea that we've added. And that's something we also, we do in the binary field. So Diamond and Posen brought to our attention the LCH14 additive FFT algorithm.
+
+But I think our contribution there is this use of this bidirectional FFT in the case of Reed-Solomon encoding. And we can apply that everywhere actually for all the Reed-Solomon encoding things. Gets a constant factor improvement, which is, of course, important when you're trying to run a proof on a phone.
+
+Matteo Frigo [49:46] Yeah. The specific problem of all these FFT-based methods is that your input array has to be of a size of a power of 2, which isn't necessarily convenient for Ligero, or if you're trying to integrate it with something else that has different constraints.
+
+So the problem is how do you do the FFT for non power of 2 things? And, specifically, how do you do Reed-Solomon encoding? So there is this bidirectional FFT thing that we have in the paper that kind of solves the general case for arbitrary sizes in a very simple way that you can study.
+
+Nicolas Mohnblatt [50:16] What do we mean by bidirectional?
+
+Matteo Frigo [50:18] Bidirectional means I'm doing it -- so in the normal FFT, either I give you all the inputs and you give me all the outputs, or you can run it backwards and you can say, I give you all the outputs and I want all the inputs. There is a way to say, well, I know that all the input -- that k of the input coefficients are certain numbers that I know, and n minus k of the outputs are a bunch of other numbers that I know, usually 0. Now give me whatever remains.
+
+So that's an important problem for doing interpolation. If you are interpolating a polynomial of degree 5, and you have an FFT of size 8, you don't know the other three coefficients. And so, either you pad everything to 8 and blow up the degree, which makes everything else run slower, or you just stay with 5 and this bidirectional FFT will give you the rest. It's kind of cool, actually. It's a very intriguing idea.
+
+Nicolas Mohnblatt [51:14] So we get away with not having to pad to the nearest power of 2 --
+
+Matteo Frigo [51:18] Yes. Yes.
+
+Nicolas Mohnblatt [51:18] And still being able to run our FFTs. That's amazing.
+
+Anna Rose [51:21] I wonder -- this might have already been answered in what you were saying, but you're talking about circuits over a primary field and also over a binary field. And I'm just wondering, is there any connection between those two things? Are they talking to each other?
+
+Abhi Shelat [51:34] Yes. They have to for soundness. Otherwise, a prover could basically say something to the P-256 field, and then say something totally different and convince the binary field. So that's where I was talking about that MAC. One of the things we do, we augment each circuit in each field with a small circuit which computes a MAC.
+
+For all the common inputs to both circuits, we ensure that they're equal, that they're same inputs we're using. So, for example, the signature that we're checking is in the P-256 thing, it corresponds to the same message that we're computing the hash of in the binary field.
+
+Anna Rose [52:11] Okay. That's the connection point then. You don't have a new proof or anything to link them. It's just by using the same -- or would you call that a proof?
+
+Abhi Shelat [52:21] Well, we have a security analysis of -- a written security analysis, but there's no auxiliary proof. It's just two proofs in these two circuits with this joint input.
+
+Anna Rose [52:32] Cool.
+
+Nicolas Mohnblatt [52:33] Just circling back to the FFT, there's one last thing I wanted to ask is, you've said we have to work in this quadratic extension. Does this mean that I have sort of a 2X blow up every time I'm going to run the FFT?
+
+Abhi Shelat [52:47] So that's what we're going to write about in this follow-up.
+
+Matteo Frigo [52:52] No. No. But there is actually a simple answer to this. The answer is no, because -- so, let's stay on the analogy of real numbers versus complex. Let's forget about the finite field for a second. So you can compute an FFT of real inputs in about half the number of operations of the equivalent FFTs of the same number of complex inputs.
+
+Okay. So there are well-known algorithms that have been studied forever by which you can save half the operations. It's actually interesting because in what we talked about in the paper, we didn't even bother to do this. It's a little bit more complicated, and we just wanted to have something that works. We have actually implemented the thing more recently and it saved a few milliseconds from the whole system. But this is well-known technology that has been used forever for 50 years, 60 years.
+
+Nicolas Mohnblatt [53:46] So then maybe I've misasked my question. I was trying to nudge you towards another part of the paper where you talk about sort of new Reed-Solomon codes where rather than picking roots of unity and using those as our domain for Reed-Solomon encoding, you picked something different. And there were some nice properties there.
+
+Matteo Frigo [54:03] So there is a definitional problem here because even though you can compute the FFT in approximately the same time over the extension field that you could in the original field, it's still a polynomial evaluated over roots of unity in the extension field. And we didn't like that.
+
+We didn't like the fact that in order to define what Ligero does in its own base field, we have to come up with a complicated concept built upon in the extension field. And we also didn't like the fact that root of unity really depends on the field.
+
+And so, we are now -- if we are trying to standardize and define what in an algorithm that works in all cases, we need this root of unity that may or may not exist. So we came up with this way to do interpolation over integers, over 0, 1, 2, 3 and small integers, which if you look closely at it, it is just Newton interpolation expressed in a clever way, and reduced to a convolution. But it's kind of a known technique that was never made explicit anywhere as far as I can tell. So we wrote it down, and that's what we are doing.
+
+Nicolas Mohnblatt [55:14] I love how you told us, oh, it's just all these things that we have not heard about, but don't worry about it, it's very simple.
+
+You did mention standards, actually. And this is a good time maybe to get out of this technical deep dive and ask you about libZK, which is sort of a library, I guess, that comes out of this project, and also an IETF draft. Could you tell us more?
+
+Abhi Shelat [55:39] Yeah. So we have a GitHub repo that we're going to make open source. Right now, it's in a private preview, so we've shared it with a bunch of technical collaborators, experts like Muthu and other people to get their feedback on it. We're going to make it fully open source later this year.
+
+And we've also --we spent a lot of time writing very formal spec for our whole system. We spent a lot of time making sure that someone could read that and basically replicate our system. And we posted that on IETF. But the standards process are kind of slow.
+
+Nicolas Mohnblatt [56:17] Always are.
+
+Abhi Shelat [56:18] The ISO has basically adopted part of our approach. They're adding messages to their mdoc standard that will basically support ZK proofs. But we're looking for more help in getting these things standardized. These are actually going to be deployed and so we'd like to get -- it takes a lot of effort to get consensus in the community.
+
+Matteo Frigo [56:41] Yes. Keep in mind that our target is government organizations like the European Union issuing passports. And so, they need some kind of reference document. And so, we are focusing on standardization specifically for this reason to make it acceptable to governments.
+
+Anna Rose [56:59] Cool. I want to ask something kind of going back to the product and the wallet, what happens -- so this is actually something that I think is a very real life case, a bit of an edge case. But in this story that we've heard so far, we create this credential, it's now in the wallet and then you can use it. What happens if you have to revoke it if your passport was to get stolen?
+
+And the reason -- I mean, the reason it's maybe good to ask now is there are other works, there's other kinds of ZK systems which slightly try to address that. And I don't know if it's already addressed or if it's something that you're planning on addressing. But yeah, do you know what to do if you actually have to revoke it, if it's already --?
+
+Abhi Shelat [57:40] Anna, you ask all the hard questions. Excellent. So revocation is something we've thought a lot about. We've explored all of the accumulator-based schemes, and a lot of the legacy-based approaches. We have a different approach to it, that we're also pushing through to standardization.
+
+Basically, the features of that are that you only need a constant size witness and the amount of work that the revoker has to do is kind of proportional to the number of revoked credentials, not the number of issued credentials.
+
+But so, we do have a solution to that. If you're interested in the details, I can give you some high level. But the high level point is, yes, revocation is a nasty problem that many cryptographers overlook, but that practitioners demand a good solution to.
+
+The first solution to that is just to ignore it by saying, well, the issuer can just renew their issuing every week or so. And so, to revoke it is essentially it automatically revokes at the end of the week, let's say, and you just get a new one.
+
+Nicolas Mohnblatt [58:43] So just to be clear, this would mean every week the state of Massachusetts gets a new public key.
+
+Abhi Shelat [58:48] No, no, no. The state of Massachusetts doesn't need a new public key. It's just that every week, essentially the state of Massachusetts signs a new credential for you and sends it back to your phone. Unless, for example, if you report your phone stolen, then it'll basically not issue that device public key signature. It won't give a signature on that old one. So that would be the simplest way.
+
+However, many people have asked for revocation where as you said, if I lose my document, I should be able to revoke it within the hour. And for that kind of system, you have to take into a number of considerations, like how much work does the phone have to do? How much information does the phone have to download? How much work does the revoking institute have to do? How much work does the relying party have to do to verify?
+
+And so, balancing all four of those things, we kind of have a good solution. We've spoken about it at many of these conferences, like these identity conferences. We've gotten a bunch of feedback on it.
+
+Anna Rose [59:41] But this would be built into the architecture, it sounds like, of the larger system. It's not built into the cryptography per se. Is it?
+
+Abhi Shelat [59:50] Right. So, essentially, we update our circuit. The circuit we use to verify the claim, we add a claim that basically says, and this credential has not been revoked. And the way we implement that is, of course, in this -- we have a specific way to implement that, but we just modify the ZK proof.
+
+And then, of course, that requires all the other parties, those other three parties I mentioned, to do things and to publish things, and if they all agree. And I think one of the benefits is to make it so that even if one of them doesn't really agree, you can kind of gracefully degrade to a system that still works.
+
+Anna Rose [01:00:23] Cool. I have one last question that is a little bit off topic. You've actually mentioned this earlier in the episode, but I wanted to ask you about working around patents of certain cryptographic processes, or types of cryptography.
+
+The reason I bring this up is actually in a bit of research for this episode, Abhi, I saw your talk on -- I think it was just on ECDSA, and actually, you've mentioned this. So there's a patent that has blocked people from being able to create this system in a more simple way. And so, there's been these workarounds.
+
+I wanted to talk to you a little bit about what you've seen over in the years that you've been working in this space with patents. Do you see value in them? Do you see them mostly as a hindrance to like the larger field? Yeah, I'm really curious to get your thoughts.
+
+Abhi Shelat [01:01:09] Okay. Well, I think patents have their place. In cryptography, I think it's very hard to work with patents. We have this experience with ECDSA where I think the simpler scheme was patented and thus couldn't be used, and I think the world would have been easier place with the simpler Schnorr-based signatures. There was the example of the RSA patent which did expire, and then after that, it became much easier to use RSA as an algorithm.
+
+So I personally have -- I don't have much experience with the value of patents and whether the argument that it fosters innovation is true or not.
+
+Anna Rose [01:01:44] Yeah.
+
+Abhi Shelat [01:01:44] But in crypto, I think, it's better not to have patents, and to have open schemes and have the world pick simpler, more performant schemes.
+
+Anna Rose [01:01:55] Yeah. And maybe just to explain a little bit, what does a patent do? You sort of say this, like there was a patent, and therefore, the scheme couldn't use that technique. But I mean, I guess the reasoning here is because you need something where you won't have to be paying a license fee to a company every time you use it, if you want to be using it as a standard. Right?
+
+Abhi Shelat [01:02:15] That's right. Most standard bodies do not adopt schemes that are encumbered by patents, because they're afraid that if everybody adopts it, and then the patent holder decides to change their stance on the licensing, then everybody would be forced to, essentially, pay rent. There's like a rent-seeking behavior you're trying to avoid there.
+
+Anna Rose [01:02:36] Yeah. I think in ZK, we've been at least in the last 20 years or so, 15 years, we've been kind of lucky where there haven't been hardcore patent teams. And teams have built amazing software where they've invented techniques where I think they could have and they didn't, and it allowed it to be free.
+
+Abhi Shelat [01:02:53] Yeah. So just to be clear, when people have asked inside whether we want to patent these things, we've been very clear that we don't want to patent this, and we want to make it open source. We want to make it easily adoptable by anybody.
+
+Anna Rose [01:03:04] Well, thank you so much for coming on the show and sharing with us your work on the Google Wallet, the ZK system that underlies it, all of the kind of amazing breakthroughs and research that you've done to be able to make this function the way you need it to. It's been really cool. Thanks.
+
+Abhi Shelat [01:03:21] Thank you so much, Anna and Nico, for inviting us. Of course, we love talking about our work, and thank you for the excellent questions that you asked. Very deep and very insightful.
+
+Anna Rose [01:03:29] Nice.
+
+Matteo Frigo [01:03:30] Thank you. This was a lot of fun. We don't normally do these kind of things, but this was -- we had a blast.
+
+Anna Rose [01:03:35] Cool.
+
+Nicolas Mohnblatt [01:03:36] Thank you both. Yeah. This was, for me, such a pleasure to read through the paper. And like I've been saying, it's full of these incredible insights. So thanks so much for telling us more about it and allowing me to pester you with all these questions.
+
+Abhi Shelat [01:03:48] It's great questions. Great questions.
+
+Anna Rose [01:03:49] All right. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai. And to our listeners, thanks for listening.
+
