@@ -1,0 +1,1043 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I chat with Florent from Self, and Marek from Self and Celo. We revisit the topic of zkID and how Self aims to bring ID onchain. We discuss the origins of the project, what applications this type of system opens up, the way the system works, and some of the challenges of working with all of the different cryptographic choices made by passport issuers worldwide.
+
+
+Now, before we kick off, I just want to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your job there today. We have heard great things from teams who found their perfect hire through this platform, and we hope it can help you as well. Find out more over on jobsboard.zeroknowledge.fm. We've also added the link in the show notes.
+
+
+And now here's our episode with Marek and Florent from Self.
+
+
+Today, I'm here with Florent from Self and Marek from Self and Celo. Welcome to both of you.
+
+
+Florent Tavernier [01:29] Thanks.
+
+
+Marek Olszewski [01:30] Thanks for having us.
+
+
+Anna Rose [01:31] So I think in today's episode, we are going to be diving back into the concept of ZK and ID with the Self product. I'm excited to cover this.
+
+
+Marek, you've been on the show before. But Florent, this is your first time on the show. So let's hear a little bit about you and the work that led you to work on OpenPassport and then Self.
+
+
+Florent Tavernier [01:51] Yeah. Thanks for inviting me. So I used to work on DeFi protocols and on wallets, so I guess more of the other side of crypto.
+
+
+But I think what really made me get more and more interested in ZK, and especially applied ZK for privacy, are the very first 0xPARC projects, and also projects like ZK Email. And when I started seeing them, I started to realize that for the first time, ZK was arriving at a point at which we could use it for very practical use cases in identity, and especially to bridge all of the existing trust infrastructures that already exist online and all of the signed attestations onchain.
+
+
+And the reason why it was really appealing to me is that I always felt like a lot of the problems that were really in the blockchain space only, like, I don't know, making blockchains more optimized, reducing transaction cost, making transactions faster, they were already kind of in a good trajectory. People were already solving them.
+
+
+But the main issues were more in connecting blockchain with the rest of the world. So I guess, getting institutions, getting, I don't know, KYC, user experience, all those things that are more at the frontier, but that really made blockchain and crypto hard to use for people.
+
+
+And in identity, it's pretty hard to really bootstrap something purely on the blockchain. For instance, you can try doing webs of trust, but it's old systems that are pretty easy to attack for which we don't really have great solutions right now.
+
+
+And so, when I started realizing that we could take all those existing trust infrastructures and bring them onchain, I think that's when things really clicked, and I got much, much more excited by ZK than I was before.
+
+
+Anna Rose [03:45] Oh, cool. Were you part of the 0xPARC cohort, or were you sort of just reading what they were doing?
+
+
+Florent Tavernier [03:52] Yeah. I was not part of 0xPARC. I'm still a bit nostalgic from this period because I used to read everything about what they were doing. And there's so many companies, Axiom, Succinct, that came out of this very first kind of spark of experiments. ZK Email too.
+
+
+Anna Rose [04:11] Totally.
+
+
+Florent Tavernier [04:12] But I got later to meet all those people, mainly thanks to Aayush from ZK Email that introduced me. Yeah.
+
+
+Anna Rose [04:17]  Cool. It's funny, Florent, you and I actually met -- we were on a panel last year at the Modular Summit in Brussels. And this is kind of a legendary panel. We were talking about -- it's very similar to what we're going to be talking about today, and what you just described, this connection between sort of existing infrastructure and Web3 and all these new ZK applications.
+
+
+I say legendary because this -- Marek, you may not realize this. This was a panel where there was almost no one in the audience, but the panelists loved this conversation.
+
+
+And for the three people who were there, they have like -- I've actually spoken to someone who came up to me months later and was like, that was the best panel I've ever seen. It was -- I think maybe because we didn't have that much pressure, we felt kind of like quite chill, and it was a very exciting moment to be brainstorming about all of these sort of experimental applications.
+
+
+Marek Olszewski [05:12] Was it recorded? It's a funny story --
+
+
+Anna Rose [05:13] It is. Yes. Yes. I think we can find it. I don't know if you can tell that it's such an empty room, but it's just like for the panelists we were looking out at, actually nothing, or very, very few people. But, yeah, at the time, Florent, you were working on OpenPassport. What was OpenPassport?
+
+
+Florent Tavernier [05:30] So OpenPassport started a bit more than two years ago now with kind of a simple realization that there's a lot of existing identity documents, and we started with passports that have attestations -- signed attestations on them.
+
+
+So, for instance, in most passports today, there's a chip. You can read the content of this chip with your phone with NFC, just like you would do a payment with Apple Pay, for instance, and you can get all the information that's on this chip.
+
+
+And it contains both all of the data that's on the main page of your passport. So, name, date of birth, when the passport was issued, and also your photo, which a lot of people don't know about, but it's pretty cool, because then you can use this for biometric applications.
+
+
+And also, it contains a signature. You might already know about this. And the signature is made by the issuing government. There's a whole infrastructure with a chain of certificates. Basically, there's a top certificate that signs intermediate certificates, and those intermediate certificates sign passports
+
+
+ But the TLDR is that you can get all the public keys of those countries online on registries, and so, you can directly verify that the signatures are valid.
+
+
+Now, the thing is that if you kind of have just a naive approach, you could have people scan the NFC chip in their passport, send you all of their data, and verify it.
+
+
+Anna Rose [06:52] And like, put it onchain.
+
+
+Florent Tavernier [06:53] You could put it onchain. Yeah. But then that means that you reveal everything about your passport, because the way that signatures are is that they sign over the whole data.
+
+
+And so, what really sparked the idea of OpenPassport was to say, okay, maybe you don't actually want to do that. Maybe you want to do ZK proofs to reveal specific things about yourself.
+
+
+For instance, you can reveal that you're a US person or not a US person. You can reveal that you're above 21. You can just reveal that you have a passport, but redact everything and not share anything about yourself.
+
+
+And kind of opened this whole new modular range of use cases that require identity proofs, but neither require you to give all of your data, which is very personal and private, or to rely on less reliable sources of identity verification.
+
+
+Like a lot of websites today, just use CAPTCHAs or check phone numbers. And this is just not a great way in practice to do Sybil resistance, especially in crypto, where so many airdrops and incentive mechanisms are just gamed all the time.
+
+
+Anna Rose [07:59] Totally. Well, I want to just pause the story right here and also do a bit of background with Marek. And then after, let's kind of figure out where OpenPassport and Self join together.
+
+
+So, Marek, you've been on the show before. I actually checked it out before this episode. It was all the way back in 2019.
+
+
+Marek Olszewski [08:18] Wow.
+
+
+Anna Rose [08:18] And it was Episode 93. And this is actually surprising to me because I've seen you a fair bit over the years, and we've even done like live events. I feel like I've interviewed you but not for the show.
+
+
+So yeah. It's actually been a long time. And the crazy thing about that episode is, in that Episode 93, I think you are introducing me to Kobi Gurkan for the first time, because you brought him on the show.
+
+
+And I think a lot of listeners of this show will know Kobi is sometimes co-host of the show. He's now a long-standing collaborator of mine. He was part of ZKV. He's a great friend. So yeah. It was funny to see that old episode. But yeah, it's great to have you back on.
+
+
+Marek Olszewski [09:01] Thank you. Wow. What a throwback. Yeah. It's good to be back. Yeah. Really excited to be here.
+
+
+Anna Rose [09:07] Cool. Back then, we were talking about light clients and using ZK for light clients. I don't even know if we used the term Plumo, but that was the project that became Plumo. I actually worked on it a little bit on the trusted setup.
+
+
+But before we dive into Self, maybe you can share a little bit of an update from your perspective on Celo, what's evolved and like why would you even kind of be interested in this space? Because last time we spoke, we were really talking about light clients and ZK for compression.
+
+
+Marek Olszewski [09:36] Yeah. Great question. Wow. 2019. Well, a lot has changed since then. But you and maybe some --
+
+
+Anna Rose [09:42] 6 years.
+
+
+Marek Olszewski [09:43] Yeah. Wow. Crazy. But you and maybe some of your listeners will remember that back then, we were working really hard to kind of create a future where anyone in the world could have a self-custodial wallet and use it, not necessarily to ape into memecoins, but use it for real-world use cases, use it for payments, use it kind of the way that maybe you and I use Venmo or Revolut.
+
+
+And I think since then, we've worked tremendously hard on realizing that vision. That was before mainnet for Celo. So that was really early.
+
+
+So I think the community stood up the Celo network on Earth Day, April 20, 2020. So, a little bit after that episode. Obviously, all the top exchanges listed the Celo assets. Many great projects deployed on Celo.
+
+
+But our vision and mission was always one of really enabling these kinds of real-world use cases. Perhaps we were a little early. There's a lot of talk now about stablecoins and payments.
+
+
+Anna Rose [10:52] Totally.
+
+
+Marek Olszewski [10:53] And this was 6 years ago that we were already kind of pushing on this. But I'm really proud of all the progress we've made.
+
+
+Since then, we've launched on Celo, there's Mento. It's a stablecoin protocol that has, you know, on the order of 20 different stablecoins for different local currencies around the world. They're frequently a top dApp -- cited as a top dApp in our space.
+
+
+Valora, which was a wallet that we built initially as part of Celo, but later spun out -- launched and spun out, did a series A and series B with some really great investors. And it's a really great example of kind of one of these really easy to use Venmo-style wallets.
+
+
+And since then, Opera got really excited about our vision and our mission. Opera, the browser company --
+
+
+Anna Rose [11:47] Like the Opera Browser?
+
+
+Marek Olszewski [11:47] Yeah. Yeah. So they're even older than us, which is rare in crypto. So I think they're on the order of 30 years old as a company. They're a public company traded on the Nasdaq.
+
+
+You may remember they had a very popular desktop browser back in the day. And I think when Chrome came out, I think they focused a lot on mobile, and they have really good market share on mobile browsers in emerging markets specifically.
+
+
+Anna Rose [12:17] Nice.
+
+
+Marek Olszewski [12:18] With lots and lots of users. And they launched MiniPay which really is just an incredible kind of incarnation of kind of our vision of what we wanted to see on Celo. It's a stablecoin-only wallet. You can pay for gas with stablecoins on Celo. So there's no need for any volatile assets.
+
+
+So it's really easy for people to understand, it uses this thing called Self Connect which lets you verify your phone number and use your phone number as your address effectively without you having to be intimidated by these public key derived addresses that we all know in crypto, but for most normies, can be kind of scary.
+
+
+So they don't actually show addresses to users, they just show phone numbers. Because they piggyback on phone numbers, you can send transactions to people in your contact list really easily.
+
+
+And they've grown. They've onboarded 7 million people into this wallet, and people are now using it the way that you and I, again, use Venmo or Revolut, primarily in emerging markets, primarily for either remittances, or for saving with a dollar wallet.
+
+
+And now increasingly with some of these dApps that are showing up in the MiniPay wallet, which again have to operate entirely with stablecoins. So these dApps auto connect to the wallet and they operate in stablecoins.
+
+
+And so, they're very accessible to your everyday user.
+
+
+Anna Rose [13:55] Is MiniPay a separate project though, or is that part of -- is that coming out of Celo?
+
+
+Marek Olszewski [14:00] Yeah. That is coming out of Opera. That is built on top of Celo.
+
+
+Anna Rose [14:03] Oh, it's coming out of Opera. Okay. Out of that project. But now I'm curious -- so I think you're sort of painting a picture where wallets, payments, ID, they're starting to see kind of a connection here.
+
+
+But now I'm curious where Self comes from. Is it coming out of Celo? Is it coming out of MiniPay? And then joining with OpenPassport? I want to hear about how those projects connect.
+
+
+Marek Olszewski [14:29] Totally. 7 million users is great for Opera. Certainly by Web3 terms, that's a really large number. But to really fulfill our vision and our mission, we need to get to everyone in the world having one of these really easy-to-use self-custodial wallets.
+
+
+And that's a lot of users, that's a lot of network effect bootstrapping that we need to still do. And that got us thinking, how can we incentivize that kind of network effect bootstrapping?
+
+
+And we were very inspired by a lot of things that have happened historically in crypto with proof-of-work. Initially, people who had excess computation were incentivized to come and mine Bitcoin, later Ethereum, and they got rewarded, and they effectively were pulled into these amazing ecosystems.
+
+
+Later on, proof-of-stake meant that anybody with some capital could do the same. DeFi Summer then kind of expanded tent a little bit more and people with capital --
+
+
+Anna Rose [15:26] Taught us about yield.
+
+
+Marek Olszewski [15:28] Yeah. They could get incentivized to create network effects for these DeFi applications that needed capital in their smart contracts for utility.
+
+
+And so, with every one of these cycles, there's been incentives that have onboarded more and more users into the Web3 ecosystem. And they all offer some sort of Sybil protection.
+
+
+And what's been missing is a way to incentivize and reward people who might have time, who might have a smartphone, who might have willingness to contribute or to use your projects, but may not have the capital to bring -- or they maybe have capital, but it's not something that they're willing to risk on, something that's totally new to them. 
+
+
+And I think that's where we got really excited about the prospect of using something like ZKPassport technology to create a decentralized identity system that offered that Sybil resistance that could then be used for incentives that could bootstrap network effects.
+
+
+And so, that's ultimately, how Florent and I started talking was in service of this kind of exciting kind of goal. And, yeah. I'm extremely, extremely bullish on this technology for not just helping bootstrap network effects for MiniPay, but really for any project out there that's looking to grow their user base, and looking to attract the next billions of people into Web3.
+
+
+Anna Rose [17:05] Were you in Celo already building something like this? Were you working in that direction? Were you looking at passports and ZK and the privacy aspect of that?
+
+
+Marek Olszewski [17:16] So we were looking at phone numbers. So as I mentioned, MiniPay uses Self Connect, which is a protocol that lets you map phone numbers to wallet addresses in a way that's hard to reverse engineer.
+
+
+And that has been working pretty well for MiniPay. One, it lets you send value to people in your contact list, which I think from a usability perspective is really nice.
+
+
+And this works across wallets too. It's not just in MiniPay. This is a standard that can work across wallets. And we were thinking of spinning out that company because initially, this was part of the work that we did for Celo.
+
+
+Anna Rose [17:54] Did it have a name back then?
+
+
+Marek Olszewski [17:56] So previously, it was called SocialConnect.
+
+
+Anna Rose [17:58] SocialConnect. Okay. Got it.
+
+
+Marek Olszewski [18:00] And then as part of the spin out, we transitioned the name to Self, and then Self Connect.
+
+
+Anna Rose [18:06] And in that spin out, were you joining forces with OpenPassport right then, or were you --?
+
+
+Marek Olszewski [18:12] It was pretty immediate. Yeah. I think it was very clear early on that there was this excitement for solving these really, I think, difficult but impactful identity problems. And yeah, right from the get go.
+
+
+Initially, I think we were talking about partnering just as two different companies. But over time, it became clear that there was a lot of excitement for joining forces as a single company. And so, that happened earlier this year, and it's just been off to the races ever since.
+
+
+Anna Rose [18:45] Now, I'm curious what Self is today in that regard. So OpenPassport, as I understood, it was kind of -- I mean, and stop me if I'm wrong, Florent, but it was -- at least when we spoke, I think it was kind of in an experimental phase. There was a sort of a portal or somewhere where you could tap a passport, you could get some of this info.
+
+
+There are actually a few other projects sort of in the similar vein. Things like what Ocelot was, ZKPassport, Rarimo. I don't know if they actually work that way exactly. 
+
+
+So basically in 2023, 2024, I saw a few of these projects pop up. I sort of put OpenPassport in a similar category. Correct me if I'm wrong, Florent. Was it sort of experimental before joining forces with Self?
+
+
+Florent Tavernier [19:29] Yeah. I think it was more experimental. We had deployed things in production. For instance, we had a mobile app. We had done -- in July of last year, we had done a new democratic primary project that was a way for people to vote for their favorite candidates in the Democratic primary using their passport.
+
+
+So we had done experiments with activists, we had explored the space a bit. But I think it's really when we met the team at SocialConnect, now Self, and that we started chatting with Marek and all the rest of the team that we realized that this could be distributed and productized way better than what we were doing. Because we are kind of like a lot of just technicals, right?
+
+
+Anna Rose [20:10] Yeah.
+
+
+Florent Tavernier [20:11] And I think this is where it really took from --
+
+
+Anna Rose [20:13] Because it sounds like you already have in place a few things. You have a distribution channel, you have users that are using a product not exactly the way you want them to, but that they would potentially be able to also use these features kind of in place.
+
+
+So now, what is Self today? At what stage is it? Is it incorporated into things, or are we still in building phase? Yeah.
+
+
+Marek Olszewski [20:39] No. It's live. It's in production. And as far as we can tell, it is kind of the first fully in production ZKPassport protocol that's available for builders and users to use and play with. And so, we're really proud of that.
+
+
+We hustled really, really hard as kind of this new team that just formed with these two companies. We hustled really, really hard to launch at ETHDenver. And I'm really proud to say that we hit the milestone, and we did so in a fully audited production-ready way. And so, Self is audited today by David Wong from ZKPassport -- sorry. From zkSecurity. I think he's the --
+
+
+Anna Rose [21:33] He was actually on the show just recently as well.
+
+
+Marek Olszewski [21:35] Yeah. It's amazing. He's incredible. Him and his team did a wonderful job. And we're just really proud to have been able to hit that milestone and to be the first to really bring a production version of this really exciting technology to the rest of the world.
+
+
+And so, if you, as a listener, are interested in hearing or learning more, you can go to self.xyz, you can install the app today, you can play around with it. Already there's a bunch of different protocols that have integrated Self today. Talent Protocols, I think, was the first one to do so.
+
+
+And we have just a lot of big, big, I would say, partners that are in the pipeline right now that are actively building against it.
+
+
+Anna Rose [22:26] Would this also be incorporated into MiniPay eventually? Or is -- and how would that even happen? Because you're saying that they're using phone numbers. So do they even need something like Self?
+
+
+Marek Olszewski [22:38] I would say yes. As Florent mentioned, phone numbers can be gamed. I think it's possible to buy multiple phone numbers. In some countries, they're cheaper than others, and so you can actually do tens of these, if not more. So if you want something that's more akin to Sybil resistance, the true Sybil resistance, then certainly this technology is better.
+
+
+Phone numbers I think are still valuable. One, they're really good identifiers, so it's still useful for helping people find each other. I like to say that the biggest social network in the world is the amalgamation of everyone's contact lists in their pockets, in their phones, likely bigger than Facebook's social graph.
+
+
+So there's a lot of value in phone numbers, and certainly, they can be a lightweight Sybil-resistance mechanism. But if you want something that's a little more robust, then piggybacking on what I like to think is the most trusted real-world attestation of who you are, and that's the passport. Then, I think, to do so with this tech, I think is just a really nice path forward.
+
+
+And one thing that I should add, Florent mentioned how amazing it is to be able to selectively disclose using ZK only the things that you want to disclose when using the Self Protocol.
+
+
+But the other thing that's really amazing is that you're doing so without a counterparty. When you typically go through KYC, usually you're giving your ID to a third party to look at --
+
+
+Anna Rose [24:12] And they're checking. Yeah.
+
+
+Marek Olszewski [24:13] Exactly. So here the counterparty effectively is the blockchain. And that I think is just really powerful to be able to do it without third party looking over this information. It's just so incredible. It's both privacy preserving and without a counterparty. It's just really, really exciting.
+
+
+Anna Rose [24:34] Nice. I think it would be great to dive a little bit into the ZK system and how it's built. I think conceptually on this high level, I think it's understandable that there's a passport, a physical object that has a chip, that has a signature, it has information. And then there's this sort of ledger, and you're going to create a connection, and the connection will be private because of ZK. But that's very high level.
+
+
+So how exactly is this happening?
+
+
+Florent Tavernier [24:59] Yeah. So I guess there's a few different components. One first thing to understand is that we can directly prove that the passport was signed correctly by the country's public key. But then we don't want to just do that. We want to guarantee a layer of anonymity when someone does a proof, because we have to have nullifiers to make sure that people can't register multiple times in our system with a single passport.
+
+
+So the way it works is kind of similar to semaphore or Tornado Cash, which is that first, you're going to do a proof that your passport is valid, and it's going to register an identity in the Merkle tree, which is like a registry. And this is onchain on the Celo blockchain.
+
+
+And then you're going to be able to use this identity, this commitment that is registered to do proofs that selectively disclose any information that you want.
+
+
+So in this commitment, which kind of represents your identity, there's both a private key that's hashed to give it so that you are the only person that's able to use it, and also the data of your passport so that you can selectively disclose specific things.
+
+
+And the reason there's this barrier is that we need to prevent people from registering multiple times, or for instance, claiming an airdrop multiple times with the same passport.
+
+
+And to do that, we need to have a nullifier. But because the nullifier has to be deterministically derived from the passport data, if someone else were to read your passport, or if the issuing government were to keep all of your passport data, even the signature that they made over it in a database, they would be able to track this nullifier and know who you are.
+
+
+And so, with this level of indirection that works exactly like semaphore, for instance, you can register once and then every time you do a disclosure proof that will disclose things about you, you will not show which commitment was originally registered with your passport.
+
+
+Anna Rose [26:54] You're separating those two steps. The commitment that there's a passport being registered and what's actually in the passport.
+
+
+Florent Tavernier [27:01] Exactly. Yeah. It's kind of the original system that was created by Tornado Cash. For instance, when you deposit money, it's not linked to when you withdraw it. We're doing basically the same, but for identity.
+
+
+Anna Rose [27:13] So you mentioned a Merkle tree, but where's the ZKP? Is it in each leaf of the Merkle tree, or is it at the top? Is the whole thing a ZK system and within it are these leaves?
+
+
+Florent Tavernier [27:26] Yeah.
+
+
+Anna Rose [27:27] Ooooh. Okay.
+
+
+Florent Tavernier [27:28] Both sides are on ZK, basically. The registration is in ZK because you want to reveal your data.
+
+
+Anna Rose [27:34] Yeah.
+
+
+Florent Tavernier [27:34] And the disclosure, which is the second part, is also in ZK. So I guess it's a bit different from, for instance, semaphore. There's not really a registration in which you prove that you have some kind of valid attributes. It's just a semaphore group that's decided by the creator, and then disclosures are in ZK.
+
+
+In our case, everything is in ZK. And I would say there's even another part that's nice in it, is that when you register, you don't even have to show which country signed your passport, because you would have to -- naively, you would have to reveal which public key signed your passport.
+
+
+But the way we do it is that we also have a Merkle tree of public keys -- of all of the public keys of all of the countries. And when you register, you just do a proof that your passport was correctly signed by one of them.
+
+
+Anna Rose [28:22] One of them.
+
+
+Florent Tavernier [28:23] Yeah.
+
+
+Anna Rose [28:23] Okay.
+
+
+Florent Tavernier And then it goes back. What's really checked is the root of the Merkle tree of all the public keys. And so, you're basically both able to register and then disclose without a link in between. But also, when you register, you don't even show from which country you come from.
+
+
+Anna Rose [28:40] But in that info, the selective disclosure info, you would have your country in that kind of pool, but separate from this registration, ZK.
+
+
+Florent Tavernier [28:49] Yeah. If you're choosing.
+
+
+Anna Rose [28:50] Okay. But the info would have to be somewhere.
+
+
+Florent Tavernier [28:53] Yeah. It's in the passport. For instance, it's three letters in the main data group of the passport.
+
+
+Anna Rose [29:00] Okay. Interesting.
+
+
+Marek Olszewski [29:01] The passport data stays on your phone.
+
+
+Anna Rose [29:03] Oh, cool.
+
+
+Marek Olszewski [29:04] And you can create these disclosure proofs based on any of that data on the phone at any point in time after you register. But you don't have to reveal where you're from, your name, really any of your sensitive information. You only have to reveal what a third-party dApp might be requesting.
+
+
+So say there's a dApp that wants to do an airdrop, all they maybe care about is that you are not a Sybil. And so, they may just ask for a proof that says you have a valid passport without revealing which country issued it. And that can be --
+
+
+Anna Rose [29:35] Or any info about it.
+
+
+Marek Olszewski [29:36] Yeah. And so that could be one really amazing kind of very simple proof that you can do. But because we have or each user has their own passport information, they can do additional proofs that are pretty powerful.
+
+
+So, you know, Florent mentioned, you can prove that you're over a certain age, under a certain age. I think this is a very common example of this type of technology. You can also prove that you're not from a set of countries without revealing what country you're from.
+
+
+And then, one thing that I think is pretty unique as well, certainly hard to do by other identity systems like say World, is we can also prove that you're not on the OFAC list, because the OFAC list is composed of people's names and birthdays, and sometimes passport numbers.
+
+
+And you can effectively prove that you're using a Merkle exclusion proof that you're not in that list. And that proof can be either verified offchain or even onchain. And so, applications can compose with that proof onchain to, for example, prevent bad actors from using the onchain protocols.
+
+
+So there's a lot of really powerful things that you can do, and there's even fun things too. If you want to, you could reveal, for example, your first name. Say that someone wanted to do a memecoin for only Anna's, then you could prove that your first name is Anna without revealing anything else. And you could claim that airdrop, which might be very, very valuable in the future. Who knows?
+
+
+Anyone can create any memecoin for any name, and you could even do something that targets birthdays as well. You could reward people on their birthday.
+
+
+There's just a lot of things that you couldn't really do before. Some of them are fun, some of them are certainly more serious and more compliance focused and more DeFi focused. But there's a whole spectrum of really exciting things that you can build on top of this.
+
+
+Anna Rose [31:38] It's funny. As you're talking about the OFAC list, it just sort of dawned on me that I feel like we need a new list which is -- because OFAC it's such a kind of old fashioned, it's one country's list.
+
+
+But there are known bad actors like bad addresses, for example, scammer addresses, or kind of pools of addresses that we know are suspicious have done hacks, have been outed by the investigators of the Web3 space.
+
+
+And I feel like there's no official list for that. And I wonder why not? I feel like someone should start maintaining that.
+
+
+Marek Olszewski [32:15] It's a good point. Yeah.
+
+
+Anna Rose [32:17] It could be international. I don't know how you fund it, but could be useful. Going back to the ZKP, the two ZKPs. So one is to create the -- to register the passport. The other, I'm guessing, is coming directly from your device. You have the information locally and then you'd be creating these ZKPs.
+
+
+But tell me, the first ZKP, the one that's registering, are you generating that once you have the passport, just the fact that there's a passport, and then writing it onchain? And what kind of ZK are you using?
+
+
+Florent Tavernier [32:50] Yeah. So that's exactly what happens. When you register, you register it onchain. The registry is all onchain on Celo.
+
+
+Anna Rose [32:57] And are you making the proof, or is the app making the proof? Where's the proof coming from?
+
+
+Florent Tavernier [33:02] Yeah. So we used to be working only with client-side ZK, so we used to do only proofs on phones. And after some time, some experience, we realized it would be really hard to rescale that for mainly two reasons.
+
+
+One of them is that we want to be very accessible to a lot of people, and there's a lot of low-end devices, especially in developing countries that are just not able to handle this right now. And the other reason is that different countries use different signature algorithms.
+
+
+So for instance, the one mainly used in the US or in France, for instance, it's SHA256 with RSA. It's pretty quick to do proofs with Groth16 and Circom, and with current tech stacks. But for some countries, it's going to be like SHA512 with ECDSA Brainpool with a large curve.
+
+
+And then, it's just going to be completely impractical to do that on the phone currently. And so, right now we use trusted execution environments to do proofs.
+
+
+Anna Rose [34:01] Okay.
+
+
+Florent Tavernier [34:02] So they don't store any of the passport data. They just get it, send end-to-end encrypted, and then they generate a proof, and then they just delete the passport data.
+
+
+Anna Rose [34:11] Where does the TEE live? Is it on the user's device still?
+
+
+Florent Tavernier [34:15] No. No. No. It's on the cloud.
+
+
+Anna Rose [34:16] Okay. It's a TEE in the cloud. Got it.
+
+
+Florent Tavernier [34:18] Yeah. So I guess there's this trust assumption currently. And again, it doesn't store any of the data persistently, it's just used to do a proof. And most of the time it takes a few seconds for the largest signature algorithms can take up to a few minutes.
+
+
+But, of course, we started working on client-side ZK at the beginning, it's still where we want to go. We just want to have this very pragmatic approach of giving this power to as many people as possible. And I guess in the very long run, we want to get back to just proving on device when it's possible.
+
+
+Anna Rose [34:55] Could you use a TEE on a device to do it too?
+
+
+Florent Tavernier [34:58] Not really. Well, if you prove on the device you don't really need a TEE because --
+
+
+Anna Rose [35:04] The proof is coming off the device anyway.
+
+
+Florent Tavernier [35:06] Yeah. Yeah. Exactly.
+
+
+Marek Olszewski [35:07] But we do use a TEE, for example, to encrypt your passport information.
+
+
+Anna Rose [35:11] Ah, like an on-device TEE, you're saying?
+
+
+Marek Olszewski [35:14] Right. They're used to store keys that you can use to encrypt data on your phone. And so, that's part of Apple Keychain, which we use extensively for securing your passport information.
+
+
+So certainly you can use them for that purpose. But for generating the ZKPs you wouldn't probably -- one, you wouldn't be able to because these things are not generally programmable yet on mobile phones the way they are on servers in the cloud.
+
+
+Anna Rose [35:41] Ah, I didn't know that.
+
+
+Marek Olszewski [35:43] But two, you also don't really need to because the user already trusts their own phone.
+
+
+Anna Rose [35:47] Got it. Okay. So you're using -- and is the TEE mostly for the registration ZKP or is it also for proving things about the content? Are you with both of those actions, are you sending it through a TEE?
+
+
+Florent Tavernier [36:00] So right now it's both. But the nice thing is that we can pretty easily now we get the disclosure proofs back to be just client side. So this is also on our roadmap, and that might be important for some people.
+
+
+
+
+Anna Rose [36:14] Yeah. Because I guess it's proving something  -- it's a tiny amount of text or a tiny amount of information.
+
+
+Florent Tavernier [36:21] Yeah.
+
+
+Marek Olszewski [36:21] And also the Merkle tree that we maintain is Poseidon based for the hash function. So generating the disclosure proofs are generally a lot quicker than doing the registration step.
+
+
+Anna Rose [36:34] Got it.
+
+
+Marek Olszewski [36:34] I think Florent touched upon this. Different countries use different hash functions, different signature algorithms for signing their passport data. Probably one of the hardest things about this whole project was the fact that there's so much diversity here and that some countries use just very expensive both hash functions and signature algorithms.
+
+
+And so, a lot of the effort to actually productionize this and to make this work for everyone in the world was to implement circuits for all of those different combinations. And worse yet, some countries, even their passports, may claim that they're using one signature method and turns out they're using a different one.
+
+
+So we've had to do just a lot of just blocking and tackling type work just to bring the quality and the reliability to a level where it's ready for the masses. And that was a huge amount of work.
+
+
+Anna Rose [37:33] Do you find that the cryptography choices, do they tend to be regional or continental? Are there large areas that tend to use one, or are they really country by country?
+
+
+Florent Tavernier [37:45] From what I've seen, it's mostly country by country. For instance, France has just one, and it's very simple. Germany experimented with a lot of different signature algorithms.
+
+
+Anna Rose [37:56] Oh, no. Really? Like within the EU even?
+
+
+Florent Tavernier [37:57] Yeah. We actually have a map. If you go to map.self.xyz and you can see all the signature algorithms that each country uses. We mainly created the map at the beginning just to have a good visualization for ourselves, but now it's used by different actors in the ecosystem as a kind of reference point.
+
+
+And you can see Germany, for instance, they just signed a few passports with some ECDSA, then another curve, then another curve. And so, of course, it's a bit more challenging to support everything. But now that we got there, we were pretty confident.
+
+
+Anna Rose [38:30] Wow. Sorry. I just pulled it up. It actually is so -- and we'll definitely add this in the show notes, but it's pretty wild to see this, the distinctions. And you're right, Germany has all these certificates with slightly different variations.
+
+
+This sounds complicated, but I guess this is where the work that you do come in. Have you decided to roll this out by certain regions first? Are you trying to cover the whole world, or have you kind of decided, okay, well, maybe we're going to have to reach different areas later?
+
+
+Florent Tavernier [39:00] So we started -- originally, we just supported one signature algorithm that was the most common one. So I think it covered maybe 40% of countries. For instance, it had the US, a few other countries. So it was good enough to start with. But we ended up realizing that we had to support everything.
+
+
+So that was also kind of a common effort because we also used certificates from other projects, got some help from other projects like Rarimo that were working on similar problems, but we ended up reaching close to 100% support.
+
+
+So basically now we support all countries. There might still be some countries that have certificates that they do not publish. And so, we did not see some combinations of signature algorithms, and we're going to figure out when people scan their passports. But overall, I think we are pretty close to 100% now.
+
+
+Anna Rose [39:49] Wow.
+
+
+Marek Olszewski [39:50] So now our focus actually is rather than adding more signature algorithms for passports, we're focusing on other types of IDs that use similar cryptography.
+
+
+Anna Rose [40:00] Interesting. I was about to ask. Yeah. I was going to ask, because we did an episode with Google Wallet, the folks from Google Wallet recently, and they've recently added ZK, but only for driver's licenses in the US. 
+
+
+So I was wondering if you were also tapping into driver's licenses, and maybe you can list some other kinds of IDs that are out there.
+
+
+Florent Tavernier [40:22] Yeah. So we kind of did the back of the envelope calculation for just the amount of coverage we could get with different ID systems. And we really want to have the most extensive solution possible.
+
+
+We started with passports. Now we are working, soon rolling out support for European ID cards which have a very similar specification as passports. So it's not that much work for us. And it's a new European specification that they created in 2019, and I think they mandated in 2019 that all the new ID cards were going to be in this format.
+
+
+So there's a lot of people now that have it in Europe. Not everyone. But same thing as passports, they have a chip. And the other one in which we are really interested is Aadhaar in India. Of course, there's like more than a billion people that have it.
+
+
+Anna Rose [41:16] What is that again? It's Aadhaar? Is that how you --
+
+
+Florent Tavernier [41:19] Aadhaar. Yeah.
+
+
+Anna Rose [41:19] Okay. Is this the one that ZKP2P is tapped into?
+
+
+Florent Tavernier [41:23] I think they tapped into the Indian payment system.
+
+
+Anna Rose [41:26] Okay. Maybe it was different.
+
+
+Florent Tavernier [41:27] I'm not sure they did other verification in ZK.
+
+
+Anna Rose [41:30] I see. Yeah. Yeah. I don't think they were focused on ID, but I thought maybe it had a similar -- maybe I thought it was a similar umbrella kind of --
+
+
+Florent Tavernier [41:37] Yeah. I mean, it has some similarities because India is just very good at deploying good infrastructure at scale. So their payment system is great, and Aadhaar is also great.
+
+
+There's a mobile app that allows people to get signatures live, even timestamped. There's PDF. There's a card. It's just very, very easy to work with compared with passports. So this is also what we're rolling out support for.
+
+
+And because we also have a lot of partners asking for Africa, and in Africa it's a bit more tricky because there isn't really an ID solution that has signatures and documents with signatures attestations deployed at scale.
+
+
+We are currently looking at another approach which is just using government databases that you can query that map people's identity to phone numbers, and then issuing an attestation ourselves, just issuing a credential, and then letting people do proofs about it in ZK.
+
+
+So, I guess, we don't have the same fully 100% chain of truth from government directly to proof because we --
+
+
+Anna Rose [42:48] You're kind of acting a bit as the third party who's double checking here.
+
+
+Florent Tavernier [42:51] Exactly. As if we were issuing the passports ourselves in some sense. But the nice thing is that, one, we can do it in the TEE. So it kind of reduces the trust assumption in the sense that the code can be open and people can see that we don't just issue credentials to people that don't really have those credentials.
+
+
+And two, because people still do selective disclosure proofs, it's still unlinked from the original query that was done to the database of the government. And so, even if you're a state actor in Africa, you wouldn't be able to get back to tracking every person, for instance, that claim an airdrop. You wouldn't be able to do this link. And this is also where we see some value.
+
+
+Anna Rose [43:34] I see. Are there other types of ID that you explored here? For example, healthcare in certain countries, a healthcare card, if it's universal healthcare. I think I haven't lived in Canada for a long time, but I feel like our healthcare card was sort of also an ID that we could use.
+
+
+So I'm wondering if you ever explored that. And in something like China, like WeChat, or these big apps that get used for all sorts of things. I don't know if they have an ID component, but have you explored any of those things?
+
+
+Marek Olszewski [44:04] We've seen a bunch of ID cards that have smart chips in them but don't support NFC reading. So those are -- the chip that looks like your credit card chip. Those are interesting, but the challenge then is how does the user actually read what's on that chip?
+
+
+Anna Rose [44:19] You might need a real reader, not like --
+
+
+Marek Olszewski [44:21] Exactly.
+
+
+Anna Rose [44:21] It's not your phone.
+
+
+Marek Olszewski [44:23] So we're not prioritizing those types of cards right now. There are, I think, 13 states in the US that I think are the ones that Google was targeting with their product that offer these driver's licenses electronically and can be put into an electronic wallet, and the signatures can be verified then electronically. And so, that's an interesting avenue as well.
+
+
+And then one really nice thing that we're noticing is the same standard that these EU IDs are using are now increasingly being used for national ID cards by other countries outside of the EU.
+
+
+Anna Rose [44:58] Okay.
+
+
+Marek Olszewski [44:58] So for example, Turkey and the Ukraine use those same cards and we're seeing just more and more countries adopting them. And so, I think there's definitely ways to get to very, very broad coverage.
+
+
+I mean, just with biometric passports, UUIDs and Aadhaar, we're talking about 3 billion people out of 8 billion people that would be covered. And so, that's a really big percentage of the population.
+
+
+Anna Rose [45:27] Does China have any sort of equivalent ID system to Aadhaar?
+
+
+Marek Olszewski [45:31] I think we've heard that they do. We haven't yet investigated in detail. We have looked at Japan's ID system, which is also very advanced, and would support the techniques that we're using, and so, we're excited about that as well.
+
+
+Anna Rose [45:46] Have you looked at Korea? Sorry. This is just me being curious about places that I feel could have good ID systems but I know nothing about.
+
+
+Florent Tavernier [45:55] Yeah. I haven't looked much at Korea. We looked at Japan. One of our team members is the first person that implemented the ZK verification of Japanese IDs, for instance. So yeah.
+
+
+Anna Rose [46:06] Okay. That's cool. What about using non identity -- non ID cards? I mean other projects, back in the day, Sismo and actually a few months ago we had Rarimo on the show, and they were definitely exploring more a combination of things between IDs, like physical IDs, as well as like online behavior or participation or ownership, like being on some sort of app. I'm just curious if that is also part of the roadmap for Self, or if the focus is going to be purely on IDs issued by governments.
+
+
+Marek Olszewski [46:39] Yeah. I think it depends a little bit on what our users and third-party builders who are integrating with Self will be requesting. Right now, that hasn't really come up. The thing that has come up a lot is a lot of excitement for this from wallets.
+
+
+So I think you had earlier asked about MiniPay by Opera and whether they're integrating. So one thing that we're working on right now is a version of Self that doesn't need a standalone app.
+
+
+So right now to use Self, you need to install the Self mobile app either on your iOS device or on your Android device. But there's a lot of people who already have wallets integrated installed on their phones, and ultimately, they want to use something like Self with the dApps that they're accessing through those wallets already.
+
+
+And so it'd be much nicer if users wouldn't have to install a second app to be able to create these proofs. And from our perspective, we don't necessarily -- we see ourselves more as a protocol kind of project and not necessarily as kind of a full stack project that owns a user all the way from the app to the protocol itself. And so --
+
+
+Anna Rose [47:56] You're not trying to get just as many people to have the app, you just want people to use this sort of system.
+
+
+Marek Olszewski [48:02] Exactly. We think that the network effects around having a lot of users who are onboarded, who are registered, who can do these selective disclosures at the touch of a button, and lots of dApps that are integrated with the protocol, interfacing with these people, that's where the value is.
+
+
+We want to work with third-party companies that have really great mobile experiences for their users to extend their offering, to offer Sybil resistance and all of the amazing identity-related offerings that we present.
+
+
+And so to do that, we're actively right now working on a version of Self that can be integrated into any mobile app. So it's not just a standalone app. And so that's something that we're discussing with Opera, but also actually with other really big wallets as well. And so, we're super excited about that.
+
+
+Anna Rose [48:54] When I did the episode with Rarimo, one of the points that kind of came through was the question of whether to work within the system or outside of the system. And in their case, they really are working outside of the system because of, I think, the founder's experience, having like built -- tried to build in government credential technologies. It's very challenging to actually get it delivered in time for it to be relevant.
+
+
+And so, their approach seems to be going very much outside. Where would you place Self on that kind of scale? Because it almost sounds like you're just -- you're working with industry, you're just working with applications, you're not necessarily working within the government, but you're also not completely outside it.
+
+
+Florent Tavernier [49:38] I can say what I think the approach is, Marek, you can correct me if I'm wrong, but in my opinion we really want to work outside, and it's similar to Rarimo because we're open with working with institutions and governments.
+
+
+But I think just the iteration cycles are in a whole different category compared to what we can do by just bootstrapping on existing systems and kind of repurposing them, just like we are doing currently with passports, Aadhaar, ID cards.
+
+
+And I think this is really where the power comes from. If we had to work, for instance, with the EU on their new identity wallet system that they are discussing right now, I'm sure we would still be there discussing like in a few years. This has happened over and over.
+
+
+And so, I think for us it's just a requirement that we don't ever think about what if a government, what if an institution changed their system. Like of course, we could --
+
+
+Anna Rose [50:34] You would respond to it, I guess. You would just -- you would adjust.
+
+
+Florent Tavernier [50:36] Yeah. We could try to convince them, but it's just not going to be as fast and as efficient.
+
+
+Anna Rose [50:42] Okay. So you're not trying to influence it, but I guess you'd have to respond if they did change something.
+
+
+Marek Olszewski [50:48] I would say we're just really excited about the application of this to Web3 and what this means for onboarding the next billion people into Web3. And so, I think we're very focused on just creating a really great product that everyone can use, and that will ultimately, I think, continue to grow the Web3 ecosystem. That's, I think, our number one focus.
+
+
+And whether that's with or without governments, I think depends on both what we're seeing from the market and the willingness from these folks to collaborate.
+
+
+I wouldn't be surprised if governments do get excited about this tech. I think it's really powerful, and I do think that ultimately will be rolled out in some way. But I think it's going to take a very, very long time and I think we have a big opportunity to do something really, really impactful in the meantime.
+
+
+Anna Rose [51:49] Nice. Kind of just going back to that idea though, of like, so if a government changed its system, if it started using a different type of cryptography, I'm assuming you would adjust and add that. But what happens if the ID itself, like the piece of ID is lost or replaced, expires.
+
+
+I mean, I guess expires is quite clear because there's an end to it. But what if it was lost, and you needed to replace it? So I'm just curious how you deal with those sort of more -- I mean, this is what all passport offices have to think about. This is what anyone who's integrated with them would have to think about.
+
+
+Florent Tavernier [52:24] Yeah. One thing that we're currently experimenting with is adding biometrics too. So for instance, doing FaceID checks with passports to make sure that if someone were to take your passports, they can't just register as if they were you. And we're just exploring those solutions right now.
+
+
+Anna Rose [52:44] So this is if someone -- if you're not registered, and someone stole your passport, and then registered you, this would be maybe an extra layer of checking that you would add which is to actually check the face, that the faces match.
+
+
+Florent Tavernier [52:57] Exactly. Yeah.
+
+
+Anna Rose [52:57] But it's not currently -- right now, if someone has not registered and someone steals that person's passport, they could then use it to register.
+
+
+Florent Tavernier [53:06] Yeah. Yeah.
+
+
+Marek Olszewski [53:05] It's extra motivation to sign up now and extra motivation to keep your passport safe, which obviously, I think a lot of people do keep their passport safe. But I guess coming to your original question, I think one thing that's interesting is that some countries do issue revocation lists that you can use to see that a passport has been revoked.
+
+
+And so, that could be one way as well that we can protect the user if their passport is stolen, and they go in and they say, hey, I need a new passport because my last one was stolen. And as soon as they receive a new passport, they can register again and they can use that new passport. And so, I think that's the thinking behind what the long-term solution is for protecting users in that case.
+
+
+Anna Rose [53:55] There's another case here though that you're making me think of, which is, what if you don't have your phone? If you've registered a passport connected to an instance of the application on one phone and you have to redo it, do you end up with a collision.
+
+
+Marek Olszewski [54:09] So you can restore your account if you lose your phone and you need to restore it. You will need your passport to restore your account. And you will need a secret that's used in the beginning of the registration process to effectively give you that privacy that Florent mentioned before.
+
+
+And so, we store that secret in your iCloud backed up key store or in an app specific part of Google Drive on Android. And so, chances are you will have access to that if you still have access to your Apple or Google account. And if you want, you can also write down the secret too, and choose not to have it backed up directly to those places.
+
+
+And so, we're pretty flexible and pragmatic there about making that easy for most people, but also very privacy preserving for people who really want it.
+
+
+Anna Rose [55:07] Let's dive into this face kind of ID checking, making sure that your biometrics match your face. I mean, because there's another project in ID that you've mentioned, Marek, but I don't think I've mentioned yet, which would be like Worldcoin, which is trying to also create the anti Sybil-resistant ID, but they're using the orbs, as most people know. I'm not a fan of the orb. I find it super creepy. Forever creepy.
+
+
+But I mean, using your face and scanning, if that's on an orb or some external device, I think it runs into the same problem. Where does this work? Where does it happen? Or where would it? Because I know it's something in development.
+
+
+Is this directly in your phone? Is it all local? Do you have to interface with some external device or some third-party device?
+
+
+Marek Olszewski [55:57] Yeah. So certainly, I don't think we're that bullish on external third-party devices. I think one of the things that makes us really excited about this approach to Sybil resistance is that it can scale to, I mentioned 3 billion people will soon be able to to create an account with Self and start --
+
+
+Anna Rose [56:19] Passport.
+
+
+Marek Olszewski [56:20] Passport, UUIDs, Aadhaar. It's just a lot of people have these ID systems that are federated. It's not a centralized ID system. There's not one government that issues them. There's many, many countries and there's really great cryptography that allows us to know for certain that someone didn't forge one of these credentials.
+
+
+And so, we're really excited about this approach primarily because of its reach. I do think there are some advantages to what World is doing. I do think that the fact that it's open to everyone, you don't need any credentials, you don't need an ID to sign up. I think is very elegant and does offer some advantages.
+
+
+And so, I don't want to be necessarily negative on them, but I do think that to scale to billions of people is just really, really hard when you have these devices. And I know that they're working hard on growing that. And so, maybe this will be a solved problem.
+
+
+But this approach is just another really, I would say, elegant way of reaching just a lot of people quickly, which is why we're really excited about it.
+
+
+Anna Rose [57:38] So how would that work? How does the face checking work?
+
+
+Marek Olszewski [57:42] So we're early still on that. I think we--
+
+
+Anna Rose [57:44]: Yeah. No. I realized.
+
+
+Marek Olszewski [57:44] There's a lot of advances now happening with zkAI that allow you to do something on your mobile phone. I think that is interesting. I think we're still trying to better understand just how much accuracy you can get with doing this entirely on a mobile phone, and what kind of phone requirements are needed. And then there's also the approach potentially of using a TEE, which I think would then work on a lot more devices.
+
+
+Anna Rose [58:18] External TEE again.
+
+
+Marek Olszewski [58:20] Yes. And then at that point, you could use the most cutting-edge face recognition algorithms. I mean, the interesting question to me though right now is with AI now being able to generate arbitrary videos of anyone, it's going to be interesting to see what this even means for the world of KYC and identity verification. This little video that we do where we move our head up and down and left and right.
+
+
+Anna Rose [58:50] I feel like doesn't the Apple photos now recreate that anyway. It basically creates the angles if you move your phone around according to their demo for their upcoming picture AI stuff.
+
+
+Marek Olszewski [59:02] Yeah. For a while, maybe, they'll randomize the direction that you turn your head and that's how they're going to know that you're not deep faking. But it won't be long before these deep fakes can generate these movements in real time. And I think that is an interesting world that we're going to go into.
+
+
+And I think when that happens, I think being able to prove that you're yourself with some very difficult to obtain credential that's cryptographically signed by a trusted entity like your government, like your passport, something that you keep safe because you need it to travel.
+
+
+It could very well be that even without the picture, that will be very, very valuable and very, very trusted for people to prove that they are not an AI agent, or not some bad actor. I think we're very, very bullish about that. And it is interesting. I don't know how often you're on Twitter now or Farcaster and you're wondering did a bot write this or did a human write this?
+
+
+Anna Rose [01:00:07] Or even a human may have posted it, but what wrote the original version of this. But yeah.
+
+
+Marek Olszewski [01:00:12] Totally. I think it won't be long before humans will want to know if they're interacting with the bot. And even more interestingly, I predict that even AI agents will want to know if they're interacting with a human or not. They too will want to know.
+
+
+And so, I think, being able to, in a privacy-preserving way, reveal that you in fact are a human, I think is going to be really, really interesting. And we're very excited about what Self can do to help people answer that question.
+
+
+Anna Rose [01:00:46] I feel like in the meantime, though, there is this sort of scary time of -- and I think we saw this with the Coinbase KYC leak. That hack where people were able to access KYC data. They didn't get the money from these accounts, but they got the KYC data.
+
+
+To me, that was one of the scariest type hacks, because once you have that KYC information, it unlocks a lot of things about somebody. And there's total identity fraud. There's the chance to kind of wreck someone's life. I think those types of hacks are so scary.
+
+
+And I think I've become very, very annoying about every vendor who's asking for my passport. And I'm just kind of like, please. No. Especially, there's a hotel you check into. You're like, you don't need this. Why don't you just look at it? It's fine. Why are you making a photocopy? It freaks me out.
+
+
+So I've become very, very difficult, I'd say, with those kinds of questions. And the reason, I think it's because of the work I do. I think it's because of doing these kinds of interviews. But it's like, I feel like there's gonna be this sort of time of pain where a lot of hacks will happen. There's going to be very unfortunate cases of identity theft, and trying to unwind that.
+
+
+And then hopefully, stronger KYC systems like IDs that are much more digital and much more provable and much more tied to somebody without us constantly sending these important, but also very revealing pieces of data and certificates around the Internet.
+
+
+I'm just hoping that we get to the point where there's enough adoption, enough acceptance, enough trust in these future KYC systems that we could actually use them.
+
+
+But I also get this -- I get the sense it's going to be so hard because it's like, every time you look at the KYC problem, there's someone who's like, oh, I'm going to solve the KYC problem. But it's like, then there's all these -- then there's a ton of small solutions, but not one unified one.
+
+
+Marek Olszewski [01:02:44] Yeah. I think you're going to like my answer here. At the ZK Summit in Toronto, I got this sticker from someone. It says, "don't share your data." Which I stuck on the back of my phone.
+
+
+Anna Rose [01:02:56] You're showing this to us. Thanks.
+
+
+Marek Olszewski [01:02:59] Yeah. I mean, I think the Coinbase hack is just a really great example for why we need technology like Self. And I think it comes back to that point that I made earlier, like you can prove aspects about yourself now without a trusted counterparty, with a third party having to look at your ID and without them necessarily having to store it.
+
+
+Now, there are of course compliance-related reasons why maybe third parties will want to store it. But for some use cases, there aren't those requirements, and yet people still ask for the passports and still save them. And that's where I think what we offer is just an amazing solution.
+
+
+And the fact that you can verify these proofs either offchain, so this can be useful for Web2 companies. We're talking to a bunch of Web2 companies that really care about age verification and this is a really interesting solution for them. But it also works onchain.
+
+
+Unlike I think Google, who you had on recently, their offering is never going to -- or at least not anytime soon, likely going to work onchain. So if you're a Web3 builder and you want to compose with this information, then I think an offering like Self just makes it really easy to do so.
+
+
+And so, I think you're literally sharing one of probably the biggest value propositions of Self, that data doesn't have to be out there and doesn't have to be hackable and stealable. And we agree wholeheartedly.
+
+
+Anna Rose [01:04:47] So what's next for Self? I feel like we've heard about a few of at least the ideas. So this kind of like face recognition, using the biometrics, but what else is in the pipeline?
+
+
+Florent Tavernier [01:04:58] I think the main things we're excited by are mainly adding more ID support, so making sure that we can support the vast number of human beings on earth. I think biometric checks are also something we're excited by.
+
+
+Maybe one point is that it's a bit different from what you are mentioning with Worldcoin because they're just using the biometrics, then they have to map those biometrics to a filter space, and then make sure that there's no collisions, for instance, using fuzzy commitments.
+
+
+But what we're doing is that we're already using passports as the source of truth. So we just have to check that faces are similar, for instance, but we wouldn't have to really make sure that they're unique and get back to a unique hash and have to prevent collisions.
+
+
+So I guess because it's used differently, we have more -- it's easier to implement basically, and to just add this layer of security instead of just using biometrics.
+
+
+Anna Rose [01:05:54] And this is where you can use a face, which is actually less of an identifier. There are people that look very similar to each other.
+
+
+Florent Tavernier [01:06:01] You wouldn't be able to use a face as a unique identifier. Which is why Worldcoin had to go up to the iris.
+
+
+Anna Rose [01:06:07] Interesting. Okay. So you just have to do that match. But then you have sort of the proof of uniqueness in the document certificate itself anyways.
+
+
+Florent Tavernier [01:06:15] Yeah. Yeah. That's the difference. And I think I'm just excited in general about-- I feel like identity in crypto and onchain has been kind of stuck between just checking that someone has an address and they do a signature, or checking a phone number, or checking a CAPTCHA, or checking the fingerprint of a browser.
+
+
+And on the other side, the traditional KYC that has always just been, like you said, all of your data and they can keep it and often they keep it for a long time and do monitoring.
+
+
+And I feel like as we're starting to develop this whole range of possible solutions with selective disclosure and different levels of security in between, we're starting to see applications realize, okay, I don't need to be on one extreme, maybe I don't need to be on the other extreme anymore. I can start to compose and really look for what I'm looking for.
+
+
+And this is kind of the open space I'm just very bullish on. It's all the things that we're not even necessarily thinking about, but people are going to be able to build using that. So this is kind of the open new space that's starting to be created that I'm optimistic on, and I want to see people build things on.
+
+
+Anna Rose [01:07:29] Nice.
+
+
+Marek Olszewski [01:07:30] We're also working on onchain -- multi-chain support. So the registry is stored on Celo and you can verify --
+
+
+Anna Rose [01:07:38] Oh, yes. This was a question I asked and forgot about. Okay. Cool.
+
+
+Marek Olszewski [01:07:41] Yeah. So the registry is stored on Celo, and right now, if you're verifying a onchain proof, you can verify it on Celo. And Celo recently transitioned to be an L2, and we're working to make it also a validium-style L2.
+
+
+So we're working with Succinct and SP1 on that. And so, this ultimately means it can be trustlessly verified on Ethereum, and therefore everywhere. But we are also just working on more direct multi-chain support as well.
+
+
+Anna Rose [01:08:18] How do you do that? Do you have to rewrite? Do you have to redeploy the Merkle tree?
+
+
+Marek Olszewski [01:08:24] Just a root. We have to communicate the root to other chains, ideally in a fully trustless way, using again, the fact that Celo is an L2, but perhaps if you want to use a chain that isn't within the Ethereum ecosystem, that isn't Ethereum mainnet or another L2, then maybe you want the root on that chain and then you could use a third-party bridge to get it there. And so we're looking into all of these options.
+
+
+Now, of course, you can also verify these proofs offchain. And so, for a lot of use cases, you don't really need this multi-chain support, because you're happy to just verify it offchain. But if you want to compose with this directly in your smart contract, then this multi-chain support will be needed. And so, that's a big focus of ours as well right now.
+
+
+Anna Rose [01:09:16] Nice. Okay. Last question. A little bit more for you, Marek. Going back, doing a throwback to that initial episode back in 2019, we were talking about the Plumo case. The work I actually did with you was on this trusted setup we were running. It was a big trusted setup. I was meeting with the team once a week. We were organizing a lot of people. Do you have to create a trusted setup for this ZK system? And if so, have you already done it?
+
+
+Marek Olszewski [01:09:43] We do, and we have done it. And there were a lot of similarities to the one that we did back then for Plumo. I think back then, that was the biggest, I think, trusted setup that anyone had done.
+
+
+Anna Rose [01:09:56] It was huge. It was huge in terms of participants. It was huge, like the size of the computation, it was like a two day. You had to run your computer, I think, for some people it was more than two days. And Kobi did all this innovation with parallelization, which we hadn't done before. It had never been done before.
+
+
+
+
+Marek Olszewski [01:10:15] 100%. Yeah. When we -- one little fun fact about that, we finished all the circuits, it was an insane amount of circuits. It was on a very big curve. And then we did the math for how long it would take to do a ceremony. We're like, oh, it will take -- if we do the ceremony sequentially, it will take over half a year for us to create the ceremony with enough participants that we'd feel good about shipping this. Like that is too long.
+
+
+And so then we realized we need to parallelize this. And at the time, there was no ceremony tool that parallelized contributions. This was again 2019. It was very early. And so I remember, as you just said, Kobi worked on this pipeline --
+
+
+Anna Rose [01:11:02] I think Georgios was a little bit involved too, at some point.
+
+
+Marek Olszewski [01:11:05] Yes. Yes. Yes. And we built that whole system and it was a big, big effort. This time around, there's off-the-shelf solutions. So we use p0tion for these ceremonies, for the multiple circuits that we did.
+
+
+And yet even now, this was a huge ceremony, and we also ran into a lot of different complications, and had to work through a bunch of different work. And so, I think even to this day, this continues to be a really big, I think, pain point for -- certainly, for us, and I'm sure for many other people in the same boat.
+
+
+Anna Rose [01:11:46] I know that there have been proving systems that don't have trusted setups. There are more systems coming out maybe in that direction. Are you guys keeping your eye on those? Would you be switching over at some point if you felt like they were battle-tested enough?
+
+
+Florent Tavernier [01:12:01] Yeah. We're looking at all of them. Looking at Noir, looking at Ligero.
+
+
+Anna Rose [01:12:04] Yeah. Everyone's obsessed with Ligero right now. It seems to be like the thing.
+
+
+Florent Tavernier [01:12:08] Yeah. We just have some pretty high requirements because we need to make sure that systems are audited, and they're ready for production right now.
+
+
+Anna Rose [01:12:17] Fair.
+
+
+Florent Tavernier [01:12:18] Which is why we haven't switched to anything else yet. But we are looking at a lot of it.
+
+
+Anna Rose [01:12:23] Sounds good. Cool. Well, Florent, Marek, thank you so much for coming on the show and sharing with us sort of the journey to Self, the combination of both of your works to create this ID system, and all the work you're doing to connect a lot of people worldwide to it.
+
+
+Florent Tavernier [01:12:40] Thanks so much for having us.
+
+
+Marek Olszewski [01:12:41] Yeah. Thanks for having us.
+
+
+Anna Rose [01:12:43] All right. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai. And to our listeners, thanks for listening.
