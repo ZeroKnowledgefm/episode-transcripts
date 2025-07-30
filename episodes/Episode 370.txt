@@ -1,0 +1,892 @@
+﻿Anna Rose [00:05] Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I chat with Daniel Kang, professor at UIUC and founding technical advisor at VAIL. We do an update on ZKML and how the space has developed since we last spoke about it in early 2023. We discuss some of the uses for ZKML, and also some of the challenges of adding ZK and proofs to these models. 
+
+
+He covers the 2023-2024 cohort of ZKML tools like zkCNN, zkLLM, EZKL, and his older project, ZKML, and also shares more about his new project ZKTorch, a tool that aims to offer general-purpose ZK proving about ML systems quickly, but also be compatible with many of the emerging models.
+
+
+Now, before we kick off, I just want to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your jobs there today. We've heard great things from teams who found their perfect hire through this platform, and we hope it can help you as well.
+
+
+Find out more over at jobsboard.zeroknowledge.fm. You can find this on our website and we've added it to the show notes.
+
+
+Now here is our episode with Daniel Kang.
+
+
+Today, I'm here with Daniel Kang, professor at UIUC and founding technical advisor at VAIL.
+
+
+Welcome back to the show, Daniel.
+
+
+Daniel Kang [01:45] Thank you. It's been a while.
+
+
+Anna Rose [01:46] Yeah. You came on the show at the start of 2023 with Yi Sun, and I think that was actually the first time we talked about ZK and ML, that intersection on this show. So for me, it was a crazy introduction to a world I really didn't know.
+
+
+Later on that year, you did come back on the show. I was just telling you this before. You didn't remember this, but you came on for a very short bonus episode where we talked about this audio experiment, the attested audio experiment that you, Kobi and I did back in 2023. And that was using our audio and then using ZK to prove providence and proof of transformations.
+
+
+Today, I hope we get to dive into the latest in ZKML, talk a little bit about your project ZKTorch. But yeah, I'm really excited to have you back on.
+
+
+Daniel Kang [02:35] Yeah. I'm really excited to be here.
+
+
+Anna Rose [02:36] Cool. I want to hear -- before we kind of dive into all of that, though, what have you been up to since 2023? What other work have you been working on? What other kind of papers have you released?
+
+
+Daniel Kang [02:48] Yeah. So well, professionally, in 2023, I was a postdoc at Berkeley, and I've since started my faculty position at UIUC officially, although I had the offer back then.
+
+
+Anna Rose [02:57] Okay.
+
+
+Daniel Kang [02:57] And I spent a lot of time spinning up my lab at UIUC, so that's been quite hectic for me. In terms of the research, a lot of it has been around auditing AI and measuring the progress of AI. I see these as very related because for a variety of reasons, you really want to know how AI is going to progress and ensure that our measurements are done accurately and honestly.
+
+
+So I've had a particular focus on AI agents benchmark quality. If I may brag, I had my first ever top page of Hacker News last week.
+
+
+Anna Rose [03:32] Cool. What was it for?
+
+
+Daniel Kang [03:34] This was on a study, a deep dive on AI agent benchmark quality.
+
+
+Anna Rose [03:39] Okay.
+
+
+Daniel Kang [03:39] And we found a lot of issues with AI agent benchmarks.
+
+
+Anna Rose [03:42] What kind of benchmarking efforts are actually happening around agents right now?
+
+
+Daniel Kang [03:46] There's a large number of efforts across a variety of institutions. So this was both academic in the frontier labs and from other industrial partners. They range from everything from computer use. So how well an AI agent can navigate, say, a web browser or your computer, to, say, cybersecurity tasks, which my lab has focused on.
+
+
+Anna Rose [04:06] Oh, cool.
+
+
+Daniel Kang [04:07] To things like software engineering, like SWE-bench, which is a very famous benchmark for AI agents.
+
+
+Anna Rose [04:12] Nice. I did an episode recently with David Wong from zkSecurity, who's an auditor using AI agents. I feel like that maybe would be a relevant thing for folks to listen to. I don't know if you had a chance to hear it.
+
+
+But when you say auditing AI, though, in your case, you're actually -- like are you going into the models and auditing them, or are you looking at outputs? Are you focused more on these benchmarks? When you say that, auditing AI, what does it mean?
+
+
+Daniel Kang [04:42] Yeah. So we're building the technology to enable all of the applications you mentioned. So this includes looking into the model, so to speak. This includes auditing its outputs, and it includes measuring how well these AI do in different circumstances.
+
+
+Anna Rose [04:55] Very cool. You're affiliated with this project, VAIL. I don't think you were last time we spoke. What is VAIL?
+
+
+Daniel Kang [05:02] VAIL's a startup funded by Manish Shah and [?] Jonah Lishan, and they are focused on high assurance AI, and this includes audits of AI systems, both depending on the application, training time, and also inference time. And they're leveraging a variety of technologies, including ZK in some circumstances, and also trusted enclaves in other circumstances to perform these audits in these high assurance situations.
+
+
+Anna Rose [05:28] That's nice. And are you a founding member? So is it a startup you're a co-founder of, like recently, or --?
+
+
+Daniel Kang [05:35] Well, I don't know what my official position is. I call myself the founding technical advisor, and I view myself as an advisor. They're really the ones doing the hard work. I'm still full-time at the university and focused on the research.
+
+
+Anna Rose [05:48] Got it. Back in -- I sort of want to do a bit of a throwback to 2023 and ZKML when we were first introducing it. I feel like back then, I mean, there was a community that was formed around ZKML. This is around the time zkVMs are just becoming a concept really.
+
+
+Before that it was like rollups, it was compression, it was light clients, it was privacy tech. But ZKML became a category basically in 2023.
+
+
+I'm really curious, if you can remember going back in time, what were the kind of proposals in 2023? And I want to hear from you which ones kind of panned out, or still relevant, and which ones we realized weren't really good use cases?
+
+
+Daniel Kang [06:37] So my memory might be a bit fuzzy, but here's what I remember.
+
+
+Anna Rose [06:40] Okay.
+
+
+Daniel Kang [06:40] There are proposals on the technical side and there are proposals on the application side. On the application side, these proposals range from verified FaceID, things like proof of prompt, audits of, say, financial models for loan applications, to healthcare applications.
+
+
+I think in terms of the applications, these are all still good applications, but the technology is still a little far away in terms of really transforming how these audits work in practice because of the computational expense of the ZK systems for ML.
+
+
+Since then, there have been a lot more applications people want to run, but they're still a bit bottlenecked by the underlying technology.
+
+
+Anna Rose [07:21] Okay.
+
+
+Daniel Kang [07:22] This includes things like proof of training, proof that, say, your AI system isn't biased, say your chatbot system isn't biased, and many other such applications. I still think these are all good applications.
+
+
+Anna Rose [07:36] In the case like, if you look at some of the stuff kind of coming out around Grok, some of the assumptions of what's happening behind the scenes that's leading to some of the outcomes. Are you thinking like ZK could be used somewhere to prove that something was included or something wasn't included? Is that sort of what you mean by that? Or that AI isn't biased? That it isn't getting sort of pushed in a certain direction?
+
+
+Daniel Kang [08:02] Yeah. That's a great question, and that is the goal of these systems. We're currently bottlenecked by the computational expense and the technical aspects to accomplishing that goal, but my lab has been working on this over the past few years. And there have been complementary technologies which can be used in conjunction to assist with these kinds of audits. For example, enclaves and other technologies.
+
+
+Anna Rose [08:25] Like TEEs.
+
+
+Daniel Kang [08:26] Yeah. TEEs.
+
+
+Anna Rose [08:27] Okay. So maybe would you still be using ZK in that case, ZK and TEEs, or is it just TEEs?
+
+
+Daniel Kang [08:33] Yeah. So it really depends on the application. There are some applications where, for whatever reason, you don't have access to an enclave, and so you really need the ZK. There are other applications where you want to do some part of, say, the ZK within the TEE. There are also some applications where you might just trust the TEE in the first place.
+
+
+And it really depends on the assurance level that you want, and also the threat model that you're assuming. For example, if you're assuming, say, that there's a nation state who's trying to bypass your system, maybe a TEE by itself is not something that you would really trust because they can physically scan the hardware for the private keys, whereas they can't really cheat ZK, as far as we know.
+
+
+Anna Rose [09:18] Yeah.
+
+
+Daniel Kang [09:19] So it really depends on the application at hand, and the level of assurance that you care about.
+
+
+Anna Rose [09:23] I want to go back to the first application you mentioned, this verified FaceID. We've had a bunch of episodes recently on zkID. So this is -- mostly it currently looks like passports or licenses that are proven into an app in ZK, kept private, selective disclosure. But almost all of those episodes that we did and projects that we spoke to have somewhere on their radar this idea of also doing KYC locally.
+
+
+Is that what you're talking about here when you say verified FaceID? Are you thinking -- or is this at a different place? Like is this happening in a different spot?
+
+
+Daniel Kang [10:01] Yeah. So verified FaceID can be used in a variety of applications, and KYC is probably the most prominent one that is being studied today, and also probably the one that's going to have the highest impact. So, for example, if I steal someone's passport, I can still use it in these ZK passport or zkID scenarios, because there's no way to confirm that the entity that claims they have the passport is actually the person in the passport.
+
+
+Anna Rose [10:27] Yeah.
+
+
+Daniel Kang [10:29] And today, as far as I'm aware, there's no way to do this in a privacy-preserving way. So if you've used a lot of government systems, or other systems that require high assurance, they take a picture of your face on, say, your webcam or on your phone, and they upload it to a server, which --
+
+
+Anna Rose [10:41] Totally. Not private.
+
+
+Daniel Kang [10:43] Yeah. Not private. Exactly.
+
+
+Anna Rose [10:44] I mean, attempts at privacy, but very likely leaked at some point. You mentioned proof of prompt and proof of training. I actually have questions about that later. So maybe we come back to those applications.
+
+
+You also kind of said that there was -- going back to the 2023 question, we had the tech side and then the application side. So you've covered some of the applications. Where were we on the tech side? And how far have we come? Have we made it? Do we have things that we can actually use today? Or are we still sort of like -- yeah, are we still bottlenecked?
+
+
+Daniel Kang [11:16] So we've come a long way since 2023.
+
+
+Anna Rose [11:18] Cool.
+
+
+Daniel Kang [11:18] Just to give a little bit of a history of ZKML. Initially, a lot of the proposals, EZKL, including my work, focused on building circuits using general-purpose proving systems. So building like, say, a Plonk circuit to prove an ML model.
+
+
+The core issue with this is that due to the way that these high level cryptographic systems work, it's just impossible to get it to the point where you can run large ML models through these systems with circuits. And people realized this actually very quickly once the initial proposals were out and once the initial benchmarks were run.
+
+
+And so as a result, there have been a few directions where people have been trying to push things towards. One is this idea of basically putting in specialized circuits into things like Plonk. So for example, not in ZKML, but if you look at a system like SP1, they have these specialized circuits that are much more efficient than just running the underlying computation in SP1. So that's been one direction.
+
+
+The other direction that people have been taking is to build highly specialized cryptographic systems for a single class of model, or maybe even a single model. So these are systems like -- academic systems like zkCNN, and zkCNN is purpose built for basically doing convolutions and ReLUs, which is roughly all you need for things like ResNet.
+
+
+Anna Rose [12:48] Are these being specifically built for ZK circuits or for AI models? Are they matching one ZK system to one model, or are they -- yeah. I'm just trying to figure out where is that limitation?
+
+
+Daniel Kang [13:01] Yeah. So the way to think about it is that you take a specific AI model architecture, and then you build a cryptographic proving system for that model.
+
+
+Anna Rose [13:10] Is it using existing ZK techniques, ZK systems, and then just kind of customizing it for this AI model, or is it making up its own?
+
+
+Daniel Kang [13:21] So it is using ideas from ZK, and then adopting them to the specific model at hand.
+
+
+Anna Rose [13:27] Okay. In which -- like zkCNN, what model does that work on?
+
+
+Daniel Kang [13:31] Yeah. So these work on convolutional neural networks, which is a class of models. But roughly speaking, they can prove VGG-style models and RESNET-style models, and maybe a few more, but that's roughly the scope of that project.
+
+
+Anna Rose [13:44] Got it.
+
+
+Daniel Kang [13:45] In particular, it can't prove things like LLMs or other models that people are excited by today.
+
+
+Anna Rose [13:52] When you talk about these different models, because I'm not so deep in AI, I'm not as familiar with what each of these do. Like when you say an LLM, does it include the image generation ones, or are those also a different class?
+
+
+Daniel Kang [14:06] Well, the reason that you might find this confusing is because it is legitimately confusing.
+
+
+Anna Rose [14:09] Okay. Well, because it's large language model, but then I'm wondering if it's used for image creation or recognition.
+
+
+Daniel Kang [14:18] Again, the reason you find this confusing is because it is legitimately confusing.
+
+
+Anna Rose [14:21] Okay.
+
+
+Daniel Kang [14:21] Even though LLM stands for large language model, people abuse that term in ways that don't necessarily reflect the L in the -- the initial L -- sorry. The second L, I guess.
+
+
+So, for example, GPT-4o, people throw around the term LLM for GPT-4o, but it is actually not specifically a language model. It is a transformer-based model, we think, or a modification of a transformer-based model, but it accepts multiple modalities as input and multiple modalities as output. 
+
+
+So I sometimes even might say that GPT-4o is an LLM, but it is actually not technically. And so, it's just a confusing state of things, and especially because a lot of these all of the details are proprietary.
+
+
+Anna Rose [15:04] Got it. Going back to this zkCNN, you mentioned this does work with VGG and ResNet. What are those two? What do they do that's different?
+
+
+Daniel Kang [15:14] Yeah. So AI is a very large space. So these kinds of arbitrary distinctions sometimes can be confusing. But I'm just going to make an arbitrary distinction which is discriminative AI and generative AI.
+
+
+Anna Rose [15:24] Okay.
+
+
+Daniel Kang [15:25] So in generative AI, you want to generate some outputs like an image or a text in, say, a chatbot setting. And in discriminative AI, you want to tell two things apart. So tell whether an image of an X ray has, say -- or say a CAT scan has a tumor or not. And so this is a classification.
+
+
+Anna Rose [15:44] Interesting.
+
+
+Daniel Kang [15:45] So VGG and ResNet have historically been used for classification or discrimination. And this is in contrast to models like GPT-4o, which is used for generation.
+
+
+Anna Rose [15:57] Got it. And would this be, going back to the ID example, the KYC with using facial recognition, would that usually be using one of these discriminative models?
+
+
+Daniel Kang [16:07] That's right.
+
+
+Anna Rose [16:08] It sounds like it.
+
+
+Daniel Kang [16:09] Yep.
+
+
+Anna Rose [16:10] Is it often images or it could be anything? I mean, I'm guessing it's anything. Right? Like any data comparison.
+
+
+Daniel Kang [16:17] Yeah. Yeah. So discriminative models can be used for any modality. So they can be used for images, but they can also be used for text. They can be used for things like LiDAR. And so LiDAR is particularly important for depth, which is very important for actually FaceID. So you can't take a picture of a picture.
+
+
+Anna Rose [16:32] And self-driving stuff, I guess. That's where I --
+
+
+Daniel Kang [16:34] And self-driving stuff. Exactly. But typically, the architectures used for different modalities look different in discriminative AI. So what you use for text is often a different architecture than what you use for, say, images.
+
+
+Anna Rose [16:47] Got it. Okay. Going back to those types of sort of specialized ZK, I don't know, ZKML systems, what about something like zkLLM? I'm guessing that deals more with the generative stuff.
+
+
+Daniel Kang [17:01] Yeah. That's right. So zkLLM is another academic system that was, I think, developed in 2024, and was a proof of concept to showcase that you can do this specialized cryptographic -- basically, make a specialized cryptographic proving system for LLMs in the ZK setting. And the way it works is very similar in principle to zkCNN where they adopt ideas from other cryptographic protocols to LLMs.
+
+
+Anna Rose [17:28] When you talk about this academic work, are these proving systems? Like what are they? So they're like new ZK systems that are focused on this particular use case?
+
+
+Daniel Kang [17:38] Yes. These are proving systems.
+
+
+Anna Rose [17:40] Okay. Who developed them?
+
+
+Daniel Kang [17:41] Yeah. So zkCNN was developed in part by one of my colleagues, Yupeng Zhang, who is now at UIUC.
+
+
+Anna Rose [17:48] Oh, yeah.
+
+
+Daniel Kang [17:49] And zkLLM, I don't remember offhand. I think it was developed by folks at the University of -- I want to say Toronto or Waterloo. I don't think they're working on ZKML anymore, though.
+
+
+Anna Rose [17:59] Okay. Are these -- like their academic works, are these proof of concepts, have they ever been implemented? Have they been tested? I'm kind of trying to figure out what would they exist as in the world. Are they something one could run and check on an LLM, or is it more just like this is theoretically how we could start proving things about what's happening under the hood?
+
+
+Daniel Kang [18:23] Yeah. So there's a whole spectrum between literally just a piece of paper and an idea to an actual implementation. And both of these systems span somewhere in between.
+
+
+Anna Rose [18:32] Okay. They have test implementations, but nothing production-ready, maybe.
+
+
+Daniel Kang [18:37] Yeah.Yeah. And one of the things I actually really want to highlight about zkLLM in particular is that the authors did not benchmark their system correctly.
+
+
+Anna Rose [18:48] Okay.
+
+
+Daniel Kang [18:49] And this is actually very important because they make wildly overblown claims of performance of their system to the point where if you measure the system correctly, it is actually unusable in terms of performance. And so, it actually got a lot of hype when it first came out, but unfortunately, the hype is not substantiated for this project.
+
+
+Anna Rose [19:08] I see. We're still on this tech side of things. I want to talk a little bit about the projects that did emerge in 2023, kind of coming more from the ZK space. There was your project ZKML. There was EZKL as well. How are those different? What are those types of systems models? What are they kind of proposing? Why are they different from something like zkCNN and zkLLM?
+
+
+Daniel Kang [19:30] Yeah. So zkCNN and zkLLM, they both develop these custom cryptographic protocols, whereas both EZKL and ZKML use existing proving systems and then build circuits to represent the AI or ML models within those generic proving systems.
+
+
+Anna Rose [19:48] In that case, were they meant to cover more of the models? Was it like you create this larger tent and you're able to do both the generative and the discriminative and the sort of variations in between? Is that sort of what the proposal is with those?
+
+
+Daniel Kang [20:06] Yeah. That was the rough idea. Because you're using generic circuits, they can be very, very general purpose. So these circuits can represent arbitrary computation up to the size of the circuit that you represent. And so, you can represent any AI model or any ML model in these systems. The core issue and the core tension is that these generic proving systems, because they're not specialized to AI or ML, are just outrageously expensive.
+
+
+Anna Rose [20:34] Ah. Is it slow? Is it that you need a ton of computational power? When you say expensive, what do you mean?
+
+
+Daniel Kang [20:43] Both.
+
+
+Anna Rose [20:43] Okay. Time and computational power.
+
+
+Daniel Kang [20:46] Yeah. 
+
+
+Anna Rose [20:47] Got it.
+
+
+Daniel Kang [20:47] And actually, one thing I wanted to explicitly do is, if you draw an axis of, say, flexibility on one axis and, say, speed or say, amount of compute on another axis, zkLLM and zkCNN are very much on the not flexible but fairly high performance. And systems like ZKML and EZKL are very much on the side of much slower but much more flexible.
+
+
+Anna Rose [21:11] What would you do -- I'm trying to picture how these things are actually used. If you wanted to prove something about, I don't know, ChatGPT something, GPT-4o, would you be creating -- like within ZKML or EZKL, would you be using this generic circuit, but then recreating something? Do you have to still customize yourself something using this tool, or would you be able to do it out of the box? Is it already built up for you to do it?
+
+
+Daniel Kang [21:42] It's closer to the latter.
+
+
+Anna Rose [21:43] Okay.
+
+
+Daniel Kang [21:44] So essentially the way these work is that you have a specification of some model. So whether it be GPT-4o, whether it be a more classical model, say, ResNet, and given the specification of the model, the systems will take that and then underneath the hood, translate it to the circuit and then do the proving.
+
+
+So the developer of the AI model can simply plug in their specification and the systems will do the rest.
+
+
+Anna Rose [22:08] Okay. And kind of going back to both of these cases, because you sort of mentioned all these different things one could prove potentially: proof of prompts, proof of input, proof of output, what are these actually built to prove? Are they meant to prove all sorts of things, or are they also kind of narrowly focused on proving one thing?
+
+
+Daniel Kang [22:30] They can be used for all those applications.
+
+
+Anna Rose [22:32] This is the EZKL and ZKML could be used for everything.
+
+
+Daniel Kang [22:36] So zkLLM can be used for all of these in the LLM-specific setting.
+
+
+Anna Rose [22:40] Got it.
+
+
+Daniel Kang [22:41] But it's not generic. And so, for example, it can't prove these classification models.
+
+
+Anna Rose [22:45] Okay. So all of four of the systems we just outlined are meant to actually prove all sorts of things. They're not specific to one, like just proving input, just proving model. Would like, theoretically, these also be able to prove bias, and like some of those other applications you mentioned?
+
+
+Daniel Kang [23:03] Not by themselves. They'd have to be combined with something like a zkVM to do some generic computation. But then you could basically hook them together to do that.
+
+
+Anna Rose [23:13] Oh, interesting. Cool. Okay. So you've painted this picture of the axes, the speed versus sort of how generic they are. EZKL, ZKML living on one corner, the zkCNN and zkLLM living on another. Now I think it's a great moment to talk about ZKTorch, because as I understand it, it bridges the gap.
+
+
+I will make a quick note. You did a talk at zkSummit13 in Toronto. In that, you have that diagram. So I'll definitely link that in the show notes. I had a chance to watch this before this interview. We do follow along a little bit similar. So if people need some visuals, that could be a good place to see it. But why don't we talk about ZKTorch?
+
+
+Daniel Kang [23:57] Yeah. Thank you. So, in my lab, we saw that these issues were going to be a major problem. And there are several reasons for this. So one is simply that the space of AI moves so quickly that, first of all, it's hard to keep up. And second, any specific system that we build might be obsolete 12 months from now.
+
+
+But the other thing that we saw is that these models, generally speaking, are getting bigger and requiring more computation. So if you lose flexibility or you lose the speed, you get left behind in this space. And so, we felt the need to build a system that is both flexible and high performance. And this is what led us to ZKTorch.
+
+
+Anna Rose [24:38] I'm curious, is it inspired by PyTorch? Is that where that name comes from?
+
+
+Daniel Kang [24:44] Yeah. Yeah. It actually is inspired from PyTorch.
+
+
+Anna Rose [24:46] Okay.
+
+
+Daniel Kang [24:47] The basic idea in PyTorch is -- and again, PyTorch is a large system that does many things. But what we were inspired by is that PyTorch defines a bunch of primitive operations that can be combined to build these complex models. And it can be basically used to implement any AI model that you could want.
+
+
+And our system does something very similar. We have a bunch of primitive operations that can be put together to construct these AI models.
+
+
+Anna Rose [25:19] Are you -- so this is what I'm trying to figure out is, what approach did you take? In one case, there's very custom systems. In the other case, there's very general purpose. It almost sounds like you kind of created modules or something that people can put together, like LEGO pieces. So it's not fully general purpose out of the box. One still has to kind of select this combination. Does the developer end up having to do a lot more work to use ZKTorch?
+
+
+Daniel Kang [25:45] So, fortunately, no. We did the work to build the LEGO blocks, and then also we have an automatic assembler for the LEGO blocks.
+
+
+Anna Rose [25:52] Okay.
+
+
+Daniel Kang [25:53] So as long as you can build the structure using LEGOs, it works within our system.
+
+
+Anna Rose [25:56] And is the idea here, you make it into blocks, into these different components to be able to keep up with the innovation. Like every time a new technique is introduced, you could create a new module instead of having to redo this entire system.
+
+
+Daniel Kang [26:11] Yeah. That's right. But the thing I will say about this is that even new models, as far as we're aware, again, some of these are proprietary, actually use a lot of the similar LEGO blocks. And if you think about LEGO, there actually are only a few kinds of pieces that can be put together to make these incredible structures. So we think this idea is very powerful.
+
+
+Anna Rose [26:30] Cool. I think I saw a system called zkPyTorch. Are there competitors to this? Do you know if there's other teams trying to build similar sort of high performance but general purpose tool sets? Actually, is ZKTorch a toolset?
+
+
+Daniel Kang [26:46] Yeah. Yeah. You can think of it as a toolset.
+
+
+Anna Rose [26:48] Okay. Are there any competitors?
+
+
+Daniel Kang [26:50] Yeah. I haven't been keeping up too much. We've been focused a lot of the work in our lab. I think zkPyTorch is one -- that's the one that I'm aware of that takes a similar idea.
+
+
+Anna Rose [27:01] Got it.
+
+
+Daniel Kang [27:01] But there could be others.
+
+
+Anna Rose [27:03] With ZKTorch, as it stands, how far along is it? Is it in sort of proposal state? Is it implemented? Can people already use it? Could they use it with existing systems? Yeah. I'm kind of curious, does this bring us closer to some of the applications that you talked about? And if so, how close?
+
+
+Daniel Kang [27:22] Yeah. We'd like to think so, at the very least.
+
+
+Anna Rose [27:24] Cool.
+
+
+Daniel Kang [27:24] And we have an implementation that will be released by the time this podcast goes out, and a technical report describing our methods, and with basically some translation, it can be used on existing applications.
+
+
+Anna Rose [27:36] That's cool. And so with ZKTorch, as it stands once kind of implemented and released, could someone start to experiment with that facial recognition or any of the other applications?
+
+
+Daniel Kang [27:50] Yes.
+
+
+Anna Rose [27:51] Really?
+
+
+Daniel Kang [27:51] They could? Yeah.
+
+
+Anna Rose [27:52] Cool. And with this sort of set too, I think I'm still trying to figure out, what are you -- where are the proofs actually happening? Because I thought about this, like, okay, with the visual recognition, this is happening on a local device. Are you running ZKTorch locally? Is that something that could happen, or -- I'm trying to picture where this lives.
+
+
+Daniel Kang [28:16] Yeah. That's certainly the goal. I will say that while we've gotten a lot of performance out of our system and our proving system, there is still a little bit left to be done to do things like verified FaceID, say, on a phone. The phone, unfortunately, has limited power, limited computation, so it's a little bit away from there.
+
+
+But to be very concrete, there's a benchmark called MLPerf, specifically the MLPerf Inference benchmark, and as far as I'm aware, we are the first system and I believe the only system that can prove every model on the MLPerf v4.1 edge inference class of models.
+
+
+Anna Rose [28:52] Okay.
+
+
+Daniel Kang [28:53] And so this includes things like the models similarly used for FaceID, this includes LLMs, this includes medical classification models, this includes recommender system models, and others as well.
+
+
+Anna Rose [29:06] Because maybe the performance still limits you from doing it on a phone, so it's not quite that performant. What can you run it on? What are the minimum specs you'd need?
+
+
+Daniel Kang [29:15] So it depends on the size of the model. You can actually run a bunch of these on your laptop.
+
+
+Anna Rose [29:20] Okay.
+
+
+Daniel Kang [29:20] But as you get to larger and larger models, you'll need to have some beefier servers.
+
+
+Anna Rose [29:25] And is the visual recognition like a pretty large model? Or maybe it depends on how much accuracy you're looking for. I don't know.
+
+
+Daniel Kang [29:34] That's actually exactly right. It depends how much accuracy you're looking for. And I think I'd have to verify this, but I'm actually fairly certain that if you are okay with the smaller face recognition models, you actually could just run it on your phone.
+
+
+Anna Rose [29:45] Okay.
+
+
+Daniel Kang [29:46] But if you want high accuracy, you probably need something like a server.
+
+
+Anna Rose [29:49] And even the laptop wouldn't work yet.
+
+
+Daniel Kang [29:51] I think the laptop is somewhere in between. You could do like the middle --
+
+
+Anna Rose [29:54] The middle ones.
+
+
+Daniel Kang [29:54] The middle ones. Yeah.
+
+
+Anna Rose [29:56] That's really helpful actually to understand, because there's these different -- sort of these different requirements depending on the use case. Like for something very benign where you just want someone to ID themselves, but it's not super security oriented, maybe an on-phone ID would work. Like getting into a bar, or something like that. Whereas if it's, I don't know, some big financial bank or something like that, they'd want something a little more accurate.
+
+
+Daniel Kang [30:21] Yeah. Exactly.
+
+
+Anna Rose [30:22] So I'm picturing you've built a lot of these modules, kind of going back to how this is built. What happens when models change? Are you always aware of what's changed in the model? And are you able to adapt those modules for the updated models? Because also sometimes what's happening under the hood in these models isn't entirely clear. Right?
+
+
+Daniel Kang [30:44] Yeah. That's right. So we have a set of modules that support all the models in this MLPerf benchmark that I mentioned.
+
+
+Anna Rose [30:51] Okay.
+
+
+Daniel Kang [30:52] We think they're pretty general, but of course, there could be other models that come out that require other building blocks. But slotting in new building blocks in our system is very easy.
+
+
+Anna Rose [30:59] How do you look into those systems, though, into those models to be able to do that? How is it visible for you, given that a lot of them are proprietary and not open source?
+
+
+Daniel Kang [31:09] Okay. So there's actually two things to say here. The first is that actually a lot of architectures are relatively open source.
+
+
+Anna Rose [31:15] Okay.
+
+
+Daniel Kang [31:16] So even if you take something like DeepSeek R1 or Kimi K2 and you fine tune those, the architecture is actually still open source. So you can still use our system for that.
+
+
+For the systems like, say, GPT-4o or Claude Sonnet or Opus 4, those are proprietary, this is where something like an enclave could be helpful. You could actually use ZKTorch to prove the inference and then you can actually, say, use an enclave to say that, yeah, I ran ZKTorch on this unspecified model architecture, but we actually run it.
+
+
+Anna Rose [31:52] But who does that? It's not the companies releasing these things that would offer that information, is it? It's the individual developer. It's the outside person.
+
+
+Daniel Kang [32:02] Well, the OpenAI or Anthropic could enable this, and then they could send the proofs to an outside developer for verification.
+
+
+Anna Rose [32:09] So it would be internal. They would have to basically accept this into their system.
+
+
+Daniel Kang [32:13] Yeah. Yeah. ZK is always an opt-in system. You have to say, like, oh, I want to use this technology.
+
+
+Anna Rose [32:18] I see. In terms of that enclave work, is that also under the ZKTorch umbrella or is that something you're kind of expecting external partners to build?
+
+
+Daniel Kang [32:28] We're expecting external partners to build it. The enclave stuff is relatively more settled in the sense of the technology is a bit -- like there are prototypes out there for different applications, so adopting them is -- we expect to be more on the engineering side as opposed to the research and development side.
+
+
+Anna Rose [32:44] Got it. When you talk about it being released, how much of it is released?
+
+
+Daniel Kang [32:48] Yeah. So we plan on releasing all of it, I believe, with Apache license. We want this to be widely used.
+
+
+Anna Rose [32:54] Interesting.
+
+
+Daniel Kang [32:55] It is a library, but it can also be used as a standalone tool.
+
+
+Anna Rose [32:58] And would you be sharing that with the model owners then? Is that sort of you pitch it to them or do you pitch it to other sort of just applications that would want to work with those models?
+
+
+Daniel Kang [33:09] Right. So because there are many applications of ZKML, they're used by different parties. So for example, if OpenAI wanted to use our system to prove, say, GPT-4o inference, they would need to opt in and use the system internally and then send the proofs elsewhere.
+
+
+Anna Rose [33:23] Great.
+
+
+Daniel Kang [33:23] If you wanted to do something like verified FaceID that would be on, say, a user's phone and they would be doing the proving. So it depends on the application and who is involved with the proving and who they're trying to prove to.
+
+
+Anna Rose [33:33] Are there cases where the input and the output would be the purview of some external developer? Are there reasons that you'd want to prove I put this in and got this output, and would your tool be useful for that?
+
+
+Daniel Kang [33:48] Yeah. Yeah. So imagine that you have a set of medical models. So the example I described, you can imagine like a hacker doing it, but there can also just be literally just mistakes as happen in the medical system. You might want to say that I want to ensure that this medically-approved model was run on my input data.
+
+
+Anna Rose [34:06] Okay.
+
+
+Daniel Kang [34:08] And ZKTorch would enable you to basically stamp that and be like, yes, this specific output, this specific diagnosis was done by the specific ML model on your data.
+
+
+Anna Rose [34:17] Okay. So what's the BD of this then? Is it sort of shopping it to these different companies and being like, you want to do this? This proves things about your model without revealing anything?
+
+
+Daniel Kang [34:27] Yeah. That's a great question. I'm focused on the R&D, so everything I'm saying is speculation.
+
+
+Anna Rose [34:31] Okay.
+
+
+Daniel Kang [34:32] But one thing I will say is that ZK and actually just a lot of cryptographic technologies even beyond ZK are just not really well known in the outside world. So if you talk to like a medical records provider, they just --
+
+
+Anna Rose [34:44] They don't know it.
+
+
+Daniel Kang [34:44] They don't know. So just education, trying to get people to know about this technology and what is enabled. I personally care about making sure that if I use AI for medical situations that I know that is my data and it's the approved model, and just so that there are no mistakes, no errors in the computation or anything else of that form, and so I would be delighted to have that. And I'm hoping that this becomes more of a thing that gets integrated into society.
+
+
+Anna Rose [35:12] It's funny because the use case for medical, I remember back in 2017, it was like blockchain and medical, and ZK was sort of sprinkled in there, but it was more like this shared ledger among hospitals and then ZK would be used for privacy. That idea was proposed. Didn't get adoption. Why?
+
+
+Because the medical system is incredibly slow, and they're very afraid of any sort of new tech. They're very risk averse. I wonder with something like ZK, what are the steps that have to happen before that industry or companies like that, organizations like that would start to trust it.
+
+
+I think the Google Wallet integration is one step in a good direction because it's sort of showing like, well, Google's trusting some ZK system. Granted, it's internally developed and customized, but clearly that concept is at least being accepted by one of the top tech companies in the world to be used on millions of pieces of data, and personal data.
+
+
+Daniel Kang [36:16] Yeah. I mean the medical system is very conservative for obvious reasons. There are good reasons for conservatism and I think that there are a lot of people who have their own theories of medical scenarios that might actually not be helpful for patients. And I think that just seeing a lot of medical technology follows from other technologies.
+
+
+So even electronic medical records, I mean that followed from a lot of -- from industry adoption, from --
+
+
+Anna Rose [36:45] Maybe like banking or something.
+
+
+Daniel Kang [36:47] Yeah. Banking. Other secure applications.
+
+
+Anna Rose [36:50] And banking I guess comes from -- it follows something else. It's a little less high risk. I don't know which thing, but yeah.
+
+
+Daniel Kang [36:58] Yeah. Yeah. And so, the medical system moves very slowly. I anticipate that as these things become more and more prevalent, it becomes more widely accepted, then they'll be more willing to adopt these technologies.
+
+
+Anna Rose [37:10] Yeah. I hope so too. I mean, it's funny, I've thought a lot about this medical and ZK concept because what I find really funny about the medical systems and organizations risk aversion is I feel like they're also the most susceptible to the hacks.
+
+
+I actually feel slightly uncomfortable sharing any data with any hospital because I'm like, likelihood you get hacked more than my computer, or -- it's really funny. And each one, if you go to different doctors, different or different institutions or whatever, you're inevitably bringing your data from one to another. You're doing it in incredibly archaic ways.
+
+
+A little side story. Some people who know me personally know this. I had this knee injury a few years ago and it was really bad. But I also travel a lot, and I had to go to doctors in different countries, and I had to bring with me like printout of paper, CD of the MRI. And it's like the most ridiculously insecure way to hold data. Like if I lost my bag, I'd lose all that stuff. It's also incompatible across different regions.
+
+
+And going through that experience, I think was very eye opening where it's like, cool guys, you're super, super privacy oriented. And yet, what ends up happening is incredibly risk on. And it doesn't work very well. So, yeah, I was pretty frustrated by that whole thing.
+
+
+Daniel Kang [38:41] Yeah. I'm really sorry about that. I'm not surprised that there are CD-ROMs even though it's 2025.
+
+
+Anna Rose [38:48] They didn't work in North -- the European ones didn't work in North America. It's amazing.
+
+
+Daniel Kang [38:52] Yeah. Yeah. I think that the medical folks are very well intentioned, but their expertise is in the diagnosis, and the other parts of the medical system and they're not really, let's say, tech oriented. So it is a slow moving process and I hope it accelerates. But yeah, we'll see what happens.
+
+
+Anna Rose [39:08] I wonder if they're not almost putting themselves at higher risk. A lot of those archaic systems, the ones that aren't cryptographically up-to-date, I mean, I think they're becoming more and more insecure. I know that people feel like they're battle-tested, but also, I mean, I think with quantum computing and all of that coming online, there's going to have to be an acceleration of adoption of some of these new things pretty soon, I think.
+
+
+Daniel Kang [39:34] Yeah. I hope so.
+
+
+Anna Rose [39:35] That leads me to the question of sort of the quantum ZK. When you talk about these ZK systems, we didn't really go into the details of the types of ZK systems that these are kind of inspired by. Are they quantum secure?
+
+
+Daniel Kang [39:47] So there are many underlying technologies that can be used in different ZK proving systems. We think some of them are post-quantum secure and some of them are just not.
+
+
+Anna Rose [39:56] Yeah.
+
+
+Daniel Kang [39:56] So a lot of the existing systems today are not post-quantum secure. They use technology that just doesn't work in the quantum era.
+
+
+Anna Rose [40:03] And in the examples that you gave, like the zkLLM or ZKTorch, are those using -- or basically are they hash-based or elliptic curve-based? Are they using any of these techniques that we believe to be post quantum?
+
+
+Daniel Kang [40:18] As far as I'm aware, they do not.
+
+
+Anna Rose [40:20] Okay. They may need to be upgraded to that. Do the AI companies care?
+
+
+Daniel Kang [40:24] So I don't know if the AI companies care. We care in our lab, and we also care about high-performance systems. And so, we're actually going to be transitioning to working on post-quantum secure and higher-performance ZK proving systems for AI models. And we don't have specific numbers, but we anticipate that's going to even be much more high performance than ZKTorch.
+
+
+Anna Rose [40:46] Very cool. Which systems are you looking at? Either being inspired by or potentially implementing?
+
+
+Daniel Kang [40:51] Yeah. So there's a bunch of work around using ZK systems using this paradigm, like low-rank matrices, like learning with errors, thought to be post-quantum secure. And we're going to be leveraging that sort of technologies.
+
+
+Anna Rose [41:05] Cool. Are there any names that we might recognize?
+
+
+Daniel Kang [41:07] Yes. There are, and I do not remember any of them off top of my head, unfortunately.
+
+
+Anna Rose [41:13] Okay. We can ask our listeners to try to dig up what you mean there. That sounds good.
+
+
+Daniel Kang [41:17] Yeah.
+
+
+Anna Rose [41:17] I want to understand, so you sort of mentioned the proof of prompt. This was kind of going back to that application. When you say that, what does that mean? Is that similar to proof of input to output or is it, is proof of prompt different?
+
+
+Daniel Kang [41:32] Yeah. It is a proof of input to an output. So let's say for image generation, these prompts are often very involved because these systems are very opaque. It's not clear how to generate an output given one of these models. And images are one such case where it's really difficult to reproduce manually.
+
+
+And one thing you can imagine doing for proof of prompt is that you could say that, hey, I produce this image and if you want to modify it, I can actually prove that this prompt generated that image. And so, you can then purchase the prompt and be assured that that correspondence was there.
+
+
+You could also imagine someone having a portfolio where they don't release the prompts, which are maybe proprietary, but release the images and say that I actually generated these images and I know the prompt that generated these images.
+
+
+Anna Rose [42:16] Interesting. Another one we didn't get a chance to talk about in the application front was proof of training. This is different, I guess, from proof of inference. What is proof of training?
+
+
+Daniel Kang [42:27] Yeah. So with proof of inference, you have a model that has already been trained, and you want to say that this model produces output.
+
+
+Anna Rose [42:34] Okay.
+
+
+Daniel Kang [42:34] With proof of training, the entity that trained the model can prove that they started from either some base model and fine tuned that model on a specific set of data, or that they trained a model from scratch again on a specific set of data.
+
+
+Anna Rose [42:47] Is this where, like kind of going back to that proof of bias, because it's really an interesting concept there of how to prove you are or are not biased. Is that related to proof of training? Is it sort of proving that you have not included some data or that you have included some data?
+
+
+Daniel Kang [43:04] Yeah. So the proof of training in and of itself just proves that a model was trained from some data.
+
+
+Anna Rose [43:11] Okay.
+
+
+Daniel Kang [43:12] Now once you have that assurance, you can then do things like say that prove that my data is demographically balanced. And this is one way that you can start to layer on assurances that the entire AI system as a whole went through best practices to remove bias.
+
+
+Anna Rose [43:31] You are still relying, though, on some third party that has decided what a balanced dataset looks like, I guess, right?
+
+
+Daniel Kang [43:40] That's right. So some auditor, or some legal entity would come in and say that we think that this is something that's balanced, and then they'd have to go from there. But of course, this is a larger societal question. We are providing the technology to enable this, depending on what the regulators or our auditors want.
+
+
+Anna Rose [43:56] Got it. And going back to ZKTorch, ZKTorch could potentially prove these things, or could in the future.
+
+
+Daniel Kang [44:03] Yeah. So ZKTorch can prove training. It is just very expensive to do so. There are a set of techniques that we think are going to be useful to reducing that cost, but we are not there yet.
+
+
+Anna Rose [44:16] Okay. So today, ZKTorch should be used primarily for which kinds of proving?
+
+
+Daniel Kang [44:22] Proofs of inference.
+
+
+Anna Rose [44:23] Proof of inference. Okay. And the input, output, or no?
+
+
+Daniel Kang [44:28] Any combination can be kept private or public. So you can keep the input public or private and the output public or private.
+
+
+Anna Rose [44:34] Okay. Cool. Now I want to revisit benchmarking. You talked a little bit about different kinds of benchmarking within the AI space. Is there like specific ZKML or ZK-AI benchmarks as well? Or is it like you're using -- are you focused more on the ML benchmarks, and then seeing how these systems kind of compete using ZK?
+
+
+Daniel Kang [44:59] Definitely the latter. I do think that if ZKML becomes more of an academic discipline, there should be some good bench -- there should be benchmarks that are commonly used. We think that the MLPerf Inference suite is a good starting point for that.
+
+
+Anna Rose [45:12] Have you been following at all the benchmarking in sort of the ZK performance space? Because that's also something we've talked about a couple times on the show. I'm sort of wondering if -- given that -- I mean, you're coming much more from the ML side of things introducing ZK. But I'm wondering if people coming from the ZK side would view this differently and if you're familiar with it.
+
+
+Daniel Kang [45:35] Yeah. So there are lots of benchmarking efforts in ZK. A lot of them focus on things like rollups, zkVMs. I'm not aware of coordinated efforts to build standards around benchmarks for ZKML. But as this becomes more prevalent, I hope I'm happy to work on these efforts.
+
+
+Anna Rose [45:52] Would more performance ZK systems in that zkVM side of things be useful in what you're doing? Or are the systems so different that you cannot compare. Like they might be amazing at compression over there in the blockchain land, but it wouldn't be at all useful. Like those techniques don't actually work with the AI systems or they're actually slow. I'm just curious if there's any connection there.
+
+
+Daniel Kang [46:14] Not directly, but we were using a lot of ideas from the general-purpose ZK proving systems.
+
+
+Anna Rose [46:19] Oh, that's cool.
+
+
+Daniel Kang [46:20] And also a lot of the applications that I mentioned, for example, proving bias, this is actually sort of an aggregation on top of input-output pairs. So you'd have to use something like a zkVM to then prove that part. So any improvements there obviously help us and we'd be delighted to have these systems improve.
+
+
+Anna Rose [46:37] Very cool. On a recent episode we did with Muthu, we were talking about Ligero and privacy actually, and how a lot of the benchmarking in today's ZK land doesn't actually take into account how private it is, or how effective it is at keeping privacy.
+
+
+In the case of ZKML, do we feel like -- and ZKML as a topic, not as a toolset, do we feel like that kind of benchmark would be important? I mean, this kind of goes back to that question of how private do we need this kind of privacy? If you're proving something about the inside of a model, is that dire that it be correct or could -- does it have to be completely private?
+
+
+Daniel Kang [47:18] So it actually really depends on the application. In the medical setting, maybe some model provider has a copyright or a trademark or whatever other restriction on their model and they're actually willing to release it as an open-weight model.
+
+
+And obviously, the medical system is highly integrated with the rest of society, so you're not allowed to use it without permission or whatever else. And in this case, you don't actually need to keep the weights private, which is great.
+
+
+Similarly, if you're using a model like Llama, DeepSeek, Kimi, OLMo, these are all open-weight models. So you actually don't need to keep the model weights private.
+
+
+Anna Rose [47:52] There is just more about verifiability. You're trying to prove that it's correct, not that it's private.
+
+
+Daniel Kang [47:58] Yeah. Yeah.
+
+
+Anna Rose [47:59] Yeah. Okay.
+
+
+Daniel Kang [47:59] And another thing that is actually kind of cool is that if you fine tune using a technique like LoRA from a model like Llama, you can keep the LoRA weights private and then the Llama be public and you can actually do much faster proofs of inference that way. So it really depends on the application and what's considered private and what's not.
+
+
+Anna Rose [48:24] Nice. Now, if somebody's listening to this episode and wants to get involved or use this tool, you mentioned that by the time of airing, it should be released. But how do they get in touch, and how do they sort of participate in this?
+
+
+Daniel Kang [48:35] Yeah. That's a great question. We have a Telegram group that we are going to have for users and potential developers of the system. We are always looking for people to help improve our systems. There's a bunch of work that could be done to improving the usability and also the performance of these systems.
+
+
+One simple thing is that we actually haven't incorporated GPU proving due to some specific technical details. And if someone wants to get involved, I'm happy to chat about that in depth. And we'll send the links to all these to Anna to put in the show notes.
+
+
+Anna Rose [49:09] Yeah. We'll add those to the show notes. Are you going to be building this as a company as like a for-profit product, or is this still sort of in the research realm? I'm just kind of curious if someone -- if folks coming in, should they try to build something with it?
+
+
+Daniel Kang [49:24] Yeah. I strongly encourage people to build things with it.
+
+
+Anna Rose [49:26] Like even startups? Like build a startup around this or something like that?
+
+
+Daniel Kang [49:30] Yeah. That would be great. The more the merrier. I'm an academic, I'm a professional professor and as part of the university, I strongly believe in open source and making our technology available for anyone and everyone to use.
+
+
+So I forgot the specific license. It's either MIT or Apache license. That's so anyone can use it. And I highly encourage people to build on this and improve it. So I want to see a thousand flowers bloom.
+
+
+Anna Rose [49:57] Very cool. Daniel, thank you so much for coming back on the show, sharing with us an update on all things ZK and ML, and also introducing us to ZKTorch.
+
+
+Daniel Kang [50:08] Thank you so much for having me.
+
+
+Anna Rose [50:09] And again, I'll add the link to the talk that you gave at zkSummit for kind of extra reference. I found that really helpful in sort of prepping for this, and I think it gives some visuals that explain what we talked about on the show as well.
+
+
+Cool. Thanks so much.
+
+
+Daniel Kang [50:23] Thank you.
+
+
+Anna Rose [50:23] I want to say a big thank you to the podcast team, Rachel, Henrik, Tanya and Kai. And to our listeners, thanks for listening.
