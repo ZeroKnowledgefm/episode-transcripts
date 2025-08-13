@@ -1,0 +1,1241 @@
+﻿ZKP-372-zkPDF MASTER 01
+ZKP-372-zkPDF MASTER 01
+[Anna Rose] (0:05 - 2:09)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Kobi and I chat with Vikas Rushi from PSE and Ying Tong.
+
+
+We dive into two topics at the intersection of ZK and real-world data, that is zkPDF and zkID. For the first half of the episode, we explore zkPDF, a project using ZK to prove something about the content of a PDF file. We dig into what makes PDFs so tricky to work with, as well as the project's journey of implementing zkPDF using zkVMs. We wrap up this part discussing real-world use cases that could benefit from something like zkPDF.
+
+
+For the second half of the episode, we switch focus to zkID, specifically the efforts being made to satisfy the EU's Digital Identity Framework requirements. Ying Tong shares what these requirements are, the response from the cryptography and privacy communities, and how the EF's PSE group is working on a ZK-based proposal. We have covered a couple other zkID projects recently on the show, so it was really cool to expand on that.
+
+
+So I hope you liked this episode. It's almost like two episodes in one. Let us know on Twitter or in our Telegram channel.
+
+
+Now before we kick off, I just want to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your job there today.
+
+
+We've heard great things from teams who've found their perfect hire through this platform, and we hope it can help you as well. Find out more at jobsboard.zeroknowledge.fm. You can find a link to this from our website and in the show notes. Now here is our episode about zkPDF and zkID.
+
+
+Today, Kobi and I are here with Vikas Rushi from PSE and Ying Tong. Welcome to both of you.
+
+
+[Vikas Rushi] (2:09 - 2:10)
+Yeah, thanks for having us.
+
+
+[Ying Tong] (2:10 - 2:11)
+Thank you for having us. 
+
+
+[Anna Rose] (2:09 - 2:15)
+And we have Kobi back as a co-host. Hey, Kobi, what's up?
+
+
+[Kobi Gurkan] (2:15 - 2:17)
+Hey. I'm really happy to be back.
+
+
+[Anna Rose] (2:18 - 2:19)
+Yeah. It's been a long while.
+
+
+[Kobi Gurkan] (2:20 - 2:20)
+Yeah.
+
+
+[Anna Rose] (2:22 - 3:18)
+So for today, what we're going to be exploring is zkPDF. It's a project that I heard about a couple months ago. I'm really excited to dive into it.
+
+
+We're also going to be talking about the larger zkID space. We've already done a few episodes on various zkID projects like Self and Rarimo. We talked to the people at Sui who are working on some identity.
+
+
+There's also like the zkTLS work, the Local-first work. So I'm really excited to continue on that topic and learn a little bit more from both of you. Let's do some quick introductions.
+
+
+Ying Tong, you've already been on the show. You were actually on the show last year talking about a framework for programmable privacy in distributed systems. We recorded that in person. Now we are recording virtually. But I remember we got a chance to actually catch up and it was really fun to do that. So yeah, welcome back.
+
+
+What have you been up to since then? What kind of research have you been working on?
+
+
+[Ying Tong Lai] (3:18 - 4:08)
+I've sort of explored privacy on the application layer. And so in February and March this year, I co-organised this community privacy residency in Taipei.
+
+
+And yeah, this brought together members of marginalised communities who were building for themselves and building to resist surveillance. And at this residency, I found out about PSA's zkID project. And that's how I met Vikas and started to work on privacy preserving digital ID.
+
+
+[Anna Rose] (4:08 - 4:21)
+Cool.
+
+
+You've been in the space for quite a while. Have you ever worked on any other ID projects before that? Like you worked on Zcash, you worked on... like I know you from so many different projects, but I guess was ID just never one of the topics?
+
+
+[Ying Tong Lai] (4:22 - 4:56)
+Yeah, this is my first real deep dive into zkID. And we'll discuss this more later, but it is very much inspired by the EU digital identity wallet and its impending rollout as soon as 2026. And this digital ID is very different from ZKPassport and from some of the other ZK identity projects that we're familiar with.
+
+
+[Anna Rose] (4:57 - 4:57)
+Oh, interesting.
+
+
+[Ying Tong Lai] (4:57 - 5:06)
+It's very different in terms of registration and verification. So we can get into this later.
+
+
+[Anna Rose] (5:06 - 5:24)
+Sounds good. That's cool. I actually didn't realise it was super different, I thought it was sort of in the same category. So, yeah, I'm really excited to hear more about it, because let's learn a little bit about you. It's your first time on the show.
+
+
+Tell us kind of what got you started on this path. And then I want to talk about zkPDF.
+
+
+[Vikas Rushi] (5:25 - 6:10)
+Yep, sure. So I did my bachelor degrees in computer science while I was in college. I was exploring like different domains in Web2.
+
+
+In the process, I started like attending a lot of Web2 hackathons. So I stumbled upon distributed systems and a consensus hackathon. So when they asked us to implement a consensus algorithm, which is like a draft, that's the first introduction for blockchain for me.
+
+
+So then I started looking more into blockchain and what are the different application related things I could work on. So after that point, I started attending a lot of Web3 hackathons also. Then there is this project that I found out, which is called Anon Aadhaar in one of the hackathons.
+
+
+[Anna Rose] (6:10 - 6:11)
+Anon Aadhaar. Yeah. Which hackathon?
+
+
+[Vikas Rushi] (6:11 - 7:07)
+So I think it's back in 2023, ETHIndia. So the project is like, so they have this Aadhaar cards in India, which is like a digital identity card in India. And they're like trying to snarkifying this digital identity using zero-knowledge proofs.
+
+
+For me, it technically sounds like something like really magical. And the first look was like really interesting for me. So I began like started exploring cryptography, zero-knowledge proofs.
+
+
+That was my initial introduction to ZK. And then I started while interning at a DeFi company. I was also working with ZK Email and Open Passport in few grants.
+
+
+Mostly we were like focussing on implementing core cryptography primitives in various ZK DSLs, something like Circom, Noir, Halo 2. Yeah. Then I started working for PSE on ZK ID standards and Anon Aadhaar.
+
+
+
+
+[Anna Rose] (7:07 - 7:36)
+Cool.
+
+
+Yeah. I mean, some of the folks you just mentioned, the ZK Email folks, Florent from Open Passport that's now Self, we've actually had them on the show in the last six months or so. So we'll try to find those episodes if people want to find out more about those projects.
+
+
+But where does zkPDF come from? I guess we have to find out what zkPDF is, but is it coming out of just sort of creating primitives and then you're like, oh, here's one path we want to go on? Or was there some goal that was put in front of you?
+
+
+[Vikas Rushi] (7:37 - 8:15)
+So zkPDF is like a proof of concept where we develop within PSE. So one of the important aspects was you have primitives like ZK Regex and something like ZK-TLS and you have all web-proofs and things standard like this thing. So the zkPDF focusses on proving facts on the PDF, digitally signed PDFs.
+
+
+Let's say if the PDF is digitally signed, you could be able to snarkify this entire digitally signed PDF and you could prove facts from the PDF itself. So that was like a major motivation for us for the PDFs, I mean, snarkifying PDFs in general.
+
+
+[Kobi Gurkan] (8:15 - 8:29)
+Was there a specific motivating use case? So, you know, for Anon Aadhaar, it was a specific digital ID from India. But was there a specific PDF that you were looking into that would be exciting?
+
+
+[Vikas Rushi] (8:29 - 8:56)
+So one of the interesting things we found was like in India, there is this app called DigiLocker by the official government. So let's say you wanted to download any type of document which is related to you regarding from health care, education, loan, banking sector. So all of these PDFs are digitally signed by Indian government itself.
+
+
+And also the interesting part is like they use the same signing key for signing all of the PDFs.
+
+
+[Anna Rose] (8:56 - 8:56)
+OK, wow.
+
+
+[Vikas Rushi] (8:57 - 9:18)
+So the Aadhaar card scope is like they issued like 1.3 billion Aadhaar cards. But I think the number was in 2023. And the initial motivation for us is like we could snarkify larger scope of Indian citizens like we can prove like a more data-rich statements within like a DigiLocker app PDFs.
+
+
+That's really cool.
+
+
+[Anna Rose] (9:18 - 9:31)
+So this is actually you were looking at like a particular real world case where PDFs are being used and you had a better idea, I guess, than how it's done now. The name of the system you said was DigiLocker?
+
+
+[Vikas Rushi] (9:31 - 9:32)
+Yes.
+
+
+[Anna Rose] (9:33 - 9:43)
+OK. And is it is DigiLocker and the Aadhaar system, are they the same system? Or is it more like Aadhaar will use this DigiLocker?
+
+
+[Vikas Rushi] (9:43 - 10:03)
+So I think there's like a different two different departments by Indian government. So I think DigiLocker has like different like sectors like tax department. So all of this integrated into this DigiLocker app, Aadhaar itself is like a different project which is managed by NPCA and digital identity by government itself.
+
+
+[Kobi Gurkan] (10:03 - 10:13)
+Do you know if DigiLocker is widely deployed? Like is it something that's been used by all the tax authorities, banks or?
+
+
+[Vikas Rushi] (10:14 - 10:37)
+So it's mainly used to store certificates. And the second one is like the one of the emerging use cases from DigiLocker is like that... Let's say anyone wanted to do KYC, it's being done by DigiLocker.
+
+
+So all of the OTP stuff with regards to Aadhaar or taxation, it's done by DigiLocker, OTP or KYC verification.
+
+
+[Kobi Gurkan] (10:37 - 10:38)
+Very interesting.
+
+
+[Anna Rose] (10:38 - 11:17)
+On some level, this sounds like kind of great because it would be great if there's like some... something that's consistent when they want to do KYC. I feel like this is a conversation that comes up a lot right now is like how terribly fragmented and dangerous all of these KYC checks are with these different companies. But at the same time, it's kind of scary for like one org or one, you know, government agency to have the full control over it.
+
+
+I think now would be a great time to define what zkPDF actually is. I want to understand a little bit how it's different from something like DigiLocker. Why the way that DigiLocker does it, like what's wrong with that, that you wanted to create something like zkPDF?
+
+
+[Vikas Rushi] (11:18 - 12:18)
+So whenever I think of like the ideal data sharing mechanism, let's say I have like this document, I wanted to share with some provider, I wanted to prove some factual data from the PDF itself. So in the DigiLocker or any mechanism where you are allowed to send this entire PDF or like sensitive data to the provider and you have to prove that this is like a correct content. So in a way, you are like kind of you're leaking all of this data to the provider and like who are issuing the KYC, the way you use zkPDF is that let's say you have this PDF and you wanted to snarkify some content and you wanted to prove to some issuer that this first thing is like issued by certain government or some person or not.
+
+
+And the second thing is like you wanted to do selective disclosure on some parameters. I have this salary of like this amount in my CTC, something like this. So proving factual statements within PDFs, that too, in a privacy preserving manner, it's all about zkPDF.
+
+
+[Anna Rose] (12:18 - 12:25)
+But would like the actual storage of the PDF could still be just like in an enclave or on your computer or something like that?
+
+
+[Vikas Rushi] (12:26 - 13:50)
+Yes. So there are like two major hurdles like while developing zkPDF, the intuition for us to build any ZK ID or like ZK identity projects is that you have this data and you are doing signature verification and you are doing some hashing and signature verification and then you are doing selective disclosure. This is like the standard intuition for us.
+
+
+Let's say what if the data is like really big, something like PDF. So the average size of PDF is like I think 500 KB to 1 MB. I think the average size is like 500 KB and the DigiLocker PDFs are like somewhere around 2 MB to 5 MB.
+
+
+So putting all of this information inside Snarks, this is too much. And also the second thing is like you can't derive like a client side proving because the constraints are too much. So that's like one of the hurdles for us.
+
+
+So we have to utilise zkVM tech for the hashing and signature verification and the proofs which are being generated Groth16. So, yeah.
+
+
+I think the second hurdle, the first hurdle is like hashing and verifying the signature because let's say comparison with any ZK ID projects, let's say the ZK ID projects have the input size like few thousand bytes versus the PDF is like megabytes. So that's like a huge difference for us to prove this in any ZK DSL.
+
+
+So, yeah.
+
+
+[Ying Tong Lai] (13:51 - 14:19)
+I mean, it sounds to me that the parsing, hashing and signature verification could basically all be done offline. A one-time proof that we preprocess and then at actual proving time on, let's say the client's phone, they could prove simply selective disclosure of the parsed values and link that to the pre-computed proof.
+
+
+[Vikas Rushi] (14:20 - 14:27)
+Yes. So it's like you generate a commitment outside the circuit and you kind of like link the same stuff we do with ZK ID currently.
+
+
+[Anna Rose] (14:28 - 14:30)
+Is that how it works or that's how it could work?
+
+
+[Vikas Rushi] (14:31 - 14:45)
+That's like one of the optimisations, like one of the really good optimisations we can think of.
+
+
+Yeah. The second part was like parsing this huge PDF tech because the PDF is like 30-year-old tech and they keep on adding updates with the original spec.
+
+
+[Anna Rose] (14:46 - 14:48)
+PDFs are so old. Wow.
+
+
+[Vikas Rushi] (14:49 - 15:56)
+So parsing this text is generally like a lot of headache and it's like very tricky and it uses, somehow it uses like hierarchical data structure. It has like cross-border references, different fonts and number of encoding compression algorithms. The funniest part was like they use like different languages also.
+
+
+Let's say they use some Chinese, Japanese, you can embed like all of these languages. So for us, it was really hard to build like something really native, which has like very minimal dependency. And the reason why we stressed on minimal dependencies was, let's say, let's say we wanted to take any zkVM and we wanted to run our circuits inside zkVM.
+
+
+The point is like all of the famous Rust crates, like which are related to PDF parsing libraries, they use native C libraries. So it's like the Rust wrappers on C. So all of these libraries doesn't work pretty good on like native zkVMs like SP1 or RISC Zero.
+
+
+So we had to like rewrite the entire PDF logic, a PDF parsing logic with only one dependency, which is like compatible with SP1.
+
+
+[Kobi Gurkan] (15:57 - 16:19)
+So PDFs are, can be pretty complex. And I think you also noted that in the ZK PDF blog post that you guys wrote, so they can contain text, they can contain images, they can contain very different complex objects. Are the PDFs that you're looking at mostly textual or do they have images?
+
+
+What are the ones that you're focussing on?
+
+
+[Vikas Rushi] (16:20 - 17:07)
+So currently we are focussing on extracting text from the PDF, even though you have like multiple images in the PDF, it doesn't matter. So the way the parsing logic works is like, let's say you have like different pages in general in PDF and each page has like different fonts being used in that PDF and you have like cross-border references. And they use like different encodings on different PDF pages.
+
+
+So you do like PDF parsing by one page to one page and then you interpret like different fonts and then you decode all of this from bytes to text within like, if it's like Chinese or Japanese, you could like decode all of this stuff inside encoding and you could omit out the strings with like a page output.
+
+
+[Kobi Gurkan] (17:07 - 17:15)
+So generally you would hash the whole PDF, let's say, but you would choose just specific segments that you would parse.
+
+
+[Vikas Rushi] (17:15 - 17:30)
+So the entire PDF is not digitally signed. There are only, all the main content of the PDF is signed. There are like few headers which are not being signed in the PDF.
+
+
+So we tend to focus on the content which is signed.
+
+
+[Kobi Gurkan] (17:30 - 17:31)
+Okay. And what content is usually signed?
+
+
+[Vikas Rushi] (17:31 - 17:49)
+So all the page content, the textual content is signed. Even the images are signed. So it's almost like 90 percent, 95 percent of the PDF is like signed.
+
+
+There are like few headers and like few unnecessary content which are like not signed because of the optimisation. So it's by the PDF spec.
+
+
+[Anna Rose] (17:50 - 18:12)
+I want to ask about like these different kinds of PDFs that we see, though, because there are sort of like modern PDFs, quote unquote modern. And then there's like really old PDFs. There's just like scans of like crappy documents where you can barely see anything and others are like text readable.
+
+
+So like are you thinking differently about both of those or in the process you have, does it work the same?
+
+
+[Vikas Rushi] (18:13 - 18:48)
+So I think the initial intuition for like any parsing is like same for the old PDFs and the new PDFs. The only difference was the type of encodings you get. So let's say the old PDF has this, they've been using deflate and like standard encodings and the new PDFs, they have like forms.
+
+
+They have like different structural, the structural like hierarchical data structures within PDF itself. So it's like more of like you have this initial like version and then you also support like different encodings like, yeah. And like different compression algorithms.
+
+
+[Anna Rose] (18:48 - 19:08)
+Do you, in order to create something like zkPDF, do you have to build for each of those encodings? Like, is that kind of the work that you're like, you're looking at all these different kinds of PDFs and you're like, okay, now how do we deal with this kind and then get it into a format that we can do parsing and then proving?
+
+
+[Vikas Rushi] (19:09 - 19:23)
+So the funniest thing was we thought of like, so the initials, the timeline for the project is like three weeks. So we thought, well, like the parsing logic would be like fairly simple. We could just like import like Rust crates and we could able to generate SNARK proof.
+
+
+[Kobi Gurkan] (19:23 - 19:25)
+So famous last words, yeah. 
+
+
+[Vikas Rushi] (19:25 - 20:07)
+Yeah. So, so after a point I've realised the PDF spec is like really complex.
+
+
+I started reading like all the Python, C and like Rust libraries in order to make it like compatible with SP1's like zkVM. And then one of the important things I had to keep on like stressing was I can't use like all of this like original crates, which are being used in that library, in my library... in my crate. So, because they have like few of their like clean level encoding compression algorithms, but I have to implement all of this parsing logic by myself.
+
+
+So it was really hard. Currently the parsing library for text, it's only has like one dependency.
+
+
+[Kobi Gurkan] (20:08 - 20:14)
+So can this library take PDF that is pretty complex and just run the part that you're interested in?
+
+
+[Vikas Rushi] (20:14 - 20:29)
+It takes like, I tested with like almost like 15 to 20 PDFs in different languages, like Chinese and Japanese as well. So it was able to parse like all of this text, like by page 1 to page 10. So it parses by page.
+
+
+[Kobi Gurkan] (20:29 - 20:34)
+So, yeah, it does. And it ignores all the rest of the complex stuff that it doesn't know.
+
+
+[Vikas Rushi] (20:34 - 20:37)
+Yep. So something like images, something like code, something like that.
+
+
+[Kobi Gurkan] (20:37 - 20:41)
+So for example, does it work on the digilocker stuff already?
+
+
+[Vikas Rushi] (20:41 - 20:42)
+Yes. The demo was on digilocker.
+
+
+[Kobi Gurkan] (20:42 - 20:44)
+That's amazing. That's cool.
+
+
+[Anna Rose] (20:44 - 20:58)
+Are the files that are in digilocker though quite consistent? Like, is it always sort of forms and templates that look very similar? So it's very easy to like create a very custom zkPDF system or are those very different?
+
+
+[Vikas Rushi] (20:59 - 21:24)
+The format they're using is like pretty similar because the fonts they've been using is like almost all the same. But the famous PDFs is like, one is like Aadhaar PDF, second is like TAX. TAX PDF is like PAN card.
+
+
+So the most important document, they follow the standard pattern. They use the same fonts and luckily all of these documents are one page. Yeah.
+
+
+[Anna Rose] (21:24 - 21:25)
+Not too crazy.
+
+
+[Vikas Rushi] (21:25 - 21:31)
+Yeah. Also they use like RSA and SHA-256.
+
+
+[Anna Rose] (21:30 - 21:31)
+So things we're familiar with.
+
+
+[Vikas Rushi] (21:31 - 21:31)
+Yep.
+
+
+[Ying Tong Lai] (21:31 - 21:42)
+How long does it take to generate a proof for a digilocker cert? Even if it's very slow, it's an acceptable one-time cost.
+
+
+[Vikas Rushi] (21:43 - 22:03)
+The demo PDF is like PAN card, which is used by taxation. So luckily this PAN card is like 104 KB and it uses like SHA-256 and RSA. So it took me around like 31 seconds to generate a Groth16 proof, which is like 21, 29 million cycles in SP1.
+
+
+[Kobi Gurkan] (22:04 - 22:07)
+That's like the SP1 prover network?
+
+
+[Vikas Rushi] (21:07 - 21:07)
+Yes.
+
+
+[Kobi Gurkan] (21:07 - 21:07)
+Okay.
+
+
+[Anna Rose] (22:07 - 22:17)
+What if we're dealing with like a much bigger PDF? You sort of said the ranges can go into the megabytes. So have you like, what's the biggest one you've tried this on and how long does that take?
+
+
+[Vikas Rushi] (22:18 - 22:40)
+So what I did was like, I took like one of the Japanese, I think Chinese PDF. I signed it myself. So I kept like a longer, I kept on adding pages in that.
+
+
+I think it was around like five megabytes. So it took me around like a few minutes, maybe like three minutes. I'm not sure, but like around three minutes.
+
+
+Yeah.
+
+
+[Anna Rose] (22:40 - 22:58)
+Still kind of manageable though, especially if these are like one-offs. Like doing this work, running this system, you're not running it multiple times, right? You're just, you do it kind of one time to parse it, to get the signatures you need.
+
+
+Then you can prove what you need about the PDF.
+
+
+[Vikas Rushi] (22:58 - 22:58)
+Yes, exactly.
+
+
+[Ying Tong Lai] (22:58 - 23:31)
+Yeah. If you're using Groth16, the re-randomising is free and opening certain values in your commitment is cheap. And another interesting thing is the issuer, so the DigiLocker signer, could also take on the role of producing these proofs for you because the threat model is that this issuer can forge PDFs.
+
+
+[Anna Rose] (23:32 - 23:34)
+Yeah, but they have no reason to do that.
+
+
+[Ying Tong Lai] (23:35 - 24:17)
+Right. And it can also already see all your information. So since it can forge PDFs, you could potentially use a Groth16 with a designated verifier set to the issuer.
+
+
+And in this setup, the issuer could very efficiently generate Groth16 proofs for the holder. It's just, I think, a better threat model than using remote prover because we're not introducing any new trust assumptions besides what we already trust the issuer to do.
+
+
+[Kobi Gurkan] (24:18 - 24:36)
+In this case that you have the issuer collaborating with you, though, would you want to produce a ZKP like Groth16 or would you maybe just want them to sign the statement? Or you want to produce a ZKP to keep the same format? Like, what is your thinking?
+
+
+[Ying Tong Lai] (24:37 - 24:55)
+I'm trying to avoid having to upload my PDF to the SP1 Prover Network. So I would like the issuer to cheaply generate the Groth16 proof for me along with the signed document.
+
+
+[Kobi Gurkan] (24:55 - 25:05)
+Yeah, I mean, but if the issuer is already creating the proof for you, can they instead just sign the statement that you want to show to the third party?
+
+
+[Ying Tong Lai] (25:06 - 25:32)
+Yeah, the advantage of having them create a proof for me is that in subsequent verifications and presentations, I no longer need the issuer's cooperation. And this gives us the property of issuer unlinkability, where the issuer is not able to observe how I'm using this credential.
+
+
+[Kobi Gurkan] (25:33 - 25:49)
+Vikas, I was also curious, what are other real world use cases that you've seen already beyond DigiLocker? So, for example, I think you mentioned on the website DocuSign and other platforms, do they naturally sign PDFs today?
+
+
+[Vikas Rushi] (25:49 - 26:35)
+So there are a few different sectors, they sign PDFs in general. So one of the important is like bank statements. So let's say you wanted to fetch few bank statements.
+
+
+So generally in India, few banks sign the statements and they send it to you via email. So that's like, I'm not sure how the outside like other countries does that. So invoicing is like one of the key areas, invoicing and bank statements that is mostly related to banking sector.
+
+
+The second sector is like digital identities in general. So there's a PoC as well, like on the project where they... they're like snarkifying Portugal digital identity PDF with the same tech. So, yeah, that's like one of the use cases as well.
+
+
+[Anna Rose] (26:37 - 26:55)
+It's starting to have a lot of echoes of like ZKP2P and ZK Email, by the way. As you're going through this, I'm just like, it's just like you're dealing with a different part of an email or a different part of like an output from some third party to prove something about it. That's really cool.
+
+
+[Vikas Rushi] (26:56 - 27:13)
+Also, I think one more thing I was like, I forgot to add was, let's say you wanted to prove email attachments, which are PDFs, you could generate like something like ZK Email proof, like zkPDF proof, and you could like generate like more data statements.
+
+
+[Kobi Gurkan] (27:14 - 27:15)
+Oh, it all comes together.
+
+
+[Anna Rose] (27:16 - 27:21)
+Would you do them at the same time? Would this be a single proof? What does that look like?
+
+
+[Vikas Rushi] (27:21 - 27:51)
+I think it depends on the use case we are trying to targeting. So let's say something like I wanted to do like something like ZKP2P where I wanted to verify this payment was successful. So generally I scrape out the information.
+
+
+Maybe if I don't find like enough information within email, I'm guessing they might send like an invoice or something like that within like email attached.
+
+
+So, yeah, I'm just like thinking like, yeah.
+
+
+[Kobi Gurkan] (27:51 - 28:02)
+That's very interesting because in this case, you don't even have to have the PDF signed. You will use the ZK Email as your signature and then you will do the rest of the parsing with zkPDF. That's really cool.
+
+
+[Anna Rose] (28:02 - 28:03)
+Oh, nice.
+
+
+[Vikas Rushi] (28:03 - 28:04)
+Exactly.
+
+
+[Ying Tong Lai] (28:04 - 28:07)
+Yeah, I feel like that's how DocuSign would have to work.
+
+
+[Kobi Gurkan] (28:08 - 28:09)
+Oh, really?
+
+
+[Ying Tong Lai] (28:09 - 28:15)
+Guys, how does DocuSign work? I'm pretty sure I don't have a DocuSign signing key.
+
+
+[Vikas Rushi] (28:15 - 29:19)
+Yeah. So I did like a little proof of concept with ZK Email people like back in last year. So the way we did was like you have any DocuSign content.
+
+
+So they generally attach signatures within PDF. Let's say you scrape out all of this PDF information. The way they do this is like they have like chain of certificates.
+
+
+So one guy signs one thing and the second chain of authority signs like they have like a different key. So they have like a chain of authority from top to bottom. Let's say you wanted to verify a few signatures.
+
+
+You have to verify all of the signatures with respect to public keys. So the PoC, what we did was, let's say you have any type of DocuSign or like ASN, like Abstract Syntax Notation 1 content. So you could be able to generate proofs on based on that.
+
+
+So let's say if the ASN information contains like public key or issuers public key or like some optional strings, which is signed by US government or something like that, you could verify, you could do basically do string matching, think the sorts of things like this. So, yeah.
+
+
+[Kobi Gurkan] (29:20 - 29:47)
+Very cool. So you mentioned some benchmarks that you've made on PDFs like DigiLocker and a few others that you've generated yourself. And those are reasonable documents that people would want to use in the real world.
+
+
+Do you have any wishlist from the zkVMs that would make your life much easier? Like, I don't know, proofed compiles, proving environments?
+
+
+[Vikas Rushi] (29:47 - 30:28)
+The initial thought process for us was like not to use zkVMs and like use like any client side language, but we were like forced to build this entire thing in like zkVMs because the hashing, all of the things in mobile or like in browser, it's technically not feasible. So in that, like we want something like as per the developer experience, we want the largest support for like the Rust crate, which whatever zkVM they have. So all of the Rust crates should be compatible.
+
+
+Not all of the crates, the famous crates should be compatible. So the people who are doing it was like Succinct and RISC Zero. It was.
+
+
+[Anna Rose] (30:29 - 30:29)
+Yeah.
+
+
+[Vikas Rushi] (30:29 - 30:29)
+Yeah.
+
+
+[Anna Rose] (30:30 - 30:32)
+That was back when you started because now there's lots of them.
+
+
+[Kobi Gurkan] (30:32 - 30:37)
+Yeah. Yeah. Yeah. True.
+
+
+[Kobi Gurkan] (30:37 - 30:49)
+Yeah. So am I understanding correctly that the motivation to use a zkVM was not mainly for the developer experience, not mainly for the Rust compatibility or was it?
+
+
+[Vikas Rushi] (30:49 - 31:22)
+So the main motivation to build the project inside zkVM was to, we quickly wanted to generate like a proof of concept, whether this thing works or not. And if you see like a good community support, we'll try to roll out an SDK and like try to generate the, create a setup where we could have like client side provings, where you pre-compute all of the stuff outside the circuit and you could technically do parsing and like [?] inside the circuit. So that was like the further research directions we were like looking into.
+
+
+[Kobi Gurkan] (31:23 - 31:34)
+So do you imagine that if this continues, you would still continue with something like a zkVM or would you consider implementing a whole parsing circuit yourself?
+
+
+[Vikas Rushi] (31:35 - 32:03)
+So there are like few research directions we were like looking into. So one of the things is like running zkVMs inside mobile. So within PSE, like we have like more pro team like working on that.
+
+
+So we were like still figuring out, but whatever like the developer experience is really good. And as long as we are generating client-side proofs, which are really important for us, we are like open to switch ZK DSLs or like any proving schemes.
+
+
+[Kobi Gurkan] (32:03 - 32:11)
+And if you had like a client side proving zkVM, that would be something that would be really useful for you.
+
+
+[Vikas Rushi] (32:11 - 32:15)
+Yes, we were like dreaming of that from so long.
+
+
+[Kobi Gurkan] (32:15 - 32:41)
+Got it. So in many deployments of zkVMs today, the proofs are wrapped in Groth16. Sometimes it's for fast verification on chain, right?
+
+
+Are you imagining that this is something that is important for you guys as well? Or let's say for non-crypto use cases, you would be able to have slower verification time, for example.
+
+
+[Vikas Rushi] (32:42 - 33:24)
+Yeah. So there are like two criteria we thought. First was like you have this proof system where it supports like on-chain verifiability, where the proofs are smaller and you could generate like something like Groth16 and like faster verification times. So the second use cases was, let's say, even though you don't care about the proof size, as long you are generating the proofs are like, the proofs are like faster.
+
+
+So that are for like, especially for Web2 use cases. So I think for like the zkPDF is like currently focussing on on-chain verifiability because we wanted to bring a large amount of Web2 data, like data-rich statements into like blockchain. So, yeah.
+
+
+[Kobi Gurkan] (33:24 - 33:54)
+Okay.
+
+
+So one of the considerations that you have today is like, it's very understandable that you're in a proof of concept phase and you use a zkVM and you submit the whole PDF to the Prover Network, but that has some privacy implications and you don't really want to do that long term. And I think you mentioned somewhere that you would consider, for example, proving delegation or using TEEs in some form. Can you talk a bit about how you would do that?
+
+
+[Vikas Rushi] (33:55 - 34:52)
+Yep.
+
+
+So the two main important things where if we didn't solve, I mean, if we didn't like pursue like client-side proving exploration within zkPDF. So the second, the obvious direction would be like something like private proof delegation. So, or like using something like TEEs.
+
+
+So I think there are like few companies who are like looking into like something like ProverNet, something like, I'm not sure this is company called Fermat. So they do like private, so then I think the inputs are private and they also give you the proof at the end. So that's like one direction.
+
+
+And the second is like in the TEEs as well, we could like technically have like attestations at the end, but that's like the, that's not the direction we want to take because there's like a lot of scope in like running zkVMs inside mobile, so that's like a good direction we wanted to explore.
+
+
+[Anna Rose] (34:53 - 35:26)
+I just want to clarify one thing because I think in the conversation, like it wasn't entirely clear to me. Like at present, zkPDF, it's a proof of concept, like you described. So I'm guessing it's like libraries, documentation, it's like a technique, but is it, is it currently taking the entire PDF into the zkVM or, because I think Ying Tong, you had this idea of like, oh, you could do part of it off chain and, but like, what is it today?
+
+
+Is it currently all in the zkVM?
+
+
+[Vikas Rushi] (35:26 - 35:50)
+So currently it takes like all of the content as the input. So all of the content. So initially it asks you to select some stuff in the PDF you want it to generate, like you, it will ask you to drag some content or like you want it to prove some content in the PDF.
+
+
+So once it verifies this signature inside PDF and then you could able to verify what's the content using like string matching.
+
+
+[Anna Rose] (35:50 - 35:54)
+And so, and what is the project today? Maybe you can also share that.
+
+
+[Vikas Rushi] (35:54 - 36:25)
+So it contains like SP1 circuits, SP1 circuit, it has like a little demo where you could like generate proofs on your local. So whenever you set up all of these things, there will be like a little demo you, where you upload a PDF and then you could able to select a few of the contents in the PDF and then you could able to click on generate proof. So it will do like a generate proof with the substring you want to check in the PDF on like which page you want to check in for.
+
+
+And then it does like a string matching in the PDF.
+
+
+[Anna Rose] (36:26 - 36:36)
+Is it the type of project today that you are looking for people to build with it at hackathons? Do you want companies to incorporate it? Like kind of what, where do you want it to go?
+
+
+[Vikas Rushi] (36:36 - 36:45)
+So for me, it's like pretty clear. So I want like zkPDF to be as something like primitive, something like zkTLS or ZK Regex.
+
+
+[Anna Rose] (36:46 - 36:47)
+Or ZK Email maybe?
+
+
+[Vikas Rushi] (36:47 - 37:11)
+Yeah, yeah, ZK Email. So it has like a lot of scope in like proving like larger set of statements inside like ZK and privacy-preserving manner. So yeah.
+
+
+So in institution level, we think of like PDFs are like, we want to make this as like some kind of like standard or like some kind of like SDK where people will be using in hackathons with this, like downloading all of these SDKs and trying to generate proofs.
+
+
+[Anna Rose] (37:14 - 37:31)
+Well, I think we've done a good job covering zkPDF. Thank you so much for sharing all of that. But we're not finished for this episode because we wanted to talk also about zkID, sort of the larger project.
+
+
+And stop me if I'm wrong, but is zkPDF sort of part of that zkID effort in a way?
+
+
+[Vikas Rushi] (37:32 - 37:47)
+So the initial zkPDF project was inspired by like Anon Aadhaar like kind of projects. But it's mostly like the same core principles with like zkID team. So we merged like Anon Aadhaar and zkID teams.
+
+
+And yeah.
+
+
+[Anna Rose] (37:48 - 38:19)
+Nice. Okay. So let's switch over to talking a little bit more about the zkID side of things.
+
+
+Ying Tong, I know you've been very involved on that side. At the start of the episode, you talked about kind of the thing that got you excited or interested in this was the European Union's digital identity effort. Why did that interest you?
+
+
+And I think I have most importantly, and this is a question I've been curious about, what is the connection to this EU ID and the Ethereum Foundation or PSE or any of these kind of efforts?
+
+
+[Ying Tong Lai] (38:20 - 39:15)
+So there is no official connection between the Ethereum Foundation, PSE and the EU Commission. However, the EU digital ID wallet has set forth a list of high level requirements, and these will be widely deployed as soon as 2026. And because of the far reaching scope of these requirements, we are very interested in making sure that our solution conforms to these requirements.
+
+
+So we can understand the EU digital ID wallet as a set of guidelines that inform the direction of the zkID project. Yeah, I think what got me interested in it was first and foremost, the flaws in the existing design.
+
+
+[Anna Rose] (39:17 - 39:21)
+You saw it was problematic and you had some ideas on how to fix it.
+
+
+[Ying Tong Lai] (39:21 - 39:55)
+Yeah, there was a document by this consortium of concerned cryptographers pointing out to the EU Commission that their solution was not unlinkable and was in fact, fully linkable by both issuers and verifiers. And so there have been many efforts to adjust this. I think the folks from Google have a very good solution, Longfellow ZK and I know they were on the podcast as well.
+
+
+[Anna Rose] (39:56 - 40:08)
+But is the EU's effort, is it similar to having something like Aadhaar? Is it trying to emulate the Indian system or like what is it actually?
+
+
+[Ying Tong Lai] (40:09 - 40:33)
+It is very different. So the main point of difference is the requirement for device binding. So it is not sufficient to have a static signed document on your phone and make proofs about it.
+
+
+You also need to prove the live possession of this device at the time of verification.
+
+
+[Anna Rose] (40:33 - 40:36)
+So you'd have to be doing constant face scans or something?
+
+
+[Ying Tong Lai] (40:37 - 41:24)
+So it's something like that. One example, it's a highly interactive process. So one example is the verifier would send you something like a session nonce, a challenge.
+
+
+And you, the holder, you would sign this nonce with the secure element in your mobile phone. And the public key of this secure element had better match the one issued in the credential. And so this interactive process achieves device binding.
+
+
+This is a requirement in the EU digital identity wallet that is not present in, say, Anon Aadhaar or ZKPassport itself.
+
+
+[Anna Rose] (41:25 - 41:29)
+Yeah. I'm just trying to think about how to even approach something like that.
+
+
+[Ying Tong Lai] (41:29 - 41:43)
+It is quite different, even if it's slightly subtle. It introduces a interactivity at verification time and it introduces reliance on secure element.
+
+
+[Anna Rose] (41:43 - 41:50)
+Is that interactivity one of the main critique points that was raised or is that a good thing, do you think?
+
+
+[Ying Tong Lai] (41:51 - 42:56)
+So this interactivity is necessary to achieve the device binding requirement. And the motivation behind it is to prevent transferring credentials. So if I made a proof on my phone and sent it to you via email, that would be of no use to you because you wouldn't be able to sign a fresh challenge with my secure element.
+
+
+[Anna Rose] (42:21 - 42:22)
+So what do they want instead?
+
+
+[Ying Tong Lai] (41:22 - 41:43)
+So this liveness, this interaction device binding is just a feature of the EU DI wallet and it's not going anywhere. What the cryptographers had originally proposed was replacing the salted hash design, the very naive selective disclosure design, with something stronger, such as zero-knowledge proofs, something that would actually achieve the anonymous credentials primitives.
+
+
+[Kobi Gurkan] (42:57 - 43:10)
+Does this derive from the earlier work that I think was in the IETF around verifiable credentials or is this a distinct effort or how does that look like?
+
+
+[Ying Tong Lai] (43:11 - 43:43)
+They very much point to earlier efforts, both in the IETF and the W3C. So work around verifiable credentials, as you said, and two very common formats are SDJet, Selective Disclosure JSON Web Tokens, as well as MDL, Mobile Driver's Licence. And under the hood, they look very similar.
+
+
+They use salted hashes primitive.
+
+
+[Kobi Gurkan] (43:43 - 44:01)
+And I think one of the goals that you mentioned in your talks was it's being part of the cryptographers' feedback that they're requesting. And what is the feedback that they're requesting? Like, what are the things that they're interested to hear?
+
+
+[Ying Tong Lai] (44:01 - 44:55)
+Yeah, the EU Commission has this open discussion on GitHub, inviting feedback from interested parties. Very often, they are seeking just cryptographic expertise. It's very practical needs.
+
+
+So they want to know how long this proof will take on an average mobile phone, how large the proof will be, how much storage is needed if there is proving keys involved. Yeah, they want to know what issue or behaviour needs to change, if any. So it's very much as cryptographers about communicating your knowledge in a practical way that's actually helpful for policymakers and for developers.
+
+
+[Anna Rose] (44:55 - 45:05)
+Are they open to these proposals that involve ZKPs? Like, is that actually something they want? Or is that something that just kind of came up through this call for feedback?
+
+
+[Ying Tong Lai] (45:06 - 45:42)
+From what I've seen, they are open to zero-knowledge proofs. I think this effort by Google, Longfellow ZK, is one of the leading options. The other camp is a primitive known as BBS Signatures that have been around 20 years.
+
+
+And both approaches have their respective trade-offs. But I think after their cryptographers' feedback, there is very much the acknowledgement of the need for a stronger privacy.
+
+
+[Anna Rose] (45:43 - 46:10)
+That's cool. That's actually kind of amazing to hear the reverberations of that Google, you know, inclusion of ZK. Just the fact that Google has taken a chance with it and has decided to build it into one of their systems.
+
+
+It's such a stamp that governments can now look for and be like, yeah, well, Google used it, so maybe we can try it. I sort of wonder if it would have been included before that or without that.
+
+
+[Ying Tong Lai] (46:11 - 46:36)
+I think very much like demonstrating a large-scale deployment, it makes it very compelling case. And I think another factor is standardisation. When you're working with these state-level entities, they are looking for primitives that are well-understood, battle-tested, well-specified.
+
+
+[Kobi Gurkan] (46:36 - 46:43)
+Cool. What is the timeline for the effort? You mentioned 2026, but what does that date mean?
+
+
+[Ying Tong Lai] (46:43 - 47:59)
+Oh, that's a good question. So I've heard that the 2026 rollout will in fact be the original Salt and Hashes design. This is just because of time constraints and because they haven't picked zero knowledge solution yet.
+
+
+So I've also heard the suggestion that the 2026 rollout be limited to a specific class of use cases that require no privacy. So for example, getting married, you need to tell everything to the registration authority. Anyway, so I've heard this proposal to limit 2026 rollout to use cases with no need for selective disclosure.
+
+
+And this would be a way to test out the larger infrastructure, you know, key management. There's many, many other issues to solve besides zero-knowledge proofs. And then this would buy us time for introducing zero-knowledge proofs and stronger privacy in say 2028.
+
+
+[Anna Rose] (48:00 - 48:18)
+Interesting. Does any of this have, like, you think of Europe and you think of privacy and then you think of GDPR and some of the things, the previous efforts. Is this related to that effort?
+
+
+Is it meant to sort of like, yeah, interact with those laws? Do you, are you thinking about that?
+
+
+[Ying Tong Lai] (48:18 - 49:05)
+That's a good question. I'm by no means an expert on that. I can say a lot of this digital ID is motivated by age verification laws that are coming into effect in many places, both in Europe and the U.S. But yeah, it is interesting that the EU Commission and their high-level requirements have put down very, very strong privacy requirements. So unlinkability, for instance, is enshrined in there. And that is why the cryptographer's feedback was so damning because it showed the failure to abide by their own requirements.
+
+
+[Anna Rose] (49:06 - 49:30)
+Wow.
+
+
+I'm curious what your work is with this. So it sounds like, I mean, thank you. I want to say thanks for sharing with all of us kind of what's happening on the EU front, their requirements, some of the critique.
+
+
+But yeah, what are you doing? And like, why is there the zkID effort there? Are you building products that sort of emulate some of the things they want?
+
+
+Are you proposing? Are you just interfacing with them? Yeah.
+
+
+What's that connection?
+
+
+[Ying Tong Lai] (49:31 - 50:05)
+Yes, we are building a proof of concept that we want to be compliant with the EU digital identity's high-level requirements. And furthermore, we are involved in a wider standardisation effort for generic zero-knowledge proofs. So this effort really is motivated by the need we see for a credibly mutual implementation and standard underpinning the digital identity infrastructure.
+
+
+[Anna Rose] (50:06 - 50:19)
+You mentioned sort of the difference between this effort and things like Self and Rarimo. And one of the things you highlighted was the interactivity. Are there other differences between like what you're working on in terms of a proof of concept and what they have?
+
+
+[Ying Tong Lai] (50:20 - 50:22)
+I would say that is the main difference.
+
+
+[Anna Rose] (50:23 - 50:24)
+Different proving systems, maybe?
+
+
+[Ying Tong Lai] (50:25 - 51:36)
+Yeah. I did this survey of zkID and ZKPassport projects. I would say most of them still use Groth16 and then the only one that doesn't, is, uses Noir.
+
+
+But yeah, we are using a different proof system. We're using Spartan Hyrax and we chose this because, firstly and mainly it gives us re-randomizable commitments. And so we can preserve the pattern of pre-computing large part of the proof.
+
+
+And then secondly, we don't need pairings so we can pick more convenient curves and fields. So we have the Circom implementation of ECDSA verification on P256 that is just native field. And then behind the scenes, it uses like Hyrax on T256, which is like a curve tower.
+
+
+So the T256 scalar field is the P256 base field.
+
+
+[Kobi Gurkan] (51:37 - 51:47)
+And the issue with pairing friendly curves, I think you mentioned somewhere that this is something that would be less acceptable or is it something else?
+
+
+[Ying Tong Lai] (51:48 - 52:15)
+Yeah, this is the main hurdle that the BBS signatures have faced. Is that they would require the issuer to do operations on pairing friendly curves. And in other words, this requires the issuer's secure element to support pairing friendly curves.
+
+
+And that's a big hurdle.
+
+
+[Kobi Gurkan] (52:15 - 52:18)
+Right, because secure elements have very specific curves today.
+
+
+[Ying Tong Lai] (52:19 - 52:22)
+Yes. P256 is no problem.
+
+
+[Anna Rose] (52:24 - 52:34)
+Is wanting to be post-quantum also one of the reasons that you're avoiding that? Or is that factoring in? Like, are people even thinking about that?
+
+
+[Ying Tong Lai] (52:34 - 53:08)
+Yes, I think it's come up. I'm not sure if it's appeared as a requirement. But yeah, my understanding of post-quantum is that it is absolutely crucial when it comes to encryption and less so when it comes to authentication.
+
+
+So I think NIST recommends that for encryption use cases, we switch to post-quantum now, whereas for authentication, we can switch when there is a cryptographically significant quantum computer.
+
+
+[Anna Rose] (53:08 - 53:10)
+And maybe standards are a little bit more sure.
+
+
+[Ying Tong Lai] (53:11 - 53:13)
+Yeah, yeah.
+
+
+[Anna Rose] (53:13 - 53:14)
+Interesting.
+
+
+[Kobi Gurkan] (53:14 - 53:41)
+So other work that you've done as part of this effort is a lot of benchmarking and you've tried many different proof systems. I think I've seen Binius and you probably have tried Longfellow and others. Fflonk, Groth16.
+
+
+I would guess that you ignored for other reasons, like the deployment considerations. What was guiding you in those benchmarks?
+
+
+[Ying Tong Lai] (53:42 - 55:32)
+So our colleague Alex published this benchmark of SHA256 in post-quantum proof systems. So we didn't include Longfellow there because it wasn't open-source at the time. But I can say Longfellow is by far the fastest.
+
+
+Yeah. And the second is Binius. So, yeah, it is always a good question that of what to benchmark.
+
+
+I think basically there's two kinds of designs. For a zkID wallet, the first is something like Google's wallet, which computes the whole proof at presentation time on the fly. And they can do this because they have a very fast prover.
+
+
+The second approach is our approach, which is to pre-compute most of the proof and then do a small linking proof at presentation time. And the benefit of this approach is in the case of multi-credential presentations, that increase in prover work would be marginal. So in our design paradigm, it makes sense to benchmark only re-randomizable commitments.
+
+
+So right now we're using Hyrax. I think an interesting research direction would be Ajtai commitments, so lattice-based commitments, to retain some structure in the commitment scheme, but also get a post-quantum alternative.
+
+
+[Anna Rose] (55:33 - 55:35)
+What did you call that, an A-tai?
+
+
+[Ying Tong Lai] (55:35 - 55:40)
+Yeah, A-J-T-A-I, Ajtai.
+
+
+[Anna Rose] (55:40 - 55:41)
+Oh, I don't know if I knew it.
+
+
+[Ying Tong Lai] (55:41 - 55:44)
+It's used in lattice fold.
+
+
+[Anna Rose] (55:44 - 55:44)
+Cool.
+
+
+[Kobi Gurkan] (55:45 - 55:49)
+Is that acceptable enough when compared to pairing-friendly curves?
+
+
+[Ying Tong Lai] (55:49 - 56:19)
+So the problem with BBS signatures was that the signature itself required an operation on a pairing-friendly curve. Whereas in our case, the issuer could still sign an ECDSA, which I will point out is not post-quantum. But the point here is we would avoid having to support pairing-friendly curves in the secure element.
+
+
+[Kobi Gurkan] (56:20 - 56:39)
+Yeah, that's a good consideration. And as part of the work you mentioned, standards are really important, and that's part of the work that you're doing. So what kind of standards have you worked on?
+
+
+I think there was the work around the polynomial commitment scheme standard, and that's part of this effort, or is it a more general thing?
+
+
+[Ying Tong Lai] (56:40 - 57:29)
+Yes, the polynomial commitment schemes standard is one of about four documents we're working on. My colleague, Janabelle, is working on IOPs, or actually IORs, Interactive Oracle Reductions. And we have another colleague, Mikelli, he's working independently on Fiat-Shamir transform.
+
+
+And then some of my former colleagues from Zcash are working on arithmetization. So they've actually written up a lot of the PLONKish proving system in Lean.
+
+
+[Kobi Gurkan] (57:29 - 57:30)
+Oh, cool.
+
+
+[Ying Tong Lai] (57:30 - 57:52)
+But yeah, they're also targeting IETF. So, yeah, the vision here is a modular approach to specifications. This is definitely less straightforward than, say, specifying your whole protocol end-to-end in a self-contained document.
+
+
+[Anna Rose] (57:53 - 57:56)
+But it makes more sense for the space, it sounds like.
+
+
+[Ying Tong Lai] (57:56 - 58:27)
+Yeah, I think from what I've observed, many projects do want to retain this flexibility, the ability to swap out polynomial commitment scheme. But I will say that for any low-level optimisation, you have to break abstractions. And so there are also many cases that do not fit neatly within our abstraction.
+
+
+[Kobi Gurkan] (58:29 - 58:43)
+So what should people keep an eye out for? Should they look for the implementation with Spartan and Hyrax? Should they try to contribute to the standards?
+
+
+What should people think about?
+
+
+[Ying Tong Lai] (58:43 - 59:48)
+Yes, they should look out for the implementation for sure. All this is open-source on the PSE-zkID repository. And when it comes to standards, absolutely.
+
+
+The more the merrier. I think standards efforts' predominant failure mode is just a loss of momentum. So in particular, this modular approach still requires multiple concrete instantiations, so the modular PCS spec would still benefit from specifying FRI, specifying Hyrax, just illustrating how this API can be instantiated.
+
+
+So I would encourage anyone who's interested in the standards efforts to contribute a specific instantiation of some proof system that you're familiar with or you want to learn about.
+
+
+[Anna Rose] (59:49 - 1:00:17)
+Bringing it back to the zkID project and the proof of concept and everything, is this a client-side project? Are you moving sort of the proving and everything closer to the user's device with this, or is it still living kind of further on a server? Because you mentioned you're not using the pairing-based stuff, and I know that this is changing, but like I've always associated the pairing-based stuff with the client-side.
+
+
+So yeah, I'm just curious how you're thinking about that.
+
+
+[Ying Tong Lai] (1:00:17 - 1:01:27)
+This is absolutely a client-side project. So the holder of the credential should not have to reveal it to any third party besides the issuer who already knew it. And the holder should be able to generate proofs about this credential independently on their device.
+
+
+So yeah, I think Longfellow ZK is a good example of something that runs very fast client-side without using pairings, just using hashes. And yeah, I think for zkID specifically, it's usually small circuits. Like even though we're doing SHA-256, it's not nearly as complex a circuit as zkPDF.
+
+
+And yeah, the sizes of the credentials we're dealing with do not approach anywhere near 500 kilobytes. So yeah, it is very much this application is the scope of it is client-side.
+
+
+[Anna Rose] (1:01:28 - 1:01:58)
+Cool. I want to ask about the concept of revocation in both contexts, in the zkID that we just talked about, but also in zkPDF. In zkID, because I have had some of the other ID projects on, we have touched on some of the problem space there, but let's start with that.
+
+
+What are the issues and how are you thinking about them? And then after that, I want to, I think we were kind of curious if there's any revocation for zkPDF, yeah. But let's start with the ID.
+
+
+[Ying Tong Lai] (1:01:59 - 1:02:40)
+Yeah, revocation is definitely a tricky one. I think right now the best we can do is to make proofs of inclusion in a whitelist or exclusion from a blacklist. And what this does is it puts an online requirement on the holder who's generating the proof.
+
+
+And depending on the size of the whitelist or blacklist, this could have repercussions for proof size, for storage, of course.
+
+
+[Anna Rose] (1:02:40 - 1:03:01)
+And almost for frequency of checking, right? Like, because if it, revocation to me is like, say you lose your passport, you lose your ID, you lose your phone, you lose a thing and you need to take it off that list. It's almost like, okay, but when does that list get updated?
+
+
+When does whatever's kind of verifying that update itself as well to match it?
+
+
+[Ying Tong Lai] (1:03:01 - 1:03:23)
+Absolutely. I think a lot of this update window can be decided by the verifier. So let's say your verifier is the bouncer at a nightclub.
+
+
+Maybe, maybe it's okay that your proof of revocation was updated last week. Let's say. Yeah.
+
+
+[Anna Rose] (1:03:24 - 1:03:25)
+Or last month.
+
+
+[Ying Tong Lai] (1:03:25 - 1:04:00)
+Yes. Whereas if your verifier is your bank, you should update the proof of revocation, like, live. So I think there's a lot of interesting research to be done here.
+
+
+For example, optimising the generation of this inclusion or exclusion proof, how to cache, how to have smarter data structures that require us only to download like some Delta, some bridge of the set.
+
+
+[Anna Rose] (1:04:00 - 1:04:15)
+Do you also imagine going past just the whitelist, blacklist concept and doing something else? Cause I mean, you, what you just described is kind of the simple form, but I feel like even in some of our conversations, there's been at least some ideas for, for other things.
+
+
+[Ying Tong Lai] (1:04:16 - 1:04:51)
+Not that I'm aware of. I saw this new paper called ZK promises, or you could call it ZK callbacks. The concept of it was almost like a callback.
+
+
+But under the hood, it pretty much is a liveness requirement on the prover to check the status of their credential at some regular interval, some callback interval. Yeah.
+
+
+I would be very interested to hear about other approaches to revocation.
+
+
+[Anna Rose] (1:04:52 - 1:05:07)
+We'll add those, those to the show notes. The previous interview is all about the ZK ID. I feel like it's come up a bunch of times.
+
+
+That's cool. What about zkPDF? Vikas, first of all, do you ever need to revocate?
+
+
+And have you thought about that?
+
+
+[Vikas Rushi] (1:05:07 - 1:05:13)
+So initially when I thought of revocation, the initial intuition was like, what if the documents expire?
+
+
+[Anna Rose] (1:05:14 - 1:05:14)
+Oh yeah.
+
+
+[Vikas Rushi] (1:05:14 - 1:05:32)
+Maybe something like expires after X timestamp. So they don't really have like user side revocation. They have to do like a issuer side revocation.
+
+
+So in this case, issuer holds the power, not the user. So I was thinking in that direction, but yeah.
+
+
+[Anna Rose] (1:05:33 - 1:05:53)
+I almost wonder with the PDF where it's like, there's also kind of a lack of power by the user in this case. Like what if there is a document, but you, for whatever reason, want that document to not be part of your file or whatever. Like you want to get rid of it.
+
+
+You don't want this. You want to destroy it. You kind of can't, it sounds like, like the issuer has the control.
+
+
+[Vikas Rushi] (1:05:53 - 1:06:05)
+So that's like a similar threat model with all of the passport as well. Right. So the issuer is like technically the government.
+
+
+So in Aadhaar, it's government, it's passport, it's like the country government. So yeah.
+
+
+[Ying Tong Lai] (1:06:06 - 1:06:27)
+Expiry is also subtly different from revocation in what you described. Like you could think of revocation as, let's say, invalidating it before it expires, let's say you committed a crime and the government says, I will now revoke all your DigiLocker certs. Can it do that?
+
+
+It seems like no.
+
+
+[Vikas Rushi] (1:06:27 - 1:06:29)
+Yeah. True, it can't.
+
+
+[Anna Rose] (1:06:29 - 1:06:53)
+Interesting. Might be a problem space to explore though. You're right though, Ying Tong, where there's a difference because if there's an expiry date, that could actually be like, it's predetermined with that document.
+
+
+You can, I'm assuming you could like actually code that somehow. You could say like, this will no longer be valid after date XYZ. But yeah, if you had to do it before, you'd still have the proofs.
+
+
+[Ying Tong Lai] (1:06:53 - 1:06:53)
+Right.
+
+
+[Kobi Gurkan] (1:06:54 - 1:07:03)
+Yeah. And there is no currently public nullifier list of the PDF documents. So, you know, maybe there will be.
+
+
+[Anna Rose] (1:07:03 - 1:07:23)
+Cool. Well, I think that's a cool place to wrap up our discussion. It sounds like a little bit of an open problem there too.
+
+
+So could be interesting to think about. Thank you to both of you for coming on the show, sharing with us zkPDF and the zkID efforts coming out of PSE. Yeah.
+
+
+Thanks so much.
+
+
+[Ying Tong Lai] (1:07:23 - 1:07:25)
+Thank you. It was a pleasure.
+
+
+[Vikas Rushi] (1:07:25 - 1:07:26)
+Thank you.
+
+
+[Anna Rose] (1:07:27 - 1:07:37)
+I also, I love how this conversation also kind of like went into, like, I feel like it touched on a lot of previous episodes that we've had over the last six months, like it's kind of a bunch of things are tying together.
+
+
+[Ying Tong Lai] (1:07:37 - 1:07:43)
+Oh, zkID is like one of the biggest possible deployments of ZK.
+
+
+[Kobi Gurkan] (1:07:44 - 1:07:45)
+The culmination of ZK.
+
+
+[Ying Tong Lai] (1:07:46 - 1:08:13)
+Yeah. But I don't know, for me, like age verification, it, this is like, I don't know, one level down, like even that premise is very scary. Like you sprinkle ZK on it.
+
+
+I think it does not make it that much better, like a little better, but I don't know. zkID makes me existential for that reason. I'm like, yeah, but a ZK, but like, what are we using it for?
+
+
+You know?
+
+
+[Anna Rose] (1:08:14 - 1:08:25)
+There's definitely two sides because you're going to be part of a registry. But you, I mean, we are already ID'd on some level. If you want to move from place to place, you need to have your passport and stuff like that.
+
+
+[Ying Tong Lai] (1:08:26 - 1:08:36)
+Yeah. But they're trying to gate access to like YouTube in Australia.
+
+
+To under 16s. It's crazy.
+
+
+[Anna Rose] (1:08:36 - 1:08:50)
+By the way, I know that that's like, that's like very contemporary. I have this weird feeling that it's just not going to work. I, because I think, I think people like just, I think it's just not going to work.
+
+
+I think that's like a proposal they're trying. I think, I don't know, I think it's going to fail.
+
+
+[Anna Rose] (1:08:51 - 1:08:57)
+I want to say thanks, Kobi, for coming back on. I think it's been like over a year since you co-hosted.
+
+
+Is that possible?
+
+
+[Kobi Gurkan] (1:08:59 - 1:09:04)
+I think that that makes sense. And yeah, I'm very, very happy to be on the podcast again.
+
+
+[Anna Rose] (1:09:04 - 1:09:19)
+Good. I'm just, it's really cool to have you. I hope we can do another one very soon.
+
+
+Thanks to both of you again. Thanks, Kobi. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai, and to our listeners.
+
+
+Thanks for listening.
