@@ -1,0 +1,1350 @@
+
+[Anna Rose] (0:05 - 2:46)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Tarun and I chat with Vlad and Murat from Lighter, a perp DEX with verifiable matching and liquidations built as a ZK rollup on Ethereum. Tarun suggested this interview in large part because Lighter may be one of the most used ZK rollup projects out there, and yet it's a ZK project that most folks in the ZK community, myself included, haven't really heard of. So it's great to learn what they've been working on.
+
+
+And a quick note, Tarun is an investor in Lighter through Robot Ventures. It's something we didn't actually mention in the recording, so wanted to share that here.
+
+
+In our conversation with Vlad and Murat, we dive into the world of perp DEXs, covering how they work, how they emerged, what previous perp DEXs attempted, where they succeeded and failed, what led to the Hyperliquid era, how having a combination of traders and engineers on a perp DEX team has brought some advantages, and how Lighter has differentiated itself with the help of ZK.
+
+
+We also explore the details of their system, what led them to choose to build a custom ZK circuit instead of using a general purpose zkVM, what ZK actually unlocked for their system, and more.
+
+
+Now before we kick off, I just want to share two things. First off, we are coming back early next month with a third season of the ZK Whiteboard Sessions. This video series produced by ZK Hack, in collaboration this time with Bain Capital Crypto, has hosts Nico and Guillermo going deep on some of the key concepts in ZK with some fantastic guests. If you haven't seen previous seasons, do check them out. It's a really great way to get onboarded into the key topics we cover on the show.
+
+
+I'll add a link to the previous seasons in the show notes. Our upcoming season kicks off in September. Be sure to follow us on Twitter, join our Telegram, or follow ZK Hack on its respective channels for more info.
+
+
+Secondly, I just want to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your job there today.
+
+
+We've heard great things from teams who have found their perfect hire through this platform, and we hope it can help you as well. Find out more at jobsboard.zeroknowledge.fm. You can find a link to this from our website and in the show notes.
+
+
+Now here's our episode with Vlad and Murat from Lighter.
+
+
+Today Tarun and I are here with Vlad and Murat from Lighter. Welcome to the show.
+
+
+[Vladimir Novakovski] (2:46 - 2:47)
+Thanks for having us.
+
+
+[Murat E.] (2:47 - 2:49)
+Great to be here. 
+
+
+[Anna Rose] (2:49 - 2:50)
+Hey Tarun.
+
+
+[Tarun Chitra] (2:50 - 2:53)
+Great to be back talking about the dark arts.
+
+
+[Anna Rose] (2:53 - 3:41)
+The dark arts of perp DEXs. Alright. So today we're going to be talking about the Lighter project.
+
+
+This is a little different from what we usually cover on the show. Lighter does use ZK, but we're going to be talking about this concept of perp DEXs. Hopefully we get to cover a little bit about the history of it.
+
+
+I am definitely very unfamiliar with this part of the world, this type of product. I really haven't used it much. And when I have, it's been terrifying and like being on a roller coaster. So yeah, I'm excited to learn a little bit more about what you guys are working on.
+
+
+But before we do, let's hear a little of your backgrounds. What got you started? What were you working on maybe before? Why are you working on something like this? Vlad, let's start with you.
+
+
+[Vladimir Novakovski] (3:41 - 4:39)
+Sure. Yeah. So my background is that, you know, kind of growing up, I did a lot of math, computer science, physics, you know, kind of did the whole Olympiad circuit and all that good stuff.
+
+
+And then I spent the first half of my career in quant finance at Citadel. Yeah. Doing, you know, high frequency trading.
+
+
+So that I think kind of there's a kind of interesting segue from that to what we're building now. But our team, we're kind of a mix of the way I think of it as like quants and cryptographers. Right.
+
+
+And so building something like Lighter is a pretty natural fit for us. So we experimented with a few things, but Lighter is the first project we've built. You know, I think different people on the team have done some side projects and, you know, we've been following the space for a long time.
+
+
+But yeah, it took us a couple of months to kind of find our footing in the space. But I think a lot of the skill set of kind of theoretical computer science and then understanding, you know, markets was kind of helpful along the way.
+
+
+[Anna Rose] (4:39 - 4:41)
+Cool. What about you, Murat? What's your background?
+
+
+[Murat E.] (4:42 - 5:05)
+Hey, everyone. I'm Murat. I'm leading the technical efforts on Lighter.
+
+
+This includes the cryptography side, the product side, the exchange side, all those. And yeah, my background is, I wouldn't say cryptography, but a lot of experience on algorithms, optimisations, data structures, which is surprisingly, it aligns really well with the things that we are doing today. So...
+
+
+[Anna Rose] (5:06 - 5:28)
+Nice, very cool. Okay. So I think we should introduce the audience to Lighter.
+
+
+What is Lighter? And just remember, a lot of our audience has been focused very much on the ZK side of things. Lighter is a ZK project, which for some reason I feel like in our community, we haven't heard that much about.
+
+
+So yeah, why don't we talk about what Lighter is and what part of the ecosystem it lives in. Yeah. What's it for?
+
+
+[Vladimir Novakovski] (5:30 - 6:23)
+Lighter is a perp DEX, right? Which means, you know, decentralised exchange, you know, perps are, we can get into more of the details of that, but they're essentially like derivatives, contracts. You know, it's kind of the most actively traded type of contract in crypto, right?
+
+
+So the, you know, the new part about what we're doing though, is that it's on top of Ethereum, but it's also, you know, the goal was to build something that's very scalable, you know, cheap, fast, and while kind of maintaining the security and verifiability aspects of being on top of Ethereum. And that's, you know, I guess we can talk about how we did that. And that's kind of where ZK SNARKs really make it work.
+
+
+But if you're using Lighter, you know, it's a way that you can trade, you know, lots of different types of derivatives and do that in a way that's cheap, fast, secure, verifiable. And, you know, that was kind of always our mission from when we started.
+
+
+[Anna Rose] (6:24 - 6:30)
+Can we do a little backstory on just perp DEXs and actually even maybe perp exchanges, like in our space?
+
+
+[Tarun Chitra] (6:30 - 6:36)
+Maybe define perp, because it's already a shortening of a longer word. I think that's like...
+
+
+[Anna Rose] (6:36 - 6:37)
+Isn't it perpetuals or something?
+
+
+[Vladimir Novakovski] (6:38 - 7:48)
+Right. I guess it's like become like industry jargon. But yeah, it's like perpetual future is what it is.
+
+
+And like the goal of like, why are those interesting in the first place is because of leverage. So, you know, you can trade all the same stuff, just like you can trade the tokens themselves, right? Like you can trade BTC, you know, ETH and so on.
+
+
+Then you're not really using leverage. Now you can do, you know, you can like borrow from something like Aave and trade the spot. You know, you can do that, but a perpetual is just a much easier way to get leverage.
+
+
+So let's say if the price of Bitcoin moves up 2%, let's say you want to make more than 2% if that happens, right? Like, you know, maybe if you take on 10x leverage, you make 20% if you get that price prediction correct. So that's kind of why these kinds of derivatives are interesting in the first place.
+
+
+And, you know, in tradfi, like I think most people who want that kind of exposure, like use options more. But in crypto, like, you know, options were kind of more difficult to do in the early days. So I think perpetual futures is what the industry arrived at as something where, you know, you can get leverage.
+
+
+Because in tradfi, like futures also exist and it's a huge market, but they're like a future as a, you know, there's like a future for three months out and then another three months out.
+
+
+[Anna Rose] (7:48 - 7:49)
+Like a fixed time.
+
+
+[Vladimir Novakovski] (7:49 - 8:24)
+Yeah, exactly.
+
+
+And actually, like there's stories where for like oil futures, if you forget to exercise that future, you actually there are hedge funds that actually got like barrels of oil, you know, delivered to them and stuff. So like to avoid all of that, I think the concept of a perpetual future was, you know, thought of. And it's actually something that would make a lot of sense even in tradfi, just that because tradfi is slow to adopt new concepts, it still hasn't happened.
+
+
+Whereas like the crypto space adopted it pretty early on. I think probably, Tarun, you might know the history of this more, but like probably around 2016, 2017, or maybe even before that, I think there's yeah.
+
+
+[Anna Rose] (8:24 - 8:27)
+Some of the centralised exchanges started to offer these.
+
+
+[Vladimir Novakovski] (8:27 - 8:41)
+Right. But even before the ones we know now, like Binance, there were some like earlier ones that did it. And it basically is this way where the perpetual part of it means that you don't have to worry about is this a June future or an August future?
+
+
+It just kind of like automatically rolls over every hour.
+
+
+[Anna Rose] (8:42 - 8:47)
+It's almost like until you reach what you say you want it to reach, it would just continue.
+
+
+[Vladimir Novakovski] (8:47 - 9:44)
+Yeah. Essentially, like, you know, going long means that you're betting on the underlying asset to appreciate and going short means you're betting on it to fall. And then while you have that position, you know, it kind of every hour it rolls over because there needs to be something that ties the future to the underlying asset.
+
+
+Right. Because otherwise the future, if it was just like a market that had no connection to the underlying... Only name only, then like who's to say that, you know, maybe the Bitcoin future could go up to, you know, a million, like who's to say that it couldn't do that, you know, but because every hour there's this like funding mechanism. So what happens is that like a perp exchange sees it go, where's the underlying trading?
+
+
+And if, you know, based on whether you're above or below that, like essentially there's this like rebalancing that happens to make sure that the price is actually kind of tethered to like the price of that underlying. That part happens generally once an hour. You could design a structure where that's different frequency, but that's become kind of the industry standard.
+
+
+And that kind of happens perpetually, right? Until you get out of the contract.
+
+
+[Anna Rose] (9:44 - 10:21)
+Okay. I have a few questions on that. Just like from a user's perspective, you put up almost like your bet on whether it's going to go up or down in the future and the amount that you're willing to trade.
+
+
+Say it goes against what you thought in the first hour. Do you see a reduction in the value of your trade or like the value of your asset that you're trading with? The reason I'm asking on that level is because like perps have always been described also as kind of like dangerous or like, that, you know, people who don't know what they're doing could like really hurt themselves.
+
+
+And I want to understand why.
+
+
+[Murat E.] (10:21 - 10:57)
+Yeah, I guess a few things to say here. I think for perpetuals, risk actually comes from the leverage, not the way. Like if you are actually 1x leverage, but like short or long a perpetual contract, it doesn't necessarily like a very risky thing to do.
+
+
+But if you are doing like 50x leverage, what I mean by that is like you put $1 capital, but your profit and loss behaves as if you deposited or you put like $50 of capital. So when you get in a position like that, when the price moves very little, you get 50x exposure to that. So that's where the risk part of it comes in.
+
+
+[Anna Rose] (10:57 - 11:00)
+If it goes in the direction you want, you'll get the good exposure.
+
+
+[Murat E.] (11:01 - 11:54)
+Yeah. If it goes in the other direction, you'll basically lose 50x as well. So it's like symmetric in that sense.
+
+
+The part that is not symmetric is, again, there's this liquidation thing, right? So the way you need something like that is you don't want people to have negative balances, right? Because then let's say like I'm minus $10, I'm bankrupt basically.
+
+
+And somebody has like $110 and that's the only two people in the exchange. What happens when the person with $110 decides to withdraw? Because you initially started with $100.
+
+
+So it is not solvent basically to ensure that everybody has positive balances. At some point, you need to say, OK, this position is out of control. Exchange needs to say, I want to basically get rid of this position.
+
+
+That's where the liquidation happens. When the exchange decides, OK, this is too risky to ensure the solvency always there, it gets rid of the position basically by liquidations.
+
+
+[Anna Rose] (11:54 - 12:07)
+Thank you, by the way, to both of you for this. I'm definitely the non-trader asking the very basic questions. But I mean, I think some of the audience is also not using these perps.
+
+
+We've heard about them, but this is really helpful.
+
+
+[Tarun Chitra] (12:08 - 14:05)
+I guess like two things. First, my mom used a perp for the first time last week because Fantom added perps and she was like, what is the thing? I'm going to put $10 and do 50x.
+
+
+Obviously, she lost her money. But I think like actually the UX for perps is getting kind of so easy that anyone can use it. But another thing I kind of which Vlad touched on a little bit, but I think might be worth emphasising to understand why these are more complicated and also why you need to get the logic for proving that a liquidation happens correct is that in a normal futures contract, say, you know, we write a futures contract that says next month you will give me one barrel of oil and I'll pay you $50 right now. In that contract, the fee is priced up front, right? Like I'm giving you $50 now.
+
+
+In one month, you give me a barrel of oil. If you don't, I guess I take you to court or whatever, right? But in perpetual setting, you have this continuous payment, right?
+
+
+So it's like not only are you betting that, you know, say you're betting like Ethereum goes up, but you're also having to pay this financing cost continuously. So like in that sense, you're doing this transformation from a discrete time cost of like I pay a single payment, to I'm paying every interval. That means you have a lot more accounting to do and there's more complexity to keeping track of how much you owe versus like how much someone else owes, because it depends on when you enter and exit the position. So you need to sort of have the entire state.
+
+
+The other thing is that the funding is a way of like synchronising the spot and the futures. So if the funding is, you know, that this price is in one direction, it sort of says, hey, arbitrageur, you should try to bring it down by taking the opposite side.
+
+
+So I think another important piece, and I think Murat and Vlad can expound on this a bit, is, you know, the synchronisation method between the spot and futures price, because I think that's a very important basic concept to understand before we talk about the ZK aspects of this.
+
+
+[Vladimir Novakovski] (14:05 - 14:30)
+Right. I mean, I think, again, it's like there needs to be some mechanism that makes sure that because, yeah, unlike something like oil, where you just like wait for settlement months out, like, you know, obviously none of that can happen, you know, on the blockchain. So you need to like have mechanisms that make sure that those prices are actually tied to each other somehow.
+
+
+And yeah, I guess, Murat, do you want to explain a bit more how like what happens, like what exactly happens every hour?
+
+
+[Murat E.] (14:31 - 15:47)
+Yeah. Yeah. So essentially these perp contracts are just some balance sheet that is stored in the state.
+
+
+So you need to somehow enforce that they represent something, right? Something in the real world, which is, I guess, what we call the underlying asset. The mechanism to make sure that the perp price is somewhat similar to like Bitcoin price, Ethereum price, whatever the underlying is, you have this mechanism called the funding mechanism.
+
+
+And what funding does is you have these oracles that are giving you the index price, which is the price of the underlying, like price of the Ethereum on spot markets, for instance. And the funding mechanisms basically does this thing. If the price of the perpetual asset in the order books or like in the trades that are happening is like higher or lower than the underlying index price, then basically we do this payment where longs pay shorts or shorts pay longs to make sure that you incentivise the price to go to the right direction.
+
+
+So it's like an incentive mechanism to make sure the market makers or the participants are moving the price to the right direction, because if you try to basically move the price to something that's irrelevant of the spot price, you're going to be paying a lot of funding. So it becomes economically unsustainable to price the perpetual futures contract anything but the spot price.
+
+
+[Anna Rose] (15:48 - 16:22)
+Okay. So that was actually a question on the sort of like, if you're going away from the individual's perspective and more towards like the market itself, like what do perpetual DEXs or like these systems, what do they add to it? Like, are they helping to find a more accurate price overall?
+
+
+Does it like increase efficiency or is it just like a cool way for people to get leveraged? Like this is the thing I've always sort of been curious about with these perp DEXs, if it's just like putting sort of trading on steroids for the fun of it, or if it's like acting as like a balancing mechanism of some kind.
+
+
+[Vladimir Novakovski] (16:22 - 18:13)
+Yeah, it's hard to answer that because there are lots of different market participants. And so like, I think you could say that something like perps is like good for price discovery, right? Okay, because the market participants who are really good at price discovery can do so using capital, like more efficiently, right?
+
+
+Because, you know, without leverage, you would have to put up a lot of capital if you're trying to trade spot, right? And so then, you know, all these different market makers and, you know, quant shops and all these guys who are like really good at figuring out what the fair price of an asset should be. Well, maybe the claim I'm trying to make is like the ones who are really good at this stuff, if it wasn't capital efficient for them to do it, they wouldn't participate.
+
+
+Like they would rather do it in tradfi or something, right? But like, you know, so that's actually where you get a lot of really good market participants in the ecosystem. And yeah, I mean, there's like a secondary question of like, how do you make sure that they're not doing stuff themselves that's unfair or that hurts the ecosystem?
+
+
+But like overall, I think you want a lot of like smart people in the ecosystem trading the stuff because that makes for the best prices. So like arguably an ecosystem without derivatives would have more volatility than an ecosystem with derivatives, which is kind of maybe sounds funny, like it would be the other way around. But the reality is that you need the more rational participants there are, kind of the healthier the market is and the way to incentivise those rational participants to be there is leverage.
+
+
+Leverage because it's capital efficient, right? Yeah.
+
+
+At a high level, I think we believe that and it's like a pretty well established how that works. But you can always find like, oh yeah, but what about this case where someone manipulated the market? And so and we can talk about those exceptions as well.
+
+
+But in general, right, like you want a lot of rational actors trading these markets. That's what makes them liquid and, you know, make sure the price is fair and so on.
+
+
+[Anna Rose] (18:13 - 18:13)
+Got it.
+
+
+[Tarun Chitra] (18:13 - 20:21)
+One thing I will add is like the historical element to like why these became popular in crypto versus other markets and one maybe contrapositive to why you would care about capital efficiency is actually inventory management. And so in 2013 to 2015, Bitcoin miners wanted to hedge their, you know, they're paying costs in dollars or renminbi, but they're earning in Bitcoin and they wanted to lock in some sort of like expected price that they're selling at. And at that time, it was actually, you know, there was only these kind of like very illiquid spot markets.
+
+
+So you couldn't really like if you happen to win a block, you would actually have too much Bitcoin to sell. So like there wasn't enough inventory, whereas like if you could use derivatives, you could like space your selling more efficiently over time. And so that was like, you know, like the BitMEX and MEXC stuff like that was kind of they were initially created where like miners needed to sell.
+
+
+And then there were just people who wanted to speculate on the other side of the Bitcoin price. And it just became much more efficient than the miners trying to just constantly sell spot all the time. They allow them to like spread out their selling because like there's this kind of inherent thing about at least in proof of work rewards.
+
+
+That's kind of interesting, which is your expected reward might be like based on how much hash power you use, like might be, say, one Bitcoin per year. But your realised reward might be I have one Bitcoin in May and zero at all other times. So how do I actually think about splitting my expected payout over the year because I still have to pay electricity over the whole year?
+
+
+And the other thing is, in blockchains, you have randomness to when you realise something in a way that you don't in the oil market, right? There's a ship coming from the Middle East, I kind of know where it is, right? Whereas in the blockchain case, it's like I randomly win the proof of work reward.
+
+
+And so I don't know ahead of time, which is why I kind of need this like continuous time thing versus a discrete. So that's a historical reason. Obviously, it kind of grew into its own world.
+
+
+But yeah, I think like inherently blockchain randomness kind of incentivised people to go to this micro market structure.
+
+
+[Anna Rose] (20:22 - 20:32)
+Why were like the early founders, though, like that were building these perp things like didn't they kind of get into trouble with regulators? Like wasn't it sort of seen as this like risk project?
+
+
+[Tarun Chitra] (20:33 - 20:38)
+Well, I think they got in trouble because like the people who are the miners were also like, you know, North Korea and stuff.
+
+
+[Anna Rose] (20:39 - 20:53)
+Okay. Was it because of who they engaged with? Or was it because of the concept of the... I always thought it was sort of like, they had introduced these markets that I don't know regulators found or deemed kind of like unfair or somehow dangerous.
+
+
+[Vladimir Novakovski] (20:53 - 21:44)
+I guess it depends on the specific case. But I think in general, they've just like not been regulated. Right.
+
+
+So and I know this is changing like in the last year. Right. But like before, I think the perspective of the regulators was like, well, we don't have rules for this stuff.
+
+
+So like maybe it's risky, maybe it isn't. But it was like regulation by enforcement. Right.
+
+
+But but it wasn't even that, you know, the regulators had a view on like, OK, 50X leverage is bad, but, you know, 3X leverage is good. It was more just like, OK, this stuff is just outside of the scope of what's regulated. So it shouldn't be traded in certain jurisdictions.
+
+
+There might have been like some specific issues where there were like specific bad actors involved. But I think in general, it was just like, you know, outside of the scope of what's what's regulated. And that's changing now.
+
+
+Right. So that's, I think, a really good shift that's happening in the last year.
+
+
+[Tarun Chitra] (21:45 - 22:03)
+This actually brings up one kind of good point, which will allow us to talk about another aspect of Lighter and Hyperliquid, which is kind of unique and like why this current market cycle has been different than the last one for the perpetuals exchanges. So, you know, one of the obviously, if you look at the things who people got in trouble for running perpetuals exchanges, almost all of it's money laundering.
+
+
+[Anna Rose] (22:04 - 22:06)
+It's related to who is participating.
+
+
+[Tarun Chitra] (22:07 - 22:40)
+But there is one accusation amongst many of the early exchanges and even against Binance that kind of is sort of one reason people thought it was unfair, which is the exchanges also owned the market makers that were market making against the exchanges. And they maybe, you know, like in BitMEX's case, there were like some examples of people claiming that they got forced liquidated, like the exchange forced the price down, caused me to get liquidated. And then, you know, like that was sort of like the manipulations of like 2015 to 2017.
+
+
+[Anna Rose] (22:40 - 22:40)
+Yeah.
+
+
+[Tarun Chitra] (22:41 - 23:13)
+And, you know, we've seen this microstructure play out a bunch of times, right? So it's like in the early days of BitMEX and MEXC and Gate and stuff, like the exchanges were the market makers. In the early days of Binance, Binance was the market maker.
+
+
+And early, and FTX, we saw this thing where like, wink, wink, nudge, nudge, the exchange is not the market maker, but kind of the market maker. But the interesting thing is DeFi in the last, since FTX, has kind of evolved these market mechanisms for on-chain market making that's transparent.
+
+
+[Anna Rose] (23:14 - 23:15)
+And separated, I guess.
+
+
+[Tarun Chitra] (23:15 - 23:19)
+Well, it's separated in that like...
+
+
+[Anna Rose] (23:19 - 23:19)
+It's transparent.
+
+
+[Tarun Chitra] (23:19 - 23:21)
+It's transparent.
+
+
+I wouldn't say totally separated.
+
+
+[Anna Rose] (23:21 - 23:22)
+Okay, so it could still be them.
+
+
+[Tarun Chitra] (23:22 - 23:50)
+Yeah, yeah, yeah. In a lot of cases, it is the teams, but you can see exactly what they're doing. So it's like, it's a lot cleaner and you know kind of what's going on.
+
+
+So maybe a good stepping point here is for you guys to talk about HLP, LLP, and kind of like how that has made on-chain perps DEXs much more efficient slash possible versus the kind of centralised exchanges. Because I think the big reason we've gone from pure centralised to decentralised is this market making mechanism.
+
+
+[Anna Rose] (23:50 - 24:03)
+Also, if you can mention a bit of the... So there's these like other perp DEXs that have come out before the Hyperliquid era, like dYdX. Like, I don't even know.
+
+
+What's the first perp DEX? I don't know what it is. 
+
+
+[Tarun Chitra] (24:03 - 24:04)
+Probably dYdX. I don't think there's... 
+
+
+[Anna Rose] (24:04 - 24:07)
+Maybe you can just work that a little into this as well.
+
+
+[Vladimir Novakovski] (24:08 - 24:39)
+Right. I think, you know, dYdX, they've also gone through like a few different iterations. Like the one that we are quite familiar with is their V3, which actually was the first one that used ZK.
+
+
+They were working with Starkware on that and they were essentially proving that the trades that they claimed that happened, like actually happened. So they weren't proving that the matching was fair, but at least like the trades were proved to be the right trades.
+
+
+[Anna Rose] (24:39 - 24:54)
+And this is what allowed it to be decentralised, right? Because before that point, you were dealing with these centralised exchanges where you were kind of relying on them, I'm guessing. And all of a sudden you have the ZK part allows for these systems to be even built.
+
+
+Am I right?
+
+
+[Vladimir Novakovski] (24:55 - 25:07)
+Yeah. Well, I guess the question is like, which part of the system is decentralised? You know, which part is verifiable?
+
+
+You know, centralised exchange, like a pure centralised exchange, like none of it is...
+
+
+[Anna Rose] (25:07 - 25:08)
+All black box.
+
+
+[Vladimir Novakovski] (25:08 - 26:32)
+It's all black box.
+ 
+So then now you can go all the way to the other extreme, something like a Uniswap, right? There, it's like everything is completely transparent.
+
+
+There is no black box part at all. Like if you're running, well, depends on the chain, right? But like, you know, just the classic, you know, like Uniswap on Ethereum, right?
+
+
+There, like everything is transparent. The problem with that, and I mean, that's not a perp exchange, that's a spot exchange, but still like a lot of the trade-offs exist there too. And it's like, there is just not very efficient, right?
+
+
+You have to like wait 10 seconds for anything to happen. You know, the costs are very high and all that. So it's like, I think the breakthrough that dYdX had, because I think before it was more like, okay, well, you can like deposit and withdraw like that part is decentralised, but like the actual trading, everything there is kind of the same as on a centralised exchange, but like, at least it's like self-custody, right?
+
+
+So like the deposits and the withdrawals are decentralised, but like once you've made the deposit and committed to a position, like the trading, that that's like same as on a centralised exchange. And I think dYdX V3 like took the first step away from that. Then there was a question, okay, well, how do we decentralise or make verifiable like the part that's really important, which is the matching part.
+
+
+And that's kind of, I think where we got started, but, but I guess as far as like what existed before, yeah, like the, the dYdX V3 was, I think a really strong product for its time. I mean, I think it was like the market leader for probably two years.
+
+
+[Anna Rose] (26:32 - 26:32)
+Wow.
+
+
+[Tarun Chitra] (26:33 - 26:35)
+Arguably it was just early in some ways.
+
+
+[Anna Rose] (26:36 - 26:38)
+Is this before or after their move to the Cosmos ecosystem?
+
+
+[Tarun Chitra] (26:39 - 27:02)
+Before, before. I mean, the Starkware product was probably better than the Cosmos version. Not, not, this is my personal opinion. Not because the Cosmos thing had like explicit problems.
+
+
+I guess it did have some like validator collusion things that people found later. And they had to do some like weird slashing events, but it's just like the liquidity was kind of a lot worse. Like, like people just weren't bridging stable coins as much.
+
+
+[Anna Rose] (27:02 - 27:04)
+So it was just like lost the moment.
+
+
+[Tarun Chitra] (27:04 - 27:17)
+Yeah. It's just kind of like, I think there were, it had captured attention and liquidity in, and then kind of moved. And then like, it took a long time to come back.
+
+
+And then by the time it came back, competitors came, I think is like the real story for them.
+
+
+[Anna Rose] (27:17 - 27:22)
+Tarun, you asked a question just before about these like specific things. What were, what was that?
+
+
+[Tarun Chitra] (27:23 - 28:21)
+Well, so I think Vlad made a good point, which is like, there's kind of the spectrum between centralisation and decentralisation, right? And the problem with pure decentralisation is you have a lot of adverse selection. Like you, you know, some user is taking a worse hit than others.
+
+
+And so you do need some stuff to be private or at least not totally telling everyone exactly what you're doing, but you also want it to be verifiable, right? And so I think this trade-off space, you know, people have been exploring this trade-off over the last, call it five plus years, six years. And I think Hyperliquid kind of first made one version of this trade-off.
+
+
+And the main thing is that they kind of, the way they bootstrapped the market-making was, I mean, there's a lot of things that went into their success, but one of them is the way they kind of built this verifiable market maker. And I think Lighter takes a step further because you have a lot of the ZK guarantees and in terms of verifiability. So maybe you guys want to talk about...
+
+
+[Anna Rose] (28:21 - 28:22)
+Hyperliquid is not ZK?
+
+
+[Tarun Chitra] (28:22 - 28:23)
+No.
+
+
+[Anna Rose] (28:23 - 28:24)
+At all?
+
+
+[Tarun Chitra] (28:24 - 28:30)
+No. And this is why bridging spot assets is very weird for it. Like they have to do this kind of multi-sig thing.
+
+
+[Anna Rose] (28:30 - 28:33)
+Oh, I see. So you're just like doing the old fashioned bridge.
+
+
+[Tarun Chitra] (28:33 - 29:00)
+Yeah. And so like, maybe it's a great time for you guys to talk about a little bit about like the benefits of ZK are for your application. Because like, I think a very interesting aspect of Lighter is you go to the website, it does not say ZK unless you go to the white paper and look at the Merkle root data structure.
+
+
+So like, it uses it without you even knowing it, right? Which I think is like, I don't know, that's a good success for ZK is that like people are using it without even knowing it.
+
+
+[Vladimir Novakovski] (29:00 - 30:06)
+Yeah. I mean, I think part of that, right, is like, I think we kind of use the term verifiable as a way to encapsulate, you know, the value prop that comes from using ZK, you know, in a way that traders understand. Yeah, I think that's kind of another question of like, how technical, you know, it's like, do the traders really understand how that part works?
+
+
+I mean, I would argue that they may not understand how it works, but they know that it's like a mechanism that, like we're building in public. And like, if, you know, as long as one person knows how it works and finds a mistake, then they would publish it. So it's like, like the traders understand that these mechanisms are subject to like audits and like public kind of anyone can make sure that what's happening is actually verifiable or not, even if that would be out in the open.
+
+
+So that's, I think, part of it. But while we're talking about like the market making part, just to kind of, you know, make a point on that, you know, our team, like I mentioned, we were kind of like a mixture of, you know, like quants and cryptographers. And, you know, like Hyperliquid, also like their founding team, you know, they have a lot of trading experience too.
+
+
+I think some of the earlier projects were not like that, right?
+
+
+[Anna Rose] (30:06 - 30:08)
+Like they're more like blockchain product people.
+
+
+[Vladimir Novakovski] (30:08 - 31:11)
+Yeah. And, you know, I think it's actually very impressive what they were able to do kind of without the trading experience. But like I think what Tarun said about bootstrapping liquidity and all that, I mean, that's certainly true.
+
+
+But I think even just at a more basic level, like when you're building the first version of a product, like it's one thing if you're like, you build some stuff, you like give it to a third party market maker and say, okay, we'll test this out. It's another thing if it's like people on your own team, they're like testing everything in real time. It's like, okay, like we just improve the circuits this way.
+
+
+Let's run the market making like right now and see if it's still work. You know, like it's just a very different kind of engineering process if everything is done by the same team. And I think, or, you know, for making like APIs that other market makers can use.
+
+
+But if on day one, though, it's like people on your own team that are actually testing all this stuff out. And so I think that that's part of it. Like, I think what happened in the past is that to bootstrap liquidity, you know, DEX projects would like make deals with market makers.
+
+
+But even just the process of building is much different, right? If you're kind of like throwing software over the wall for others to test, you know, so I think bootstrapping liquidity.
+
+
+[Anna Rose] (31:11 - 31:36)
+It's like traders. It sounds like it's like the users building the product versus building a product and then finding the users. It's sort of a classic, like kind of what you described, that like if there's a background in trading, you have all of the intuitions already built in for what you're looking for and what's annoying and what's going to be problematic.
+
+
+So... I can totally picture that the engineering process is going a little faster.
+
+
+[Vladimir Novakovski] (31:37 - 32:12)
+Right. Right. And then also kind of the fact that the way the market maker operates is completely transparent and verifiable.
+
+
+And not only that, like in practise, once it has been launched, like it's like ninety nine percent of the value generated there goes right back into the community. So I think people like those things, too. It's very different from like a centralised exchange running a market maker with their own money.
+
+
+Right. And keeping the profits, you know, that's but I think maybe you can you can jump in here a bit and kind of talk more about how we think about verifiability since it's different. Right.
+
+
+It's not you don't necessarily need kind of consensus, you know, if you're using ZK circuits. But yeah, maybe it's a time for you to jump in.
+
+
+[Murat E.] (32:13 - 34:23)
+Yeah, I guess the initial talking point was layer one, building your own blockchain with consensus versus having this rollup that uses ZK. One of our principles were to have something that's verifiable. Verifiability can come from a bunch of different places.
+
+
+It can come from like a layer one blockchain consensus. It can come from ZK proofs. It can come from optimistic, like fraud proofs or you can have like a trusted execution environment which can somewhat provide some verifiability.
+
+
+But all have their, I guess, advantages, disadvantages. Like, for instance, when you have a consensus, a blockchain, like a full layer one blockchain, you can't like transfer information faster than speed of light. Right.
+
+
+So you'll have network latencies. You'll have like if it's like a globally distributed thing, like you're not going to have less than 100 millisecond latency. Right.
+
+
+It's going to be more than that. But in finance, you don't that's not acceptable in TradFi, for instance. It needs to be in microseconds, not even milliseconds.
+
+
+So it has that disadvantage. If you want to have something that works long term and scales as much as the exchanges on TradFi, like ZK is an option here, basically. Optimistic rollups are also an option.
+
+
+And besides that, optimistic rollups, you have all these issues like withdrawals, deposits, like withdrawals specifically, like you need to have this grace period. Right. So you can't just put your money out of the exchange in a secure way, let's say, like you can have bridges and such, but they're not going to be like the sequencer can always try to do something malicious and it'll be basically like much slower compared to ZK rollups.
+
+
+And the hard part, I guess for ZK, it is really good. But the bad thing about it is it is hard to build. Right.
+
+
+Because when you are building a blockchain, layer one blockchain, you already have a lot of the building blocks. You just combine them to like get a consensus. But here you need to essentially build an exchange and you need to build another exchange that can prove the operation.
+
+
+And ZK tech also has been evolving quite a lot. And that's why it wasn't fully feasible before. And now it's becoming feasible.
+
+
+And we are on production. We are processing like 100 million transactions a day, which is quite a lot right now.
+
+
+[Tarun Chitra] (34:23 - 34:34)
+So I mean, also you had six billion dollars of volume someday this week. Right.
+
+
+To me, it's actually crazy. You're the most used ZK project that people who are building ZK stuff don't know about.
+
+
+[Anna Rose] (34:35 - 34:45)
+This is one of the reasons Tarun brought you up to come on the show, too. He's like, you know that there's this really big ZK project you don't know about. Let's talk to them.
+
+
+[Tarun Chitra] (34:46 - 35:10)
+So actually, one interesting thing, I think that's sort of a narrative violation that that you guys have really leaned into is, you know, you went with custom circuits and I know your journey involved you testing, trying to build this with zkVMs and trying to do it in different rollup stacks. Walk us through the journey of how you ended up back at custom circuits and like where you started and how you ended up with the architecture you have now.
+
+
+[Vladimir Novakovski] (35:11 - 35:50)
+Right. We were pretty open-minded about which architecture to use in the beginning. I mean, we spent like a couple of months, you know, even before like committing to the architecture.
+
+
+I mean, it took a while to build. Right. But even before we made the decision, like we tried a bunch of things and talked to a bunch of teams and did some experiments, which, by the way, I think the earlier point about like being able to kind of iterate quickly and test everything out is important.
+
+
+But like, you know, we thought, OK, well, who's to say, like maybe even just like optimistic rollups. Like we know one thing for sure is that you're using, you know, Ethereum L1. That's definitely like there's no way you could build an order book exchange there.
+
+
+[Anna Rose] (35:50 - 35:54)
+On there. Yeah. That ship has sailed. There was a time.
+
+
+But yeah.
+
+
+[Vladimir Novakovski] (35:54 - 37:19)
+Yeah. We also knew that like in 22, like on let's say on Solana, there were actually order book exchanges that I had other problems. Some of those early projects there had like an FTX connection.
+
+
+You know, there were some technical issues there and then some other issues that kind of unrelated to that technology. Right. But like we didn't know, like who's to say maybe like something like an optimistic rollup on Ethereum is actually efficient enough to run an order book exchange.
+
+
+Right. So we experimented with that because you kind of have to. It's not just something where you can do back of the envelope math and say, OK, it's not going to work because it's like it depends on the nature of exactly how the market making works on things like how many orders are filled, how many are cancelled, like how often do you need to update the orders?
+
+
+Because, you know, those L2s, they're like pretty close to being efficient enough, I guess is my point, to do this. So it's not like you can just do some quick math and conclude it won't work. So you actually have to try it and kind of figure it out.
+
+
+But we we did try it and it was OK, like most markets where you need fast price discovery and, you know, be able to update the order book quickly and, you know, look at the where the costs aren't crazy. Like it's just the L2s are a lot more efficient than the L1, but still several orders of magnitude away from what would really work well. So we always knew that ZK is really powerful and like a really big innovation.
+
+
+And we did think, OK, well, like there's a lot you can do with with ZK SNARKs. It's like building a zkVM isn't the only thing this tech is good for. Like circuits, you know, you can do a lot of different things.
+
+
+[Anna Rose] (37:19 - 37:30)
+They open up actually new possibilities. Just the fact that you're using these things.
+
+
+What influenced that, though? Like when you were like looking around, like what did you see that sort of prompted that understanding or that intuition?
+
+
+[Vladimir Novakovski] (37:30 - 37:59)
+Right. Well, part of it was that the example of, you know, dYdX V3, right.
+
+
+I mean, that was one example. I guess we knew some folks who were part of like 0xPARC or like kind of in the ecosystem and they weren't all building zkVMs. Right. So it's like because because I think the the narrative from like, I don't know, someone who doesn't really understand it, like for like someone like a VC, they might just say, OK, are you using ZK or you're not using ZK?
+
+
+And to them, ZK just means building a zkVM. And that's that. Right.
+
+
+[Tarun Chitra] (38:00 - 38:05)
+Well, they did ruin the notion of ZK meaning zero knowledge versus succinct proof.
+
+
+[Anna Rose] (38:06 - 38:10)
+They? Us. 
+
+
+[Tarun Chitra] (38:10 - 38:13)
+Hey, I'm part of the they.
+
+
+I'm like including myself in the they there.
+
+
+[Vladimir Novakovski] (38:14 - 38:23)
+But like we did try and if ZK based L2s were efficient enough to run an order book exchange, like we would have done that. Right. It's not like we weren't just like trying to like
+
+
+[Anna Rose] (38:23 - 38:25)
+use cryptography because it's cool.
+
+
+[Vladimir Novakovski] (38:25 - 38:43)
+Yeah. Right. I mean, that's a nice benefit, you know, because it's like it's really it really gets the team pumped to like use interesting stuff.
+
+
+But but no, like if there was an easier solution, we would have done it. And the fact that no one else had done it. I mean, I think even dYdX, who were the closest, they actually like moved away from the Ethereum world.
+
+
+Right.
+
+
+[Tarun Chitra] (38:43 - 38:45)
+And ZK part, the Cosmos thing.
+
+
+[Vladimir Novakovski] (38:45 - 38:53)
+Yeah. So I guess that's kind of a narrative because like no one else was thinking about it this way or maybe they were, but didn't execute on it. Right.
+
+
+So cool.
+
+
+[Tarun Chitra] (38:54 - 39:11)
+Well, OK, I think maybe maybe for the ZK audience, the benefits that you get in the exchange performance-wise or oracle-wise or withdraw-wise, like these tangible benefits, can you describe which, you know, which ones the ZK pieces has been uniquely important to and like which... how that kind of improves the product?
+
+
+[Murat E.] (39:12 - 40:13)
+Yeah, I guess a few things to add here. Yeah. As Vlad mentioned, like there are a bunch of existing optimistic rollups, ZK rollups, EVMs that you can deploy a set of contracts to.
+
+
+Like this thing here is like, as I mentioned, we were processing 100 million transactions right now. It can actually do like a billion, but maybe we need to do like 10 billion a day, right in the future.
+
+
+It's a lot of data. You can't just post all those data or like all the state to Ethereum. There is not enough like blobs data available to there. So you need some type of hybrid structure where things are in the states, like orders are in your state tree, but you don't actually post the data about those to your base layer.
+
+
+You can't do that with like off the shelf, like EVMs, right? You need like a lot of cost. Like it needs to be customisable.
+
+
+You need to like that's that's the reason like why are deploying these things to Arbitrum or like Optimism, ZK, ZKsync, Polygon, whatever like it. It just doesn't scale because there is not enough data space on Ethereum for you.
+
+
+[Anna Rose] (40:14 - 40:15)
+But you're talking about zkEVMs there.
+
+
+[Murat E.] (40:16 - 40:16)
+Yeah.
+
+
+[Anna Rose] (40:16 - 40:25)
+Could you use could you have used zkVMs, like the new batch? Like why did you have to create... I think just going back to that question, like why did you create that custom circuit?
+
+
+[Murat E.] (40:25 - 42:12)
+So the thing is, yeah, like you need to as I mentioned, you need to have a custom data availability structure. You maybe you don't want to post all of the data, right? Like the point of posting the data here is we want everyone to be able to reconstruct their portfolio, account portfolio, how many dollars they had, what positions they had.
+
+
+All of those should be reconstructable on Ethereum. But like, for instance, you create an order, it doesn't change your portfolio, right? That data does not need to be posted on Ethereum.
+
+
+And exchanges like the things that exchanges process is dominated by like order operations, not by trades, not by deposits, withdrawals, it's dominated by create this order, cancel this order, modify this order. So you need to basically like to get the 100x data improvement, you need to have a custom data availability structure where you post some of the state, not all of the state.
+
+
+I can give you an analogy on the like, so this is the data availability cost, there is also the like proving costs, right? Like using an off the shelf VM, zkVM versus building your own thing. Like let's say these SNARK frameworks are like a bunch of Lego blocks, and you can like different types, different sizes, different colours, different purposes, you combine them, like if it's a zkVM, you combine these to build a car, right? Like, but what you can do is like you can get rid of all the pieces you don't need, because we are operating an exchange, we don't need to have a virtual machine that can calculate the nth Fibonacci number or something, right?
+
+
+So basically, you get rid of all the unnecessary things. And you build your own Lego blocks, that is like an engine, for instance, so that you can build the car efficiently, you don't need like a huge engine that you built from Lego blocks for running the car, right? So it gives you a lot of efficiency on that side.
+
+
+So you don't need a lot of things and you need certain things that are not efficient to do with the current zkVMs. Yeah, yeah, exactly.
+
+
+[Tarun Chitra] (42:13 - 42:59)
+One question related to this is like, when I was in trading, I remember you'd all you know, you never implement a level in an order book as a tree, you'd always implement it as like, skip list or something where like you could take advantage of caching. But an interesting thing in your white paper is you have this very easy to merklize representation of an order book. You know, do you actually use that in practise?
+
+
+Because like in the white paper, I thought that was like an interesting thing where like in normal non-ZK land, you'd implement something different for performance reasons. But in ZK land, it actually makes more sense to represent like this because it merklizes more easily and stuff like that. I feel like trade offs like that seem to be more akin to things that would make it better to be in a circuit.
+
+
+Yeah, what are the types of techniques and data structures and stuff you're using that are kind of optimised in your circuit?
+
+
+[Murat E.] (43:00 - 44:36)
+One of the things I mentioned earlier, like to build a ZK exchange, I mentioned you need to build an exchange and you need to build a prover for the exchange, right? So like, for instance, the data structure that is mentioned for order book in the white paper is only used in our circuits. And when we are generating the input data for circuits, Sequencer actually uses the most optimal version of that data structure as possible.
+
+
+And Sequencer works as fast as possible because that type of structure, you don't need inclusion proofs to give users like soft finality, right? So you actually can use a different data structure.
+
+
+In the circuit side, yeah, we have that data structure, it is being used right now.
+
+
+That data structure, I guess white paper also mentions it, it provides you inclusion proofs, but on top of that, you can also do a lot of things where you can ask it to give you the best order with the best price. And you can ask it to give it to you like, if I were to buy like $100 worth of this contract, how many contracts I can get? So it can give you like quote proofs as well.
+
+
+So those are the things, functionality that you would need from the data structure. And we try to design something that is optimal to like, just for those things, right? Because you can do stuff like you can implement some type of sorted linked list using regular Merkle trees, but it's not great.
+
+
+The depth of the tree needs to be bigger. You need to send like maybe two Merkle proofs instead of one to verify the inclusion proof. So there are a lot of things that are less efficient.
+
+
+So we try to like custom, like build something super customised, and that is just good for what we wanted to do, not for other things.
+
+
+[Tarun Chitra] (44:37 - 45:11)
+One reason I bring up the data structure thing is like, this is kind of something I think if you hadn't tried implementing an exchange or like a trading strategy where you have to implement an order book, you wouldn't really think about this, right? You just go to a VM and say like, hey, I have this register machine, like here's my linked list, like go make it for me. But if you actually look at the size of the proof and like the depth of the checks, it's like, could be orders of magnitude more than like what you're getting in your custom design, right?
+
+
+That stuff is like a secret, you know, like it's like people don't talk about that type of optimisation.
+
+
+[Murat E.] (45:11 - 46:21)
+Interesting, you know, we actually have a lot like, this is not the only thing, there are some things like more specific optimisations that we do in the circuit level that is not, I guess, in the white paper, maybe we will publish some like write-ups around those. For instance, there are a lot of things that we optimise by, so like in a VM, you have like maybe, you have like words, right? Like 8 bits, 16 bits, whatever bit, words, and the actual underlying prime fields of the SNARK framework is not actually that word, right?
+
+
+It's actually something bigger. Like for instance, like you can allow, like you have like 8-bit words, let's say, and you can multiply them, the result is going to be like 16-bit, let's say, but if you're doing this in an existing off-the-shelf VMs, like it's going to do a bunch of range checks, it's going to do like, it's going to reduce it, whatever, but here you can actually allow it to just, like it's not going to overflow, right?
+
+
+Because your prime field is actually bigger, so you don't need to actually do the range checks here. Maybe like you can do a bunch of these operations, still make sure that you don't need to do any reduce, it doesn't overflow your prime field, you can do those reduces like after you do a lot of computation. So a lot of optimisations like that you can do, like we have a lot of things like this, yeah.
+
+
+[Tarun Chitra] (46:21 - 46:56)
+Do you actually, this is maybe another kind of dumb question, but do you end up doing like mixed precision, like one order book will be represented as like 17-bit words, another one is like four, or do you actually, you know, use like fixed precision? Because like, I could imagine, and I remember kind of doing this in trading, where like the difference between trading like something that's, you know, very tiny micro cap versus like large stock precision-wise was so big that actually you would get a lot of speed from like representing the kind of large number in fewer bits and the high precision one in lower bits.
+
+
+[Murat E.] (46:56 - 47:04)
+In the order book, we don't actually, like we just store the prime field, we don't actually have like a word for it, we just store the numbers in the prime field.
+
+
+[Tarun Chitra] (47:04 - 47:07)
+Oh, you store them directly, you don't take a binary representation.
+
+
+[Murat E.] (47:07 - 47:08)
+No, we just store them.
+
+
+[Tarun Chitra] (47:08 - 47:12)
+Yeah, that's actually, that's interesting, because like that's like another thing, I guess, in a VM you don't do.
+
+
+[Murat E.] (47:13 - 47:20)
+Yeah, exactly. These are the things that gives you advantage, you can, you don't need a lot of the things that VMs do for all your operations.
+
+
+[Tarun Chitra] (47:20 - 48:05)
+Well, I just think like all of this stuff is like, it's interesting, I think, from a sociological standpoint, that the types of people who find the optimisations for this type of stuff are like the people who have, it's like necessity is the mother of all innovation type of thing, right? Because I think, in ZK land, everyone's really been focused on like, client side proving, zkVMs, like general everything, right? And like, I think in some ways, that's made it harder to find applications that are unique, right?
+
+
+Because it looks kind of the same as a non-ZK environment. And it's like, well, can I figure out what I'm getting a benefit from verifiability? But here you have a very distinct reason that you care in that your users need to be able to trust that you're not like, rugging them and that you're market making correctly.
+
+
+And that like, the order book is behaving in a certain way.
+
+
+[Murat E.] (48:06 - 48:19)
+Yeah. Also, if the users cannot distinguish, I guess, your ZK rollup from like a centralised off-chain matcher or from like a co-located very high TPS L1 means like ZK is working, right? It actually scales.
+
+
+[Anna Rose] (48:19 - 48:29)
+What flavour of ZK are you actually using? You talk about a custom circuit, but I'm assuming you're using something that, or maybe talk about your starting point. And what proving system?
+
+
+[Murat E.] (48:29 - 49:13)
+So we are currently using Plonky2, which works really well for our current scale. We are actively working on Plonky, there's Plonky3, there is something that Starkware develops, Stwo, right? And there are other things that are coming in as mentioned, like I said, in the beginning.
+
+
+So we are not really married to any type of proving structure. Our goal is to constantly upgrade it to be for us to use the state of whatever is the state of the art for us. So we are currently actually working on upgrading from Plonky2 to a faster proving system.
+
+
+And yeah, we are expected to push something to production later this year or early next year. But we are still optimising a lot of things just with Plonky2. Like you can have a pretty scalable thing even with Plonky2, which is a good thing.
+
+
+[Anna Rose] (49:13 - 49:38)
+I mean, in that very custom circuit though, so like you're looking for these optimisations, it sounds like part of it is in the build itself. But I'm wondering like the zkVM space is heating up. It's getting faster and faster and more exciting.
+
+
+And there's all these new proving systems and techniques and all these things. Do you think there is a moment where the efficiency gain from what happens over there could actually be useful? Or do you have to, like, because of the way this thing is built, do you have to stick to a custom circuit?
+
+
+[Murat E.] (49:39 - 50:05)
+Well, custom circuits are like our thinking is custom circuits are always going to be like it's not going to be slower, right? Because if it was actually slower than you would just build the VM for it, right? So it cannot be slower.
+
+
+Our bet is like we think it's going to be much faster because that's what's happening in all the industries, right? Like maybe Vlad you can share some stuff on the HFT world, right? Like people build hardwares, right?
+
+
+They don't use like your regular off-the-shelf CPU or whatever.
+
+
+[Tarun Chitra] (50:05 - 50:12)
+By the way, this is why I was asking about mix precision because I used to unfortunately have the misfortune of writing FPGA code for this type of stuff.
+
+
+[Murat E.] (50:12 - 50:47)
+So this is the case of everything else. So we think it's going to be the case for ZK as well. If you want something really, really optimised and does exactly what you want it to be, not everything, but just the exchange operations, let's say the best, like most scalable approach we think will always be a custom rollup, but you can always like have things attached to your custom rollup for composability, right?
+
+
+Like you can have like an EVM that runs on the site or like another VM that runs on the site. Your order operations, exchange operations still go through your like exchange circuits, like custom exchange circuits, but you can have something on the site.
+
+
+[Vladimir Novakovski] (50:47 - 51:31)
+So these innovations that are happening with, you know, teams like Succinct or, you know, we spend a lot of time with Yi Sun and, you know, his team. So a lot of that, I think that will be useful to later, not to replace the custom circuits for the core exchange, but like to compose it with other, like let's say that we want to allow builders to come in and like write smart contracts that would share the sequencer with the core exchange for like stuff that needs to be efficient, but doesn't have to be like extremely efficient, you know, like lending, right? Or AMMs or NFTs, like all these other things that exist in DeFi that don't have to be, you know, you're not talking about like hundreds of millions of orders, but they still have to be efficient though, right? So I think these innovations are going to be helpful for that reason.
+
+
+[Anna Rose] (51:32 - 51:48)
+Interesting. So you're saying like the zkVMs and the work that's going on there might actually help add sort of flavour to some of the things that people can do with your platform, but that core trading product or that part of it is going to stay on the custom circuit?
+
+
+[Murat E.] (51:48 - 52:05)
+Yeah. Also, I can share like some numbers maybe. So since our launch back in January, we have processed like 5 billion-ish transactions, like Ethereum in its lifetime, for instance, processed 3 billion.
+
+
+Like imagine proving all of Ethereum, right? Like we did like in five, six months and proved everything and it's still launching.
+
+
+[Tarun Chitra] (52:05 - 53:40)
+Okay. One thing I also, I think is worth noting is like this fast path, slow path thing is very common in finance where you have sort of like the fast path that's super optimised for like one thing. And then the general purpose stuff runs slower, like next to it, like Hyperliquid is doing the same thing with HyperEVM.
+
+
+Generally in finance and tech over the last 20 years, 30 years, like the advice has always been in finance, like reduce latency at all costs. And then in tech, it's always been like use the general purpose thing because the general purpose thing will win, right? Like why has NVIDIA kind of crushed ASICs?
+
+
+It's because like the general purpose stuff was able to like survive long enough for like someone to find an application, like AI stuff that happened to fit in it well. But I kind of view finance as like focused on optimisation and tech is focused on like exploration. So there's kind of like this natural exploit versus explore trade-off.
+
+
+And I think in general, you're not going to really be able to do that with a VM, right? Like no exchange in the world that is at low latency is running their order book in a virtual machine. I mean, they are sort of indirectly, but like they're usually super optimised for like the particular transaction types, right?
+
+
+So I think like it's interesting that I think ZK maybe took a little longer for people to realise that. At least that's my, that's sort of the thing I find interesting is like people in ZK have been doing all these low level bit optimisations for a while, but they didn't think about making applications that took advantage of that.
+
+
+[Vladimir Novakovski] (53:40 - 55:12)
+Well, it's like, you know, I guess an analogy, like when I was in tradfi, right, we would do all these, you know, all this stuff with high frequency trading where we're being doing like millions of trades a day and with like very low latency, right? And that stuff would be super optimised. And then at the end of the day, like the back office, you know, the accounting department, they would bring like stacks of paper.
+
+
+They would like print out because that's like the slow path, right? Like at the end of the day, they had to like reconcile the trade. So they actually, yeah, they had these like huge stacks of paper.
+
+
+And of course that's not on-chain, but like, I guess this is kind of like the on-chain analogue of that, right? So it's like, and it's a lot faster than end of day, but you know, the verifiability part that the proofs that are generated, that doesn't have to happen in milliseconds, right? I think if that happens in minutes or even hours, that is generally, you know, good enough.
+
+
+But like the actual trading, when the markets are moving quickly, you know, that part can go kind of as fast as hardware allows you to go. And then you're still kind of generating the proofs that it all happened fairly. And if it didn't, then the whole thing breaks down and there's a kind of incentive mechanism for, you know, the sequencer not to cheat.
+
+
+Because if it does, then like it can't post anything until it's reconciled. And then, you know, within a certain amount of time, like there's like this escape hatch too, right? So then like, if the sequencer were to cheat and couldn't fix the problem, then eventually you can just take your assets out from Ethereum, which, you know, like other architectures like Hyperliquid that have their own L1, they don't have that feature, right?
+
+
+Like if their L1 breaks or is compromised, kind of that's it. Like there's no security layer underneath.
+
+
+[Anna Rose] (55:12 - 55:30)
+I want to understand then what you just described. Is that actually how you're built? Like, are you using ZK custom circuit for the actual trades, for the actual perp part, and then also at like another ZK proof system for this verifiability, or is it all built into the same thing?
+
+
+[Murat E.] (55:30 - 56:12)
+I guess the last part that Vlad was mentioning. So we have this different circuit, different set of circuits where you can use the publicly available data on Ethereum, the blob data to reconstruct your account state. And you can, like in the case this escape hatch mode is triggered, you can use the public data, generate a different proof that says I have this much USD in my portfolio at the time of the latest state upgrade, like state push on Ethereum.
+
+
+So that's a set of circuits. And the other set of circuits is the same, like a single multi-layered, I guess, circuit. What it does is basically it proves everything that happens in the exchange.
+
+
+Like everything that changes the state is proven there, including the order creations, order cancellations, and the trades.
+
+
+[Anna Rose] (56:13 - 56:33)
+Earlier in the conversation, we talked about some of the things that were being verified, but I wasn't entirely clear on what you're verifying. And maybe let's like compare it to what Hyperliquid is verifying. So I think you said like market maker verification or something like, verified market maker rather, is something that I think they pioneered potentially.
+
+
+Is that correct?
+
+
+[Vladimir Novakovski] (56:33 - 56:37)
+I think maybe it was GMX, but yeah, I mean, Hyperliquid, you know, they have that.
+
+
+[Tarun Chitra] (56:38 - 59:24)
+Yeah. Well, I think there is something to be said about, you know, the GMX and Jupyter versions, which are more like AMMs versus like the order placement versions like Hyperliquid and Lighter. So it might be worth talking about the history of these kind of like in the wake of FTX, maybe I'll do the GMX and Jupyter, and you guys can do Hyperliquid and Lighter.
+
+
+So like in the wake of FTX, I mean, GMX actually launched before FTX blew up, but like basically it didn't really have that much usage. And then after FTX, people were like, is there an on-chain perp stacks that I can use? And it was on Arbitrum.
+
+
+And so in like early 2023, like February, 2023, something like that, you started to see it's like usage go up a lot. And around that time, basically, I think, I think they got to like a few billion of TVL, but the way that their market making system worked is there's this kind of like liquidity pool, think of it like a Uniswap style, a pool where I deposit assets in. And it works in a way where the pool lends its assets to the perpetuals trader.
+
+
+So a perpetuals trader basically says, I want to go 2x long. I'm simplifying this. I've wrote a paper about this.
+
+
+So if you really care about writing the details, you can go read that. But I'm going to be a little fast and loose to make it easy to understand. So imagine that there's a pool that has Bitcoin and USD in it.
+
+
+And a user wants to make a trade that says, hey, I'm 2x Bitcoin. So they put up 1x Bitcoin, and then they borrow 1x Bitcoin from the pool to get the 2x leverage. And then they pay a fee on that borrow effectively, which is like this financing rate.
+
+
+And if they get liquidated, their Bitcoin goes back to the pool. So the pool might take a loss if the price decreases sharply enough. But otherwise, the pool will kind of earn the yield that the user is paying to keep the position open.
+
+
+But these are more like AMMs. So they're fully algorithmic and they're rebalancing. There's like an arbitrage game of like people creating and redeeming a little bit like a Uniswap style arbitrage.
+
+
+Okay. So GMX, the interesting thing is like they were able to show it was stable. Like you weren't able to offer that much leverage. And they did have a couple incidents with like Oracle's issues.
+
+
+But generally speaking, it was stable, but very capital inefficient, right? Because I'm lending you the entire position effectively. But around that time, Solana started taking off, especially because of meme coin trading.
+
+
+And Jupiter basically copied more or less like the GMX model. And that grew a lot. At the same time, Hyperliquid was like, hey, we're actually going to have an order book.
+
+
+And an order book, you can't really use this. I mean, you can kind of use this lending model, but it's insanely inefficient. And so, you know, I'll let Murat and Vlad explain how HLP works and how OLP works.
+
+
+[Vladimir Novakovski] (59:24 - 59:35)
+Right. With Hyperliquid, right, because it's its own L1, the verifiability happens as a function of that, right? So it's like... 
+
+
+[Anna Rose] (59:36 - 59:37)
+Consensus, consensus validators.
+
+
+Is it it's a proof of stake?
+
+
+[Tarun Chitra] (59:38 - 59:41)
+Yes. But the HyperCore is not open source. So who knows what the...
+
+
+[Anna Rose] (59:41 - 59:42)
+Oh, okay. Okay.
+
+
+[Tarun Chitra] (59:42 - 59:47)
+The EVM is open source. Yeah. You can decompile the binary.
+
+
+The binary is public. Okay.
+
+
+[Anna Rose] (59:48 - 59:59)
+All right. Just to continue what you're saying, Vlad. So it's a consensus, like just the fact that there's a validator set, it's consensus.
+
+
+That's what's verifying what's happening. That's what's proving that it's like correct.
+
+
+[Vladimir Novakovski] (59:59 - 1:00:16)
+Right. You know, there's that. And again, there's the whole question of like, well, how, how secure is that L1?
+
+
+But putting that aside, I mean, I think everything that happens there, you know, you could see it on the block explorer of that L1. And that includes the operation of the internal market maker, you know, HLP. And, you know, HLP has certain rules.
+
+
+[Anna Rose] (1:00:16 - 1:00:20)
+What is HLP? Is that its token or its system?
+
+
+[Vladimir Novakovski] (1:00:21 - 1:00:33)
+It's basically just like the name of that, you know, market maker there. And, you know, you could like anyone could deposit funds into it. There are some rules about like, you can only withdraw after three days, stuff like that.
+
+
+[Tarun Chitra] (1:00:33 - 1:00:40)
+These are all enforced by contract, though. So it's like, it's not like a private market maker agreement. It's like you can go deposit USDC in it right now if you want.
+
+
+[Murat E.] (1:00:40 - 1:00:55)
+Yeah. Also, it is not the only market maker. So it's just like an extension thing on top of a regular exchange where others can deposit money into, but you don't need to.
+
+
+It's just an extra feature on top of the centralised, like current centralised exchanges. It's not like a part of the protocol in a sense.
+
+
+[Vladimir Novakovski] (1:00:56 - 1:01:17)
+But like, importantly, those funds can only be used to trade, you know, on that exchange. And, you know, you need like signatures to deposit and withdraw. It's not like they can just take those funds and do other stuff with it.
+
+
+Again, that's if you trust the L1. But like, assuming that we do, then that's how it works. And now for us, verifiability is enforced through ZK proofs, right?
+
+
+So there it's like...
+
+
+[Anna Rose] (1:01:17 - 1:01:18)
+And Ethereum, I guess.
+
+
+[Vladimir Novakovski] (1:01:18 - 1:02:50)
+And Ethereum. So even if we wanted to cheat, we couldn't. So, I mean, I think that's even a stronger guarantee.
+
+
+But so we also kind of created this LLP, you know, lighter liquidity pool to bootstrap liquidity from the beginning. Right. And it's something that our quant team developed in tandem with our cryptography team, like I was saying before.
+
+
+Right. So kind of we made sure that all works in the beginning before making the API available to other market makers. But that also, you know, again, it's like the same rules, you know, it can deposit, you can withdraw, like everything that happens needs to be signed.
+
+
+Like, you know, they can't, you know, the rules that this LLP has to follow and everything you can see in the block explorer, like it's all transparent. So it's, you know, so that's kind of what it is. But the purpose for it is that the community can deposit funds like rather than some third party market maker extracting profits.
+
+
+Right. Like, why not just have the community itself provide the capital and then they're making yield from it? Because, you know, market makers in general make money.
+
+
+Right. Like otherwise companies like even in tradfi, right. Like Citadel or Jane Street, you know, they like they're not just doing it for fun.
+
+
+Right. Like, you know, and then it's like I think market making, no one has a problem with market making being profitable. I think what what is problematic is if they go too far and like, you know, manipulate the price or do things like kind of backroom deals.
+
+
+But like if it's transparent, you can see, OK, the market maker, you know, it makes 10, 20 basis points a day. You can get the yield. You can see exactly what it's doing.
+
+
+That's fine. And again, other market at this point on Lighter, we have a bunch of other market makers, too. But LLP was very useful to bootstrap the liquidity on day one.
+
+
+[Tarun Chitra] (1:02:50 - 1:03:45)
+Wait, one one important thing. And I think this is where, again, I always like to think of the historical things here is like crypto kind of had this thing of like 2017 everyone to launch a token. You have a market maker.
+
+
+The exchanges generally ran their own market makers. So it was kind of a little bit of a mafia shakedown when you wanted to list a token. Then, you know, during the bear market, Uniswap came out and it was like, hey, I could actually list my token without paying the mafia price to get listed on the exchange.
+
+
+But the problem is that while that was democratised, like anyone could earn the yield from anyone could also cause you adverse selection via all the five million ways of doing MEV, all the JIT attacks, like, you know, all the stuff we've covered in different episodes. But I think now we're at this place where, like, people realise you need some privacy for a market maker, right? Like a market maker shouldn't be like telling everyone exactly what its strategy is at all times because someone's going to front run them.
+
+
+[Anna Rose] (1:03:45 - 1:03:48)
+And that's what Uniswap actually was. Everything was so open.
+
+
+[Tarun Chitra] (1:03:48 - 1:04:35)
+So open. Right. So the verifiability is I can be a verifiable market maker where I prove to you that I'm not using your money somewhere else.
+
+
+I'm not doing, you know, FTX shit where I'm like borrowing it and investing in Anthropic. I have like some constraints that are enforced and I'm proving to you that I'm using it, you know, using it to generate income. But I don't have to tell you the strategy.
+
+
+And I think this thing is like, you know, I think it hasn't been explained that way. But that, I think, is the reason these things have taken off is because they kind of are a strict improvement on the fully public. Like we went from like fully non-public to fully public to like somewhere in the middle.
+
+
+And like the middle seems more sustainable for perpetuals. I don't know if you guys can if you guys think differently, but I think that that that's always how I would argue how the microstructure evolved in the last 10 years.
+
+
+[Vladimir Novakovski] (1:04:36 - 1:04:54)
+Right. Yeah. You could say, well, why not like open source the market making strategy?
+
+
+And it wouldn't cause a problem for the protocol directly. But what would happen is then like all then all the third party market makers would like because their stuff is like they're not obligated to open source their stuff. Right? So then they could just like front run the community market maker.
+
+
+[Anna Rose] (1:04:54 - 1:04:57)
+So it's closed source then, that LLP.
+
+
+[Vladimir Novakovski] (1:04:57 - 1:05:10)
+Yeah. But there are proofs that what it does is within the rules of like like it can't take too much leverage or it can't just like move funds from your account to another account. You know, it can't do anything like that.
+
+
+But within the rules of what it can do, that's closed source.
+
+
+[Anna Rose] (1:05:11 - 1:05:19)
+And the proofs that you just described are those ZKPs as well? Or is it more like proof because of, I don't know, something in the white paper?
+
+
+[Murat E.] (1:05:20 - 1:05:48)
+Yeah, I can say a few things here. So LLP is essentially an account, just an account that can do anything that like most of the things that an account can do. But it has this extra thing where people can buy into this account.
+
+
+Right. You can say I'm going to give you like 10 bucks, use this 10 bucks to market make, but I'm going to take your profits as well. Like you are basically buying into the account.
+
+
+It cannot do like it cannot just withdraw these things. Like if someone sends you $10, you cannot just like transfer that to somewhere else. You can only do.
+
+
+[Anna Rose] (1:05:48 - 1:05:49)
+But how do you prove it?
+
+
+[Murat E.] (1:05:50 - 1:06:13)
+The strategy itself is, again, like when a market maker runs a market making strategy, they run it. Right. Like you don't like they don't send us an algorithm and we prove that we run the correct algorithm.
+
+
+They just say, create me this order, cancel this order. All those LLP is the same. Basically, LLP has an operator.
+
+
+That operator says, "Create this order, cancel this order." All these order operations are verified.
+
+
+[Vladimir Novakovski] (1:06:13 - 1:06:18)
+But like the fact that LLP couldn't just like move capital from one account to another, the circuits enforce that. Right.
+
+
+[Anna Rose] (1:06:18 - 1:06:23)
+Oh, OK. So it is the circuits like the ZK part of it. That's cool.
+
+
+[Murat E.] (1:06:23 - 1:06:49)
+Yeah. Imagine like all these things, the lighter exchange does. Like imagine we moved all of our code to like smart contracts, deployed them onto Ethereum and the exchange is running.
+
+
+They're very slow, but it's running. And then everything that Ethereum guarantees that is verifiable in that scenario is what we prove right now. So we don't have like loopholes where we prove certain things, but not the other things.
+
+
+Just like whatever these features of the exchange does, everything is proven as if they were just deployed.
+
+
+[Anna Rose] (1:06:50 - 1:06:52)
+Sort of the rules, but not the strategy.
+
+
+[Murat E.] (1:06:52 - 1:06:53)
+Yeah, exactly.
+
+
+[Anna Rose] (1:06:53 - 1:06:53)
+OK.
+
+
+[Murat E.] (1:06:53 - 1:06:55)
+And rules are how the how the matching works.
+
+
+[Anna Rose] (1:06:56 - 1:06:56)
+Got it. OK. OK.
+
+
+[Murat E.] (1:06:57 - 1:06:57)
+Yeah.
+
+
+[Anna Rose] (1:06:57 - 1:07:14)
+Cool. Uh, yeah. You just you sort of just talked about like the privacy for, for a second I thought you were using sort of the ZK privacy part, like ZK in the traditional sense. But you're not really saying that. Like the privacy is is created by having it be closed source, the strategies.
+
+
+[Tarun Chitra] (1:07:15 - 1:09:30)
+Or off-chain. Like you can almost just think of it as like there's an oracle that you can't control.
+
+
+That's just like giving you a bunch of orders. But it's constrained in that that account can't do anything other than add or remove at a certain rate and like can't add too much because it will cause too much leverage. Like like it has rules and those rules are enforced in ZK.
+
+
+So this is what I mean by it's like verifiable market maker. Like I can verify that the strategy is within this box defined by these rules, like these constraints. But I don't actually know the exact position. I'm treating it like an oracle.
+
+
+And you could make that more ZK, like I don't know, run in a TEE or something. I know people are have been trying to do that, but I think from a pragmatic standpoint, this is the fastest way to bootstrap while also providing guarantees to the depositors.
+
+
+So, you know, I obviously have been enamoured with the idea of like ZK being used in this way. There's sort of weirdly funny. There's like a very tiny intersection between ZK and people who like trading stuff.
+
+
+But it's like non-zero, it's definitely non-empty. It's much smaller than either of the two sides. But one thing in general, I've just been thinking about is like, what are other things you can do, right?
+
+
+This idea that you have this verifiable market maker that you can get a lot more efficiency while also, like, giving guarantees. There's a sense in which the ZK could improve behaviours of exchanges even more so. Like you could have better capital efficiency in some way.
+
+
+You could change how you onboard collateral. One interesting thing about Hyperliquid is, I sort of think it's almost a bug, not a feature that you have to use this like a separate protocol and hyper unit to bridge spot assets. Whereas with ZK, you don't have to think about the assets you bridge. You can have assets on other chains that are, you know, doing other things that you bridge kind of just in time, stuff like that.
+
+
+So what benefits do you see ZK providing Lighter in the future? Like what are kind of features you want to develop as you expand and kind of improve?
+
+
+And what, you know, in some ways, like what are the things that you think will make Lighter more successful because it's in ZK in the future? Not just like the current stuff, which, you know, we covered, but where it goes from here.
+
+
+[Vladimir Novakovski] (1:09:31 - 1:10:17)
+One, just like this architecture enables Lighter to be on top of Ethereum, right? Which other architectures, I don't know, Solana or other things would not have. So that's just like, there's still a lot more value to get from that, right?
+
+
+Not just in terms of security, but in terms of composability with kind of other protocols on top of Ethereum. Second point is, yeah, this whole idea of like using collateral, like imagine kind of where any asset that's kind of in the Ethereum ecosystem can be kind of natively used as collateral for Lighter. So you can kind of keep those assets and trade.
+
+
+And then, you know, the liquidation, if you get liquidated, then only then are those assets touched. So I think that's definitely something that, you know, the ZK architecture allows to do. I guess, Murat, maybe you can jump in on this.
+
+
+[Murat E.] (1:10:17 - 1:11:53)
+Yeah. So basically in Ethereum native assets, you have like this native fully secure bridge, as you mentioned, like for other chains, you can deposit some like SOL token to Solana, a contract in Solana, and there can be like a ZK proof of it, which then can be used to, again, securely mint that SOL token on Lighter so that they can use it. There are also like other things that comes from composability, for instance, like we mentioned, we talked about LLP, but we also have the infrastructure for other people to, or like other actors to, yeah, deploy these type of pools, public pools, we call them.
+
+
+Imagine that you have a public pool that maintains like a 3x leverage Ethereum long position, right? When someone deposits, it increases the position, when someone withdraws, it decreases it, and it rebalances when the price moves. You can natively tokenise this public pool, and it can be on Ethereum.
+
+
+So you can have like a native 3x ETH token on Ethereum, which can be, I don't know, used to lend to Aave or something. So you can have like those type of things. And as Ethereum scales, as like rollups, as they start like sending their proofs more and more frequently, then you would have this native composability layer through Ethereum between different L2s as well.
+
+
+So like long-term, this is going to like, composability is one of the bigger things that's going to get better and better. Also, there is the, since we are using ZK, there is a privacy part as well, right? This is something that like, we are not using, like utilising ZK part yet, but that is something that actually you can turn on and get some advantages from it, because there are people that prefer to market make in like a more zero-knowledge environment.
+
+
+[Tarun Chitra] (1:11:53 - 1:12:00)
+I mean, a stupid thing is like iceberg orders, right? I probably would want a private iceberg order. I don't want a public, yeah.
+
+
+[Anna Rose] (1:12:02 - 1:12:32)
+Interesting. Cool. Vlad, Murat, thanks for coming on the show, sharing with us, sort of explainer on an almost introductory episode or introductory part, just about perp DEXs, how they work, a bit of the history of perp DEXs, the new generation, and then your project Lighter, and how it kind of uses ZK in these novel ways to, yeah, to actually like make this on-chain Perp experience make more sense.
+
+
+Yeah, very cool to learn about everything you're working on.
+
+
+[Tarun Chitra] (1:12:32 - 1:12:42)
+Thanks for having us. Thanks for having us. Glad to be back and glad to bring a little bit of the dark side to ZK, this podcast, because I feel like, I feel like...
+
+
+[Anna Rose] (1:12:42 - 1:12:43)
+Some of the dark arts?
+
+
+[Tarun Chitra] (1:12:43 - 1:12:44)
+The dark arts, yeah.
+
+
+[Anna Rose] (1:12:46 - 1:12:50)
+I feel like there's lots of dark arts floating around. Maybe perp DEXs is one of them.
+
+
+[Tarun Chitra] (1:12:50 - 1:13:02)
+Well, I just think it's like, it's this thing where like, if you're not really staring at it, you don't, you kind of are like, it sounds like a scam or whatever, you know, like how I would think about your reaction in the beginning, you're like, oh, like, I thought they were like.
+
+
+[Anna Rose] (1:13:04 - 1:13:11)
+So dangerous!
+
+
+But I hope you don't mind me taking that perspective. It is, it is sort of the way it's been fed to me, you know?
+
+
+[Tarun Chitra] (1:13:11 - 1:13:21)
+On the other hand, I watched someone who didn't know what a perp was use it the other day, and I'm like, all right, well, I think we've like, come across over the Rubicon.
+
+
+[Anna Rose] (1:13:22 - 1:13:32)
+Yeah, cool. All right. Thanks again.
+
+
+I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Kai, and to our listeners. Thanks for listening.
