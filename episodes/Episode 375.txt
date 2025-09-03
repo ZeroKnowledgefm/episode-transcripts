@@ -1,0 +1,1227 @@
+﻿ZKP-375-RachelLin MASTER 01
+[Anna Rose] (0:05 - 2:30)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Tarun and I speak with Rachel Lin, a professor at the University of Washington's Paul G. Allen School of Computer Science and Engineering. We discuss indistinguishability obfuscation, or iO.
+
+
+Often described as the holy grail of cryptography, iO is a powerful primitive that if fully realised could have profound implications for privacy tech as a whole. Rachel helps break down the concept for listeners who may already be familiar with ZK, FHE, and TEEs, clarifying how iO is different from those constructions, but also some of the similarities in the assumptions upon which these are based. Our conversation covers the history of iO research, from the early works happening in 2013 to the key breakthrough that was described in a paper Rachel co-authored in 2021 with Jane and Sahai.
+
+
+The paper introduces a novel construction of iO built on well-founded assumptions. We discuss the nuances of this paper and what's happened since 2021 in the field of iO, with the re-emergence of iO constructions built on lattices.
+
+
+Now before we start, I want to just let you know that we've just recently kicked off Season 3 of the ZK Whiteboard Sessions.
+
+
+The first module came out yesterday, and in it we covered one of the key components of many modern-day ZK systems, that is hash functions. Our guest lecturer was JP Aumasson, a previous guest of this show. ZK Whiteboard Sessions are produced by ZK Hack, in collaboration this season with Bain Capital Crypto.
+
+
+Every two weeks we have our hosts Nico and Guillermo going deep into the key concepts in ZK. I've added a link in the show notes, please do check them out. These are a great resource to learn about the fundamentals and techniques powering the ZK systems we often discuss on the show.
+
+
+Now switching back to iO, here's our episode with Rachel Lin.
+
+
+Today, Tarun and I are here with Rachel Lin, a professor at University of Washington in the Paul G. Allen School of Computer Science and Engineering.
+
+
+Welcome to the show, Rachel.
+
+
+[Rachel Lin] (2:30 - 2:33)
+Thank you. Nice to meet you, Anna and Tarun.
+
+
+[Anna Rose] (2:33 - 2:49)
+Hey. Nice to meet you. And thanks to Muthu for doing this intro.
+
+
+I feel like this is like the fourth or fifth time Muthu has done a fantastic intro to a guest in the last couple months. So I want to say thank you, Muthu, for bringing these wonderful people to us.
+
+
+[Rachel Lin] (2:49 - 2:50)
+Thank you to Muthu too, from me.
+
+
+[Anna Rose] (2:52 - 2:53)
+Hey, Tarun.
+
+
+[Tarun Chitra] (2:53 - 2:54)
+Hey. Excited to be back.
+
+
+[Anna Rose] (2:54 - 3:54)
+Yeah. I feel like, Tarun, you were very excited about this one when we floated the idea of doing an episode on iO and specifically speaking to Rachel. But yeah, so I'm just excited to have you here with me.
+
+
+Personally, iO, indistinguishability, obfuscation, the topic of this episode, it's something we've never covered in depth. I don't know if I fully know what it is. So I'll be definitely the beginner of the two of us getting into this topic.
+
+
+But I do feel like we've hinted at it or it's come up in passing a couple times on the show. I'm very curious to hear if it intersects with ZK and the things that we are, like FHE, the things we already talk about a lot on the show, or if it's, yeah, I don't know, pie in the sky, something coming up in the future.
+
+
+So I think maybe we should start with just a very short definition. What is indistinguishability obfuscation? We're going to be referring to this as iO going forward. So what is iO?
+
+
+[Rachel Lin] (3:54 - 4:02)
+That's a very good question. And I'm afraid that I'll have to tell you a story in order to end up being what is iO.
+
+
+[Anna Rose] (4:02 - 4:03)
+Okay, perfect.
+
+
+[Rachel Lin] (4:03 - 5:06)
+I think maybe we can start somewhere back in time and also in terms of the development of this concept. I mean, the first thing to ask is what is obfuscation, right? Indistinguishability obfuscation has the indistinguishability part and also the obfuscation part.
+
+
+The obfuscation part is this concept about can I have a compiler that turns clear text programme, a very complex software, and then compile it into a new version? Think of it as a very, very scrambled version. It is so scrambled to the point that even when you give it out, you release it to the public, that nobody can actually understand what it is doing.
+
+
+But it still works that you feed it an input, it will produce an output, and the input-output behaviour is identical to the original version. So this is the basic concept of obfuscation or programme obfuscation.
+
+
+[Anna Rose] (5:06 - 5:19)
+Is this obfuscation done through, because we hear about things similar to this like hashing or you add randomness or like, what are you doing to create that obfuscation or that sort of like jumbled output?
+
+
+[Rachel Lin] (5:20 - 5:22)
+That is a very grand question.
+
+
+[Anna Rose] (5:23 - 5:26)
+Sounds simple, but it might be complicated to answer.
+
+
+[Rachel Lin] (5:27 - 6:25)
+I mean, it's a very natural concept, right? And in fact, that in the software industry, as soon as the software exists, the people were wondering about whether there are ways to scramble the software so that you can garble, as you say, the internal working of the software so nobody can understand what's your secret source. And people can have intuitions about how they might want to approach this.
+
+
+And then the first thing they might want to do is maybe I can give variables very difficult names to understand. Maybe I can insert a bunch of like no-op operations that will cancel themselves out. Maybe I will do something else, right?
+
+
+Initially, there's a lot of tricks one can play just with programming techniques. And this was being investigated and explored. But the issue is that all these intuitive methods end up to be de-obfuscated.
+
+
+They end up to be easy to reverse engineer.
+
+
+[Anna Rose] (6:26 - 6:28)
+De-obfuscated too easily.
+
+
+[Rachel Lin] (6:28 - 7:10)
+Yes. So then cryptography comes into play because in cryptography, that we want to build tools that are really bulletproof. That we know as long as a certain mathematical hard problems remain hard to solve, that no one can violate the guarantee that we can prove based on their hardness.
+
+
+So the grand challenge question is that can we build a programme obfuscation in a way that is based on solid foundations, based on cryptographic hard problems that we have extensively studied and we know that they resist attacks?
+
+
+[Anna Rose] (7:10 - 7:31)
+Cool. I want to just ask one more question about the name before we just switch into just saying iO. But when you say indistinguishability obfuscation, isn't that kind of a double, like isn't that saying the same thing twice?
+
+
+Because the obfuscation, I think we've made clear, but is indistinguishable here? Is it meant in a very specific way?
+
+
+[Rachel Lin] (7:31 - 9:43)
+It is certainly meant in a very specific way. And in fact, the indistinguishability obfuscation, this notion itself, this concept itself is a great contribution. And the notion of obfuscation actually exists from the genesis of public key cryptography.
+
+
+So this notion was first mentioned in a paper in 1976, authored by Diffie and Hellman, in the same paper where they proposed public key cryptography. And what's quite interesting is that when they proposed it, they named this notion called a one-way compiler, as I was telling you that you can think about obfuscations, a process of compiling programme into something hard to understand. So they call it a one-way compiler to indicate that this process is one way and hard to reverse.
+
+
+And funny enough is that back then we didn't believe they were still, like the community was grappling about, does public key cryptography even exist? It sounds so magical that you can have a public key and still encryption remains secure. So Diffie and Hellman justified that, they argued that this concept should be feasible because if you had a one-way compiler, then all what you need to do is to take a secret-key encryption scheme, let's say your favourite one that we use AES today.
+
+
+So now choose a random secret key. And now we're going to just obfuscate the encryption algorithm of AES together with this randomly chosen secret key. After obfuscation, now this obfuscated programme is going to serve as the public key.
+
+
+Why? Because you feed it any message you want to encrypt with some randomness, it's going to produce a ciphertext. And because this random secret key is locked inside this obfuscated programme, that nobody can learn what it is.
+
+
+It's just interesting that public key cryptography, we then subsequently know that we can directly construct from a variety of hard problems. But the challenge of obfuscation lasted for 40 plus years until only recently we managed to have some progress on it.
+
+
+[Anna Rose] (9:44 - 9:47)
+So this indistinguishability, is that the new breakthrough?
+
+
+[Rachel Lin] (9:47 - 11:05)
+It is one of the breakthrough. It is one of the milestone because the first milestone is to know what are the security guarantees I can achieve and I cannot achieve. So what I have just described to you is a very easy mental model to think about what obfuscation could possibly do, which is that it's kind of like a mathematical black box.
+
+
+You put a programme inside, now you can call this black box any time as you want, and it doesn't leak anything about the software inside. Unfortunately, this is an ideal obfuscation. It turns out that this notion is impossible in general.
+
+
+And this relates to the unlearnability in complexity theory that was discovered around 2000. And then the question is like, then what notion is possible? Do we just give up obfuscation at all?
+
+
+And then researchers proposed this new notion called indistinguishability obfuscation. It's saying that it's not going to act like a mathematical black box, but the formal guarantee is that if I started off with two different implementations of the same functionality, then you cannot tell from the scrambled version which version one started with.
+
+
+[Anna Rose] (11:05 - 11:10)
+I see. That's the indistinguishability. You have these two that look identical.
+
+
+[Rachel Lin] (11:10 - 11:11)
+Exactly.
+
+
+[Anna Rose] (11:11 - 11:12)
+Interesting. Yeah.
+
+
+[Rachel Lin] (11:12 - 11:22)
+So if you started with two original programmes, they are different implementations of the same function, you will end up with something that are hard to tell apart.
+
+
+[Anna Rose] (11:23 - 11:23)
+Cool.
+
+
+[Rachel Lin] (11:23 - 11:39)
+So for audiences who are familiar with the zero-knowledge language, I would say indistinguishability obfuscation is kind of the analogue of witness indistinguishable proofs, whereas the original ideal obfuscation is the analogue of zero-knowledge proofs.
+
+
+[Anna Rose] (11:39 - 11:39)
+Interesting. Cool.
+
+
+[Tarun Chitra] (11:40 - 12:49)
+I guess one interesting thing is like there's a lot of things that iO sort of implies, like you get hardness of one-way functions. You get this kind of like average-case NP problem to worst-case NP problem reduction type of thing.
+
+
+It's like if you can achieve it, you can achieve all of these other things as a consequence. So it like has this little sort of holy grail theory of everything type feeling to it because it's like you can derive a lot from it. So maybe it would be great to just talk about some of the primitives that you can derive from iO, why it is sort of a little bit more powerful as a black box than some of the other things. And I think, you know, to your point about defining indistinguishability in terms of circuit representations, I guess being able to kind of compare why you needed to do things at the circuit representation level versus that sort of a tape level or as a function, you know, like there is a sense in which I feel like the circuit aspect is important in the way it is in MPC and ZK versus like other representations of a state machine. So, sorry, there's a lot of questions there...
+
+
+[Rachel Lin] (12:50 - 12:55)
+That is a lot of questions. We can deal with them one after another.
+
+
+[Tarun Chitra] (12:55 - 12:56)
+Yeah, sorry, sorry.
+
+
+[Rachel Lin] (12:56 - 13:50)
+Yeah, I think in terms of power of iO, for sure, this is why that this obfuscation in general is such a fascinating concept. First of all, that the idea of obfuscation is so powerful. To understand the power of iO, let's first understand the power of ideal obfuscation. Why do people want it? Why we have tried so hard for it? And what is it good for?
+
+
+So I give you an example about how to use the mathematical black box to turn a secret-key encryption scheme into a public-key encryption scheme, right? Which is just to obfuscate this encryption algorithm of the secret-key encryption scheme with a random secret key. And because it's now put in this mathematical black box, so the secret key now is hidden and it's safe to just give away this black box.
+
+
+So essentially that it almost gives you a software version of a trusted hardware.
+
+
+[Anna Rose] (13:50 - 13:51)
+Oh, yeah, yeah.
+
+
+[Rachel Lin] (13:51 - 17:59)
+Right. So any problem that you might hope to solve using a trusted hardware, which is you have secrets that you want to protect, but you also want to use the secrets through a limited interface, or you have a programme that you want to make sure that the internal logic remains hidden. Intuitive solution is put in the trusted hardware.
+
+
+Now, cryptography is all about using mathematics to replace administration or replace hardware. So now we can wrap it inside the ideal obfuscation and that is going to be secure. You can imagine I give you only the input output behaviour.
+
+
+So that's why it's very easy to use. Like I would say that in the fields that crypto-engineer or crypto-researchers have a feasibility question that, oh, can I achieve this cryptographic goal? They can first think about, can I achieve it using secure hardware?
+
+
+If they can achieve it using secure hardware, likely that they can achieve using ideal obfuscation. Not always, but it approaches it. Yeah.
+
+
+Now we're going to ask, what's the power of indistinguishability obfuscation then? It isn't ideal, right? Ideal doesn't exist.
+
+
+So it turns out that, and thanks to a lot of techniques that have developed in a larger body of work, something called a punctured programme technique that was first introduced in a paper by Amit Sahai and Brent Waters, that with this technique in a lot of the ideal obfuscation applications, we can actually replace this ideal obfuscation with iO. So that requires understanding of some cryptographic technique. And there's another layer to answering this question, which is that if we are comfortable with using heuristics, it turns out that this mathematical black box analogue, even though it's impossible in general, it is still possible.
+
+
+It's not ruled out completely. So there is a slightly weaker variant called the virtual black box, which approaches this ideal obfuscation. And its impossibility, it's also shown to be generally impossible.
+
+
+But the impossibility is demonstrated using certain complex and kind of pathological example to show that this notion is impossible. So you might be wondering like, oh, then for a natural programme that isn't designed to be adversarial against this notion of mathematical black box, can this black box security guarantee still be possible? So at a heuristic level, we now have some evidence that this is possibly true.
+
+
+And what evidence do we have is that this heuristic that for natural programme, we can obfuscate in a mathematical black box way, connects with this random oracle heuristic that we in cryptography love. And in fact, if you think about the random oracle heuristic, which says that, you know, give me the code of a real world hash function, say SHA. And by looking at the code, having access to this code, still an attacker has no more power than just treating the input output of this hash function like a random function.
+
+
+So if you think about it, effectively saying that the code of the hash function is a mathematical black box for a pseudorandom function, because even with access to the code, even seeing the code, you don't have any more power than just query input output and the input output behaves like random. So heuristically, this notion is possible. And from this heuristic, we can actually justify that for natural programmes that mathematical black box security might still be possible.
+
+
+[Tarun Chitra] (17:59 - 18:08)
+One quick question. When you say natural programme, do you mean like in the relativization sense? Like that type of, like what do you mean by natural programme, I guess?
+
+
+[Rachel Lin] (18:08 - 19:24)
+Oh, wow. I'm so glad you brought it up because there's so much overlapping of terminology. No, by natural programme, I really meant in the sense of similar to in the random oracle heuristic, we know that random oracle heuristic isn't true mathematically, there are also counter examples on applications in which it is secure when accessing to a black box random oracle, but isn't secure no matter which hash function you use to instantiate this random oracle.
+
+
+However, those examples are typically pathological, typically mathematically constructed so that we can show a separation between oracle access versus code access. So then the random oracle heuristic is about for natural applications of the random oracle heuristic, natural meaning isn't constructed adversarially to create a separation, this instantiation of the random function or the random oracle using a real-world hash function is going to be secure. So in the same sense, natural in the sense that it isn't a programme created in order to prevent mathematical black box obfuscation to exist.
+
+
+[Tarun Chitra] (19:24 - 19:55)
+Maybe to zoom out a little bit, you know, if I compare iO and FHE and functional encryption, I'm ignoring the fact that one of your constructions uses FHE to construct iO, but that's like a devil in the detail. I think maybe describing how they're different in the sense of like, I can obfuscate the input, I can obfuscate the output, I can obfuscate the circuit or function, the programme that computes something and how those are all different in these in iO versus FHE.
+
+
+[Rachel Lin] (19:56 - 21:24)
+Oh, so FHE is in some sense, advanced version of encryption. So what it says is that if you give me encryption of the input without ever decrypting, I will be able to derive encryption of the output. So we do the computation over the ciphertext.
+
+
+But it is in some sense of following the traditional all-or-nothing security guarantee in cryptography. What do I mean by all-or-nothing? The security guarantee is that either you know the security, therefore, you know all information, you know all the inputs, you know all the intermediate computation results, you know all the outputs.
+
+
+Or nothing means if you don't have the secret key, you'll learn nothing. And the big thing in cryptography, even since the 80s and then a lot of different objects we're building is to go beyond this all-or-nothing guarantee. That what we really want is that I want to have very precise, controlled information release.
+
+
+I have this sensitive information, sensitive data X. I want to learn some function evaluated on it. And I actually want to learn it in the clear.
+
+
+I want to learn F of X. And that's the only thing that is revealed. So it turns out that if you want to reveal zero information, it's actually easier to achieve.
+
+
+If you want to reveal, let's just say, exact information, that's a little bit harder to achieve.
+
+
+[Anna Rose] (21:24 - 21:25)
+In FHE, you're saying.
+
+
+[Rachel Lin] (21:25 - 21:30)
+Yeah, in FHE, it doesn't have any. We don't have any way of doing that in FHE.
+
+
+[Anna Rose] (21:31 - 21:33)
+And in iO, is there the chance to do that?
+
+
+[Rachel Lin] (21:33 - 22:45)
+iO, if you think about it, is one such primitive because that I have a programme that is secret. And what I allow to be revealed is for any input, you're able to learn what's the output for that input.
+
+
+So it reveals our truth table. And by truth table, I just mean the entire function table. And I can easily programme it to achieve something like what I just said.
+
+
+And you're touching on the concept of functional encryption, right? Functional encryption is kind of the encryption... sounds a little bit similar like FHE, but it allows precise information revelation.
+
+
+So you can encrypt the data like in FHE. And if you're given with one secret key, and this secret key is kind of, we can create these secret keys that are tied to a particular function. That's called a secret key for function F.
+
+
+If you have such a secret key, when you decrypt this ciphertext of the input X, what you'll learn is not X itself. All what you'll learn is F of X. You only learn the output.
+
+
+So the output is revealed and nothing else about X is revealed.
+
+
+[Anna Rose] (22:46 - 22:52)
+But in FHE, nothing, it's encrypted on both sides, right? So you don't get any info, but you get all-or-nothing. Yeah.
+
+
+[Rachel Lin] (22:52 - 22:58)
+Yeah, you'll get all-or-nothing. And the functional encryption is about precise revelation of information.
+
+
+[Anna Rose] (22:59 - 23:25)
+I also, as you were speaking about like this black box and all of these things, I had echoes also of FHE because I'd always heard like you have trusted execution environments, and if you wanted a software version of that or a cryptographic version, you do FHE. But what you're saying is like iO offers, first of all, you can like have some revelation. You can reveal certain things.
+
+
+Do TEEs also have that feature normally?
+
+
+[Rachel Lin] (23:26 - 24:14)
+Yeah, I think iO is the direct analogue of TEE. When people say that once you have FHE, you can kind of remove TEE. What they're talking about is that it's only for a single user who knows the secret key.
+
+
+For the single user who knows the secret key of the FHE, now they can delegate whatever computation on their input to the trusted environment. Now, it doesn't need trusted environment because everything is encrypted, and then they will get back an encrypted output. If they know the secret key, they will be able to decrypt and learn the output.
+
+
+But the point is that if I want to reveal information to the public, this is not going to work. Unless I reveal my secret key to the public, then everybody learns every information, all of the information.
+
+
+[Anna Rose] (24:14 - 24:15)
+Yeah.
+
+
+[Rachel Lin] (24:15 - 24:22)
+In functional encryption, I can reveal a secret key for the function F, and everybody will be able to learn F of X.
+
+
+[Anna Rose] (24:23 - 24:25)
+But not the things you don't want them to learn.
+
+
+[Rachel Lin] (24:25 - 24:28)
+Exactly. Not the things you don't want them to learn about X.
+
+
+[Tarun Chitra] (24:29 - 25:28)
+One thing I think that might be worth adding here is functional encryption and iO are very closely related, like one implies the other. So maybe talking through that, because I think that functional encryption is actually easy to understand in some ways, easier, I feel like. But the fact that they're equal is kind of a sort of notion of equal under some extra kind of assumptions.
+
+
+Like maybe like walking through that and like the history of how people search this space, you know, because like it feels like a lot of these notions for iO and functional encryption from the 2010s to 2020s, like evolved a lot, right? Like people found these special cases and then they like prove them. And then of course you in 2021 kind of wrapped it all together and figured out how to take a bunch of well understood assumptions and build the whole thing.
+
+
+But it felt like almost like watching someone build something out of Legos, right? They like figured out like a brick here, a brick there, and then like someone had to figure out how to like put it together. So like the history of this stuff is also kind of interesting of like how people found these.
+
+
+[Rachel Lin] (25:29 - 27:33)
+So yes, so functional encryption turns out to be very related to iO. So first of all, let's see that with iO I can easily build a functional encryption. That's also cute. So first of all, I want to encrypt private information.
+
+
+So let's take a normal public-key encryption so that I can encrypt my input X. Now this public-key encryption has a secret key. That secret key is all-or-nothing secret key.
+
+
+Once you reveal it, everything is going to be revealed. So with an infunctional encryption, I would like to create partial decryption key, right? This decryption key that are related to a particular function F that's like a decryption token.
+
+
+I allow you to compute F. So what I can do is that I can now create a mathematical black box, which now again is going to have this secret key hard-coded inside. And when I'm creating it, I will also hard-code the logic of function F because I'm trying to create a partial decryption key only for function F.
+
+
+So what this black box is going to do, if you feed it a ciphertext, an encryption of X, it's going to internally kind of decrypt it and to reveal X, but then it's not going to output X. It's going to evaluate F on X and only output F of X. Right?
+
+
+So once I have this box, I can make the box output partial information, F of X, and nothing else. And if it's an ideal obfuscation, then this is really secure. Hence you learn F of X.
+
+
+It turns out that with iO, using what I mentioned, this punctured programme technique and also a few other techniques that we can also make this paradigm to work. So that's how iO implies functional encryption.
+
+
+And hopefully you also see that this mathematical version of a trusted environment is really, really powerful because it just makes a very hard, challenging problem super easy to solve.
+
+
+[Anna Rose] (27:33 - 27:51)
+Interesting. I just wanted to ask something because we didn't do a background on sort of you and where your research has led you. But Tarun, you just mentioned this 2021 paper.
+
+
+Is it in that paper that you sort of put those things together? Can you just describe a little bit about what you covered in that?
+
+
+[Rachel Lin] (27:51 - 28:45)
+In that 2021 paper, this is a joint work with Amit Sahai and Aayush Jain. The three of us give a construction of iO for the first time based on hard cryptographic assumptions that are well understood, that have been studied for a long time and that we know resists attacks. And this is kind of the culmination of a long journey of many people, the entire community's efforts of trying to realise iO and what's different in this 2021 paper from prior work is that before, we need to rely on some kind of magical, unvetted assumptions that were invented so that we can have a heuristic and candidate construction of iO.
+
+
+[Anna Rose] (28:46 - 28:52)
+I see...
+
+
+And in this paper, you kind of hardened it? You're using like proven parts to like prove that this is actually possible.
+
+
+[Rachel Lin] (28:52 - 29:23)
+Yeah. So in this paper that we managed to prove that it can be based on more solid grounds, on assumptions that the community have been studying and they have deep connection with other aspects of mathematics and the theoretical theory of computing. So this, for the first time, that I think give us a lot of confidence that the concept of iO is not just a magical imagination, but really it is something to be trusted.
+
+
+[Anna Rose] (29:23 - 29:35)
+Cool.
+
+
+Because we didn't do your backstory now, I'm kind of curious, like, were you working towards this? Had you been working on this iO problem for a long time before? Or were you coming from a different part of cryptography?
+
+
+[Rachel Lin] (29:36 - 29:55)
+Oh, yeah, totally. I mean, I started working on the problem of iO around 2015. And at that point, I would say personally, it had been a long five, six year journey until that 2021 paper.
+
+
+I have not been so excited about a topic.
+
+
+[Anna Rose] (29:55 - 29:56)
+Other than this.
+
+
+[Rachel Lin] (29:56 - 29:57)
+That time period. Yeah.
+
+
+[Anna Rose] (29:58 - 29:58)
+Oh, wow.
+
+
+[Rachel Lin] (29:59 - 31:29)
+And when I entered the area in 2015, it was, iO was in a very interesting junction, I would say, the development. And it's a concept that dates back to 1970s. Really, people were imagining it when we started imagining public-key cryptography.
+
+
+But for a very, very long time, nobody had any grasp on it. Until I would say 2013, that came also a breakthrough, which is the first work that attempted to construct iO based on a mathematical object called multilinear maps, except that we didn't have, it's kind of a generalisation of pairing groups, in fact, kind of like inject a steroid into pairing group. Imagine that it can go beyond just doing one pairing, but it can do many, many pairing as you want.
+
+
+So that's what we call the multilinear map. If we have that object, then we can build iO. So that work really took the community by a storm, except that we didn't really have good candidate of multilinear map because imagining pairing, it's not people didn't want to generalise pairing over the past decades. We didn't know how to generalise pairing.
+
+
+So they give a heuristic lattice-based candidate for these multilinear maps. And it turns out that it then had been subsequently attacked.
+
+
+[Anna Rose] (31:29 - 31:32)
+Okay. It was the wrong candidate, I guess?
+
+
+[Rachel Lin] (31:32 - 32:44)
+It was an imperfect candidate, let's say. Yeah, it leaves much, I think that work is still very influential. Very, very important to kind of restarted the surge of research on iO and around the same time, I think also on the 2014 paper by Amit Sahai and Brent Waters, where they introduced the punctured programme technique was also a milestone because that really opened up application using iO. Because as we are imagining about how to use programme obfuscation, our natural instinct is using ideal obfuscation, the mathematical black box. What they showed is that this way of thinking is not wrong when we use iO it's just that we need a few more tricks. And they introduced these tricks and then they really opened up a floodgate of application based on iO. And because of those two things, we started to look into iO again, but then the big challenge and the big question is, can we base it really on solid foundation or are we just, you know, proving everything is possible based on some assumption that is faulty to start with?
+
+
+[Anna Rose] (32:45 - 33:06)
+Yeah...
+
+
+So from 2015, when you sort of joined this problem space to 2021, did you know right away that you wanted to focus on that particular problem? That it was like you were looking for ways to prove the validity of this, that it was actually, it could be based on concrete proven things? Or did it evolve into that?
+
+
+[Rachel Lin] (33:06 - 35:49)
+I think that I was just taken. I was just taken by iO.
+
+
+It was like an obsession. And it was also love at first sight.
+
+
+In 2015, when I saw all those applications of iO, the fact that it really acts like holy grail, or you call it, or I call it the master tool of cryptography, it is convincing. The evidence was convincing that it is such a powerful tool. And also, I think the long-term objective vision is also really convincing because we have, we now have these like, you know, mathematical black box heuristic, even if you, if one day this object were to be practical, I really believe that engineers will be able to create their own cryptographic tools by using this tool in an easy way, instead of relying on the research community, which the progress is after all, slow. So when I saw it, I was just taken.
+
+
+And at that point in that 2015, there were a lot of attacks on those initial heuristic candidates. And what I felt was that, I felt that we need to diversify our approach. Instead of only focussing on those heuristic candidates, a direct construction, we need to have some different strategy.
+
+
+So when I entered my first paper was 2016, the strategy kind of I took was based on, at that time, a very important work by two sets of researchers, which they showed functional encryption actually implies iO And that was my initial inspiration, which is that, can we actually use provable security, you know, security reduction, these modern techniques to first try to understand iO, this object, by narrowing down to weaker and weaker object that perhaps will tell us, first of all, what iO really is. And second, what is the hardcore task that we need to achieve?
+
+
+So this is a more sort of like a complex theoretic approach. I thought that if we could narrow it really down to the hardcore, it'd be easier, no matter we want to instantiate from heuristic or maybe we will have the luck of basing it on solid assumptions. So that was my angle.
+
+
+And then in the 2016, my first paper on iO construction, I show they can be based on constant degree multilinear map, which is still a generalisation of pairing, except it doesn't need so many number of pairings. It just need a constant number of pairings.
+
+
+[Tarun Chitra] (35:49 - 35:52)
+Sorry, is that like AC zero circuit or NC zero circuit?
+
+
+[Rachel Lin] (35:52 - 36:30)
+NC zero circuits. Exactly. Yeah, it's exactly NC zero circuits.
+
+
+So from that point on, I was just obsessed about the object and then keep trying to reduce it down to weaker and weaker things. And from the other end, keep trying to attempt to like instantiate these, you know, minimum hardcore objects. And they're really, I would say it's kind of a struggle from the both ends, like from the complexity theoretic angle as well as from the algebraic and assumption angle.
+
+
+And eventually they fortunately met in the middle in 2021.
+
+
+[Tarun Chitra] (36:31 - 37:23)
+So actually, I think maybe it'd actually be good to kind of talk about the formal definition for indistinguishability in the sense of like for any pair of circuits, any PPT, like probabilistic polynomial time adversary can't distinguish is sort of like a core thing. And like, I think maybe first let's talk about the definitions, like the the things we want, like, you know, like the soundness, completeness, et cetera. And then maybe we'll talk through the assumptions in your first paper and then how that kind of changed.
+
+
+Because I do think understanding the assumptions is actually the key thing, because obviously it's taken people a long time of searching through the space of assumptions. Right. And so like understanding the ones that worked and why I think is like would be great.
+
+
+But maybe let's just start with the definition of indistinguishability and how you can compare it to sort of the zero-knowledge guarantees that people... succinctness guarantees that people are used to.
+
+
+[Rachel Lin] (37:23 - 38:33)
+OK, so let's try. So formally, indistinguishability obfuscation actually has a really simple definition. The definition says that for any two circuits, let's say C0 and C1, that has the same input output behaviour.
+
+
+So they, for every input X, they evaluate to the same output. And furthermore, they have the same size. So they have the same number of gates.
+
+
+Then what iO guarantees is that if I feed C0 through the compiler of iO and it produces C0', versus I put C1 into this compiler and it produces C1', no PPT attackers or probabilistic polynomial time attackers, knowing C0, C1 is able to differentiate C0' from C1'. So in other words, C0' and C1' are computationally indistinguishable for any PPT attacker, even if they know C0, C1 in the clear text.
+
+
+[Anna Rose] (38:33 - 38:39)
+Could that be defined as a form of soundness? Is there a terminology for what that guarantee is?
+
+
+[Rachel Lin] (38:39 - 39:19)
+I think you could think about it as a term of soundness. And in this definition, it's actually quite remarkable and also connects to our earlier discussion about cryptography moving from all-or-nothing towards partial revelation of information. So what would it take?
+
+
+What are the properties that this obfuscated programme needs to have in order to make sure that they hide it's coming from C0 or it's coming from C1, right? So there are two elements to it. Obviously, there's some privacy, right?
+
+
+Because it needs to at least hide which circuit, if it gives out the circuit in the clear, it's clearly there's no privacy. You can easily tell apart.
+
+
+[Anna Rose] (39:19 - 39:19)
+Yeah.
+
+
+[Rachel Lin] (39:20 - 40:59)
+But there's also what I would call integrity. And what does integrity mean is that given this obfuscated programme that I am able to evaluate it on arbitrary input and it's supposed to produce an output.
+
+
+Now, an attacker, what an attacker can do, it really has this programme at its hand. It can actually see, you know, this programme is also going to turn itself into a circuit, right? How else, how are you going to execute it?
+
+
+So as the attacker has this programme at hand, it's going to observe all the intermediate values that this programme is computing. Hopefully, they're all going to be scrambled and it does not reveal information about the circuit inside. And additionally, it could in fact flip, right?
+
+
+In the circuit's execution, it could even tamper with its execution. It says, oh, I see this wire now evaluates to one. Let me flip it to zero. And see what they continue to execute out.
+
+
+So it can do a lot because this is direct access to the code that attacker can do a lot. So what does integrity mean?
+
+
+Integrity means that this programme, no matter what the attacker does, it needs to make sure that given me X, either it produces garbage, if it's too much tampering, or it needs to produce the right Y. It should not produce, you know, Y prime, which is evaluation of X on some related circuit, right? So that's what I call integrity.
+
+
+There's a building soundness to it. You need to make sure that it's really executing the right programme inside.
+
+
+[Tarun Chitra] (41:00 - 42:15)
+So actually a kind of related thing, I guess maybe slightly before we go to the assumptions, but since we're continuing to make the connections to ZK, I might as well bring these up. So like, I have a function, I've represented it as, you know, a multilinear polynomial, like its Boolean expansion. And I arithmetize it, like you do that in ZK, you do that in iO, in both cases, you construct kind of these polynomials.
+
+
+But the difference in iO and then sort of, it took, I think I had to really read your paper a couple of times before I understood this, is that basically for a given Boolean function, there's a set of circuits, and in theory, that have the same truth table. In theory, right, I should be able to just, if I had a PRG that could sample those circuits, and I could randomly sample a circuit for a given function, it seems like that's like a naive, obvious way to get iO, right? But that obvious, that doesn't work until you, you know, when you go into the details.
+
+
+So like, why should we not expect something like that? If I was able to enumerate all the circuits that represent a single truth table, why could just choosing a random one not work? Or like, why is it hard?
+
+
+Because that sort of has always, that was sort of the naive thing at first, right? It's like, oh, imagine I could write out the set of circuits. But there's some complexity reasons for why you can't do that.
+
+
+[Rachel Lin] (42:15 - 43:44)
+Yeah, I mean, that's a fantastic question. And in fact, that's why iO is such a fascinating object, because, you know, in most of the cryptography, that if P equals to NP, then the cryptography doesn't exist. Like, if P equals to NP, we don't have one-way function, we don't have public-key encryption, nothing, right?
+
+
+So we would better be living in a world where P doesn't equal to NP. But actually, if P equals to NP, iO exists.
+
+
+Exactly for the reason that you're mentioning. Because now what would I do? My compiler given me a programme.
+
+
+What it's going to do is it's going to try to find either, as you say, a random circuit, that a random circuit that implements the same programme, or it could find a lexicographically first one that implements this programme. Because P equals to NP, this process is going to be efficient. And this is actually statistical iO, this is statistic, it's going to give me perfect indistinguishability, not just computational indistinguishability.
+
+
+The only problem is that this approach isn't efficient in the world of P not equal to NP, right? It is hard to, given two circuits, to identify whether they implement the same function, let alone to say that give me one circuit, I want to find all possible circuits or the first circuit that implement the same function.
+
+
+[Tarun Chitra] (43:44 - 44:24)
+By the way, the reason I bring this up is I think in ZK people always think of like, I made a single circuit. I don't care about the set of all circuits that could give me the same input and output, right? It's just like, which one did my compiler give me?
+
+
+Or like, which multi-linear polynomial did I construct, right? Like, whereas in iO, you actually do care about the combinatorics of like, how many of these circuits are there? How randomly can I kind of like give you one without you being able to infer which one I chose?
+
+
+And to me, that always seemed like the gap, like of why it was stronger. It was like, you somehow have to deal with the set of all possible circuits that do the same thing versus just like a single circuit that does something. Do you agree that that's sort of like where the gap comes from?
+
+
+[Rachel Lin] (44:24 - 45:37)
+Definitely. That's exactly the gap that comes in. That kind of reflects itself in the difference between ideal obfuscation and indistinguishability obfuscation.
+
+
+Ideal obfuscation is like zero knowledge. You don't have to care about how many different implementations of the same circuit, you just obfuscate it, it's a black box, right? And the indistinguishability obfuscation, however, when you want to use its security guarantees, in an honest environment, I can always just obfuscate.
+
+
+It comes as a compiler, I can always just feed my circuit into it. It will produce something. That at that moment, I don't have to care how many different implementations there is.
+
+
+But if I want to reason about what guarantee this obfuscated programme gave me, then I have to start thinking about, oh, another implementation. And based on what other implementation there is, I reason about what's the security. That is why iO isn't obvious.
+
+
+It isn't obvious why iO is powerful. And that is thanks to the larger body of work that we now have that give us these additional tricks to get around this difficulty.
+
+
+[Anna Rose] (45:37 - 45:56)
+I was hoping to continue kind of on the story from your 2016 paper there, like functional encryption around that era, functional encryption allows for iO. You just mentioned these tricks. Like maybe you can share a little bit more of what those are.
+
+
+It sounds like that's kind of what you compiled in those years until 2021.
+
+
+[Rachel Lin] (45:58 - 50:54)
+Right. So I think I can tell you that one very powerful trick, which is functional encryption implies iO. And there is also a notion which is called exponential efficiency iO, which is very related to functional encryption.
+
+
+It kind of captures what the functional encryption is doing. Why is it related to iO in the language of iO. So what is it?
+
+
+Like if you think about iO, at the core of it, it has this ability to compress a very large truth table or the input output behaviour into this canonical circuit. This canonical circuit from which you can, no matter which implementation of the truth table you started with, you're going to end up with this canonical kind of representation, except it's not a single representation. It's a kind of, you know, computationally indistinguishable.
+
+
+So it's like a pseudo canonical representation. So it has like a gigantic compression from the truth table, which is exponential size, to this pseudo canonical version, which has polynomial size. And what is the notion of exponential efficiency iO?
+
+
+It's saying that, okay, maybe I just look at a little bit of compression. What if I just have a tiny, tiny truth table? Not so tiny, but it's not exponential size.
+
+
+Exponential is a hard to deal with, but I just have a polynomial size truth table. And if I have polynomial size truth table, technically I can compute this truth table and just publish it. This is actually perfectly indistinguishable obfuscation by itself.
+
+
+Because any two circuits that computes this polynomial size truth table is going to be end up with the same table. So obviously you have lost any information about which circuit you came from. Now what we, exponential efficiency iO, or we call it XiO, says is that I just want to compress this polynomial size truth table by a little bit.
+
+
+You know, if it started having size M, I want to have the obfuscated circuit having size M to the 0.99, for example. So any sublinear compression is enough. That's what XiO can mean.
+
+
+What we turns out can show is that XiO implies full-fledged iO. As soon as I can compress the truth table, just sublinearly, I will be able to compress an exponentially larger truth table back to polynomial size. And XiO is essentially functional encryption.
+
+
+An object that is even weaker than functional encryption, it gets close to functional encryption. And the reason is because, as I mentioned, functional encryption allows you to reveal F of X, but for every such revelation, in some sense that it needs a token. So in other words, it's kind of like, once I obfuscate my input X, I can reveal a polynomial number of outputs, different F of X for different F, as long as I can give out polynomial number of tokens.
+
+
+But they cannot go to revealing exponential number of outputs, because for that, I will have to reveal an exponential number of tokens. That is not feasible. So the ciphertext for X can be expanded into a polynomial, arbitrary polynomial number of outputs.
+
+
+That is the connection between functional encryption and XiO. Now the magic is in the functional encryption to iO transformation. In the language of XiO to iO transformation, there is a connection, which is that in cryptography, maybe some of you know that there is a transformation from pseudorandom generator to pseudorandom function.
+
+
+A pseudorandom generator is something that says I can produce from a short seed a polynomially longer pseudorandom string, whereas a pseudorandom function is that I can start from a short seed and produce an exponentially long pseudorandom output. And similar to this pseudorandom generator to pseudorandom function transformation, almost the same paradigm, I can go from XiO to iO. And the key idea is use recursion, which is that as soon as I can compress by a sublinear amount, a little amount, then I just keep compressing, I keep, keep compressing until I ended up with a tiny one.
+
+
+[Anna Rose] (50:55 - 51:03)
+Were you borrowing that idea then? Like you saw the pseudorandom generator to pseudorandom function happening and then you realised you could like kind of borrow that technique?
+
+
+[Rachel Lin] (51:03 - 51:08)
+I think this is a very much kind of a viewpoint in hindsight.
+
+
+[Anna Rose] (51:09 - 51:09)
+Okay.
+
+
+[Rachel Lin] (51:10 - 51:28)
+So when the first two works by two sets of researchers showed the functional encryption to iO transformation, and then later on we proposed this notion of XiO and show that a similar transformation goes through. And in the hindsight that we saw the similarity.
+
+
+[Anna Rose] (51:28 - 51:29)
+It looked similar.
+
+
+[Rachel Lin] (51:29 - 51:29)
+Yeah.
+
+
+[Anna Rose] (51:29 - 51:33)
+So you had sort of on a parallel track discovered a similar technique.
+
+
+[Rachel Lin] (51:34 - 52:52)
+I guess so. Yeah. I guess people had this, you know, as researchers that we are nourished by all the different ideas, sometimes you don't know where this inspiration comes from.
+
+
+Yeah.
+
+
+So I think that's one very important step in the development of iO that we're able to reduce it down to just, you know, look at the polynomial size truth table that makes it a lot manageable. Another very important step is that we realised if we have one of the assumption, which is pseudorandom generator that are computable in NC0 circuits, meaning that every pseudorandom output is depending only on constant number of elements in the input C. If I have that kind of a simple pseudorandom generator, then not only I care about this truth table that are polynomial size, I only need to care about this truth table that are computed using NC0 circuits.
+
+
+So there's not only that I don't need to care about exponential number of outputs. I also only need to care about very, very simple circuits. That's another kind of important step.
+
+
+[Tarun Chitra] (52:53 - 53:14)
+Actually, on that point, you know, I think that main breakthrough paper had four main assumptions. So like PRG and NC0 was sort of one. I know, I guess I know that one is like a kind of mixed assumption.
+
+
+Like we know there exists PRGs in NC0, but they're kind of very annoying versus NC1, like the logarithmic depth ones. But...
+
+
+[Rachel Lin] (53:14 - 53:16)
+Yeah, I understand...
+
+
+[Tarun Chitra] (53:16 - 53:59)
+...because at the end we will talk about like, what does practical iO look like? And I know this type of stuff and all the black box reductions and XiO and stuff like that, like add up a lot of complexity.
+
+
+But so, so, so PRGs in NC0, you can, you know, pseudorandom number generator with constant arity when I expand it. Learning with errors. So that's, you know, common to FHE.
+
+
+Learning parity with noise. So it's like sort of like a sparse field version of LWE in some ways, except you have some extra conditions and then like a bilinear DLIN type of thing. So maybe let's talk through those assumptions.
+
+
+Why were they necessary? What does each one give your construction? And I know you wrote some later papers that remove some of those, but just to.
+
+
+[Anna Rose] (54:00 - 54:01)
+We'll wrap up on the 2021.
+
+
+[Tarun Chitra] (54:02 - 54:02)
+Yeah, the 2020...
+
+
+[Rachel Lin] (54:03 - 55:40)
+I think eventually that we show that LWE isn't needed, but I think that the two assumptions that are really needed is one, the learning parity with noise assumption, which is kind of, as you mentioned, for people familiar with LWE, it's almost like LWE, except that it's not using small noise to perturb a linear system. It's using sparse, but the larger noise to perturb linear system. It's closer to the encoding theory because in encoding theory, we usually think about a code word being corrupted with a sparse corruption, but whenever a corruption happens, that location of the code word is completely gone.
+
+
+So that's the assumption. And the other assumption is bilinear pairing with the DLIN type of assumption. So what bilinear pairing is really needed is really comes from the genesis of iO, where the first heuristic construction is that if I have bilinear pairing on steroids, which is, I don't just have one pairing, I have like so many number of pairings that I can keep going.
+
+
+Each pairing is a kind of corresponding to one multiplication on secret values. Right? We know that the groups usually allow you to have addition over secret values.
+
+
+And that's just a general, like a discrete log hard group. And pairing gives you one more computation, which is one multiplication. But the problem is once you've done one multiplication, you end up in a target group, you cannot continue multiplication anymore.
+
+
+[Tarun Chitra] (55:40 - 55:55)
+Well, I guess actually one quick question though, because in FHE you have the sort of re-encrypt type of thing of like, I multiply, I add noise, I reduce. It seems like you don't have to do that here in how you've constructed things or am I misinterpreting?
+
+
+[Rachel Lin] (55:55 - 57:19)
+Yeah. So the big distinction is that in FHE everything is always hidden. Like you can do more multiplication in FHE, but you never reveal, like there's never any reveal of information.
+
+
+But what's interesting in pairing is that even if you think about just group, not pairing, an elliptic curve group, that it has both privacy and it also allows some revelation of information, which is if I have a random value and I put it in the exponent g to the r, we know now that this is hidden and we can leverage this privacy to build encryption. At the same time, this mathematical structure also allows me to test if g to the x is where x is zero or not, because I can just compare g to the x with the identity. So that's a tiny puncture of a hole that allows some revelation of information.
+
+
+That FHE doesn't have. And it's an art to build on top of this tiny puncture of a hole of revelation of information. From pairing, we can build what we call functional encryption for quadratic functions because it allows for one multiplication.
+
+
+So you can evaluate a quadratic function on secret input x and you are allowed to learn whether the output is zero or not.
+
+
+[Tarun Chitra] (57:19 - 58:18)
+So actually, this brings us to a good point, which is, you know, I think a key construction in this paper, and maybe it wasn't the first place that this was done, but certainly the first place I ever saw this of like arbitrarily high degree on public values, but degree two on secret values, like you somehow were able to factor the secret versus public data and that allowed you this kind of thing. Like, how did you come up with that construction? Because I think that to me, that felt like there are two things in this paper that seems very, like, not very obvious.
+
+
+Well, first was that you could split this thing into this like low degree and high degree thing, and then a very low degree, like two. And then the second was that you did this like sort of like almost like Johnson Lyndon Strauss compressed sensing thing where you made these matrices that you expanded and compressed. Right.
+
+
+I'm just kind of curious, like what were the inspirations? Because there were like so many different things I feel like that went on into this construction that this had to have taken a long time to come up with putting all these things together.
+
+
+[Rachel Lin] (58:19 - 58:23)
+It certainly had taken a long time, certainly had taken a long time.
+
+
+[Tarun Chitra] (58:25 - 58:31)
+Well, just because they seem very disparate. You took a lot of things from many disparate parts of cryptography, I felt like.
+
+
+[Rachel Lin] (58:31 - 1:02:09)
+I mean, that's the beauty of research is sometimes I don't even know where the next paper is going towards. And I think that what you are describing is we say we can have functional encryption for quadratic function. And this was actually showing a much earlier work.
+
+
+Where I build, in fact, I said, if you have k pairing available, then you can build a functional encryption for degree k polynomials. And if k equals to 2, then you can only have quadratic function. And that was in earlier work, that was more sort of a direct follow up to initial attempts of building iO based on multilinear maps. But we formalise it and then we can show this primitive can be done. And later on, initially, we were trying to just reduce the degree needed from k being constant in my first work to down to 5 and then down to 3. And then we even made like, you know, we also conjectured new pseudorandom generator assumption, which turned out to be true.
+
+
+At some point we had candidates pseudorandom generator that are just degree 2. Why degree 2 is because that we wanted to evaluate those pseudorandom generator just inside the pairing. When we realised if we could evaluate the pseudorandom generator inside the pairing, then I would be good.
+
+
+Except that we didn't find a good candidate for it. Until this day, we don't have a good candidate for it. So it was an effort trying to seek alternative approaches.
+
+
+What if my pseudorandom generator is not going to have degree 2, it just have constant degree. And I only have pairing that only evaluates degree 2 secret evaluation, secret computation. So one thought was to seek the help of a fully homomorphic encryption.
+
+
+You know, if I have homomorphic encryption, maybe I can evaluate the pseudorandom generator in a fully homomorphic encryption. Or it doesn't need to be fully homomorphic. If I have a simple enough pseudorandom generator, I just need a homomorphic encryption for constant degree, right?
+
+
+And then maybe the degree 2 isn't going to be used directly to compute the pseudorandom generator itself, but it's just for decryption. Because homomorphic encryption's drawback is that it has powerful evaluation, but it never reveals any information. So I have to decrypt it in some way.
+
+
+And I can only decrypt it inside the pairing because that's a way that I can control what information is revealed. But the soundness property is important because homomorphic encryption doesn't have any soundness property. Once I'm given with an encryption of the input, you can evaluate any function you want, right?
+
+
+Here I only want to evaluate the pseudorandom generator on the encryption of my seed. That's why this idea about enhancing the pairing group construction, not just do secret quadratic function, but also have a public part of the computation, which has a higher degree, but the benefit that public part doesn't need to be hidden because it's protected by the functional encryption. So that's the idea where this partially hiding functional encryption came about.
+
+
+So this is at least a framework where we can put together a homomorphic encryption with this partially hiding functional encryption in order to evaluate a higher degree pseudorandom generator.
+
+
+[Anna Rose] (1:02:10 - 1:02:23)
+I'm going to kind of rewind a little bit. You guys used an acronym that I actually just don't know, which is DLIN. You did define LWE was learning with errors.
+
+
+LPN was...
+
+
+[Tarun Chitra] (1:02:23 - 1:02:25)
+Learning parity with noise.
+
+
+[Anna Rose] (1:02:25 - 1:02:33)
+Exactly. So you defined those ones, but DLIN you didn't. So I'm sort of, I've been a little stuck on that acronym.
+
+
+Can you just share what that stands for?
+
+
+[Rachel Lin] (1:02:34 - 1:02:35)
+Decision linear.
+
+
+[Anna Rose] (1:02:35 - 1:02:36)
+Okay.
+
+
+[Rachel Lin] (1:02:36 - 1:03:03)
+It is a standard assumption over pairing groups.
+
+
+Yeah. I think the concrete assumption is not that important because we can also build this partially hiding functional encryption using different assumptions over pairing groups.
+
+
+Decision linear is one of them. Another is called SXDH. And I am blanking on the full name of that assumption myself.
+
+
+[Tarun Chitra] (1:03:04 - 1:03:13)
+Symmetric something Diffie-Hellman. Yeah. I don't know what that exists.
+
+
+But Anna, this is used in a lot of ZK and kind of BLS type of stuff.
+
+
+[Anna Rose] (1:03:13 - 1:03:15)
+Why didn't I ever see it? I don't know.
+
+
+[Tarun Chitra] (1:03:15 - 1:03:18)
+This is just like in the formal guarantees you make assumptions.
+
+
+[Anna Rose] (1:03:18 - 1:03:18)
+Yeah.
+
+
+[Tarun Chitra] (1:03:18 - 1:04:49)
+So this is actually more like the very standard. The other ones are a little more like FHE. Like LW is FHE.
+
+
+LPN is like actually when we talked about watermarking and error-correcting codes, like that's an assumption you make there. This is sort of what I mean. Like the proof relied on like a lot of different subfields that had to come together, which is like kind of, I think what certainly was interesting to me.
+
+
+So we've talked a lot about the construction, the candidate construction, and a lot of the details used, right? Like there's a lot of composition theorems, like going from XiO to full iO, right, where you have to recurse things, which can blow up constants and make things expensive practically, or, you know, a lot of the assumptions that are made, maybe like the PRG and NC0, the circuit is really wide and it's expensive to compute or something, right? Like, I'm just trying to say there's, if we want to get iO that is developed, like it seems like there's like a long way to go, but I'm just curious, like how you think the world gets there and how this has happened from like people finding new constructions that are maybe more direct, a little bit like how FHE started with ring LWE and then moved to integers and then all the practical ones are in integers, or is it like, you know, it has to be a totally new thing? Because I know from our side, we've definitely like heard of like Ethereum Foundation trying to fund people building implementations.
+
+
+I mean, they're using kind of non-typical assumptions, so I'm not sure how well they'll go. But I'm just curious, like how you think about how this gets out in the world.
+
+
+[Rachel Lin] (1:04:49 - 1:05:04)
+That's a very, very good question. And I would say that is the next challenge, that the next mountain to climb. And if we have to make some analogies, I would say that iO is an infant at this point.
+
+
+[Anna Rose] (1:05:05 - 1:05:09)
+Okay, not even walking towards the mountain, just growing and developing.
+
+
+[Rachel Lin] (1:05:10 - 1:08:55)
+Yeah, it's like developing, yeah. So the research is really, I think, still in its infancy that there's so much we need to do, right? It will be great just to have alternative constructions.
+
+
+That's number one. It will be great to have heuristic constructions based on principled new assumptions. And towards the practise, and I think that the current construction is very far because of several different efficiency bottlenecks.
+
+
+What you mentioned about this bootstrapping, sometimes we call, or this FE-to-iO or XiO-to-iO transformation uses recursion, is by itself too expensive. But on every such front that we need completely new ideas. And in this particular one, that one can potentially think about the direct algebraic constructions, which may still be under the hood, be viewed as using recursion.
+
+
+However, because of the direct algebraic construction, it might be much more efficient. So the analogue I would make is that when we first had the Goldreich-Micali pseudorandom generator to pseudorandom function transformation, that one wasn't in a black box way. That one wasn't usable either.
+
+
+However, subsequently we had the direct algebraic constructions, for example, like a non-arranged PR pseudorandom function construction from the groups. And those, you can in some sense see the structure of the original GGM transformation inside, however, it's algebraic. Being algebraic makes it much more direct and much more efficient.
+
+
+And in fact, there has been attempt to trying to create algebraic versions of this transformation that could potentially be more efficient. And in terms of XiO itself, I think there are also attempts trying to have direct lattice based candidates. We're trying lattice again.
+
+
+They started with lattices and we're still trying lattices. Attempts of directly using fully homomorphic encryption to build XiO candidates. And this line start around 2021 or 2020, that the key technical barrier here is to overcome the fact that fully homomorphic FHE does not reveal any information.
+
+
+And we want to create a new way of controlled decryption. That I want to give you an encryption of the circuit, allow you to evaluate on input one to a hundred and reveal only the output for inputs from one to a hundred. And this revelation, as I mentioned, it's important that this token that allows me to reveal these outputs, these 100 outputs, is going to be shorter by itself than 100.
+
+
+And that is the key technical challenge. And there are some recent works, including my own, trying to do this. However, it is at a stage where we are making new lattice based assumptions.
+
+
+So I would say it will still be a while before we stabilise in terms of assumption, trying to attack it, either we will reach some kind of, hopefully we will reach some kind of stable state that there is a new assumption that we're willing to kind of go forward with. Or maybe we were, if we're really lucky, managed to build it from standard lattice assumptions.
+
+
+[Tarun Chitra] (1:08:55 - 1:09:01)
+Actually, out of curiosity, like what is the non-standard, like what is the thing that you're assuming here, I guess?
+
+
+[Rachel Lin] (1:09:01 - 1:10:48)
+Yeah. So if you think about it, fully homomorphic encryption will allow me to from an encrypted circuit, because I want to hide the circuit, to evaluate an arbitrary number of outputs. So from input one to a hundred, let's use this as an example.
+
+
+So I will get outputs, I will get encryption of the outputs for input one to a hundred. Now the question is, how do I reveal these outputs? So this seems to require me to give you a decryption token that is going to break the output ciphertext.
+
+
+However, I want to make sure it doesn't break the input ciphertext, because the input ciphertext hides my circuit. So I want to have these decryption tokens that is powerful enough to open up certain ciphertexts that I wish, but do not open up, do not hurt the security of other ciphertexts. So what is this decryption token is going to be?
+
+
+I mean, what's even worse is this decryption token has to be shorter than 100, because otherwise what's the point, right? The most powerful decryption token is the secret key itself. It's certainly shorter than 100, but, you know, it's going to reveal everything.
+
+
+So it has to be some kind of leakage information about this secret key and the leakage information that is tied to the input one to a hundred. And this is really difficult to come up with. Some leakage that is powerful enough to open some ciphertexts, but not all.
+
+
+So that's where the new assumption comes in. It is in the ballpark. The type of assumption we're exploring is what we call LWE with hints.
+
+
+[Anna Rose] (1:10:49 - 1:10:50)
+With hints, huh?
+
+
+[Tarun Chitra] (1:10:50 - 1:11:03)
+It's like the way you're describing this actually reminds me of some like old school complexity theory things, like the switching lemma type of stuff where you randomly restrict a circuit and then suddenly it's depth is much smaller.
+
+
+[Rachel Lin] (1:11:04 - 1:11:05)
+Oh, interesting.
+
+
+[Tarun Chitra] (1:11:05 - 1:11:12)
+Like, like, like, like it sounds like something, like I got to read this paper, but anyway, I, that sounds interesting. I didn't realise that this is.
+
+
+[Rachel Lin] (1:11:12 - 1:12:10)
+Yeah. I want to also shout out that there are completely different ways using completely different mathematics for building directly building iO. For example, there's recent research on using local mixing of reversible circuits.
+
+
+And then there is the work on heuristic iO candidates for investigating affine determinant programmes. So in those efforts, we're not working with circuits. We're thinking about different models of computation, like affine determinant programme, which is somewhat closer to a branching programme.
+
+
+And also reversible circuits is kind of like a computation model, which is closer to what used in quantum computation. So for different model of computation, there might be easier ways to scramble them and have some like heuristic candidates, but those are fairly kind of also in its infancy.
+
+
+[Tarun Chitra] (1:12:10 - 1:12:12)
+Well, those sound like they're newborns.
+
+
+[Rachel Lin] (1:12:12 - 1:12:53)
+They're newborns. Yeah. Indeed.
+
+
+So I would say at this point, we're welcoming any idea, any idea to come into the field. And we're staying optimistic because as soon as we have algebraic construction, whose security is relatively safe, optimisation over algebraic and direct construction, our field has now such an expertise that things will enter the realm of the exponential improvement pipeline, hopefully.
+
+
+Right? So that's, that's where we are.
+
+
+[Tarun Chitra] (1:12:54 - 1:13:03)
+I mean, it does feel a little bit like ZK in the 2000s before you got all the R1CS and things that like people finally were like, I can implement.
+
+
+[Anna Rose] (1:13:03 - 1:13:05)
+Like pre 2013, you mean?
+
+
+[Tarun Chitra] (1:13:05 - 1:13:07)
+Like even pre, like, I mean, more like 2000s.
+
+
+[Anna Rose] (1:13:08 - 1:13:08)
+Oh, wow. Okay.
+
+
+[Tarun Chitra] (1:13:08 - 1:13:14)
+When it was like, ZK was like, you know, very tiny programme.
+
+
+[Rachel Lin] (1:13:16 - 1:13:30)
+Yeah. We need new ideas. Yeah. But the, the beauty with research is that you, you never know.
+
+
+We never know whether we're completely stuck or we're just a few ideas away. And once we have the right idea, things may jump.
+
+
+[Anna Rose] (1:13:30 - 1:13:31)
+Amazing.
+
+
+[Rachel Lin] (1:13:31 - 1:13:38)
+And that's what I also love about theoretical research is that sometimes it can create these long jumps.
+
+
+[Anna Rose] (1:13:38 - 1:14:03)
+So cool.
+
+
+So we talked, you know, earlier about your 2021 work and how you had been able to collect these proven assumptions from different spaces to bring them together to sort of prove that this thing is possible. Since then, I mean, you've just shared like some of the ideas, but your own research, like your own work, what have you been focused on? Like, have you touched on some of these things?
+
+
+Have you started to explore the lattice stuff? I'm just curious what your work is on.
+
+
+[Rachel Lin] (1:14:04 - 1:16:02)
+Yeah. So I have been exploring the lattice stuff together with my co-author on, Aayush Jain is a long-term collaborator, also an author on the 2021 paper and Amit Sahai. So Aayush and I have been exploring on lattice-based construction.
+
+
+So earlier that I mentioned that there was a new approach that was proposed in 2020 and 2021, and that approach generated some new avenue. And then initially we were really focussing on cryptanalysis because there's always that component of new assumption. And unfortunately that we showed through cryptanalysis that these assumptions have counterexamples, right?
+
+
+We can create counterexamples to contradict a certain version of their assumption. So it's not completely broken, but I would say that this journey is very much in coming up with a heuristic. We can crystallise where the hard, we can put our finger on where the hardness is coming from, and even if this hardness is not going to be in the end, a standard, well-studied assumption, we would like to be able to say that we can digest this hard problem in a human way and have some reasonable confidence.
+
+
+So I think formalising this, crystallising this hardness is an essential part of this journey. So more recently, we also had our own proposal of assumption for a lattice-based candidate. And we are going to continue.
+
+
+Our attack and crystallising the hard assumption. So it's very interesting. That's one aspect.
+
+
+Outside of iO, I also work on other kind of cryptographic object. In fact, I work on garbling. I have a recent interesting take on garbled circuits.
+
+
+[Anna Rose] (1:16:03 - 1:16:26)
+And I had a question I actually asked you before the interview started, but I'll ask it now, which was like, I had always heard iO and garbled circuits used together, but you informed me that they're actually, they're not that close to each other. But like, I thought it was like, I thought iO was the technique of garbled circuits originally. So yeah, tell me what a garbled circuit is.
+
+
+How is it different? How is it? How is it related?
+
+
+[Rachel Lin] (1:16:27 - 1:17:10)
+Yeah, garbled circuit is one of the essential tools in cryptography. And you can think about it as, since we've been talking iO so much, you can think about it as a one-time, one-time evaluation. So what it allows me to do is to hide a circuit.
+
+
+However, to evaluate it on a particular input, I need to first get the token for that input. Once I have gotten the token for that input, I can evaluate with this scrambled circuit and obtain the output in the clear. It will give me the output in the clear, unlike fully homomorphic encryption.
+
+
+But it's only one time. Once I have gotten the token, you know, that garbled circuit can only be evaluated once.
+
+
+[Anna Rose] (1:17:10 - 1:17:13)
+Whereas iO is perpetual, I guess?
+
+
+[Rachel Lin] (1:17:13 - 1:17:17)
+iO is perpetual. Yeah. And you don't need a token for any input.
+
+
+[Anna Rose] (1:17:18 - 1:17:20)
+You just evaluate it. Cool. I see the difference.
+
+
+[Rachel Lin] (1:17:21 - 1:18:12)
+So garbled circuit is one of the early kind of concepts and it's related to, it's used for building two-party computation and also used in multi-party computation. It's kind of our traditional way of achieving this partial revelation of information, where each output requires you to do something. Whereas in iO, once I give you something, you can do, it's perpetual.
+
+
+You put it so nicely, it's perpetual. So that's a big distinction. So therefore, garbled circuit is one of the earliest realised crypto tools, which can be based on just one-way functions and you can build it using random oracle, for example.
+
+
+And whereas iO has to rely on much more hardness problems.
+
+
+[Tarun Chitra] (1:18:13 - 1:18:19)
+But there is some notion of like succinctness versus not succinct in garbled circuits, right?
+
+
+[Rachel Lin] (1:18:19 - 1:19:07)
+Yeah, you're spot on. What these two objects, which seemingly at the two ends of the spectrum share, is that they can both reveal partial information and in order to reveal partial information, unlike fully homomorphic encryption, integrity is very important. You want to make sure that once these encoded stuff is given out, no matter what the attacker can do, it's always guaranteed that the right circuit is evaluated on allowed input.
+
+
+So that is in the integrity part, the soundness part, right? And now the soundness part actually share across the spectrum. There are techniques that we use and there are also many intermediate objects in cryptography, for example, attribute-based encryption.
+
+
+[Anna Rose] (1:19:07 - 1:19:10)
+Is this attribute-based encryption?
+
+
+[Rachel Lin] (1:19:10 - 1:20:41)
+Yes, attribute-based encryption, which is another object kind of in the middle. People think of it as more powerful than garbled circuit.
+
+
+There's no direct comparison, but it's an object that's kind of more powerful than garbled circuit, but much weaker than iO. It also has this integrity component. So what's interesting is that the techniques for integrity can actually float about.
+
+
+So if I use the more powerful tools such as attribute-based encryption or iO, I can build way more fancier versions of the garbled circuit. For example, I can build those garbled circuits where the garbled circuit itself is a small size. It's very succinct.
+
+
+It's much smaller than the circuit itself. That is called a succinct garbled circuit. I can even create these garbled circuits which are reusable in the sense that the same garbled circuit can be used with different input tokens.
+
+
+You still need to obtain input tokens in order to evaluate, but it can be reused across multiple input tokens. So this notion itself is actually getting closer to functional encryption, and indeed, it is related. So in that sense, the whole spectrum connects to each other.
+
+
+And as a researcher, you can swim around in these different notions, upstream and downstream sometimes. It's a lot of fun.
+
+
+[Anna Rose] (1:20:41 - 1:21:12)
+I've been through this conversation just because it was a lot of piecing together assumptions and techniques. But like, do you develop some of those? Like, or do you ever prove those assumptions?
+
+
+Like, who or who's doing that? When you say like, you know, you wanted to build like a proof that these things had been proven, who's building those proofs? And like, could there be new proofs emerging or new assumptions being proved that you can then incorporate and it would help you explain that like something is actually secure?
+
+
+[Rachel Lin] (1:21:12 - 1:21:43)
+Whenever I talk about the assumption, the image that comes up in my mind is a volcano. And the assumptions are the lavas. On one hand, it's extremely dangerous because they're not proven.
+
+
+If I conjecture that a problem, a mathematical problem is hard for a polynomial time computer to solve, I'm making an assumption. And I might be making the assumption that pigs can fly. I don't know, ultimately, because it's not proven.
+
+
+[Anna Rose] (1:21:43 - 1:21:43)
+Yeah.
+
+
+[Rachel Lin] (1:21:43 - 1:22:46)
+So that sense that the volcano is very, very, very dangerous. But at the same time, the volcano makes new land on which life can grow.
+
+
+Assumptions is where cryptography comes from. It is, it is, you know, it has this duality. It's beautiful.
+
+
+It is, it is what we need. And then it can take us to places that we didn't know how to do. And then whenever we have a good new assumption, a secure one, so much grow out of it. You know?
+
+
+Just think about the story of lattices. It didn't exist until Regev's paper in 2005, I think. And look how much cryptography has advanced because of this assumption.
+
+
+But on the other hand, if our crypto business every day is I want to achieve a goal and I make a new assumption, I want to achieve a goal and I make a new assumption, then we don't know if we're just, you know, proving every possible statement based on false assumptions.
+
+
+[Tarun Chitra] (1:22:47 - 1:22:58)
+Well, then we know we can't do that, right? Well, no, yeah. In your analogy, are cryptanalysis equivalent to like people who like to climb volcanoes when they're erupting and like watch the...?
+
+
+[Rachel Lin] (1:22:59 - 1:24:18)
+Yes, yes, they are. They're absolutely warriors. They're absolutely warriors and it requires a lot of skills.
+
+
+And that is what is an important aspect of cryptography. So you are absolutely right that the new assumptions do come about once in a while. And the ones that the people usually use are typically those ones at the tip of the iceberg, because they are the ones that actually are elegant, you know, and they are simple to state.
+
+
+They are having structures that people have studied a lot. We have good confidence about their security. So those are what we prefer to use and what we're encouraged to use for very good reasons.
+
+
+But where do these assumptions ultimately come from? Well, people have to try, right, taking nourishment from different mathematical fields, looking at the cryptographic goals that we want to build, but actually fail and try to bridge the gap and make variations of existing assumptions in order for favour of practicality or sometimes functionality. And lots of people are doing that.
+
+
+And that by itself sometimes is going to bring us new assumptions.
+
+
+[Anna Rose] (1:24:18 - 1:24:18)
+Cool.
+
+
+[Tarun Chitra] (1:24:18 - 1:25:00)
+Yeah, I mean, I do think the one thing that's to me the most interesting about iO, and maybe this was like sort of true for ZK in like the 80s, is just like how close is this to complexity theory in the sense that like the assumptions are you're like really dancing on the edge of like of complexity theory type of stuff. It feels like if you can do iO, you've turned every average case problem into like a worst case instance for like the invertibility.
+
+
+And like that seems like just like a generically very strong thing. So it just seems so much harder than something where I only need to be worst case sometimes. If that make sense?
+
+
+It's like I always have to be worst case is like sort of a very high standard.
+
+
+[Rachel Lin] (1:25:01 - 1:25:04)
+Yeah, it is a very powerful concept indeed. Yeah.
+
+
+[Anna Rose] (1:25:04 - 1:25:17)
+Cool. All right. On that note, I really loved this conversation.
+
+
+Thank you so much for coming on, Rachel. Chatting with Tarun and I, I didn't know much about this at all. So it's been wonderful.
+
+
+[Rachel Lin] (1:25:17 - 1:25:23)
+Thank you so much for inviting me, Anna. And thank you so much, Tarun, for asking so many questions. And you are so knowledgeable.
+
+
+[Tarun Chitra] (1:25:24 - 1:25:31)
+I don't know. I mean, I'm reading your papers. You read our papers.
+
+
+It's not... you're the knowledge source. I'm just a learner.
+
+
+[Anna Rose] (1:25:32 - 1:25:38)
+Cool. Thank you so much, Rachel. Thank you.
+
+
+[Rachel Lin] (1:25:38 - 1:25:38)
+Thank you, thank you!
+
+
+[Anna Rose] (1:25:38 - 1:25:44)
+I want to say a big thank you to the podcast team, Rachel, Henrik, Tanya and Kai and to our listeners. Thanks for listening.
