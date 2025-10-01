@@ -1,0 +1,1203 @@
+﻿[Anna Rose] (0:05 - 0:21)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+[Anna Rose] (0:28 - 1:55)
+This week, Kobi and I chat with Arnaud Brousseau and Jack Kearney about verifiable key management and trusted execution environments, or TEEs. We explore how their work in the custodial validator space prompted them to work on the key management problem, what earlier solutions such as HSMs offered and where they fell short, and how modern approaches are evolving to make key management more transparent and verifiable with the use of TEEs.
+
+
+The discussion covers a range of challenges and techniques, the role of remote attestation and reproducible builds in ensuring trust, strategies to prevent downgrade attacks, and the use of authorization and policy layers to reduce misuse of keys while still enabling automation.
+
+
+We end up touching on the overlap with ZK and with AI agents, so I hope you enjoy.
+
+
+Now before we kick off, I just want to make sure you're following our release of the ZK Whiteboard Sessions Season 3. These videos, produced by ZK Hack and supported by Bain Capital Crypto, feature our hosts Nico and Guillermo exploring the building blocks of the ZK systems we know and love.
+
+
+We are currently releasing one module every two weeks. These can be found over on the Zero Knowledge Podcast YouTube channel, subscribe there to be reminded, and we'll be adding the link to the show notes.
+
+
+Now here is our episode with Arnaud and Jack from Turnkey.
+
+
+Today, Kobi and I are here with Arnaud and Jack from Turnkey.
+
+
+Welcome to the show, Arnaud and Jack.
+
+
+[Jack Kearney] (1:54 - 1:55)
+Hey, thanks for having us.
+
+
+[Arnaud Brousseau] (1:55 - 1:56)
+Hi. Good to be here.
+
+
+[Anna Rose] (1:57 - 2:07)
+So today we're going to be digging into verifiable key management and revisiting the topic of TEEs. And hopefully we'll get to see how ZK intersects with this.
+
+
+Kobi, how are you doing?
+
+
+[Kobi Gurkan] (2:07 - 2:08)
+I'm good.
+
+
+[Anna Rose] (2:08 - 2:16)
+There was a conversation in the big ZK Podcast Telegram chat that prompted this interview. Do you want to just recap what happened there, Kobi?
+
+
+[Kobi Gurkan] (2:16 - 2:40)
+Yeah, sure. So there was a question about state and TEEs and how that is managed in the ZK Podcast Telegram group.
+
+
+And quick disclosure, Bain Capital Crypto, where I work at, led the Series B for Turnkey. So I know these guys pretty well, and I thought they would be perfect to answer that question. So I told them: hey guys, please come answer that question.
+
+
+[Anna Rose] (2:40 - 2:42)
+And you pulled them in. Totally.
+
+
+[Kobi Gurkan] (2:42 - 2:51)
+And they were happy to do that. And we also later thought it would be a good idea to kind of discuss more thoroughly the technical work that they've done.
+
+
+[Anna Rose] (2:51 - 3:25)
+Cool. Yeah. And I think this is -- I mean, this is a perfect opportunity for us, as I mentioned, to revisit TEEs, something we have covered on the show before. We'll try to dig up our last episodes on this. But we don't usually go that deep into it.
+
+
+It's usually just sort of thrown out as this like, throw a TEE at it kind of idea. It's just sort of this abstract thing that we bring up every once in a while. So, yeah, I'm excited to learn more.
+
+
+Before we dig into Turnkey, I'd love to hear a bit about you and what got you excited about this, what got you started. Arnaud, why don't we start with you?
+
+
+[Arnaud Brousseau] (3:25 - 4:10)
+Yeah, sure. So my name is Arnaud. I think I first dug into crypto and key management and security at Coinbase. So that was kind of my first entry point into this realm. And building Coinbase Custody and seeing the folks at Coinbase doing cryptography, doing security, and all the problems that come from key management and asset support and expansion of asset support, that's kind of what got sort of the problem framed in my mind.
+
+
+And I think Turnkey is a continuation of key management. And so building that system from the ground up and taking all the ideas and taking all the things that we've learned at Coinbase was really something that was super exciting to me.
+
+
+[Anna Rose] (4:10 - 4:23)
+Were you part of that team before they joined Coinbase? Because this, as far as I understand, is the team -- they used to be Bison Trails. And then they were kind of brought into Coinbase and became a bit more like the custody team. Or am I thinking of something else?
+
+
+[Arnaud Brousseau] (4:23 - 4:25)
+Yeah. Different team. Different team, but I've worked with the Bison Trails team, actually.
+
+
+[Anna Rose] (4:26 - 4:27)
+Got it.
+
+
+[Arnaud Brousseau] (4:27 - 4:48)
+But after. So basically, I joined Coinbase around 2018, 2019. And that's when Coinbase Custody got off the ground as a product. And so the build out of Coinbase Custody led to Coinbase Prime.
+
+
+And then part of the Coinbase Prime offering was staking. And staking was something that was offered through Bison Trails. Yeah.
+
+
+[Anna Rose] (4:49 - 4:51)
+And then they got incorporated into it. Got it. Okay.
+
+
+[Arnaud Brousseau] (4:51 - 4:51)
+Exactly. Yeah.
+
+
+[Anna Rose] (4:52 - 5:00)
+And I think at this point, maybe the team has dispersed throughout. I know some folks that I think are part of the Custody team that originally were Bison Trails, but okay.
+
+
+[Arnaud Brousseau] (5:00 - 5:01)
+Yeah, for sure.
+
+
+[Anna Rose] (5:02 - 5:04)
+Cool. Nice.
+
+
+And what about you, Jack?
+
+
+[Jack Kearney] (5:05 - 5:13)
+Yeah. So I've been in crypto or I guess I followed crypto and been interested in it for a really long time at this point. First got into it in 2011.
+
+
+[Anna Rose] (5:13 - 5:16)
+Oh, very early. Is that before Kobi?
+
+
+[Kobi Gurkan] (5:16 - 5:21)
+I think so. I mean, I heard about it before, but I didn't get seriously into it.
+
+
+[Anna Rose] (5:21 - 5:21)
+Okay.
+
+
+[Jack Kearney] (5:23 - 6:09)
+It was hard to get seriously into at the time. I mean, you could go deep on the Internet and read a lot, but there was not anywhere to work really at the time. Not too many companies formed. And frankly, the companies that were formed at that time were sort of sketchy.
+
+
+So I was in college at the time and just kind of I was studying math and economics. And it was right at the intersection of the things I was interested in reading about. So I went pretty deep down the rabbit hole then.
+
+
+Joined Coinbase in 2016. So it was pretty early still. And I think I was like engineer 30 or something like that. There was one combined infrastructure and security team and I joined that team, and then it quickly split off and the company grew pretty far from there.
+
+
+[Anna Rose] (6:10 - 6:14)
+Didn't Coinbase go through -- I'm not sure if this is correct, but did it go through YC?
+
+
+[Jack Kearney] (6:14 - 6:15)
+Yeah. Yeah, it did.
+
+
+[Anna Rose] (6:15 - 6:17)
+Were you there at that time?
+
+
+[Jack Kearney] (6:17 - 6:19)
+No. No. That was in like 2012, I think.
+
+
+[Anna Rose] (6:19 - 6:20)
+Oh, Okay. Okay.
+
+
+[Jack Kearney] (6:20 - 6:26)
+Yeah. I think actually Brian was solo going through YC, which they typically frown on. Yeah.
+
+
+[Anna Rose] (6:26 - 6:26)
+Interesting.
+
+
+[Jack Kearney] (6:27 - 6:56)
+But yes, and I was like the first person working on Coinbase Custody, or one of the first people working on Coinbase Custody and had a chance to kind of help design the whole new cold storage system from the ground up and think a lot about key management from first principles and how not only Coinbase would want to use this system, but also our customers through Coinbase Custody would want to use this system.
+
+
+And then we built the product and then sort of started scaling it. That's where Arnaud and I first met.
+
+
+[Anna Rose] (6:56 - 7:16)
+Back then, were there tools that sort of existed for this kind of thing?
+
+
+I'm trying to understand if it was a purely crypto-native concept, this verifiable key management or just key management, or if it was like, it existed in all sorts of industries, there were kind of some best practises that needed to be ported into the space, or if you had to invent it.
+
+
+[Jack Kearney] (7:17 - 7:48)
+I mean, there were definitely -- HSMs have been around for a long time. The traditional banking sector and some healthcare applications use HSMs, which are Hardware Security Modules. So yeah, there was definitely some best practices around key management and stuff.
+
+
+And Coinbase had been around for, what? 6 years or something by the time we were building Coinbase Custody. So they had -- for Coinbase Custody, we built cold storage v4. And so there were three kind of systems that had existed at Coinbase prior to that.
+
+
+[Anna Rose] (7:49 - 7:59)
+And they were already managing quite a lot of assets. This was not so early that you could experiment too much. I guess you need some tried-and-true solutions already.
+
+
+[Jack Kearney] (7:59 - 8:07)
+Yeah. It was a pretty big company at that point. I think when Coinbase Custody was getting started, I want to say it was 200 or 300 people.
+
+
+[Anna Rose] (8:07 - 8:12)
+Okay. Cool. And then, did you spin out -- at what point does Turnkey start? What's the year?
+
+
+[Jack Kearney] (8:13 - 8:22)
+Yeah. So early 2022. Actually, I think the first conversation I would say I had about Turnkey was over the Christmas holidays, 2021.
+
+
+[Anna Rose] (8:22 - 8:22)
+Okay.
+
+
+[Jack Kearney] (8:23 - 9:00)
+And then kind of started thinking about things. And actually, I had been at -- I was at Polychain for the three years leading up to starting Turnkey, and had been using Fireblocks.
+
+
+And so it was kind of, I was doing a lot of internal asset operations at Polychain. Because at the time, Polychain was investing in a ton of really long-tail crypto assets that weren't readily supported by US-based exchanges or custodians.
+
+
+And so we were doing a lot of manual asset operations. And that kind of was super clunky and tricky. COVID hit and we had one cold storage system for Polychain that required people being in-person together.
+
+
+[Anna Rose] (9:01 - 9:01)
+Oh, wow.
+
+
+[Jack Kearney] (9:02 - 9:09)
+And so COVID hit and suddenly we couldn't move money around in the way we needed to.
+
+
+So yeah, 2022 hit. And I was like: it's time to build this thing.
+
+
+[Anna Rose] (9:10 - 9:21)
+Did Polychain also -- I'm not sure if it was Polychain, but didn't they have a validator business that spun out as well? Were they taking some of that key management stuff with them for that?
+
+
+[Jack Kearney] (9:22 - 9:24)
+Yeah. So that's what I was working on.
+
+
+[Anna Rose] (9:24 - 9:24)
+Okay.
+
+
+[Jack Kearney] (9:24 - 9:33)
+It was called, at the time, Polychain Labs. And Polychain Labs then split off and became this company called Unit 410, which was ultimately sold to Coinbase.
+
+
+[Anna Rose] (9:33 - 9:34)
+Oh, wow.
+
+
+[Jack Kearney] (9:34 - 9:41)
+And still actually operates independently.
+
+
+[Anna Rose] (9:35 - 9:35)
+Cool.
+
+
+[Jack Kearney] (9:35 - 9:41)
+And so they took a bunch of that key management system and sort of staking operation with them.
+
+
+[Anna Rose] (9:41 - 9:48)
+Interesting. I think I actually met with someone from that team back in 2021 because I think they were based in Austin. Is this true?
+
+
+[Jack Kearney] (9:48 - 9:48)
+Yep.
+
+
+[Anna Rose] (9:49 - 9:56)
+Yeah. And I feel bad, I can't remember the name of the person, but I knew about this operation just as it was getting off the ground.
+
+
+[Jack Kearney] (9:56 - 9:57)
+Yeah. Maybe Rob?
+
+
+[Anna Rose] (9:57 - 10:10)
+Yeah. Yeah. I think it was. Interesting.
+
+
+So you had been sort of at least there. Did you actually join this Unit 410, or was it like, you were sort of part of the initial creation and then you left to do Turnkey?
+
+
+[Jack Kearney] (10:10 - 10:20)
+Well, yeah. So I think I stuck around for a year at Polychain. Kind of helped deal with the handoff and just stuck around at Polychain for a little while longer and then went off and started Turnkey.
+
+
+[Anna Rose] (10:20 - 10:20)
+Cool.
+
+
+[Kobi Gurkan] (10:20 - 10:44)
+You guys have been thinking a lot about what it means to use TEEs, both for verifiable key management, but also beyond that. And I think it would be really interesting to understand, first of all, what you do there, but also the challenges of doing that.
+
+
+And there are a lot of challenges that I learned from you guys. So I would love for you to share this with the rest of the people here.
+
+
+[Arnaud Brousseau] (10:44 - 13:00)
+I guess, we can start maybe with the piece that is the easiest to understand, which is the key management use case and why that's difficult. And when I say easy to understand, I don't know, we'll see when we get deeper into the details.
+
+
+So a key management system at its core has to hold a key and then be able to offer basically two operations. It's like create a key and then sign a message with it. And that's kind of at the core of any sort of crypto operation that you do.
+
+
+So that's the first thing that we recognise, I think, as a company. We didn't want to stretch ourselves too thin and take on too much scope because that's something that we saw in previous experience. It's, as soon as you start taking into account assets, ecosystems, et cetera, you get into problems in terms of scale of software and dependencies and special casings.
+
+
+So basically what we said as an initial bet for Turnkey is we are a key management system. We're not something that is going to take a transaction end to end. And that's what we want the TEE and the secure operations to be centred around is this notion of you give me something to sign, I will sign it.
+
+
+So that sounds well and good. It also sounds very much like an HSM. And so what is an HSM compared to Turnkey?
+
+
+Well, an HSM gives you those primitives. Turnkey gives you those primitives and a bunch of stuff around it, which is, in my opinion, just as important, and that's the authorization of what you signed.
+
+
+So if you enable a piece of technology to sign a message, it can sign a message that you want. It can also sign the message that you don't want.
+
+
+So for example, send my funds to an attacker's wallet. That's something that should be denied. Send my funds to the person I intend to, that should be allowed.
+
+
+So the first thing that you want to consider in the key management system is how requests are authorized into that system. And so that's basically the first hurdle that you have to go through is you need to build the key management and the cryptographic operations around that, but you also need to build the authorization layer.
+
+
+And so what we chose to do is really go all the way and build the authorization layer inside of a TEE as well.
+
+
+[Kobi Gurkan] (13:00 - 13:36)
+I think it's a very important insight in the sense that putting a key inside an HSM is a very important step, but that's one step, because as people know, if you have a blind signing oracle that basically can sign anything, it can sign exactly the messages that you don't want.
+
+
+And hardware wallets, for example, chose to handle it in a way that they do the hard work of parsing transaction data on the device and show it on the screen and then you have to click and authorize it. But that's one way to do it, and it works for some cases.
+
+
+But you guys do something pretty different.
+
+
+[Anna Rose] (13:37 - 13:51)
+Do you need this to be able to do much more automated tasks too? Like that example you just gave, Kobi, where it's you're manually sitting there and you're clicking through, you can't automate that very easily, I'm assuming, without it being somewhat dangerous.
+
+
+[Arnaud Brousseau] (13:52 - 16:03)
+That's, I think, the main reason why Turnkey was born, is to basically automate these things safely. So just like Kobi said, if you have a Ledger device sitting next to you, parsing the transaction, you can make the decision as a human to say this is going to go through or this isn't. And the authorization layer in an automated system needs to have also those kinds of rules that you currently have in your brain, codified.
+
+
+And so that's the other piece of the puzzle that we needed to put together is this notion of policy. So how do you fold in policy data and policy execution in that picture? And how do you roll this into the authorization and authentication logic? That also needs to live in an enclave.
+
+
+And then the last piece that I think is sort of completing the cycle is: well, once you have policies codified, once you have your users and who has access codified, how do you make sure that data all together is protected and authentic and guaranteed, sort of canonical?
+
+
+So that's why you need also a secure enclave or a TEE to sign that data regularly to make sure that you have the right version of the data.
+
+
+So we can get into that kind of flow in more detail later in the podcast, maybe. But this is the problem of downgrade protection and making sure that your data and your policies and your users and the public keys that you authorize are the public keys that you're authorizing and the policies that you think should be applied right now, not the policies that you wanted to apply last year.
+
+
+So basically summarizing a little bit, when HSM gets you protection against key theft, so that's good. Your key cannot be exfiltrated, but it doesn't prevent key misuse.
+
+
+And so really the length that we've gone through at Turnkey is to protect people against key misuse. And there is a really big difference between key theft and key misuse in theory, but in practice for crypto, the difference is really not that big.
+
+
+If you authorize somebody to use your key, well, you might as well give them the key because all the funds can be gone in a minute.
+
+
+[Anna Rose] (16:04 - 16:06)
+You can't revoke it, I guess. Can you?
+
+
+[Arnaud Brousseau] (16:06 - 16:06)
+Exactly. Yeah.
+
+
+[Anna Rose] (16:06 - 16:06)
+Okay.
+
+
+[Arnaud Brousseau] (16:07 - 16:22)
+Crypto transactions are forever, and so your funds are gone. That's also why I think doing cryptography and security for the crypto space is very different from doing cryptography and security for other traditional sector because of the irrevocable nature of it.
+
+
+[Anna Rose] (16:22 - 16:22)
+I see. 
+
+
+[Kobi Gurkan] (16:23 - 16:31)
+Just to simplify, when you sign transactions using Turnkey, how is it different than signing transactions otherwise?
+
+
+[Jack Kearney] (16:31 - 17:12)
+I mean, in a lot of ways, it's really similar. So you can think of signing a transaction with a Ledger. Maybe you're interacting with some dApp. You have MetaMask. You have a Ledger hooked up to your Metamask. The dApp is actually creating the transaction, serializing it, and then kicking it off to a Ledger.
+
+
+Similarly, Turnkey can kind of be a remote signer in a lot of contexts. So a dApp can be kind of directly hooked up. Turnkey can be embedded into that dApp. And then the transaction generated on the dApp kicked over to Turnkey, which is similarly a remote signer. And then ultimately, Turnkey can make a decision autonomously in this case, so without a human approving something, whether or not to sign that transaction.
+
+
+[Anna Rose] (17:13 - 17:35)
+And this is based on the rules, or these policies that you've just described. Okay.
+
+
+Is it dangerous to add this much kind of programming though? Whenever I hear about anything extra complicated when you're like: oh, and we're going to add functionality that has rules -- aren't those the places that bugs pop up or hacks happen?
+
+
+[Jack Kearney] (17:35 - 17:35)
+Definitely.
+
+
+[Anna Rose] (17:36 - 17:43)
+I always get the sense like the simpler, the safer, but also obviously less functionality. So can you speak on that?
+
+
+[Jack Kearney] (17:44 - 18:18)
+Yeah. I think it's a balance. I think you can push logic into the enclaves and it's sort of -- I think a big part of the engineering challenge of building Turnkey is like: what's the line? How do you simplify what you are ultimately pushing into the enclave?
+
+
+What do you not have to push down into the enclave applications is a big thing we talk about a lot.
+
+
+Internally, we have this threat model or way of thinking about things, which is basically any logic that could be used to manipulate data, touch user keys, sign using a user key, anything that's scary has to be deployed into an enclave.
+
+
+[Anna Rose] (18:19 - 18:19)
+Okay.
+
+
+[Jack Kearney] (18:19 - 18:26)
+And then anything that isn't scary doesn't have to be deployed in an enclave. It sounds simple, but that mental model I think is really important.
+
+
+[Anna Rose] (18:27 - 18:27)
+The scary threshold.
+
+
+[Jack Kearney] (18:28 - 18:29)
+Kind of the scary threshold.
+
+
+[Arnaud Brousseau] (18:30 - 19:39)
+Yeah. And then I think it's also important to say that from a user point of view, we also give people flexibility to pick their own --
+
+
+[Anna Rose] (18:37 - 18:38)
+Scary threshold.
+
+
+[Arnaud Brousseau] (18:38 - 19:39)
+Scariness level. So if you want to automate something, and I don't know if you're just putting $10 worth of coins that you don't care about on that key, well, by all means, just give full access to that key and experiment and give that to an AI agent and tell the AI agent to have fun.
+
+
+But in the case of a customer like Bridge, well, they probably have some policies and internal rules and controls such that there is a human in the loop when it gets too scary.
+
+
+And so at Turkey, we have this half-human, half-automation sort of possibility with consensus rules. So when a transaction becomes too scary, however you want it -- however you want to define it, really, that becomes something that is kicked off to a layer of approval where a human has to go into dashboard, review the transaction, could potentially run more checks on it, and then give the final approval.
+
+
+So there is this escalation principle that we have built in the product for people who really need that.
+
+
+[Kobi Gurkan] (19:39 - 21:03)
+Yeah. And I think that's -- Jack, what you said about treating it as a remote signer in the mental model is a really important one. And I think that's probably also going to be useful to discuss that in the set of challenges that this introduces, especially when you run things on your own machine.
+
+
+And I've seen people making this distinction, which I liked. When you run things on your own machine, you have control of what runs there and what code is run and where the keys are stored and so on. But when you use a remote signer, you really hand off a lot of power to someone else.
+
+
+Jack, the way that you mentioned previously to think about it as a remote signer in some mental model. And I've seen people making the distinction, which I liked, which is that when you run code that, for example, manages keys on your own machine, you have a lot of control. You know what it runs, you know where the keys are stored, you know all of that.
+
+
+And when you use something like Turnkey or TEEs or remote TEEs in general, you basically hand off a lot of power to some remote place. And there is a set of challenges that is involved with doing that securely.
+
+
+And one of them, for example, is things like remote attestations. That would be interesting to talk about.
+
+
+[Jack Kearney] (21:04 - 22:00)
+Right. So you're interacting with something, you need to trust this external something, and you don't have full control over it. You definitely don't have physical access to it.
+
+
+And so in this case, there's this TEEs. One of the kind of properties that make TEEs super interesting is this thing called remote attestation, which is, remotely, so from afar, so from my computer, I can reach out to another machine that's external to my computer and I can attest to what is on it.
+
+
+Or I can attest to what is currently being run in some cases. I can attest to kind of what was booted up, different TEEs, different kinds of secure hardware have different sort of forms of attestation.
+
+
+But the broad strokes is that you want to be able to prove that what you think you're interacting with is actually the thing that you are interacting with.
+
+
+And Turnkey has done just a whole ton of like the engineering legwork to make this kind of as buttoned up as possible.
+
+
+[Kobi Gurkan] (22:00 - 22:15)
+Yeah. And that includes both the specific TEE platform you're using is the correct one, but also the code that you're using is the correct one. And I know that you guys thought a lot about reproducible builds, for example.
+
+
+So why is that important?
+
+
+[Jack Kearney] (22:16 - 22:33)
+Yeah. Okay. So a lot of times people will use TEEs. They'll say: we're going to leverage TEEs in our backend architecture. And to build an artifact in a CI pipeline somewhere, they deploy it into the TEE, and then they say: look, we're using a TEE. Everything's secure.
+
+
+[Anna Rose] (22:33 - 22:36)
+But no one can see inside the TEE, I guess.
+
+
+[Jack Kearney] (22:36 - 22:42)
+Exactly. No one can see inside the TEE. No one knows what actually built the thing that's running inside the TEE.
+
+
+[Kobi Gurkan] (22:42 - 22:46)
+But hey, you get a signature on a code hash. Is that not enough?
+
+
+[Jack Kearney] (22:49 - 25:11)
+Yeah. You get some signature on the hash. You say: hey, look, my machine built this thing. Isn't that good? But then it's like: what was the compiler that was running the thing that built the thing? You kind of start peeling back the layers of the onion, and you say: at some point, I'm trusting something opaque, and kind of the foundation of what I'm trusting is something opaque. And you're ultimately then just trusting something that you can't really trust.
+
+
+And so Turnkey's put in a ton of effort into reproducible builds. And I think even within reproducible builds, there's a huge spectrum of what this means.
+
+
+Broadly, reproducible builds is like you take a piece of source code, you compile it, and you get the same artifact. So you get the same thing every single time you build it. And that's true if I build on my machine or Kobi builds on his machine, et cetera.
+
+
+And this is sort of counterintuitively, not always the case. So most software, when you compile it, there's like linking order can change the eventual artifact, or timestamps can leak into the compilation process, or a whole host of other things can happen that means that the eventual artifact isn't deterministic. And so it's kind of a pretty tricky thing to actually figure out how to make something fully reproducible.
+
+
+The critical thing, though, is a lot of times people, they talk about reproducibility like what we would call last mile reproducibility, which is you take a particular piece of application source code and then compile it and get the same artifact.
+
+
+Turnkey has kind of gone way, way, way deeper than that. And we go all the way down to not just the application source code, but the compilers that are building the application source code, the operating system, in this case, QuorumOS, which runs in our enclaves, all the way back to build environments and tool chains that are decades old at this point.
+
+
+So we've kind of dug down to the end of the rabbit hole of reproducibility and gotten to this very, very minimal kind of original foundation, which is literally 190 bytes of assembly code, which is well known and audited. And then from there, you can bootstrap up to kind of these intermediate build systems, compilers, and then eventually to modern Rust or Go or other things.
+
+
+[Anna Rose] (25:12 - 25:18)
+It's all created in this reproducible way. Like you're able to replicate no matter who runs it, it's going to always get the same output.
+
+
+[Jack Kearney] (25:18 - 25:38)
+Exactly. And so this is important. Basically, then our intention is we're going to open source huge chunks of Turnkey source code.
+
+
+And then the goal is we're running something inside Turnkey's backends. And then anybody in the world should be able to take that, compile it, get the resulting artifact, and then remotely attest that our enclaves are actually running the things we claim.
+
+
+[Kobi Gurkan] (25:38 - 25:51)
+By the way, one analogy that I would make to the ZK world is that running in TEEs without doing that is somewhat equivalent to running a verifier for a circuit that you can see the circuit composition itself.
+
+
+[Anna Rose] (25:51 - 26:33)
+Ah, interesting. Going back to what you described about like, I almost want to understand what the kind of bad actor could do if you -- if reproducibility has not been done, and you sort of talked about this, what happens in the TEE is unknown.
+
+
+What could actually be injected in there? And who does it? Or is it just like computer code breaks, period? It's like an accidental thing.
+
+
+I'm just wondering if it could be malicious. And if so, but how do they get -- if there's code running in a TEE, even if not reproducible, but if it was deployed with good intention, you can't see into it. So how does a bad actor either inject bad things into it or act badly in that space?
+
+
+[Jack Kearney] (26:33 - 27:01)
+Yeah. So I think a really simple example of this is hijacking entropy, which is relevant for key generation.
+
+
+So let's say I was specifically trying to target you and I had full control over the enclaves, I could wait and say: okay, as soon as I see a key being generated for an account that has your email, I'm going to basically make it look like it's a freshly generated key, but actually I'm going to generate a key that I previously generated using a seed, on my machine.
+
+
+[Anna Rose] (27:01 - 27:01)
+Okay.
+
+
+[Jack Kearney] (27:01 - 27:13)
+And then it's returned to you, it's sort of an address that you think is fresh and new, you've deposited a bunch of funds on that, but actually I'm able to reproduce the generation of that address on my machine and can steal everything.
+
+
+[Anna Rose] (27:13 - 27:22)
+That's even happening though within the TEE, or is that happening on top of the TEE? Is it sort of in between the user and the TEE that you're kind of injecting it, or is it within it?
+
+
+[Jack Kearney] (27:23 - 27:30)
+No. So this is all, if I had the ability to fully control entropy within the TEE, yeah, that would happen in the TEE.
+
+
+[Anna Rose] (27:31 - 27:43)
+Okay. Interesting. For some reason, I always think of it as a very safe black box that no one can touch, but it sounds like you can actually change it. You can change it. You can go in and do stuff.
+
+
+[Jack Kearney] (27:43 - 27:49)
+I mean, in that case, it would have -- basically, the changing would have happened before it was deployed into the enclave.
+
+
+[Anna Rose] (27:49 - 27:58)
+Okay. Okay. So it is the person deploying it in a way, or it's in the deployment that this needs to be accessed. It's not post-deployment, someone goes into the TEE.
+
+
+[Kobi Gurkan] (27:58 - 28:03)
+Deployment, build process, all the stuff that happens between source code on GitHub to TEE running the code.
+
+
+[Anna Rose] (28:04 - 28:05)
+Okay.
+
+
+[Jack Kearney] (28:05 - 28:11)
+Maybe the building of the compiler from 10 years ago. There's this, I think --
+
+
+[Anna Rose] (28:12 - 28:12)
+It's a long game.
+
+
+[Jack Kearney] (28:12 - 28:24)
+Yeah, yeah, yeah. It's worth calling out here, this famous paper by a guy named Ken Thompson, who's like a famous computer scientist. It's called Reflections on Trusting Trust. Definitely recommend reading it.
+
+
+[Kobi Gurkan] (28:24 - 28:24)
+Really nice paper.
+
+
+[Jack Kearney] (28:24 - 28:28)
+Yeah, really great paper. I think speaks exactly to this problem.
+
+
+[Anna Rose] (28:30 - 28:50)
+Cool. All right. Now, going back to the reproducibility that you just introduced, because as far as I understood, reproducibility makes something safe because -- or it's a way to prove that things are safe.
+
+
+But in that case where a bad actor had added something, wouldn't it still be reproducible? Wouldn't it reproduce the same way, even if there's a bug in it?
+
+
+[Jack Kearney] (28:50 - 29:17)
+Yep. It would be reproducible. But at that point, the intention is that people are able to audit what is being reproduced.
+
+
+So going back to the example I used, somewhere along the way, there's source code that says: if Anna's email, then generate this particular address. And people hopefully review the source code and say like: hold on, what's this doing? This seems really sketchy. This is not the way Turnkey should be operating. So something bad's going on.
+
+
+[Anna Rose] (29:17 - 29:34)
+Would you be reproducing it outside of the TEE when you're auditing it? Okay. So it's just like having -- yeah, sort of just like, it's no trust me, bro situation, where it's just like: oh, this is stuff in the TEE, don't worry about it. You're like: actually, you can also run it outside of the TEE and just see if there's anything wrong.
+
+
+[Kobi Gurkan] (29:34 - 29:44)
+I would also recommend reading something that I got inspired by, which is Arnaud's blog post around why TEEs without reproducible builds make no sense.
+
+
+[Anna Rose] (29:45 - 29:49)
+Is this the remote attestations are useless without reproducible builds post?
+
+
+[Kobi Gurkan] (29:49 - 29:50)
+Yeah. Exactly. Exactly. That's the one.
+
+
+[Anna Rose] (29:50 - 29:52)
+We're going to add that in the show notes.
+
+
+[Kobi Gurkan] (29:53 - 29:56)
+And I think that gives a really nice overview of this problem.
+
+
+[Arnaud Brousseau] (29:57 - 31:48)
+Yeah. I mean, I think one thing that's important to conceptualize is basically this three-step process. You start with the source code, then you have an artifact. And on the other side of that artifact, you have a deployed artifacts somewhere.
+
+
+If you have source code to compile and review, and then you produce an artifact from that, that's one step. And that's basically what most people do with code reviews. And then once you want to go from an artifact to a deployed artifact and running somewhere, having the insurance that this is actually done faithfully is what remote attestations really give you.
+
+
+And you can't really have a full end-to-end auditability of a system unless you have those two links. Because if you're missing one, well, the chain breaks. And so you're not able to really reason as a human about what is running, because in order to reason about what is running, you need to reason about source code, which is written by human, as opposed to reviewing an artifact, which is just binary garbage that is only executed by computers.
+
+
+So that really is kind of the crux of the problem. It's this from source code to artifact, from artifact to deployed computer.
+
+
+The first link is sort of on GitHub, typically with social consensus. Second link is usually done with a black box secret operator within a company that usually nobody knows about. And remote attestations sort of let you remove that trust that you have to have in the operators of the machine.
+
+
+And as an operator at Turnkey, I feel a lot safer because I can remotely attest to what is running inside Turnkey. But as an end user, you could also do that and sort of be sure that Turnkey deploys what it's supposed to be deploying and not lying to you.
+
+
+[Anna Rose] (31:48 - 32:19)
+Given that Turnkey, and you sort of described this was like -- it's more like an agnostic tool and people can choose how much of this is in the TEE. I'm sort of curious, when it comes to reproducible builds, do you have something built into your toolset that enables that? 
+
+
+I don't really understand if this is more like a concept or if it's something that Turnkey is offering, or if it's the way that you check if your software is right. Is this like an auditing process, a tool, or yeah?
+
+
+[Arnaud Brousseau] (32:19 - 33:17)
+Yeah. So we haven't really said what we're doing for reproducible builds, but the solution that we've come up with and the thing that Jack described really well with the system that goes all the way down to compilers and compilers of compilers all the way down to the assembly seed, that is called StageX.
+
+
+So StageX is an open source project and you can check it out. It's hosted on Codeberg, I believe. So codeberg.com/stagex.
+
+
+Yeah. So this system is how we build software internally. So we have basically CI jobs and we have recipes to build software through StageX. And so it's not just a check that we do after, it is how we build software day to day.
+
+
+And so we build our Go applications, our Rust applications, even our Node.js applications, actually, that we don't run in TEEs, we still build them with StageX because it's both sort of a convenient build system and also something that provides reproducibility out of the box without us having to even think about it.
+
+
+[Anna Rose] (33:18 - 33:31)
+So Kobi, this is a little bit of a question to you. This idea of using reproducible builds to prove sort of something that's secure and trustworthy, is that actually something we do in ZK as well? Or is there some variation of this?
+
+
+[Kobi Gurkan] (33:32 - 35:40)
+So one thing that I mentioned before was that there is some sort of inherent reproducibility in the sense that verifiers for ZK programs, they are tied to a specific program. So some specific circuit, let's say. So there is some sort of code that runs that can only be verified for a specific program.
+
+
+So that's something that we already have inherent in ZK. What is maybe not inherent is what happens on the prover side.
+
+
+So one kind of thing that's in the zeitgeist is that people say: all right, when you audit ZK systems, you only need to audit the verifier. Because the verifier is the one that is actually running or verifying the execution of a specific program. That should be enough. 
+
+
+And that might be true for many situations. Any prover can produce a proof that verifies against this audited verifier, and you're good. Especially when things are not really ZK. So like rollups, let's say.
+
+
+But when you start involving secrets, then it becomes more touchy. And I wrote something about it, and again, inspired by Arnaud's blog post initially, about what happens when your ZK system has, let's say, a mobile prover that has to rely on some secret data; your passport or even your secret keys or whatever.
+
+
+And in that situation, if you don't take some care to verify what is running on your phone, then that program can leak your secrets in a way that is completely undetectable outside. It could look as any other proof that comes out of that system, and it could leak your secrets to some actor that they're the only one that knows how to decrypt it or read it, let's say.
+
+
+[Anna Rose] (35:33 - 35:33)
+Interesting.
+
+
+[Kobi Gurkan] (33:33- 35:40)
+So there is something that reproducible builds can help, even in ZK, especially on the prover side.
+
+
+[Anna Rose] (35:40 - 35:43)
+Especially when it's ZK-ZK, where it's actually private.
+
+
+[Kobi Gurkan] (33:44- 35:44)
+Yes. Exactly. 
+
+
+[Arnaud Brousseau] (35:44 - 36:57)
+Yeah. And there's also maybe worth mentioning the recent paper: How to Prove False Statements.
+
+
+It's something that came out a few months ago that basically is an attack on the same side. It's the prover side. And it's a paper that explains that in some cases, if you don't audit the code that is running in the prover, and it's running the wrong circuit, then it's actually able to prove to you something that isn't true.
+
+
+And so that's obviously the case of an attack, and we can kind of think about ways to mitigate it. But the real way to mitigate that is to audit the prover code in the end and having reproducible builds and remote attestations help a ton with that, because I just think ZK and TEEs compose well together when they're used in this way.
+
+
+It's ZK within TEEs is stronger than ZK without TEEs. And I think it's true in general of a lot of computation that you consider critical or that you want to trust in some way. I think adding a layer of attestation and reproducibility is just net good for security.
+
+
+[Anna Rose] (36:57 - 37:22)
+It's funny. As you describe this, I just think of the sort of way I've been thinking about the TEE x ZK so far, which has been mostly like ZK helps TEEs. So you can prove things about TEEs, what's happening inside the enclave with ZK. 
+
+
+But what you're describing is using TEEs in the proof generation almost. So then it's TEEs as part of the ZK flow. That's cool.
+
+
+[Kobi Gurkan] (37:23 - 37:30)
+Yeah. There are a lot of interesting combinations to be explored there. I think we'll see more work in the community around it. That's my hope at least.
+
+
+[Anna Rose] (37:30 - 37:34)
+Is there ways to use Turnkey, or is this sort of just conceptual?
+
+
+[Arnaud Brousseau] (37:34 - 39:12)
+Maybe that's a good place to sort of start talking about how applicable TEEs are and how far it could go because key management is just one of the application for TEEs, and obviously, key management is sort of critical workload that you care about a lot.
+
+
+But what we're starting to do at Turnkey is let people run arbitrary applications inside of TEEs. And so I think running a ZK prover is something that we've talked about with a customer. They may end up doing it. So we'll see.
+
+
+But yes, we'll, I think, either have external applications running inside of Turnkey and inside of our infrastructure with QuorumOS or you could also imagine Turnkey taking a more first-party approach to that and having an easy to use API around ZK verification or around ZK proving.
+
+
+We don't have in-house expertise on ZK right now and we don't have those primitives, but I think it's definitely on the roadmap in the next year or two to start exploring more primitives packaged inside of TEEs and packaged around our API because you can then sign but also proof stuff.
+
+
+We've also talked about having encryption and decryption APIs because that's something that's very adjacent to signing. So any sort of critical cryptographic operations you might want to imagine, I think they're safer when they're executed with trusted code inside of a trusted environment that you can attest.
+
+
+And I think generally the space and the industry would be safer with a whole bunch of stuff run in TEEs.
+
+
+[Kobi Gurkan] (39:12 - 39:33)
+Okay. So maybe taking it on a different direction. We solve, let's say one problem. Now you guys got the code deployed into the TEE in a reproducible way, and there is something running there. But that's not the end because there's a lot to still be done there in terms of security.
+
+
+So what kind of attacks can happen?
+
+
+[Jack Kearney] (39:34 - 41:16)
+Yeah. Well, a bunch we're thinking through. One thing I think is worth flagging is as we're deploying these remotely attestable machines, basically prior to them being able to do anything in our backend, we need to ensure that they have a secret in them.
+
+
+So we need to basically ensure that they are able to represent themselves to other enclave applications to be trusted versions of an enclave application. They need to, in some cases, be able to decrypt state that is relevant for their application. So if you're going to sign with a private key, for instance you need to be able to decrypt that private key inside of a trusted environment first before signing with it.
+
+
+And so in order to operate Turnkey securely, a really big thing that we had to solve was how do we safely transport this secret material into the TEE such that they're able to perform whatever we need them to perform in our backend?
+
+
+So that led us down this crazy path of using airgap machines and kind of have portions of the key split in certain ways and kind of actually doing the remote attestation process on an airgap machine which itself is not necessarily trivial. Like so that a variety of people, multiple people who are in control of portions of this key are able to know that as they're about to provision the enclave with the secret material that it is a trusted real version of the enclave And it's not some fake insecure version of the enclave.
+
+
+Our deploy process is crazy and it is, I think unlike most other companies out there it's really complicated and has been a huge engineering effort for us to get into a place that's consistent.
+
+
+[Kobi Gurkan] (41:16 - 41:27)
+For example, in one of the scenarios that you mentioned you can work on old versions of data. So how do you guys prevent this kind of data downgrade attack?
+
+
+[Jack Kearney] (41:28 - 45:29)
+Yeah. Okay. So taking a little bit of a step back here, one thing that maybe isn't super obvious when you're starting to think about TEEs is that they are primarily stateless. There's not a disc attached to an enclave. You need to use traditional storage mechanisms to have persistent data which is really kind of critical and a reliable hosted application
+
+
+And so you have to use something like a traditional database and that database itself is not trusted. So it's kind of a weird way of thinking. In most companies' backends the database would be just this pretty trusted place. If you store something in it, it's what you think is there, or what is there is kind of trusted.
+
+
+In Turnkey, we don't trust the database, and I say that in quotes because we rely on it for reliability obviously. If data disappears, it's bad, but we do a lot of verification as it gets ingested from this untrusted location, the database, into the trusted location, the secure enclave.
+
+
+So that's a whole pattern. We call that our verifiable data pattern but essentially what we're doing is every time state is mutated, the mutation of that data is signed by one of the enclaves that we were on. So that one's called Notarizer, and then ultimately that gets persisted inside of the traditional database.
+
+
+The question you're asking, Kobi and Arnaud maybe you can go into it a bit more detail actually into that thing later on. But I think Kobi, that question you're asking is: how do we deal with old versions of the data that was valid and basically how do we know that when we're operating on inside the enclave, it's not old and it's actually canonical.
+
+
+So let's just set up an attack here. So say that I go in, I make a Turnkey account, I generate a key in that account and I'm just testing -- so I have an API key and there's no policies in place. The only policy is my API key can sign anything with this key in here.
+
+
+And I do some testing, I'm like, okay, I build an application I like, I get some policies in place to control access to it, batten down the hatches, and then I want to go live with it, so I put a bunch of money into this key.
+
+
+How do we prevent against the initial state of the application or the organisation, which is where my API key controlled everything, from being considered a valid sort of state of the organisation at a later date.
+
+
+That is a really tricky problem. We call that kind of attack "a downgrade attack." So that's like, we've progressed the state of the organisation to a later state, and then now I'm saying I'm downgrading to a prior previously valid state and trying to: how do we invalidate that at the current time.
+
+
+So the first version we had here was incredibly janky. I'll say it, it works, but it was incredibly janky, which was every interval, let's call it, every hour or something, you go through the entire set of organisations inside Turnkey, and you just re-notarize them. 
+
+
+So you just say like, if this was valid 10 minutes ago, it's still valid now, and I'm going to re-sign it. And so what that meant was every hour or something, we were pumping our whole database through our system, and just re-signing everything constantly.
+
+
+And it worked. It meant that every time we were going to operate on a piece of data, we knew it had been piped through the system within the past hour, so it was still valid. But it definitely didn't scale. So we got to millions of wallets, and suddenly, everything started falling over.
+
+
+The current system, it's basically saying, instead of having to refresh as we call it organisations every hour, instead we're refreshing this Merkle tree, and every time we're going to operate on one of these organisations, instead of saying: is this a recent version of an organisation? We instead ask the question: is this an organisation that belongs to a recently notarised version of a Merkle tree, so a valid Merkle tree?
+
+
+So it essentially lets us collapse down the entire state of Turnkey into one Merkle tree which itself can then just be refreshed consistently.
+
+
+[Anna Rose] (45:29 - 45:35)
+and you're still doing that once an hour? Some part of the Merkle tree is being refreshed, but doesn't have to be the whole thing.
+
+
+[Jack Kearney] (45:35 - 45:36)
+Yeah. Just the root of it.
+
+
+[Anna Rose] (45:36 - 45:36)
+Okay.
+
+
+[Jack Kearney] (45:36 - 45:45)
+Yeah. And we actually have a blog post, which I think will be out by the time this podcast comes out that goes into a lot more depth here. Definitely recommend checking it out.
+
+
+[Anna Rose] (45:45 - 46:02)
+It's funny, I really realise I don't know that much about how TEEs work. In the TEE, you just said that they're stateless, and I was like, oh, I thought -- how do you program in there? How do you do stuff?
+
+
+I actually completely have a bit of a false mental model of a little black box computer --
+
+
+[Kobi Gurkan] (45:02 - 46:05)
+Like a VM?
+
+
+[Anna Rose] (45:05 - 46:10)
+Yeah. Something little that you can put programs into and it will do stuff. It will compute.
+
+
+[Jack Kearney] (46:10 - 46:21)
+I think that's a pretty fair mental model. It's just you start kind of like peeling back the layers here, and you're like: well, okay, if we don't trust this thing, then that means we can't trust this thing. And if we --
+
+
+[Anna Rose] (46:20 - 46:28)
+Yeah. It has no state, there's no trust -- you can't put a trusted database, or  they can't have any memory.
+
+
+[Jack Kearney] (46:28 - 46:33)
+You can have volatile memory. But yeah, not persistent data.
+
+
+[Anna Rose] (46:33 - 46:33)
+Interesting.
+
+
+[Arnaud Brousseau] (46:33 - 47:11)
+Another big limitations of TEEs are the way we use them is that there's no external connectivity. So a TEE cannot reach out to the outside world at all, which makes the architecture very interesting, because usually in sort of internal architectures of companies, you see service A calling service B and service B calling service C and then all the way back up.
+
+
+So our architecture actually has to have what is called a Coordinator, which calls service A, gets results from service A, and then injects service A's result into service B and so on and so forth. So the no-connectivity is also a pretty big --
+
+
+[Anna Rose] (47:11 - 47:15)
+You can't do a sequence, really. You always need some coordinator in the middle.
+
+
+[Arnaud Brousseau] (47:15 - 47:33)
+Not with enclaves. So basically enclaves, in terms of call graph, have to be leaf nodes of the call graph, which is interesting. So we have this star-shaped pattern with the coordinator at the center and then all the enclaves around it. 
+
+
+And so that's a pretty unusual pattern, but not too bad to work around.
+
+
+[Kobi Gurkan] (47:33 - 47:54)
+So given that TEEs don't have this external connectivity out of the box, how do you handle that? Because a lot of applications do need connectivity. They would enjoy calls to other systems, especially in verifiable ways, especially those that have TLS involved within them. So how do you guys think about that?
+
+
+[Arnaud Brousseau] (47:55 - 50:12)
+That's a good question. I think that's also -- I mean, we have written a blog post about that, so I recommend people check it out.
+
+
+But basically there is a way to make HTTPS requests from inside of an enclave to outside, but it requires a little bit of extra setup. So typically, enclave applications run inside of an isolated environment. They are connected to the outside world with a socket, basically. And so they only accept requests inbound.
+
+
+What we had to do was poke another socket through and run infrastructure outside of the enclave to be a proxy between the enclave code who needs connectivity and the outside world.
+
+
+I'm going to skip over a little bit of detail, but essentially what is very important is you want connectivity and specifically like TLS requests to be trustworthy and the content to be authentic. So in order for that to be the case, you need the TLS session keys to be handled within the TEE.
+
+
+And the proxy that we run on the outside is only a layer 4 proxy, so at the TCP level. So basically what happens is the enclave establishes connection through the proxy at the layer 4, so establishes the TCP connection. And then all of the application level protocol at the TLS level and HTTP level, et cetera, et cetera, all of that happens inside of the enclave through that proxy TCP connection.
+
+
+And so it is a little bit of an involved setup, but we have done it. And the way we use it today at TurnKey is to basically fetch the canonical signers of OIDC token to enable people to connect to TurnKey and have authenticators that are linked to their Google Gmail account, for example.
+
+
+And so part of the way we do that is through this bridge that we have in our TLS Fetcher enclave. So we have an enclave type called TLS Fetcher. And the TLS Fetcher is the only enclave type that has this external connectivity component, essentially. But it does enable applications to opt into having some sort of external connectivity if they need to.
+
+
+By default, that's just not the case. So for our signer, for our policy engine, for our Notarizer, we don't have that external connectivity piece.
+
+
+[Anna Rose] (50:13 - 50:24)
+Could you ever combine that? Because you talked about having a coordinator sitting outside if you needed to do like a sequential thing. Would the external connectivity unit also be a coordinator if you needed that?
+
+
+[Arnaud Brousseau] (50:24 - 51:27)
+Yeah, you could. So we do that as well. So basically the other pattern that you could do is fetch data from outside, and have the coordinator fetch some data somewhere, and then inject that data in an enclave.
+
+
+But then you have to think about the problem of how does the code inside of the enclave trust the data that's injected?
+
+
+So it has to be signed by some component that you trust. And so, in our threat model, the coordinator is not considered trusted. And so it becomes a little difficult to say: oh, well, I trust that the coordinator is going to do a good job injecting the canonical correct data. So that's why we had to do all these tricks to make sure that the TLS content is actually authentic.
+
+
+But it does work in some other cases. For example, if the user wants to inject a piece of data that they consider trusted, they could sign it with a key that they have, and then we can inject that inside of the enclave and the enclave code can then verify that it was indeed signed by the user. And so there's this trust relationship between the user and the enclave, and that works.
+
+
+So it depends on the use case.
+
+
+[Kobi Gurkan] (51:27 - 51:40)
+So given that you now described how to do things like verifiable TLS, and I know that you guys put a lot of work into that, how does this compare to the ZK side of things, which is zkTLS?
+
+
+[Anna Rose] (51:40 - 51:43)
+Or MPC-TLS. Depends on how you want to --
+
+
+[Kobi Gurkan] (51:43 - 51:43)
+Sure.
+
+
+[Arnaud Brousseau] (51:44 - 54:14)
+So maybe we should frame that question on how do you transfer trust from TLS, which is basically trust in the PKI system that we have with certificate authorities and certificates that live on servers, et cetera, et cetera. How do you transfer that over to something that is self-contained into a proof?
+
+
+And so TEEs, the way I described it, is a way to do that because the TEE is handling the session keys, verifying the certificates and sort of the response authenticity inside of the TEE, and then exchanging that with a signed package that you can then verify outside of the enclave. So that's one way to do it.
+
+
+zkTLS is another system to do this. So you exchange the sort of transcripts that you have from the request playing out to a proof about that transcript, and then ZK is the way that you transfer that trust over to something that is self-contained that people can then verify.
+
+
+Again, I think zkTLS versus TEE-TLS, they don't have to be one or the other. I think it would be actually most secure to have both, because ZK is super useful inside of the TEE as well. So an example use case that we can't solve right now is how do you make sure that private inputs or private outputs as part of TLS requests are correctly protected? 
+
+
+So if I wanted to fetch the most recent Google OIDC signers, that is a very trivial use case because the input is basically just a public request to the Google URL. The output or the response is also public and not sensitive. So we can't do it in the way that we're doing it today by just fetching the response, signing the response, we're good to go.
+
+
+A use case that is very difficult is something like proving that you have more than $10,000 in your bank account balance. Because in that case, the TLS request goes to your bank with some sort of private session and it comes out with maybe your private balance that's $10,001 or maybe a million dollars, maybe a billion dollars, I don't know how rich people are, but so you don't want to disclose that.
+
+
+And ZK is useful to obfuscate parts of the response and make sure that you are not leaking information out to people that verify the proof.
+
+
+[Kobi Gurkan] (54:14 - 54:15)
+That makes sense.
+
+
+[Anna Rose] (54:15 - 54:46)
+I want to go back to what you described, Jack, when you were talking about how you were putting the secret into the TEE and you have these processes to do that.
+
+
+The way I've understood that, it's the transferring of a secret, it's not really transferring of code. But I'm assuming if you're deploying code, are you doing it in a similar air-gapped? I'm assuming there's a lot of security that would have to go into the deployment.
+
+
+And then I kind of wonder about upgrading. Do you also have to go through some sort of process to keep that secure?
+
+
+[Jack Kearney] (54:47 - 55:45)
+Yeah, totally. So the code itself will be open before too long. It's open to everybody who's going to be involved in the release process at Turnkey right now. And the artifacts are deterministic or reproducible. And so if you have the source code, you can make the same artifact.
+
+
+So there's nothing really secret about producing the artifact, which ultimately gets deployed into the enclave. That part is totally kind of transparent.
+
+
+What is secret, the secret is inside of our applications, there's this thing called a Quorum Key, which is QuorumOS is the operating system which runs all Turnkey's enclave applications. The Quorum Key then is kind of the only piece of state you need to be able to do anything in our backend, or for an enclave application, to do anything in our backend. 
+
+
+And that Quorum Key itself is kind of everything in some senses. That's the thing that if you lose it, you can not recover funds. Actually -- yeah.
+
+
+[Anna Rose] (55:45 - 55:46)
+Some bad stuff could happen.
+
+
+[Jack Kearney] (55:47 - 55:51)
+Yeah, bad stuff could happen. So we're really, really careful about how you kind of securely store that Quorum Key.
+
+
+[Anna Rose] (55:51 - 55:51)
+Got it.
+
+
+[Jack Kearney] (55:52 - 57:10)
+And basically the process to reconstruct that Quorum Key inside the enclaves is really cumbersome and challenging and requires all of this air-gapped stuff that we were talking about.
+
+
+One thing I think is not obvious if you're running enclave applications, like a backend and a highly available system based on enclave applications, is that you typically need to be able to auto scale or scale up and scale down the systems that you're running in the backend.
+
+
+So you're more requests than you're able to process given the machines you have running right now. You want to be able to add some more machines so you can process the new requests that are coming in.
+
+
+And if it were the case that Turnkey's engineers or operators needed to basically break out the airgap machines and remotely attest every new enclave instance that was coming online, we'd be super slow. We couldn't respond in real time to surges and requests.
+
+
+And taking a step back, this is a major problem with HSMs. So a lot of the traditional kind of custodians and stuff that were based on HSM technology, this is a problem they have. They have physically racked HSMs in a data center somewhere.
+
+
+And so if they suddenly get a major surge in traffic, sorry, you're out of luck. You got to wait for a new shipment of machines to come in, rack them, put them online before you're actually going to be able to handle that.
+
+
+[Arnaud Brousseau] (57:12 - 57:20)
+And the other way around, if they break, you have to emergency to [?] go and replace these things. So, that's --
+
+
+[Jack Kearney] (57:20 - 57:42)
+Like fun little anecdote, a lot of HSMs actually have tamper resistance basically baked in. So if you feel the chassis of the HSM being unscrewed or something, they'll zero themselves out. And so that can actually happen. Like someone walks by your cage in a data center and accidentally bangs it, your HSMs can go offline. So there's a lot of operational challenges of --
+
+
+[Anna Rose] (57:40 - 57:41)
+Very delicate.
+
+
+[Jack Kearney] (57:41 - 58:19)
+Using physical machines.
+
+
+But anyway, so we solve this problem using a process called key forwarding, basically, where either versions of the enclaves that are identical to one another, or versions of kind of an old version of an enclave, which is maintained by the same set of people for a new version of the enclave, they have a process by which they can essentially exchange this core secret between each other after remotely attesting what is running on them.
+
+
+And that in turn allows us to scale up or scale down the machine safely without needing to break out the machines and also simplifies the deployment process considerably.
+
+
+[Anna Rose] (58:19 - 58:41)
+When it comes to the -- I'm just kind of going back again to that example where you had the machine in the airgap and you're deploying it, you talked a little bit about distributing parts of the key. Would that be like a DKG, this like a distributed key generation event that creates that?
+
+
+I'm just curious, because we've had that topic come up before on the show and I don't know if it's what you're talking about there.
+
+
+[Jack Kearney] (58:41 - 59:02)
+Yeah. We use Shamir's under the hood. I think there's layers of things that we can talk through, but fundamentally when we talk about splitting keys, it's using Shamir's Secret Sharing, which is a very old battletested algorithm for splitting keys in this case, but can be used for splitting arbitrary data into components of which you need n to reconstruct them.
+
+
+[Anna Rose] (59:02 - 59:19)
+We've touched on a few different parts of the Turnkey system, but I'm sure there's parts that we're not as aware of. 
+
+
+What are other things that you've built that people can use that sort of allow for more, I don't know, functionality in key management and in working in groups?
+
+
+[Jack Kearney] (59:19 - 59:55)
+So I guess we've mentioned every enclave in Turnkey's backend other than one, which is our Transaction Parser enclave.
+
+
+So Transaction Parser, basically you feed in serialized transactions into Turnkey and then we do some stuff, say, can you sign this and sign it? Well, that stuff is basically taking the serialized transaction, parsing it into something that's more human readable, and then comparing the human readable thing against policies that humans have written to dictate whether certain kinds of transactions should be signed or not, and then ultimately making a decision and signing that transaction.
+
+
+[Anna Rose] (59:55 - 59:59)
+That's the human side of thing, or the legal side of thing basically.
+
+
+[Jack Kearney] (59:59 - 1:01:51)
+Yeah. More human. I mean, it's really like how do you control access? If you're building an application, how do you control what parts of the application can perform certain tasks or who in your backend or in your organization can perform certain things?
+
+
+So I think one really cool example of this is we just rolled out ABI parsing in Ethereum and SPL parsing or IDL parsing in Solana. So essentially what that means is users of Turnkey or developers in Turnkey can upload smart contract ABIs to Turnkey.
+
+
+So for instance, say I upload the Uniswap contract to Turnkey, and then you can write policy that says: Kobi can sign a transaction so long as that transaction is only transferring assets in Uniswap using this one trading pair. But if Kobi tries to call the transfer function on the USDC contract, he will be rejected.
+
+
+And so you can get really, really granular with the kinds of things that humans can do unilaterally or that machines can do unilaterally while not necessarily being able to have full control over the assets.
+
+
+So we think this is super important for setting up just safe access controls. This is actually one of the motivating instances that made me want to start Turnkey. I was again at Polychain, and I'd have these relatively young traders come to me and say: hey, I want to acquire a position in some totally obscure crypto asset. Will you send me $20 million of USDC, so I can go acquire this position?
+
+
+And I'd be like, love the agency, probably a good investment, but I'm not going to send you $20 million of USDC to your MetaMask. That's just not going to happen. And I was like: well, it'd be great if I could give them an API key or some tool so that they could trade, but not necessarily be able to sweep the funds in a decentralized setting.
+
+
+[Anna Rose] (1:01:51 - 1:01:55)
+Like give them controls or rules as to how much they can interact with.
+
+
+[Jack Kearney] (1:01:55 - 1:02:19)
+Yeah. Like what can you do without giving you full control? And I think the same is true actually for AI agents, which we haven't really talked about here, but you can imagine all different kinds of applications where you'd want to say: I want to give an agent some capabilities with this key or this address, but not all.
+
+
+And that's fully kind of, you can control that in really granular setting using Turnkey's policy engine and transaction parsing capabilities.
+
+
+[Anna Rose] (1:02:19 - 1:02:37)
+Interesting. I mean, actually the example that comes to my mind is from the validator world where maybe you're running a validator, maybe you also want to do voting, which is a very -- it's something that maybe the person running the validator may not want to be doing the votes. You could have somebody else on the team. Maybe something like this could be used.
+
+
+[Jack Kearney] (1:02:37 - 1:02:47)
+Yeah. Totally. I think it's a great example. Governance of all kinds, yeah. Just a separation basically between use of key and long-term control of key.
+
+
+[Anna Rose] (1:02:47 - 1:03:45)
+It's a shame we're totally at time. We don't have time really to cover this AI case. There was an episode that I did with Tarun talking to Kostas from Sui who had created this really interesting access control using ZK. And Tarun had all sorts of questions around AI and access control.
+
+
+I feel like the more we dig into these, I don't know, signing agents having kind of different roles, how do you define them within these cryptographic systems within the software? Yeah, it's just coming up a lot.
+
+
+It's a shame we don't get a chance to talk about it today, but maybe another time. So we'll add a link to that episode in the show notes, but I do think it's worth another conversation for sure at some point.
+
+
+All right. Well, thank you, Jack, Arnaud, for coming on the show and sharing with us the story of Turnkey, digging back into TEEs. I've learned a bunch of things along the way. I thought I knew TEEs. Not really. But it was cool to explore how you're working with them.
+
+
+[Arnaud Brousseau] (1:03:45 - 1:03:45)
+Thank you. That was great.
+
+
+[Jack Kearney] (1:03:46 - 1:03:47)
+Thanks so much for having us.
+
+
+[Kobi Gurkan] (1:03:47 - 1:03:47)
+Thank you, guys.
+
+
+[Anna Rose] (1:03:48 - 1:03:48)
+Thanks, Kobi.
+
+
+[Kobi Gurkan] (1:03:48 - 1:03:49)
+Thank you.
+
+
+[Anna Rose] (1:03:49 - 1:03:58)
+And I want to say thank you to the podcast team, Rachel, Henrik, Tanya, and Hector. And to our listeners, thanks for listening.
