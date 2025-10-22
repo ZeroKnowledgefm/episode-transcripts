@@ -1,0 +1,977 @@
+﻿[Anna Rose] (0:05 - 0:21)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+[Anna Rose] (0:28 - 2:18)
+This week, Guillermo and I speak with Kevin Lacker, the creator of the Acorn Theorem Prover. The idea for this episode came about because of a discussion in our community. 
+
+
+People were asking, since mathematical proofs are verifiable, could they be a natural fit for AI collaboration? Could LLMs help generate proofs that something mathematical is correct? In this conversation, we explore that question. 
+
+
+We begin by discussing what theorem provers are, their history, and how they're used today. Kevin walks us through how Acorn integrates AI into the proving process and the benefits and challenges that come along with it. We touch on the history of mathematics, the foundations of formal reasoning built on solid axioms, and how AI might accelerate the creation of mathematical knowledge.
+
+
+If you're a researcher interested in tools that might change your workflow, this episode is for you.
+
+
+Now, before we kick off, I just want to share that we've launched Season 3 of the ZK Whiteboard Sessions. The ZK Whiteboard Sessions are produced by ZKHack in collaboration with Bain Capital Crypto. This series goes deep on some of the key concepts in ZK.
+
+
+I've added a link in the show notes. Be sure to check out these videos, they are a great way to learn about the fundamentals and techniques powering the ZK systems we often discuss on this show.
+
+
+Also, if you're looking to jump into ZK professionally, or just looking for a new role, I wanted to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your job there today.
+
+
+We've heard great things from teams who found their perfect hire through this platform, and we hope it can help you as well. Find out more over at jobsboard.zeroknowledge.fm. You can find this on our website, and I've added it to the show notes.
+
+
+Now here's our episode with Kevin Lacker from Acorn.
+
+
+Today, Guillermo and I are here with Kevin, the creator of Acorn, which is a theorem prover.
+
+
+Welcome to the show, Kevin.
+
+
+[Kevin Lacker] (2:18 - 2:20)
+Hi, Anna. Thanks for having me on.
+
+
+[Anna Rose] (2:20 - 2:21)
+Hello, Guillermo.
+
+
+[Guillermo Angeris] (2:21 - 2:22)
+What's up?
+
+
+[Anna Rose] (2:22 - 2:30)
+All right. I think to get started, it would be great for us to understand what exactly a theorem prover is, and what Acorn is.
+
+
+[Kevin Lacker] (2:30 - 2:43)
+So Acorn is a theorem prover, which means you write mathematics in it, and the theorem prover checks that your mathematics is correct. And what makes it special among theorem provers is that it has an integrated AI with the goal of making it easier to use.
+
+
+[Anna Rose] (2:43 - 3:50)
+Very cool. And we're going to be spending most of the episode talking about Acorn, so we're going to get into the weeds. But I do want to mention that this interview is prompted by two things.
+
+
+One was a conversation happening in the big ZK Podcast telegram group, I think a few weeks or months ago. It was about whether LLMs could be used to help generate proofs and prove proofs and whether people could trust them and what it would take.
+
+
+And I think at the same time, around the same time, Guillermo, you had just published a blog post called Acorn and the future of (AI?) theorem proving. And Kobi flagged that for me, being like, hey -- or for all of us, actually, being like, this is coming up in the ZK community. Why don't we have a chat about it? And so this is how this episode came to be.
+
+
+Just before this interview, Guillermo, you and I were chatting about your paper as well. And you gave me a little bit of a framework for what you were thinking about with that paper. So maybe you could share a bit about that, and then we should dive into Acorn.
+
+
+Actually, then we should dive into Kevin's background, and then we should dive into Acorn.
+
+
+[Guillermo Angeris] (3:51 - 5:44)
+Yes. Totally agree. So really quickly, I guess I'll just set up what the blog post about is essentially, how do we do math? We say something, give a theorem or a statement of a theorem, and then we prove it.
+
+
+And what does it mean to prove it? It's you write out some English that tries to convince the person who's reading it that this thing must be true.
+
+
+And the cool part about math is unlike many other fields is you can... there's axioms. In some sense, every theorem is true because you can reduce all the way down to the axioms of how numbers get added, blah, blah, blah.
+
+
+And people realised this pretty early in the 20th century, and realised that you could mechanise math. You could have a computer essentially check that your mathematics is correct. And this is actually how you prove a bunch of interesting theorems about metamathematics.
+
+
+Funnily enough, it was like why Turing came up with his original idea for a Turing machine. It's actually not for breaking the enigma or whatever. It was very much for proving theorems or showing that theorems are otherwise not necessarily provable.
+
+
+So okay. So cool. Now we have modern computers. We can actually not just make a Turing machine like a virtual thing in our head, but we can make it a quasi reality. And you can now give theorems to computers and then have it check that a theorem is correct by going all the way back down to the axioms and checking that every single step that you've done in this theorem is good.
+
+
+And that's cool. You get things... when you do that, we can get in many languages, but one of them being Lean and you can write out theorems as if they were programmes. And if the programme compiles, then the theorem is correct.
+
+
+The problem is that it sucks. It really sucks. It sucks in every fucking possible way one could say it sucks.
+
+
+Because there's a gajillion theorems you can prove about tiny things. Like you add stuff, and when you add stuff like when you add A and B, that's the same thing as adding B and A.
+
+
+[Anna Rose] (5:44 - 5:50)
+Do you mean like you'd have to write both of these rules into the language? All the edge cases and all the variations?
+
+
+[Guillermo Angeris] (5:51 - 7:47)
+Yeah. Exactly. It's one way to think about it. Yeah. So you have to write it into the language. Somebody has to go and prove that that is true.
+
+
+And it's a very trivial thing to prove that it is true often, or at least trivial enough. But somebody has to go do that work, because you have to show the computer that every single possible step in every single proof is justified.
+
+
+And so you end up, if you think about programmes as... or theorems as programmes, like every single one of these things has a name associated with it. Add com is a thing. And it's like, yes, it's true. It's an important thing to know, but it's not how mathematicians think about math, which is, of course, A and B and B and A, like people say and A plus B are the same fucking thing. Just like we don't talk about it.
+
+
+And so that's why it sucks is because computers are the ultimate pedantic checkers. They check every single possible thing, even though it's true or obvious or things like that.
+
+
+But these are trivial theorems to show and prove. And so I think this is where Kevin's... we'll talk about it, but this is where Acorn is a very beautiful thing, which is, like math is when you prove a theorem in math, you state things that are true and they don't necessarily follow perfectly one after the other, but they are very simple, logical jumps.
+
+
+So it's not everything is perfectly justified at every step, but it can be perfectly justified upon request. And that's the important part. It's like when it is requested, it can be perfectly justified, and the justification is often very simple.
+
+
+And so why not, instead of forcing humans to do that, why not make the computer, the LLM, which is pretty good at doing these kind of routine mechanical steps -- or not LLM, like a ML model in general, justify those for the human. 
+
+
+And so the human can write things that look much more like normal math and in turn end up with an actual legible set of steps as opposed to a Lean proof where you have to essentially justify every single step.
+
+
+They have shortcuts and stuff. I'm glossing over a lot of this, but anyways, that's what the blog post is about. And that's what we'll get into very deeply in this episode, which I'm very excited to do.
+
+
+Yeah. 
+
+
+[Anna Rose] (7:46 - 8:05)
+Very cool. All right. So that's a little bit of the intro to the themes of this episode.
+
+
+But maybe before we kind of dive in, Kevin, I think it would be great to hear a bit about you and what got you interested in this, what you were working on before. Have you been a mathematician your whole life? What's exciting about this?
+
+
+[Kevin Lacker] (8:05 - 8:57)
+I wouldn't say I've been a mathematician my whole life, but I've always been pretty interested in mathematics when I was… let's see, long ago, in high school and college, I did a bunch of mathematical competitions like the International Math Olympiad and the Putnam exam. 
+
+
+And so recently, maybe 3 or 5 years ago or so, there was some interest in, hey, can we get these computer systems to solve these math contests?
+
+
+And recently there has been a lot of great success in LLM world in making that work. And I think there was a suspicion at the time that this was something to get into.
+
+
+And when people started talking about that, I thought: oh, hey, I have this background, maybe this mathematics that personally I've more like let be an aspect of my past. Maybe that's relevant, maybe I should take a look at these things.
+
+
+[Anna Rose] (8:58 - 9:04)
+Were you a software developer? What kind of work were you doing before that, that made this seem like something you should take on?
+
+
+[Kevin Lacker] (9:05 - 10:40)
+Yeah. I've been a software engineer for a while. I worked at Google and Facebook and started a couple of Y Combinator companies. One, Parse, which was aimed at being a developer tool, making databases easier to use for mobile developers.
+
+
+So the concept of making a tool with a good developer experience was a very familiar one to me. And so when I took a look at Lean at some point, when people are starting to say, okay, can we make this system useful for solving math contest problems? At some point they were saying, oh, can some people formalise the results of some IMO problems?
+
+
+And so I thought, okay, that's something I can help out with. I have a bit of familiarity with Lean, a bit of familiarity with IMO problems. And then I started doing it and just quickly felt like, oh, this is much harder than I expected.
+
+
+I'm familiar with a lot of programming languages, but this adds many more layers of difficulty because you have to prove every step along the way. And it involves remembering many, many tactics is what it's called, different ways of solving different proofs.
+
+
+And I worked on some systems in Lean, a rewrite search tactic to try to solve some stuff. But after a little while, it seemed like it wasn't a great fit. And it made me think about, well, what would a language look like if you thought that... well, what would the ideal interface for a person be to write this?
+
+
+And if you could imagine that the AI could solve all the awkward bits for you, how would that inform the design of the language itself?
+
+
+[Anna Rose] (10:41 - 10:50)
+Is Acorn then a language or is it a toolset or is it a product? Because I mean, you refer to it as a theorem prover, but I don't know what that is. Is it a concept?
+
+
+[Kevin Lacker] (10:51 - 11:00)
+So the way you use it is you open up VS Code and you type in characters that are written in a language, the Acorn language.
+
+
+[Anna Rose] (11:00 - 11:00)
+Okay.
+
+
+[Kevin Lacker] (11:00 - 11:45)
+But it's not a programming language because it's not designed to write code. You're not reversing a linked list. It's a language for mathematics.
+
+
+You're expressing a mathematical statement, like if X is an even number, then X times 5 is also an even number. Some sort of thing like that.
+
+
+So you can express that in Acorn, and then what the theorem prover does is you run it as a VS Code plugin, most commonly. And the theorem prover, you type some mathematics and it just checks your mathematics for you.
+
+
+If your mathematics is correct, it puts a little check mark there, and if your mathematics is wrong, it will put a little yellow squiggle there. And if you type something that was complete nonsense, like I can't even tell what you're doing, it'll put a little red squiggle.
+
+
+[Anna Rose] (11:45 - 11:53)
+Is it similar to Lean then? Is it taking... is Lean similar to that or is it kind of moving it in a different direction?
+
+
+[Kevin Lacker] (11:54 - 12:53)
+It's similar to Lean in the sense that it's a theorem prover. They both have the same goal of letting you express mathematics and letting you express a proof of it and verify that the proof is correct.
+
+
+But in practice, when you look at Lean code, the majority of it is not mathematics, but tactics, which is a separate language besides mathematics that expresses how a proof is created.
+
+
+The idea of Acorn is that you don't learn two separate languages. You just learn the way to express mathematics and the AI will fill the details for you and tell you if it can prove it or not.
+
+
+And so the hope is that this is more like the human way of thinking about mathematics, where you think of a bunch of mathematical statements and you might tell your friend, hey, does this seem reasonable?
+
+
+And when you tell your friend, well, if X squared equals 9, does that mean that X must equal +/-3? Your friend doesn't ask you about your tactics for proving it or anything like that, they just say, yes, that's correct.
+
+
+[Anna Rose] (12:53 - 12:53)
+Okay.
+
+
+[Guillermo Angeris] (12:54 - 15:33)
+Yeah. The way I would compare it to Lean is like, Lean is like Haskell or maybe like Rust.
+
+
+Rust is cool and it lets you express very, very flexible types and how these things connect to each other, traits and things like that. It is also incredibly verbose.
+
+
+And the reason why is because you can essentially construct... while that's very good for ensuring things are very nice and concrete and production and all this stuff, in math, we kind of implicitly endow objects that we care about with types, or with information about them.
+And that information can be gleaned from the context. It doesn't need to be kind of explicitly stated by the user.
+
+
+So you can construct languages, and the language that I will like put in a separate bin is more like Julia. Julia is also strongly typed in the same sense that Rust is.
+
+
+In a sense of every single object has a type, it can have these abstract classes and stuff. But at the same time, you don't have to explicitly write all of that information.
+
+
+And in math, we just want to check whether something is true or not. We're not trying to make a production level system that somehow can avoid edge cases or whatever. And so certainly you could do a lot of work... like the machine can do a lot of work to infer what things are important about the thing you're writing.
+
+
+So Lean, if you look at it, it looks like very much a fairly complicated language with a bunch of different functions and calls and syntax around how you do different tactics and all the stuff, whereas Acorn looks kind of like a much dumber, and this is a very complimentary thing, looks much dumber.
+
+
+And it's like you have a theorem, which is a statement, and you have a bunch of lines that are just how you would write math normally. You would just say this thing is equal to this thing, and this other thing is equal to this thing.
+
+
+And like Kevin said, the point is, when you explain your proof to a friend, you're not explaining the tactics you used to rewrite one side to the other. You simply just say if this thing is true, then obviously this next thing is true because it's like state that and your friend can, in their head, come up with why it must be true.
+
+
+And the point is, instead of a friend here, you have your AI assistant friend who does the filling in those steps for you, whereas Lean requires you, not your AI assistant friend, to fill in those steps for you and do so very, very explicitly.
+
+
+So anyways, I would recommend just like... it will be helpful to compare the syntax. I think in the blog post, I have a comparison of what Acorn's version of this is and the proof in Lean. And it's like, it's actually quite enlightening because it's very illegible to a mathematician unless you're already very familiar with theorem provings like languages.
+
+
+[Anna Rose] (15:34 - 15:50)
+Cool. We're definitely adding that link. I didn't mention that earlier, but we'll be adding that link in the show notes if anyone wants to see that article.
+
+
+You mentioned, Kevin, though, at the start that it's using AI. What's your connection to machine learning and AI? Are you coming also from a space that worked with that?
+
+
+[Kevin Lacker] (15:50 - 16:33)
+I've worked a little bit on AI in the past. Long, long ago, I wrote little tiny AI models at Google to solve problems that now seem ridiculously trivial. Like if a domain name had ZK prover, for example -- or zeroknowledge.fm, how do you know that "zero knowledge" is actually two words, zero plus knowledge?
+
+
+And 20 years ago, this was a very difficult problem requiring AI. Nowadays, with generative AI, the AI is many, many times stronger. So I would say I just have a little bit of background in it, enough to start figuring some stuff out.
+
+
+[Anna Rose] (16:33 - 16:51)
+In the case of Acorn, how is the AI brought into it? Are you using out-of-the-box solutions and sort of, I don't know how you would do this, but adding it into the language and into this sort of theorem prover? Or is it like a bespoke... are you kind of training it yourself?
+
+
+What is it?
+
+
+[Kevin Lacker] (16:51 - 18:17)
+It is trained itself on the Acorn library. So Acorn is in two parts. There's the theorem prover itself, and then there's the mathematical library.
+
+
+So the mathematical library is written in Acorn and contains a bunch of these very detailed proofs for basic stuff. Like how do you multiply two rational numbers together? What are some facts about even numbers or factorials? 
+
+
+And so from someone using it from their point of view, when you get the VS Code extension, you download it and it comes with a small local AI model that is included. And so every time you type a line or every time you save something, it can run.
+
+
+And so I think this is really important for the mathematician experience as you type things, because you want it to be saying, yeah, that's good every time you write a line.
+
+
+And so it isn't as powerful as, for example, these models that are winning the IMO by spending a large cluster and teams of enormous amounts of people to crack these problems with many hours of computer time, but it is a tool that you can just go use right now.
+
+
+And when you have a tool that takes moments to give you feedback, it lets the human and the AI work together in conjunction.
+
+
+[Anna Rose] (18:18 - 18:36)
+Interesting. I know you guys just defined it as very different from Rust, but as you say that, I start to think like, is this sort of a real time version of how Rust does the compiling and tells you if there's bugs? Would you put it at all in a similar category in terms of concept or is it so different left field?
+
+
+[Kevin Lacker] (18:36 - 19:29)
+I think it's similar. If you think of the borrow checker if you're writing some Rust, you just type your code and then occasionally it says, oh, this mutable reference conflicts with this immutable reference.
+
+
+And in Rust, you don't explicitly say here are all these lifetimes, here are these memory rules, there's all this stuff that in Rust is implicit, and if you're writing C++, you need to say in every single spot, where exactly is every variable deallocated.
+
+
+And so if you compare some C++ code to the code doing the same thing in Rust, you'll find this, the C++ is writing all these explicit deallocators, you're managing it everywhere, you can screw it up all the time. And Rust makes this part of it easier and you do have a little more... you're a little bit more handcuffed if you really want to shoot off your foot, then C++ will make that easier for you.
+
+
+[Anna Rose] (19:29 - 19:35)
+And in this analogy, is Lean more similar to C++ and Acorn's more similar to Rust?
+
+
+[Kevin Lacker] (19:35 - 20:15)
+I think the vision for Acorn is for writing it to feel more like writing Python, where it's clean and simple and if you take someone who is not primarily a software engineer, it's a lot easier to start learning Python when all of this additional stuff to help you is things that you can kind of ignore or not think about, and then if you compare to writing a more strict language like either C++ or Rust, there's a lot more stuff you have to learn.
+
+
+And so writing Acorn should be much easier for a mathematician to sit down and learn some basic syntax and then start using it.
+
+
+[Guillermo Angeris] (20:16 - 20:24)
+I think like one really helpful thing, which is... it's kind of hard to describe in words, it's way easier to be, you should just pull up acornprover.org or whatever, I don't remember what the link is.
+
+
+[Kevin Lacker] (20:24 - 20:25)
+That is it.
+
+
+[Guillermo Angeris] (20:16 - 20:53)
+Okay. Nailed it. So good. But do you want to describe the workflow? The workflow is like a very... it's a very satisfying thing.
+
+
+I remember like I downloaded it, I kind of ran it and I was like, fuck, this is the way these things should be, not like whatever nonsense we were doing before. And I think that's the thing that was like immediately to me was like very cool about it.
+
+
+Like high level description of the workflow. What does it look like? You download... you have VS Code, you download this extension, I want to prove that if I have an odd number, I add one to it, it becomes even. What happens?
+
+
+[Kevin Lacker] (20:53 - 22:34)
+The way I think of it is, what workflow do I want if I'm writing a proof and I have someone who's just much smarter than me, standing over my shoulder and helping me out as I go through it.
+
+
+And so to take your example, if I want to prove that if I have an odd number and I add one, it's an even number, then I would start out by taking this that we can express in English and then writing it in the formal language.
+
+
+So Acorn, it'd be something like theorem, you write the name, you have your variable, X is a natural number, and then you state the theorem, like X is odd implies X plus 1 is even. All right.
+
+
+And so in the Acorn workflow, you save this. And what I think will happen immediately, if you type it in correctly, is it will put a little yellow squiggle, which means two things, it means yes, you wrote it down correctly, if you're missing a parentheses or something, it'll red squiggle it, and it means this is not trivial. This is not something that you can just say without assuming you got to prove it. And so you think, okay, well, how do I start proving it?
+
+
+All right. So if n is your odd number, the way you start proving it is, well, you let d, a natural number, be such that 2 times d plus 1 equals n.
+
+
+And so this thing I've said out loud is just about exactly one line in Acorn code. Let d : nat satisfy "squiggly braces here" 2 times d plus 1 equals n.
+
+
+And then you save your file, and then Acorn will check it for you. If you mistyped it, red squiggle. And I think this should be enough that it doesn't require a yellow squiggle. It says, okay, this should be like... this is something you can take for granted because there's already some theorem, or this is just the definition of odd, probably.
+
+
+[Guillermo Angeris] (22:35 - 22:40)
+Like the definition of odd is there exists some number d, so it's that 2 times d plus 1 is the number.
+
+
+[Kevin Lacker] (22:41 - 22:58)
+Yeah. All right. And then let's think about it. So 2 times d plus 1 equals n plus 1. So I know this to be true because in my head I'm doing the little algebra and stuff.
+
+
+And I actually don't know, right now, this is maybe on the boundary. I'd have to look to see if Acorn is going to be like, yep, that's obvious. Or if you have to put in another step.
+
+
+[Guillermo Angeris] (22:58 - 23:02)
+I actually think it might automatically get it from here, but anyways, let's assume it doesn't.
+
+
+[Kevin Lacker] (23:02 - 23:27)
+I think it should, but I mean, this is one of the underlying things, which is however good the AI is now, the whole world of people building AI things, there's so many brilliant people and so much effort into it, into both how good the public models are and how good are the tools for you to train your own that you want to just build something and then think, okay, hopefully the AI people can just make this stuff work 10 times better over time.
+
+
+[Anna Rose] (23:28 - 23:37)
+In this example, though, it doesn't fix it for you. It's literally just highlighting whether it's true or not, right? Or does it prompt you to tell you, oh, maybe this is what you need?
+
+
+[Kevin Lacker] (23:38 - 24:07)
+It doesn't really prompt you to say what you need. It's either... if it recognises immediately, I know how to prove this, then it just says check mark. And then if you select the thing... because if you type something and it's like, yep, that's true, and you're like, wait a moment. Why? I was just kind of guessing, because sometimes that'll happen. The AI is like a step ahead of you, then you select it and there's another panel in the editor you're using that will show you, okay, here is why this thing is actually true.
+
+
+[Anna Rose] (24:08 - 24:08)
+Okay.
+
+
+[Kevin Lacker] (24:08 - 24:14)
+So if it knows it, it'll explain the whole thing to you. And if it doesn't know it, it'll say I don't know. Why don't you keep going?
+
+
+[Anna Rose] (24:14 - 24:14)
+Interesting. 
+
+
+[Kevin Lacker] (24:14 - 24:41)
+And I think we could sort of build other stuff over time where it says I don't actually know, but I have some ideas and let's have some feedback and let's go back and forth and chat. And I do think that that would be a compelling thing to do.
+
+
+But I think at that point we have to hook in cloud LLMs and figure out some way to do all that stuff because this sort of local model is not yet powerful to just chat about whatever you want and to have a whole language thing going on.
+
+
+[Guillermo Angeris] (24:41 - 24:52)
+I actually have a bit of a disagreement on this now.
+
+
+[Kevin Lacker] (24:43 - 24:43)
+Oh yeah?
+
+
+[Guillermo Angeris] (24:43 - 24:52)
+So recently, I think about 2 months ago or something, Qwen released a set of updated models. These are tiny models, by the way.
+
+
+[Anna Rose] (24:52 - 24:55)
+What was the name you said? Qwen?
+
+
+[Guillermo Angeris] (24:55 - 24:56)
+Qwen. Q-W-E-N.
+
+
+[Anna Rose] (24:56 - 24:57)
+Okay.
+
+
+[Guillermo Angeris] (24:57 - 26:03)
+And I would highly recommend you do this. Just download, I think it's Qwen-4B or something like that. Qwen-4B-Thinking or something like that.
+
+
+It's a 4 billion parameter model, runs on a phone. It can run on your laptop. No problem. Whatever laptop you have, it'll run quite well.
+
+
+And ask it something. Ask it something like... my standard question for these tiny models is like: Please solve this small convex problem that's non-obvious unless you're already familiar with it. And it will nail it. Nail, just like literally give you a complete English-level proof that would absolutely convince any human that knows anything about math that this thing is true.
+
+
+And it's not a problem that, as far as I know, is super obvious in training data because it requires some interesting steps about AM-GM inequalities and stuff.
+
+
+But the point is, I suspect actually that if somebody, it could be you, Anna, were to fine tune said model on the Acorn library, I think it would probably be quite, quite good at proving a lot of these theorems about lists and basic number theory and stuff like that. Like quite good.
+
+
+I was very impressed by what a 4B model could do.
+
+
+[Kevin Lacker] (26:03 - 26:18)
+Yeah. I need to check out these Qwen models. It's definitely a danger of saying that anything is not quite possible in AI world nowadays is that you'll discover that there's some other thing that came out in the last 6 months that like, well, it goes beyond your level.
+
+
+[Guillermo Angeris] (26:19 - 26:26)
+Yeah. There's like a million people and like a hundred billion dollars trying to prove you wrong as much as possible, or whatever.
+
+
+[Kevin Lacker] (26:26 - 26:41)
+Yeah. Exactly. And I think it's a pretty good bet that eventually, even if Qwen-4B-Thinking doesn't quite hit the sweet spot, it doesn't seem like we're anywhere close to how well you can do with the model that's running locally.
+
+
+[Guillermo Angeris] (26:41 - 26:41)
+Yep.
+
+
+[Kevin Lacker] (26:41 - 26:55)
+And there's also... the model doesn't have to be running locally. It could be integrating a remote model. So there's many, many different possibilities here for ways to improve the AI component of Acorn to make it even easier.
+
+
+[Anna Rose] (26:56 - 27:03)
+You sort of said there's these two components that there's a theorem prover and then there's this mathematical library. Can you explain a little more what that looks like?
+
+
+[Kevin Lacker] (27:03 - 29:18)
+So the idea of theorem provers is that you can prove all of math from a very basic set of axioms. And these axioms, people have figured this out over the past hundred years or so.
+
+
+I think in the 1910s, before computers existed, people tried to boil down all of mathematics with a Principia Mathematica, Russell and Whitehead, and it ended up being this enormous book where it's like, okay, at page 200, you get to 2 plus 2 equals 4.
+
+
+And so people have been making these systems better and better over time in terms of a simpler set of axioms that is able to prove these things in a more straightforward way.
+
+
+And so I think the general way of how to do this is pretty accepted among the theorem proving community right now, where you start with some ways to handle inductive structures, like a list where you can start off with either you have an empty list or you construct a slightly larger list from a smaller list.
+
+
+And then you can build numbers that way too, because natural numbers work the same way as a list. You have zero, and then whenever you have a number, you can have the one, one after it.
+
+
+And then you have some basic axioms that involve things like substituting into a formula. If you have a formula where x is some any natural number, and you have y as a natural number, then you can substitute that in.
+
+
+And then you have equality. If you have two expressions that are equal, then you can substitute them out in any other expression.
+
+
+And then there's basically a pretty small list of this sort of axiom. And then you can start building up mathematics, things like lists, natural numbers, integers... so integers as opposed to natural numbers and integers, where you also allow negative ones. And then rational numbers, real numbers, sets, all these other structures you can prove in terms of the more basic ones.
+
+
+And there's just many facts about these structures that you can prove from the basics.
+
+
+If you have a list, if you reverse a list twice, then you get the same list. You would say that to someone else and they'd say, yes, obviously. And then to actually write out the proof from the very basic definition of list is a fairly long ordeal.
+
+
+[Anna Rose] (29:19 - 30:22)
+This reminds me a little bit of an episode we recently did on iO.
+
+
+So here, I want to take it a bit into the cryptography proof direction, but iO being a theoretical cryptography. And our guest on the show was Rachel Lin talking about a paper they'd written in 2021, which was using well-founded assumptions, like some of these proofs that had been somewhat tested to now build a proof that this iO was possible under certain circumstances.
+
+
+An she had a really lovely analogy for assumptions and how they're very creative, but then you have to prove them.
+
+
+So as you talk about this and you talk about these building blocks, like there's the basics, the axioms that are well-founded, people have very much accepted them, and then you try to build on top of it. And that's also how you've built, as I understand, this mathematical library, or is the library just those basics? And then the AI actually has to learn... teach itself those levels up.
+
+
+[Kevin Lacker] (30:22 - 30:41)
+The very basics, like the rules for equality and substitution and induction are built into the language. And then the library is written on top of that in the Acorn language. And then the AI gets trained on the library to help you add more to the library.
+
+
+[Anna Rose] (30:41 - 30:41)
+I see.
+
+
+[Kevin Lacker] (30:42 - 30:51)
+There's a flywheel of the more you add to the library, the smarter the AI can get. And then the smarter the AI gets, the easier it is to add more stuff to the library and so on.
+
+
+[Guillermo Angeris] (30:51 - 31:16)
+So I really want to hammer at this particular point too. One of the things I do want to mention, the library is like, we think of libraries as like, oh, these are tools that we then use to build other things. That's kind of true.
+
+
+But the way I would think about libraries in theorem proving is that they are, in other words, a collection of statements that we know to be true. And ideally, the best possible library is a library that contains all statements that are known to be true.
+
+
+[Anna Rose] (31:16 - 31:18)
+But that would be very big.
+
+
+[Guillermo Angeris] (31:18 - 32:19)
+That would be enormous. But nevertheless, it would be the coolest library. And that's what kind of Lean... Lean has a version of this called MathLib, which they are trying to do.
+
+
+So they are trying to like every known statement that is... obviously not every known statement, like statements that are important enough to have papers about them or something, you would like to prove and then incorporate into the standard library, so that other people can then use those theorems to prove newer theorems.
+
+
+Acorn's, acornlib, I think is the actual name, attempts to do something very similar, but with an additional and important change, which is because this AI model is integrated into Acorn itself, as people prove more theorems, you can train the AI model to learn the techniques that people use to prove those theorems, to prove newer theorems, which in turn should enable future theorems to be proven more easily because the AI now knows about the techniques that were used to prove the theorems in the standard library.
+
+
+So it's this very nice flywheel, as Kevin noted.
+
+
+[Anna Rose] (32:19 - 32:24)
+Are people who use Acorn adding to this library every time they do something then?
+
+
+[Kevin Lacker] (32:25 - 32:32)
+You can submit and add to the library if you want, and you can also just use it on your own mathematical problems. It's up to you.
+
+
+[Anna Rose] (32:33 - 32:35)
+Would you be adding to your own library as you go?
+
+
+[Kevin Lacker] (32:36 - 34:04)
+You can, but it's most... I think the eventual goal for the Acorn library is to have all mathematics in it.
+
+
+I mean, you said that's all known mathematics is large. It's true in a sense, but when you compare to the scope of these general AI projects, I mean, an LLM will be trained on all the documents on the internet, and there's only about a 100 math papers published a day. It's sort of larger or smaller, depending on how you think about it.
+
+
+So if you try to imagine a system that ingests 100 PDFs per day, that doesn't seem like an inordinate volume. If you could even process it with... you can afford to spend a decent amount of work for each one.
+
+
+If it actually worked... I should say once it actually works because it really seems like it will. Once the AI is able to do a human level job of taking a PDF and turning it into mathematics and incorporating it into a library, we should be able to take the existing human-produced 100 PDFs per day and add to the library.
+
+
+The job's probably going to get even harder because once we have these better AI tools, people are going to use them to create even more mathematics. So we'll have to figure out how to handle that when we come to it.
+
+
+But the goal of the library is to have all mathematical knowledge in a form where you can simply ask, is this thing true or not, and it has indexed all known mathematics.
+
+
+[Anna Rose] (34:04 - 34:21)
+Do you then host this like master lib... because you guys are talking sometimes about doing it locally, but then also this like, I don't know if you can expect every person to locally be ingesting all of these papers every day. So is there sort of a, I don't know, a central master list, master library or something?
+
+
+[Kevin Lacker] (34:22 - 35:21)
+There is. There's a central one. I mean, it's a GitHub repository. I think to actually scale up to be taking a 100 papers worth a day, I mean, if you think of that as a 100 pull requests per day, that's a lot, but a lot of systems do handle that.
+
+
+I think the only plausible way to get there will be to have AI code reviewing and accepting pull requests, and I don't think we're close to that, but I think we're going to get there.
+
+
+The difference between this and other sorts of code is that you can just validate that it's true. And if you have an ugly proof or something, but it works, that's pretty good. It's true.
+
+
+And if you imagine a world where, well, if you have a 100 really ugly proofs being incorporated into your library every day, can you handle that? I think the answer has to be, yes, we're going to handle that. That's how it's going to work. 
+
+
+And if people or AI systems would like to come back and clean that up later, hey, that's great. Go for it.
+
+
+[Guillermo Angeris] (35:21 - 37:22)
+Yeah. It is a funny philosophy. What's interesting about math too here, and this is a debate I think like currently going on on Twitter. I just kind of woke up this morning and saw it, but is the cool part about theorem provers is like, if it compiles, it's good. That's the whole point.
+
+
+The whole point is it doesn't matter how you did it or what you did it. If you agree that this is a statement that is being made and it's a useful statement, if Acorn gives you a little check mark, then you're good. That statement is true by the reason stated below, plus like whatever ML-assisted magic in it.
+
+
+At some point you would be able to check every single line, and in turn, you would be able to see that you have reduced it to the axioms of mathematics or whatever.
+
+
+And which is very different from kind of AI-assisted slop as it comes into libraries. People right now are getting very defensive of programming projects because, kind of if you have no idea what's going on, and use an LLM to create a cryptographic library or something of the like, you're kind of screwed.
+
+
+If you truly have no clue what's going on, you have no idea of the AI has constructed a thing that looks plausibly like it does something correct, but actually it's completely useless or fucked up or broken, whereas by construction and by the fact that mathematics is one of the few truly checkable things, here you can be sure that the thing is correct in the sense of you have proven the thing you have said you want it to prove by definition.
+
+
+The Acorn itself goes and does this checking for you, and it has checked that you have indeed proven this theorem. Although the proof might be completely unreadable to a human.
+
+
+And the hope, I think Kevin is, which is kind of an interesting thing, is we should just accept the AI slop output or whatever it is. Maybe not. Maybe I'm going to strawman it a little bit, but the point is like, if somebody really cares about this particular proof, you can either have a human or another AI tool, go rewrite this in a way that is more legible or more clean for somebody to go read through it.
+
+
+But the point is, once you have a proof of that statement, but Acorn itself kind of accepts it says, this is correct or this is good, then you know the statement is true. And the question is, is it worth including this in a library? And the answer is probably yes.
+
+
+[Anna Rose] (37:23 - 37:43)
+When you talk about those ugly proofs, if you have a lot of ugly proofs, do they sometimes mess with each other or just create noise... or even if they come through as true and correct, can it compound over time? If you start adding those together and then building on top of them, can there be more messed up problems within that?
+
+
+[Kevin Lacker] (37:44 - 39:37)
+You could definitely have messed up problems. I think you do have to slightly distinguish between theorem statements and the proofs of the theorems themselves, because a lot of concepts, it's not quite clear what the cleanest way to define them is.
+
+
+So there are some funny edge cases, like how do you express the fact that 1 divided by 0 is like, quote, an invalid thing to do? Or another example is how do you represent subgroups? This is a little bit more mathematical, but is a subgroup fundamentally tied to the group that it is part of?
+
+
+It's like you have a data structure and there's a couple different ways to define a data structure. It's like when you're defining a list, for example, should you say, well, this is a list of just one particular type? Or should you say this is a list of any type?
+
+
+So you have these sorts of definition questions and these are almost more aesthetic principles. If you define all your variables really stupidly, then it's going to frustrate humans that read this. Whereas if you prove things in a very roundabout way, you can generally ignore the proofs.
+
+
+So we can't just let the LLMs slop all over everything. I mean, in an Acorn it's separated out. You have the actual proof certificates where philosophically that's where the LLM slop goes.
+
+
+If something is garbage and really long and the AI is like, here's the proof, well, it's shunted off to the side. It's in a different file where typically you don't look at it. If you want to debug, it's kind of popping the hood of your car to see the guts of what's going on there.
+
+
+And then you have the Acorn language itself, which is the idea is that this should be beautiful and simple. When I think, hmm, why is this true? I should be able to read the Acorn and that looks pretty nice.
+
+
+So it actually achieved the dream of having the computers or the AIs accept 100 PDFs a day. We'll have to figure out a little bit more, but we're not quite at that point yet.
+
+
+[Anna Rose] (39:38 - 39:45)
+Do you see Acorn being used in cryptography for cryptography type proofs or more for other kinds of mathematical proofs?
+
+
+[Kevin Lacker] (39:46 - 40:23)
+I think you two probably know so much more than I do about cryptography. I would be excited for it to be useful. It's not entirely straightforward to me how it would be, or what is the big need in cryptography?
+
+
+I think in general with my understanding with zero-knowledge stuff is that you usually want to prove that a specific computation actually did happen. So it's kind of proving one specific sort of thing and the tools you have to do that are designed for that and they seem pretty good at it.
+
+
+[Anna Rose] (40:23 - 40:43)
+Yeah. I think, I mean, ZKPs can be used to prove that something happened, but the people who create the zero-knowledge proof systems have to prove things about those systems. It's more for the practitioners, unless maybe for the user of the proving system that I'm thinking a tool like this might be useful.
+
+
+[Guillermo Angeris] (40:44 - 41:00)
+So, yeah. Exactly. Exactly. I think there's two things to separate out here and I think both are quite interesting.
+
+
+So funnily enough, the reason I actually got originally into Acorn, and it's funny that you discussed the subgroup thing, because I think the current definition of subgroup might've... no, it's actually your definition, finite subgroup is my definition that's in acornlib, if I recall correctly.
+
+
+[Kevin Lacker] (41:00 - 41:00)
+I'd have to look.
+
+
+[Guillermo Angeris] (41:00 - 43:18)
+Yeah. Anyways, it's very entertaining because it's like we now have two weird, slightly different definitions of subgroup, one for the finite case and one for the not finite case. And so the definitions turned out to be quite important.
+
+
+But anyways, stepping aside, the reason I started that project was because I actually wanted to prove things about cryptography in Acorn. And originally I wanted to do it in Lean because I just wanted to formally verify some papers, which some people are now kind of depending on for cryptographic protocols. And I wanted to show that under the standard assumptions that the paper makes, actually this protocol is a reasonable protocol.
+
+
+So one version of it is like under the random oracle model, ZODA is a protocol that actually does what it states it does. And it's kind of a pain in the ass to prove, in Lean it's an enormous pain in the ass to prove this.
+
+
+Truly enormous because you have to define all sorts of nonsense and you have to go all the way back to really annoying definitions and rewrite them slightly because they're a little bit different than you expect. So Acorn was very, very appealing in that sense.
+
+
+And so there's like that part, which is when you construct ZK systems or succinct system proof systems or whatever, you have to prove mathematical statements. And indeed those mathematical proofs are perfectly amenable in Acorn. 
+
+
+You can write the theorem statement in Acorn and the statement could be something like somebody has given you this random linear combination. If the following things all match up to the way you expect and with extraordinarily high probability, the thing that you are looking at actually is correct.
+
+
+There's a second point, which is the practitioner version of it, which is cool. Like I have a system and I have engineered this system to run on a computer.
+
+
+And the question is, is the system, is a spec of that system match the math that we are assuming is correct? We're going to, for now, assume somebody wrote an Acorn and the math is good. Does this particular implementation of that system match the mathematics?
+
+
+I actually do think it is possible to do some interesting intermediate stuff in Acorn, but as it stands today, it is not currently easily possible to translate kind of this code, which is a thing that performs some set of steps into something that you could prove in Acorn to be equivalent to the mathematics.
+
+
+[Anna Rose] (43:19 - 43:28)
+Because there you're getting more into formal verification, aren't you? That's more like a different category of it's engineering and it's like security and the engineering front.
+
+
+[Guillermo Angeris] (43:29 - 44:07)
+Well, that's exactly it. So fundamentally interactive theorem proving is formal verification. These two are the same thing. Formal verification, but in mathematics as opposed to of programmes. Exactly.
+
+
+But the whole point is that mathematics is a programme. You can write any proof as a programme and there's all sorts of nonsense on this.
+
+
+So you could imagine, and actually I suspect it's probably not that difficult, but as it stands today, it's a little bit annoying, essentially formally verifying programmes inside of Acorn by essentially writing a spec of the machine that is executing the programme inside of Acorn and then showing using these inductive types and all this stuff that you have done something correctly.
+
+
+[Kevin Lacker] (44:08 - 45:05)
+That is reasonable. I think it's hard to even predict what's going to be possible in a couple years because the whole space of both theorem proving and formal verification, the tradeoff that has existed since forever is that it's a whole bunch of extra work.
+
+
+Formally verifying these systems is nice to have, but it's a lot more work. And so are you going to go and do that?
+
+
+And what we're seeing, not just for these systems, but really for all software engineering is that the cost of doing standard software engineering stuff is dropping rapidly as the AIs get really good at doing it.
+
+
+So things like formal verification, theorem proving, or really any sort of weird model of programming where you want to carry around some extra state all the time and be doing a whole lot of extra bookkeeping is going to be much more possible in the near future as these tools get better.
+
+
+[Anna Rose] (45:05 - 45:24)
+It almost sounds like right now too, Acorn is about adding AI into theorem proving, but eventually it would be theorem proving would be in the AI itself doing something bigger, potentially. Like if it's generating the code that this theorem proving would be incorporated within it, I wonder.
+
+
+[Guillermo Angeris] (45:25 - 46:44)
+So as it stands today, this is actually kind of what Acorn is doing transparently. So I remember that Kevin said like, oh, if you write some statements, and it's like, oh yeah, cool. We have like, whatever, and let d satisfy whatever, and it puts a check mark after it, you can actually click on that statement.
+
+
+And if you actually click on the statement, you'll see... on the right-hand panel, you'll see a list of things. And that's actually what the AI has done to prove that statement to itself and you.
+
+
+So in some sense Acorn is, I would say is the limit of that, which is the opposite. It's like what happens when you just completely bypass kind of the Lean, you have to justify every step, and just condense that into like, look, the AI does this. Well, we can show it to you when you need it, but it is otherwise irrelevant. It doesn't matter. The AI has proven this, you don't have to worry about it. Don't worry, like your head, the AI slop is below the surface.
+
+
+I think that's very interesting here. And I do agree though, you could imagine the secondary flywheel here being as you train models on the standard library, things like very fancy models, you could then produce new mathematics more easily than it itself can write further proofs, which they can then train as they become correct.
+
+
+It's like a mini reinforcement learning loop. It's like these things are judged to be correct, it can train itself on those things and so on and so forth.
+
+
+[Anna Rose] (46:44 - 46:51)
+And it would have sort of this theorem prover and formal verification built into how it's working almost potentially.
+
+
+[Guillermo Angeris] (46:52 - 47:08)
+You can imagine also exactly what Kevin was saying is putting in programmes, and then having an LLM translate those to formal proofs of their correctness without doing intermediate work. And you would be sure that it's good because you can read the statements and then you can read the... and make sure that it's actually correctly translated.
+
+
+[Anna Rose] (47:08 - 47:54)
+Okay. So right now we're talking as though AI is for sure going to be better. I think there's some assumption in this conversation that it is.
+
+
+But there's also... I mean, at least, and maybe it's just in the news right now, there's a little bit of pushback against AI being this be-all end-all that like it's still just a copycat machine, at least LLMs are, that it won't ever be able to truly invent things, but will always just sort of be emulating and reproducing. And they still hallucinate sometimes.
+
+
+So in that case, knowing what we know about AI to date, is there a chance that sometimes it acts wrong? Is there a chance that it's saying something is proven and it isn't proven?
+
+
+[Kevin Lacker] (47:55 - 48:57)
+There's definitely the possibility that there are bugs in the system and it proves something that it's wrong about. I think that the way you solve this is by finding your bugs and fixing the bugs.
+
+
+But the idea of the theorem prover is that you have this core of the theorem prover, which is written by a human and you can verify it in different ways, you can have one theorem prover verify the core of the other one.
+
+
+And once you have this trusted verifiable core, you can run it on enormous amounts of stuff that is LLM generated or generated by some other sort of AI, and you know this thing makes errors all the time, but when you have the trusted core thing go through and filter out the errors, you're left with stuff that is just as trustworthy as the trustable core.
+
+
+So the hallucinations part of it, I think that is, it's a big problem with modern AI and the idea of the theorem prover is just the precise antidote for this problem.
+
+
+[Guillermo Angeris] (48:57 - 49:56)
+Yeah. The cool part here is if you trust this small core of the theorem prover is correct and that it is indeed verifying what it says it is verifying, which is the same way like you might want to do with succinct proofs or ZK proofs.
+
+
+In ZK proofs, you have to trust the verifier. The verifier has to be correctly written. This is precisely, precisely analogous to this trusted core of Acorn.
+
+
+If that is proven and if that is good, if you have read it yourself and it's good and it's simple enough to go through, then you will accept... it doesn't matter whether the proof is incorrect or correct, if you only accept correct proofs, you're golden, you're good.
+
+
+You know that the proof must have been good because the verifier itself has accepted the proof and you know the verifier is good. And so it's analogous in that same way here.
+
+
+And so hallucinations are kind of a side problem. It's like maybe the LLM hallucinates 99% of the time, but it doesn't matter because if 1% of the time it's good, you know that that 1% is good. And in fact, you can distinguish the good stuff from the bad stuff without needing to do extra work.
+
+
+[Anna Rose] (49:56 - 50:10)
+I don't really get that. I don't know. To me, it still seems like there could be mistakes. So there could be like... yeah. Is it just because you run lots of instances that they correct themselves? So there couldn't be some consistent problem that always shows up?
+
+
+[Kevin Lacker] (50:10 - 50:26)
+Imagine a really huge code base, like the code for Linux. Are you sure that it compiles? I'm pretty sure it compiles because I can run it and it compiles.
+
+
+And so it's deterministic. So if it compiles for me now, I'm going to run it again a little later and it'll compile again.
+
+
+[Anna Rose] (50:26 - 50:27)
+It'll compile again. Okay.
+
+
+[Kevin Lacker] (50:27 - 51:02)
+Can I be confident it's deterministic? I don't know. There might be... someone might've made an error somewhere in the Linux compiler or in the C compiler.
+
+
+But since you have this idea of, well, the compiler is going to validate that all of this is valid C code, and we do find compiler bugs over time, but we fix them and it's pretty small.
+
+
+And so overall, you can be pretty confident that the whole thing works. And when you do find a compiler bug, it's pretty rare because you really just have this small core of the compiler that you want to be trustworthy and good.
+
+
+[Anna Rose] (51:03 - 51:04)
+Okay. And this is built in a similar way.
+
+
+[Kevin Lacker] (51:04 - 51:12)
+It's very similar to a compiler. It's the same sort of idea of you have this language and you have a small verifier and then you check it that way.
+
+
+[Anna Rose] (51:13 - 51:18)
+It can't exactly lie to you, or it can't lie because it just wouldn't work.
+
+
+[Kevin Lacker] (51:18 - 51:29)
+That's right. It wouldn't work in the same way that if you snuck in a parentheses in the wrong place, in the middle of a billion lines of C code, the compiler is still going to catch it.
+
+
+[Anna Rose] (51:29 - 51:30)
+Yeah. Okay.
+
+
+[Kevin Lacker] (51:30 - 52:09)
+And so, to the other... I think you had a second point of feedback there, which is there's this model that the LLMs are very good imitation machines or copying machines, and there's some sort of special human spark that it doesn't have because it can only copy what it sees other people doing.
+
+
+So it's a philosophical position that I don't really know. Let's consider that to be the pessimistic case. If all we can do is copy, then what we should do is we should look at every single PDF that is submitted by the world's most brilliant mathematicians, and we should look at those 100 PDFs ---
+
+
+[Anna Rose] (52:09 - 52:09)
+And copy them.
+
+
+[Kevin Lacker] (52:09 - 53:02)
+Yeah. We should copy that. And if at the end of the day we sit down and we're like, you know what, this thing is only as smart as the world's 100th smartest mathematician, but I can run it on everyone's laptop. If you say, okay...
+
+
+[Anna Rose] (52:23 - 52:23)
+Still good.
+
+
+[Kevin Lacker] (52:23 - 53:02)
+We're living in the failure world. This is depressing, but we can still validate all published mathematics. We can still give this ability to anyone who wants to do math, they can have this assistant that's as smart as the smartest math professor at their college.
+
+
+And this would be an amazing sort of distribution. So even this sort of pessimistic outcome would still be pretty great. And what do I ultimately believe? It's like, well, this AI boom, the AI is getting better and better. And where does it stop? I don't know. We'll just have to see.
+
+
+[Guillermo Angeris] (53:03 - 53:15)
+So we mentioned before, which is like, we talked about all the Acorn stuff and the Lean stuff, and I guess how should people go try this out? We talked about it being easy and all this stuff, like what should we do here?
+
+
+[Kevin Lacker] (53:15 - 54:01)
+Well, you should go check out the website at acornprover.org. And the simplest way to get started is just to try it out yourself.
+
+
+It's a VS Code extension. So if you're familiar with VS Code, it's as easy as finding the Acorn Prover Extension. That'll get the local AI model for you, and you could write a few lines of math and see the feedback that it gets for you.
+
+
+And if you're interested and you have more questions about it, then there's also a link to our discord from the website, and there's people who'd love to help you out or complain about more features that really should exist, and it's a thriving nascent community there.
+
+
+So I'd encourage people to do those things. Check out the website, check out the extension, do some theorem proving and come say hi in discord.
+
+
+[Guillermo Angeris] (54:01 - 54:12)
+The other thing I would mention is the sick and cool part is if you do prove some theorems, go do a pull request to the acornlib and become part of the machine god brain.
+
+
+[Anna Rose] (54:12 - 54:14)
+At the very least, like an ultimate imitator.
+
+
+[Guillermo Angeris] (54:14 - 54:14)
+Yes.
+
+
+[Anna Rose] (54:14 - 54:18)
+And at the very most, maybe the creator of its own theorems.
+
+
+[Kevin Lacker] (54:20 - 54:42)
+That would be great. I mean, the more people contribute to acornlib when the math library gets larger, then the AI that trains on it will get better. And that means the AI assistant will get better, which makes Acorn easier to use.
+
+
+And then when it's easier to use, it's easier for people to add more to the library. So it's a self-reinforcing cycle.
+
+
+[Anna Rose] (54:42 - 55:42)
+Nice.
+
+
+[Guillermo Angeris] (54:42 - 54:43)
+Yes.
+
+
+[Anna Rose] (54:43 - 55:12)
+Cool.
+
+
+All right, Kevin, thanks for this journey into theorem proving, the Acorn system, how AI can be used along with it. 
+
+
+Thanks Guillermo for walking us through this as well, and for that article that kind of drew the attention to this project, at least for us.
+
+
+Yeah. I mean, as a non deep in the math person, this was really interesting to hear. I hope our listeners who are much deeper in the math will give it a shot.
+
+
+[Kevin Lacker] (55:12 - 55:13)
+Well, thanks for having me on the podcast. It was a lot of fun.
+
+
+[Anna Rose] (55:13 - 55:14)
+Cool.
+
+
+[Guillermo Angeris] (55:15 - 55:21)
+And definitely go try it out. Try Acorn Prover. It's very, very, very fucking cool. If you ever tried Lean, it'll be way nicer, way sicker.
+
+
+[Anna Rose] (55:19 - 55:21)
+Guillermo is pushing this one.
+
+
+[Guillermo Angeris] (55:22 - 55:25)
+I'm just shilling this thing cause it's super sick and I just want people using it.
+
+
+[Anna Rose] (55:26 - 55:27)
+Cool.
+
+
+[Kevin Lacker] (55:27 - 55:27)
+All right.
+
+
+[Anna Rose] (55:28 - 55:35)
+I want to say thank you to the podcast team, Henrik, Rachel, Tanya, and Hector. And to our listeners, thanks for listening.
