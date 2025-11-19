@@ -1,0 +1,546 @@
+﻿[Anna Rose] (0:05 - 0:21)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+[Anna Rose] (0:28 - 1:49)
+This week, Nico and I speak with Binyi Chen, a postdoctoral researcher at Stanford University. We discuss his work LatticeFold, LatticeFold+, and his new work, Symphony.
+In this episode, we get to ask him some of the questions we still had about lattices and folding, and try to tease out why they combine so well.
+We discuss how the folding work began back in 2023, and the opportunity that the introduction of lattices created, once it became clear they were a feasible replacement for Pedersen hashes. We cover some of the key ideas in lattice-based folding work, including the benefits and limitations of this combination.
+We then move on to his new project, Symphony, and explore the new techniques described in this work.
+This episode is research-heavy and serves as a great complement to the recently released ZK Whiteboard Sessions module, all about LatticeFold, which was also hosted by Binyi. I definitely recommend watching this as an additional resource. I've added the link in the show notes.
+Before we kick off, I just want to point you towards the ZK Jobs Board. There you can find job postings from top teams working in ZK. And if you're a team looking to hire, you can also post your job there today.
+We've heard great things from teams who found their perfect hire through this platform, and we hope it can help you as well. Find out more over at jobsboard.zeroknowledge.fm. You can find this on our website, and I've added it to the show notes.
+Now, here is our episode with Binyi Chen about LatticeFold, LatticeFold+, and Symphony.
+Today, Nico and I are here with Binyi Chen, a postdoc researcher at Stanford University. He's been advised by Dan Boneh, someone who listeners of this show will be very familiar with.
+Welcome to the show, Binyi.
+[Tanya Karsou] (1:51 - 2:35)
+Aztec invented the math, wrote the language, and proved the concept that privacy is in fact the missing link to mass adoption. And now, Aztec is on the road to mainnet. Aztec is a privacy-first layer 2 on Ethereum, supporting smart contracts with both private and public state, and private and public execution.
+It is one of the most exciting ZK projects out there, and we are excited to see it go live. There are a tonne of ways to get involved. You can join the testnet, explore the Noir ecosystem, become part of the community, or look out for ways to participate in the last steps before the upcoming mainnet launch.
+Details about Aztec's technology, research, and community programmes are available at aztec.network. And now, here's our episode.
+[Anna Rose] (2:38 - 2:50)
+Today, Nico and I are here with Binyi Chen, a postdoc researcher at Stanford University. He's been advised by Dan Bonet, someone who listeners of this show will be very familiar with. Welcome to the show, Binyi.
+[Binyi Chen] (2:51 - 2:55)
+Thank you, Anna. And thanks, Nico. And nice for being here again.
+[Anna Rose] (2:55 - 2:56)
+Yeah.
+[Binyi Chen] (2:56 - 2:58)
+Since last time in the ProtoStar episode.
+[Anna Rose] (2:59 - 3:00)
+Exactly.
+Hey, Nico.
+[Binyi Chen] (3:01 - 3:02)
+Hey, Anna. Hey, Binyi.
+[Anna Rose] (3:02 - 3:43)
+Yeah. And Binyi, you have been on the show before. Last time you were here, it was with Benedikt Bünz, and you were talking about ProtoStar, which was very focused on IVC and folding.
+Today, I think we're going to be spending more time talking about LatticeFold, so kind of the continuation of that work, and hopefully get to hear about some new work.
+But before we do that, I just want to highlight a few kind of connection points that we've had over the years. I actually was looking just to put together this episode, but you've hosted the ZK Study Club. You've spoken at the zkSummit. We just released your ZK Whiteboard Session, all about LatticeFold and LatticeFold+.
+By the time this airs, it'll be two weeks later, but it's just kind of cool to have you on the show today.
+[Binyi Chen] (3:43 - 3:52)
+Yeah, me too. It's a great pleasure, and it's always a very pleasing experience when I host anything here and give a talk here.
+[Anna Rose] (3:53 - 4:09)
+Cool. I think it would be cool to bring us a little bit up to date on the research and the focus of your work.
+As we mentioned last time you were on, it was ProtoStar, it was folding. What kind of happened since then that pushed you more towards the lattice work?
+[Binyi Chen] (4:09 - 4:58)
+Yeah. Since the last time, a lot of things has happened and I've been exploring many directions of SNARKs and proof systems, such as coding-based SNARKs like BaseFold and Blaze, but still my main focus is still in folding, and especially recently on post-quantum folding, like lattice-based folding schemes.
+I want to mention the one thing that I talked about in the last ProtoStar episodes, I think Bünz and I mentioned this open problem on whether we can have post-quantum folding schemes, and we think that lattice is actually one of the promising directions.
+By that point, we mentioned this is pretty hard because norm blowup. But I'm pretty happy that after maybe 2 years, I guess, we have so many new works in the lattice setting that do folding using lattices.
+[Anna Rose] (4:58 - 5:05)
+What was it about those earlier folding works, though, that made them not post-quantum or impossible to make post-quantum?
+[Binyi Chen] (5:05 - 5:57)
+Yeah. A very good question. So I would call them the first generation of folding schemes, like starting from Nova and [BCLMS21], and probably Halo is also one of them. And we also have some follow-ups like ProtoStar, ProtoGalaxy, HyperNova, and Mova, etc.
+All of them are following some kind of similar framework for using Pedersen hashes to commit the witness. And these Pedersen commitments, they are unfortunately vulnerable to quantum attacks because they are based on these so-called discrete log assumptions.
+And these discrete log assumptions are exactly broken by this very famous Shor's algorithm. So that means if you have a very powerful quantum computer, you can easily break this assumption, and that makes these kind of schemes no longer secure in the quantum world.
+[Anna Rose] (5:58 - 5:58)
+I see.
+[Binyi Chen] (5:58 - 6:00)
+That's why we need some new schemes.
+[Anna Rose] (6:00 - 6:11)
+Was it using this sort of the characteristics of the Pedersen hashes, though? Why not just switch it out with some of the other hashing functions anyway? Why did you have to wait for lattices to come along?
+[Binyi Chen] (6:12 - 6:55)
+Yes. So previously, when we did the folding, we need homomorphic property, meaning that you can combine commitments, which becomes commitments to the combination of the underlying opening or witness. And the most natural way to do that is using Pedersen hashes.
+So that's why people are starting using them. But in order to make it plausibly post-quantum secure, you have to switch it into another commitment. And the most natural way to switch it is to using Ajtai commitments, which is lattice-based commitments.
+And recently, I want to mention there are also some really cool work by Benedikt and his co-authors that achieve folding without homomorphic commitments. They basically just use hash or Merkle commitment to achieve it, which is also very elegant.
+[Nico Mohnblatt] (6:55 - 7:21)
+By the way, I'll also add, at the time we were looking at these linearly homomorphic commitments and we suddenly realised, well, if we want something quantum secure, we cannot have this homomorphism because as soon as you have homomorphism, you have a group structure and as soon as you have a group, you have discrete logs.
+So there was this sort of feeling of like, is this possible or not? And that's why it was a cool open question that Binyi and me and the others tackled over the past few years.
+[Binyi Chen] (7:21 - 7:42)
+Exactly. Yeah. So I think I want to be more precise, and Nico is right, these Ajtai commitments is not fully homomorphic, linearly homomorphic in the sense that they have to make sure that the opening is always no norm.
+So they are only somewhat linearly homomorphic compared to Pedersen hashes, which is basically linearly homomorphic over the entire field.
+[Anna Rose] (7:43 - 7:49)
+Is the type of hashes you're describing, Ajtai? Is that the word you're using?
+[Binyi Chen] (7:50 - 7:51)
+Exactly.
+[Anna Rose] (7:51 - 7:57)
+Okay. So this is actually one of my questions that we're going to get to later. But what is that work? What is Ajtai?
+[Binyi Chen] (7:58 - 8:00)
+Ajtai is a very famous cryptographer.
+[Anna Rose] (8:01 - 8:02)
+Okay. Yeah. It's a person.
+[Binyi Chen] (8:02 - 8:29)
+Yes. Yes. He's one of the pioneers in the lattice cryptography and he invented this shortest integer solution assumption, which is a cryptographic assumptions that can be reduced to some worst case lattice problem, which is amazing work.
+And from that, he gave us this really elegant constructions for collision resistant hash function using SIS or shortest integer solution assumption.
+[Anna Rose] (8:30 - 9:18)
+There's a bunch of these terms that come up in your work, but also in the work of other kind of lattice folks.
+We had two modules within the ZK Whiteboard Sessions this season on lattices. We had one with Vadim Lyubashevsky and one with you. And because they've just recently come out, I'm excited to kind of dig in.
+For this episode, we don't want to go through it again. We're going to point to those videos. And those are whiteboard sessions, so those are really detailed. I think a great way to learn about this stuff.
+But I wanted to ask you sort of questions that came up as I was watching it, and also get some context around maybe where the research is coming from. So this Ajtai explanation is helpful.
+One question... another question I've had about that, though, is when was that work from? Is this older?
+[Binyi Chen] (9:18 - 9:19)
+It's very old.
+[Anna Rose] (9:19 - 9:20)
+Okay.
+[Binyi Chen] (9:20 - 9:26)
+I think it's the year when I was born, like 1992.
+[Anna Rose] (9:27 - 9:29)
+Okay. So like 30-something years ago.
+[Binyi Chen] (9:29 - 9:35)
+Yeah. I think it's 1992 if I didn't remember incorrectly, but definitely at that period.
+[Nico Mohnblatt] (9:36 - 9:42)
+Which you know, for people is not very old, but for a paper in cryptography, surprisingly old.
+[Speaker 6] (9:42 - 9:43)
+Cool.
+[Nico Mohnblatt] (9:43 - 9:50)
+Before we actually dive into LatticeFold, I sort of want to bring it back to something you mentioned is you also worked on hash-based schemes.
+[Speaker 6] (9:50 - 9:51)
+Yes.
+[Nico Mohnblatt] (9:51 - 10:13)
+Like BaseFold. You also mentioned that there are hash-based schemes that do folding.
+And so I was wondering, as someone who's worked sort of on both fronts of the current like post-quantum ideas, how do you compare schemes that are based on hash functions and those based on lattices?
+Do you find that somewhere easier to work with as a researcher or more promising to implement? What do you think?
+[Binyi Chen] (10:13 - 12:47)
+Yeah. That's a good question. I think both directions are very interesting and promising. What I can do is just give some kind of comparison on their pros and cons.
+I think for hash-based schemes, in particular hash-based SNARK, they're pretty mature right now. There are many industrial implementations for it compared to the lattice world.
+And the assumption underlying it is also pretty solid. They only rely on these symmetric hash functions, which we believe is definitely post-quantum secure as long as we increase the key size or the output size large enough. Sometimes we don't even need that.
+So in terms of security, I think they are more robust in terms of the quantum attacks. And they're also pretty efficient in terms of prover, because what they do is basically just do some error-correcting coding and doing Merkle commitments.
+But why I care about lattices if we already have a really good hash-based solutions. I think in terms of lattices, they have two really nice features compared to hash-based schemes.
+The first one is they are more algebraic. They have a lot of algebraic structure and a property which is similar to those elliptic curve-based schemes, like some homomorphism or something. This makes them more powerful to achieve more powerful primitives.
+And second is that the verification, when we do the folding, the verifier is really small. It's much more efficient compared to hash-based folding schemes.
+In hash-based folding schemes, the verifier have to check a lot of Merkle path openings. And that means when you check... when you want to prove this, like when you represent it as a circuit, it's really large.
+In terms of lattice-based folding schemes, the folding verifier is only slightly larger than those elliptic curve-based schemes, but much smaller than the hash-based folding scheme.
+So given that, I would say in terms of SNARK, currently hash-based schemes is more mature, even though we have a lot of new and very exciting results in the lattice world as well.
+But in terms of folding, I think lattice-based folding schemes is really promising in the sense that the prover is already competitive with hash-based folding, but the verifier complexity is much smaller, which is very important when you do need to prove that the folding verifier was done correctly. So you have to make sure the folding verifier circuit is small enough.
+That's my personal perspective. I don't know whether people agree with me or not.
+[Anna Rose] (12:47 - 13:10)
+In the combination, when you start putting folding and lattices together, do you have to rethink the entire thing? When you were talking about using the Pedersen hashes, I mean, this is kind of where my mind went, where it's like, well, why don't you just swap it out?
+But if you're using lattices, are you using them in the same way the Pedersen hashes were used, or are you kind of reconstructing this entire thing?
+[Binyi Chen] (13:10 - 14:59)
+Yeah. We are actually doing things in the middle. So it would be nice if you can just switch Pedersen hashes with Ajtai hashes, and then do everything the same way.
+But then if that's so easy, then we don't need to spend so much time to come up with this. We would already have it when we have Pedersen-based folding schemes.
+So the key challenge of achieving this in the lattice world is because these so-called Ajtai commitments is kind of more restricted compared to Pedersen.
+So we have some extra constraints on these Ajtai commitments in the sense that it is secure only if the opening is low norm. By low norm, I mean that every element of this vector or the witness are some small values. And this is not a constraint in the Pedersen hashes.
+In the Pedersen hashes, the pre-image can be arbitrary field elements. So that means if you want to do folding, if you fold two witness together, this witness norm will blow up.
+So first question is how do you control the norm blowup after the folding? This is the first challenge.
+And the second challenge is that the prover also needs to prove that this witness opening are low norm. So this is not the case in the Pedersen hashes.
+So you add more overhead and complexity for prover, which also needs to run some range proof to argue that the opening of commitments is low norm.
+So these are two main challenges compared to Pedersen-based or elliptic curve-based folding schemes. And that's why it's harder to design.
+But I would say still they have many similarities. These two types of folding schemes, they have many similarities because they're all based on kind of homomorphic commitments.
+[Nico Mohnblatt] (15:00 - 15:09)
+Yeah. At the end of the day, we cryptographers have one trick is to take two things and a random number and multiply one of the things with a random number and then add everything together. That's all we can do.
+[Binyi Chen] (15:09 - 15:11)
+Yeah. That's the universal trick. Not only folding.
+[Anna Rose] (15:14 - 15:34)
+Maybe we should actually talk a little bit about what folding is actually offering. Why are we designing systems like this? What are we trying to achieve? Is it faster? Is it cheaper? Is one side faster... does the prover go faster, but the verifier slower? Are we running into tradeoffs? I'm just curious, maybe let's start with just folding and then the lattice folding part.
+[Binyi Chen] (15:34 - 16:10)
+Exactly. I think that's a very good plan. So first, maybe we can review what folding is for those audience who are not familiar with.
+Folding is basically a mechanism or a protocol that allows us to reduce the checking of multiple NP statements into a single NP statement.
+For example, if you want to prove a million-step Fibonacci sequence, you can chunk it into many small chunk statements and fold them up into a folded chunk statement, which is much smaller. So this basically is a way for us to efficiently reduce a large problem into a smaller problem and then solve this small problem.
+[Anna Rose] (16:11 - 16:16)
+Is it similar to parallelisation? Can you use that term to describe it or is it different?
+[Binyi Chen] (16:16 - 18:06)
+It's kind of similar, but it's kind of more mathematically reducing some large problem into one. Like divide, conquer, and parallelism, they are all kind of similar notions, but this is another mathematical primitive to do that.
+And I think also why we need it, right? Why we think folding is a really nice primitive? Why it is the direction for the future for dealing with scalable computation?
+I think there are three really nice features about folding. The first is exactly the simplicity.
+So folding, typically the protocol is much simpler than a monolithic or full-fledged SNARK. Because basically what it does is just to commit each NP statement's witness and randomly combine.
+So the verifier just generates some random scalars and combines the commitments, and the prover just randomly combines the witness correspondingly, and we just compile these many input statements into one combined statement.
+So first is simplicity, that's much easier to implement and much faster as well.
+And the second nice feature is that folding also allows us to convert it and be transformed into a succinct proof system. So I would highlight that folding itself does not give us a succinct proof system because the verification work is actually linear.
+But it can be transformed into a succinct proof system using this compiler in IVC and the PCD, which is by recursion. 
+So essentially what you do is you fold these recursive statements. These recursive statements not only check the application logic or computation, but also check that some previous folding step was done correctly.
+And this is the reason why we need to embed the folding verifier circuits into these proven statements and fold them up.
+[Anna Rose] (18:06 - 18:13)
+I always wonder when you say that, like the recursion part, is this happening before the folding or post folding?
+[Binyi Chen] (18:13 - 18:14)
+Long before the folding, actually.
+[Anna Rose] (18:14 - 18:15)
+Long before the folding, okay.
+F
+[Binyi Chen] (18:16 - 18:30)
+Yes. Actually this idea starts from recursive SNARK when the folding doesn't exist. So initially we'll have SNARK and people were thinking, "can we recursively prove SNARK, like we can prove some proof is correct."
+[Anna Rose] (18:30 - 18:37)
+Yeah. Proving proving proofs is recursion, basically. It's using a SNARK to prove a SNARK to prove a SNARK.
+[Binyi Chen] (18:37 - 19:19)
+Yes, exactly. And this idea was already proposed in 2008 by Paul Valiant. That's a long time ago already. But at that point, they are only focussing on recursion of these SNARKs.
+I would say at that point, it's only of theoretical interest because the recursive circuits for SNARK verifier is actually pretty expensive, so no one would actually use it.
+But this has been changed since this Halo paper has been introduced, and also the follow-up of Nova and the [BCLMS21] has been introduced, and therefore folding verifier is much simpler than SNARK verifier.
+And by combining this idea of recursion together, we can actually obtain much more efficient constructions.
+[Nico Mohnblatt] (19:19 - 19:34)
+Yeah. By the way, it's funny because Valiant had this SNARK vs. SNARK idea to do IVC at a time where SNARKs, we weren't even sure if they existed.
+[Anna Rose] (19:34 - 19:42)
+The term "SNARK" had not been defined yet, I don't think. That was 2012, remember? At least that's what we said on stage, Nico, at the zkSummit.
+[Nico Mohnblatt] (19:43 - 19:45)
+That is what we said on stage. I might regret saying that.
+[Anna Rose] (19:45 - 19:48)
+No. But I think it's the first time it's written in a title, and it was like...
+[Nico Mohnblatt] (19:48 - 19:57)
+Yeah. Absolutely. Absolutely. There was the notion of succinct proofs and the notions of proofs of knowledge, but calling something a SNARK and making it a thing came later.
+[Binyi Chen] (19:58 - 21:13)
+Yeah. I also do want to mention a third really important feature for folding compared to full-fledged SNARKs, which makes it quite unique and quite important when we want to deal with large and streaming computation, is basically the streaming friendliness, which is very important.
+So if you think about it, we have some really large tasks like zkVM or proofs on verifiable machine learning. If you only have SNARK, usually what you do is you start the computation, and you finish the entire computation, and then you generate some computational trace and the witness for this entire computation, and only then you can start doing the proving.
+So the proving can only start at the very end of this stage, which is kind of wasting some time. But folding allows us to do better in the sense that you don't have to start doing folding while you finish the computation. You can just start it while you're doing the computation.
+You only need to get some partial results, then you can already start doing the folding. And that's pretty important for this large-scale computation.
+I think the analogy is that when you watch the video, like watch YouTube video, you don't want to buffer the entire video first and then watch the video or movie.
+[Anna Rose] (21:13 - 21:18)
+Which is what we used to do when you download from like Napster or something.
+[Binyi Chen] (21:19 - 21:26)
+Yes. But now we get used to YouTube. So it's more pipeline and much better experience.
+[Anna Rose] (21:26 - 21:47)
+Interesting. I think in my initial question, it was sort of like, there's also this question of what part of the SNARK does recursion and folding help with? So does the proof time go down, or does the verifying time get affected?
+Yeah. I'm just curious if there's a tradeoff at all. Is it harder to verify a folded scheme, actually?
+[Binyi Chen] (21:48 - 22:38)
+Yes. I think the main motivation is prover time. And it's particular for... and also memory, I guess. Both memory and prover time, but particular for those large problems.
+So if your task is not very complex, if you're just proving a single transaction or just proving a hash, you don't bother to use folding. You just do a simple Sigma protocol or SNARK. That's good enough.
+It makes sense only when it comes to a really large problem, like ZK virtual machine or verifiable machine learning. In this case, it's not that easy to use a monolithic SNARK to prove it efficiently. So you have to split this large problem into a smaller problem first, and then use SNARKs.
+And folding is exactly a very efficient way and scalable way, and as well as memory efficient way to reduce this really large problem into a smaller problem.
+[Anna Rose] (22:38 - 22:53)
+And I think I remember when it was first shared, it also is really good for certain types of problems which are repetitive. Like you want repetitive steps. You don't want dynamic circuits and lots of different... like you want something quite consistent.
+[Binyi Chen] (22:53 - 23:35)
+Exactly. So, for example, if you want to have a CPU, you don't have like custom circuit, you want to have CPU, well, each time just run a single instruction and folding is perfect for this. Well, each chunk statement, just one single instruction.
+And I want to mention two things. First is that, first we do this for folding is because folding is perfect for this uniform computation. So if this computation satisfies property, which is kind of iterative, it perfectly fits for the framework folding.
+But I do want to mention that recently there's a paper called Mangrove, which actually can reduce some arbitrary computation into many uniform computation. And after that, you can start doing the folding as well.
+[Anna Rose] (23:35 - 23:35)
+Cool.
+[Binyi Chen] (23:35 - 23:37)
+So it's more general than that.
+[Anna Rose] (23:37 - 23:53)
+Okay. And then now let's go to that second part, which is like lattices. So you're introducing lattices.
+Is the proving time made even more efficient? Again, which part is affected? And is there any tradeoff when you introduce lattices? Does any part of the process get slower?
+[Binyi Chen] (23:53 - 25:11)
+Yeah. Very good question. So initially our goal for using lattices is not only for post-quantum security, it's actually we want to accelerate the prover. We want to make prover even faster than elliptic curve-based folding schemes.
+Why? Because we have some really nice commitment in the lattice world as well.
+I do want to clarify that the original Ajtai commitment that was invented in 1992 is actually not that efficient because it's based on some integer lattices, but later it has been adapted and optimised in the ring setting, like polynomial ring setting by Vadim, Chris Peikert, Alon Rosen, and Daniele Micciancio around... I think, around 2006 or something. Yeah, maybe 2006.
+So after that, the Ajtai commitment becomes more efficient. Basically, the complexity goes from quadratic to [?] quasi-linear, and it's much faster than that, and also highly parallelizable.
+And moreover, you can use some small fields to instantiate. So that makes it extremely fast. So that's one of the motivations for using that kind of commitment.
+So in summary, we have plausibly post-quantum security, and in theory, we might also get even faster prover. So that's really nice. That's why we have some motivation to study it.
+[Anna Rose] (25:12 - 25:12)
+Yeah.
+[Nico Mohnblatt] (25:12 - 25:35)
+I'll add another piece of motivation, actually. With elliptic curve commitments, you have your witness, your circuit lives in a field. And then when you do commitments, you put them on an elliptic curve.
+And then when you want to do this recursive step of checking your verifier, you now have to write statements about the elliptic curves with your field.
+So you have this weird recursive thing happening. And this is actually quite painful to do. It makes your circuits very big. And that's why we had these cycles of curves that were very painful to deal with, that caused bugs.
+And so even back when ProtoStar and Nova came out, we were all thinking, wouldn't it be nice if we could get rid of these cycles of curves? And can we use things like lattices to do that?
+[Speaker 6] (25:36 - 25:36)
+Yeah. That's a very good point.
+[Nico Mohnblatt] (25:36 - 25:55)
+And this is actually quite painful to do. It makes your circuits very big. And that's why we had these cycles of curves that were very painful to deal with, that caused bugs.
+And so even back when ProtoSAR and Nova came out, we were all thinking, wouldn't it be nice if we could get rid of these cycles of curves? And can we use things like lattices to do that? Yeah, that's a very good point.
+[Anna Rose] (25:55 - 25:58)
+Are there any downsides to introducing lattices?
+[Binyi Chen] (25:59 - 26:00)
+Yes. Definitely.
+[Anna Rose] (26:00 - 26:02)
+Yes, there are.
+[Binyi Chen] (26:02 - 26:03)
+Lie whenever you introduce something, there are some tradeoffs.
+[Anna Rose] (26:04 - 26:06)
+Okay. Good to hear.
+[Binyi Chen] (26:06 - 27:30)
+Yeah. No free lunches at all. And especially in our first generation of lattice folding schemes, even though they are pretty competitive, they are becoming practical, they still didn't beat the state-of-the-art of elliptic curve schemes.
+The reason is that, as I mentioned before, we actually are dealing with a harder problem. We have to deal with norm blowup, we have to deal with proving that norms are low norm.
+So these extra tasks make the construction of lattice-based folding schemes harder. And that also adds complexity of the folding schemes.
+For example, in the first generation of LatticeFold, in order to prove that the norms are low or small, you have to first decompose the original witness into multiple witness vectors, which are even lower norms. And only then you can run some so-called sumcheck protocol to prove it.
+And that means the prover's work is more, because they need to commit to more vectors. Suppose initially you only need to commit to one vector, now you have to commit, say, like 10 or 16 vectors, which is more prover expensive.
+So even though Ajtai commitment itself, or ring-based Ajtai-commitment itself, is more efficient, the work you have being done is actually more. So the speed is actually not faster than elliptic curve-based folding schemes.
+So in order to make it more efficient, we really need to have more efficient range proofs.
+[Nico Mohnblatt] (27:30 - 27:36)
+And I think what you cover in the Whiteboard Sessions, right?
+[Anna Rose] (27:36 - 28:03)
+It's funny when...and this is actually bringing me to the Whiteboard Sessions themselves, because in that, you mentioned a few lookup works in that context of range proofs, but I was confused why... you sort of said CQ does something with the range proofs, but I always thought of them as being pretty separate.
+Is there a connection there between like the lookup table, lookup argument work, and the range proofs? And if so, what is it?
+[Binyi Chen] (28:03 - 28:20)
+Definitely. So if you think about this, range proof is actually a special case of lookup arguments, because what you want to prove in a range proof is you want to prove that certain value is in certain range.
+But this range itself is also a table, it's just a special table. The table includes all the values of this range. So that means if you have a lookup argument, that you also have a range proof as well.
+[Speaker 6] (28:20 - 28:21)
+Oh.
+[Binyi Chen] (28:21 - 28:29)
+The table includes all the values of this range. So that means if you have a lookup argument, that you also have a range proof as well.
+[Anna Rose] (28:29 - 28:54)
+Oh, wow. For some reason, I feel like that never really came up on the show.
+So that was also... as I was watching the Whiteboard, I was putting my hand up, but it's a video and I wasn't actually there. I wasn't part of the recording, but it's like the moment where I had this question. I was kind of confused, but this is helpful. And it makes sense, actually, that you just choose the lookup of just a certain range, basically.
+[Binyi Chen] (28:54 - 29:00)
+Yes. Yeah. Range proof, when you think about range proof, you always think as a special or even simpler problem than lookup.
+[Nico Mohnblatt] (29:01 - 29:17)
+Are there any other ways to do this range proof? I know that you have two iterations of LatticeFold. There's also this paper called Neo that we should mention that also does folding based on lattices.
+I was wondering, all the techniques, there are super different, super similar, and is there a lot more like to explore?
+[Binyi Chen] (29:17 - 30:34)
+Yes. So I think the lattice-based setting, the range proof is slightly different from the other elliptic curve-based setting. And currently we have two main ideas, or three main ideas, I would say.
+First is doing decomposition, and second is to do random projection, which is the idea using LaBRADOR. And third is the idea in LatticeFold+, which is called monomial encoding, where you just use some kind of restructure of polynomial ring to prove some lookup relations. All these are having their pros and cons.
+And I want to mention that recently in this new paper, I want to discuss later, we also have a new lattice-based folding scheme, which has a new range proof, which is kind of combination of projection and monomial encoding. That makes this much faster and much simpler.
+So Neo, I think the main contribution of Neo is, I guess, it's not a range proof. It uses this paradigm of decomposition of LatticeFold as well. But it has some other really nice properties and contributions in terms of supporting small fields and encoding the constraints in a more natural way.
+So I think they'll use decomposition to do the range proof.
+[Anna Rose] (30:34 - 30:40)
+Are there any other tradeoffs or downsides to using lattices or to combining folding and lattices?
+[Binyi Chen] (30:40 - 31:53)
+Yes. And this is something that I think will have connection to what I said later in terms of the new work. So beyond this prover overhead, this verifier overhead is also an issue. Even though it's much better than hash-based folding scheme, it's actually still worse than elliptic curve-based folding schemes.
+So the reason is that you have to run this Fiat-Shamir circuit. For those who are not familiar, Fiat-Shamir is a way to convert an interactive protocol into a non-interactive protocol by generating this verifier challenges using a hash function on the transcript.
+And in lattice setting, this transcript is much larger than elliptic curve setting because these Ajtai commitments are larger compared to Pedersen hashes. Each Ajtai commitment can be as large as 4 kilobytes or even 8 kilobytes.
+And if you have many commitments to hash inside this transcript, then this complexity of just doing the Fiat-Shamir hashing is already pretty expensive.
+So one of the questions, can you remove this Fiat-Shamir circuit in the verifier to make the recursive circuit much smaller?
+[Nico Mohnblatt] (31:53 - 31:58)
+By the way, for comparison, the Pedersen commitments, the Pedersen hashes are like a few bytes, right?
+[Binyi Chen] (31:58 - 32:02)
+Yeah. 32 bytes or 48 bytes, I guess.
+[Nico Mohnblatt] (32:02 - 32:05)
+A few orders of magnitude difference.
+[Anna Rose] (32:06 - 32:21)
+This is kind of another definitions question, but you mentioned it in your Whiteboard and actually Vadim mentioned it in his as well, the SIS. And you already have defined it today in the interview, but can you talk about what that actually is? Because it comes up every time you're talking about lattices.
+[Binyi Chen] (32:22 - 33:21)
+Yeah. So SIS, or shortest integer solution assumption, is kind of a bridge between this really fundamental lattice problem and the cryptographic applications.
+So this is a cryptographic assumptions, which is saying that given a randomly generated matrix a, it's hard to find a small vector x such that when a times x, you get zero.
+So if you don't have any constraints on this vector x, we can actually very easily solve this equation. Basically, there's just a bunch of linear equations and they can solve it. That is an easy problem.
+But it turns out when you add these small constraints, that you have to make sure this x is no norm or every element of this vector is small. This turns out to be a really hard problem. And we have a reduction that if you can solve this problem, you can solve some really hard lattice problems in the high dimensional lattices.
+[Anna Rose] (33:22 - 33:27)
+But in this case, is this one of these cryptography moments where you want it to be hard?
+[Binyi Chen] (33:28 - 33:28)
+We do. Yeah.
+[Anna Rose] (33:28 - 33:33)
+You want it to be very difficult because you don't want it to be breakable, right?
+[Binyi Chen] (33:33 - 33:35)
+Yes. We want it to be really hard.
+[Anna Rose] (33:36 - 33:45)
+Okay. It's just funny, whenever... like the SIS problem, it sounds like something that we're trying to solve, but that's not the point. It's like, no, no, we like it. We want it to be hard.
+[Binyi Chen] (33:47 - 33:52)
+Yeah. We definitely want it to be hard. Otherwise, most of the lattice cryptography will collapse.
+[Nico Mohnblatt] (33:52 - 33:58)
+But by the way, it is a problem, and we do want people to try to solve it. The more people try, the more we know it's hard.
+[Anna Rose] (33:58 - 34:09)
+It's like if the SIS problem was solved, that would be bad for lattices, but maybe good for general safety and security because we would know this wasn't hard enough.
+[Binyi Chen] (34:09 - 34:14)
+And that would be a really breakthrough, like very, very important results if we do have these results.
+[Anna Rose] (34:15 - 34:26)
+And the feeling though is that the quantum computers can't break it. Maybe feeling is not what we're looking for. The assumption is that you can't break it with quantum computers.
+[Nico Mohnblatt] (34:26 - 34:29)
+I mean, it is at this point, a general feeling or a general sentiment. That is just how we work.
+[Binyi Chen] (34:29 - 34:29)
+Yes. First, I don't have a really good explanation on why it will be against quantum computing attacks, but the thing is that we have gone through 30 years or more of cryptanalysis of these world, and this is one of the most mature and time-tested assumptions that no really good attacks on top of it, even for quantum computers.
+And there are many really talented researchers. They are basically just working on cryptanalysis on lattices.
+[Nico Mohnblatt] (34:30 - 34:32)
+Trying to break them.
+[Binyi Chen] (34:32 - 35:09)
+Trying to break them. And we don't have a really good solution yet.
+[Anna Rose] (35:10 - 35:36)
+When you decided to start working on LatticeFold, in that time between ProtoStar and that interview we did and LatticeFold and LatticeFold+, what happened in lattices that changed that allowed you to start using them?
+You sort of mentioned earlier on in the episode that like 2 years on, you started to see, oh, we can actually do this. But what was it? Was it like the LaBRADOR work? Was it something that came out, something that changed?
+[Binyi Chen] (35:37 - 35:42)
+Yes. So I think it's just we didn't spend too much time on it at that time.
+[Anna Rose] (35:43 - 35:46)
+And then you looked and you're like, hey, we can do it.
+[Binyi Chen] (35:46 - 36:55)
+Yeah. I think maybe it's kind of pre-thought. When we think about this problem, when we think about folding, we always think about folding, we never think about decomposition.
+So that's why we think there's no possibility of controlling the norm after the folding. But it turns out if you fold... if after folding you decompose first, and then you fold, and you actually control this norm, and this is the first step that the change of mindset makes it possible.
+And the second is this range proof. I think the range proof is kind of inspired by both, inspired by LaBRADOR as well as sumcheck.
+Because previously I was working a lot on sumcheck, and it turns out sumcheck is a really nice protocol to help you to prove some relations. It turns out this range proof relation is one of them, can be covered. And so you can actually use sumcheck to give a range proof for that.
+And moreover, this range proof has sublinear verifier complexity, which is very important in the folding case. The reason we cannot directly use in LaBRADOR is exactly because the verifier complexity of LaBRADOR is actually linear, which is not enough for folding to be used.
+[Anna Rose] (36:56 - 37:04)
+So it's sort of a convergence of a few different research threads that meant actually now is a good moment for us to really dive into this.
+[Nico Mohnblatt] (37:04 - 37:16)
+It's an area that needed someone who was from the folding world to go and look at all these lattice works and put things together and make it work. And that's exactly what Binyi and Dan did with LatticeFold.
+[Anna Rose] (37:16 - 37:39)
+I think I, in the past, have sort of talked about LatticeFold as like a continuation after LaBRADOR, but I feel like I've been corrected on that too.
+I mean, I'm guessing it's taken some influence from it, but it's not really the same kind of lattice. Maybe can you just describe where those research threads diverge?
+This is a LaBRADOR, Greyhound, and then sort of the LatticeFold work.
+[Binyi Chen] (37:40 - 38:48)
+I think the LaBRADOR one is mainly for arguments, like succinct arguments. In a sense, they want to prove argument system that has small proof directly proving this relation. So in terms of crypto primitive, they are slightly different from folding.
+And the follow-up Greyhound is kind of a optimisation to LaBRADOR, which improved the verifier complexity of the scheme from linear to square root, though it's still worse than polylogarithmic.
+On the other hand, I want to mention there are also some other work called RoK and Paper and SISsors, and also recently RoK and Roll. They are another line of work for lattice-based arguments that not only have small proof sizes, but also a small verifier complexity, I think it's polylogarithmic verifier complexity.
+However, compared to LaBRADOR, they are less concretely efficient, but I do think there are many new works, follow-ups, that try to make them more practical as well. So that will be the first line in terms of arguments.
+[Anna Rose] (38:49 - 38:54)
+It's funny, the RoK and Roll, I saw that for ZK Mesh. It came out really recently, right?
+[Binyi Chen] (38:54 - 39:01)
+Yes. So it started with this RoK, Paper, SISsors, and RoK and Roll is kind of an optimisation and a follow-up to that work.
+[Anna Rose] (39:01 - 39:21)
+Okay. I'll have to include it in a new edition. Very cool.
+Okay. That was really great. Thanks for sharing that kind of distinction.
+This has been something I wasn't quite clear on. I really thought of it as a continuation, but it's just like lattices as a theme were becoming more relevant, and then I was like, oh, this is why.
+[Nico Mohnblatt] (39:21 - 39:33)
+So Binyi, earlier you teased out that you had some new work coming up that also involves folding and a new way to combine folding schemes to get SNARKs.
+Can you tell us a bit more about the motivation for this work and what's happening in there?
+[Binyi Chen] (39:33 - 41:42)
+Yeah. Definitely. So I think I'll also partially mention this, that the previous folding schemes, especially the lattice-based folding schemes, they have some of this kind of drawback of proving Fiat-Shamir circuits.
+So Fiat-Shamir circuit is pretty large in that sense because our other operation is pretty simple, just a linear combination of ring elements. So this is the first reason that I want to remove this Fiat-Shamir circuits.
+Early this year, I came across this paper by Ron and Lev and Dmitry. They come up with this really elegant attack towards the GKR-based proof system.
+So to give a little bit of background, GKR 2008 is a very elegant interactive proof system. So initially there are interactive protocols, meaning that on an online phase, the prover and the verifier needs to communicate to check certain kind of arithmetic circuit computation was done correctly.
+But it turns out we can also make it non-interactive by using this Fiat-Shamir heuristics that generates the verifier challenges using the hash computation of the transcript.
+And we even have some kind of security proof for that in an idealised model, where we treat these hash functions as some random oracle, meaning that it's basically just some random function that you can query in a black box way.
+But it turns out what this attack is showing you is that whenever you instantiate this hash function into a real-world concrete hash function, it turns out this scheme is no longer secure. And particularly, they're able to generate a valid proof for some false statements, which break the soundness of the system.
+And the main idea of enabling this attack is because it allows the prover to generate a proof for certain statements where these statements is proving some Fiat-Shamir heuristics inside the statements.
+And the reason why it is important to do that is because it allows the prover to generate, to predict this verifier challenge inside circuit, which given its power, they can be exploited to generate a fake proof for some false statements.
+[Nico Mohnblatt] (41:42 - 42:11)
+This is a result that we knew from back in the day, protocols that are secure in the random oracle model are not always secure in the real model when you change the random oracle for a hash function.
+But at the time, we only had examples for very weird protocols. Like you have to really come up with a protocol that's really designed on purpose to break.
+And then this recent paper earlier this year was the first time that there was a natural protocol that was out in the wild that people used that actually suffers this problem.
+And Binyi is saying, it's part of the attack was to do Fiat-Shamir inside the circuit. And that's, I think, where you're going. Binyi is like exactly what's happening in folding, we do Fiat-Shamir inside our circuit.
+[Binyi Chen] (42:11 - 42:11)
+Yes.
+[Nico Mohnblatt] (42:11 - 42:21)
+And like Binya is saying, it's part of the attack was to do Fierchand-Mir inside the circuit. And that's, I think, where you're going Binya is like exactly what's happening in folding. We do Fierchand-Mir inside our circuit.
+[Anna Rose] (42:21 - 42:33)
+But did that mean that all of a sudden the works were less secure and you felt like you needed to do a new paper to figure out how to make it more secure, or were you already more secure because of some other feature?
+[Binyi Chen] (42:34 - 42:57)
+So this is indeed an attack to a real-world system, but that's not a [?] attack to all the recursive SNARK system. It's only working for this GKR-based system, but not immediately working for other proof systems like FRI, STARK, Plonk, Spartan, HyperPlonk and so on.
+However, it's still worrisome, right?
+[Nico Mohnblatt] (42:57 - 42:58)
+Yeah. It shakes our confidence.
+[Binyi Chen] (42:58 - 44:05)
+I wouldn't say it's fixed, I just tried to remove this attack surface. We don't prove any Fiat-Shamir circuits in the statements. If that's the case, it's much easier to handle this kind of attack because circuit logic is much easier to audit. You just make sure that it never runs this Fiat-Shamir hash functions or instantial random oracle inside circuits.
+But in the previous framework, it's much harder to audit because anyway, you have to do this. So you don't know whether there are some kind of really tiny changes that make it attackable or not.
+[Nico Mohnblatt] (44:06 - 44:20)
+It's almost like backdoor in the style of the KRS attack is indistinguishable from what the circuit is supposed to do. And so that's super hard.
+[Binyi Chen] (44:20 - 44:50)
+Yeah. So this new work is called Symphony. So maybe before what it achieves, I want to mention is why these names.
+There are two reasons for this name. The first reason is that if you look at Symphony, this paper is actually inspired by many previous works, many elegant papers previously. If you think about each paper as an instrument, then what we do here is try to just harmoniously combine them together and play all these instruments together to get a symphony.
+[Anna Rose] (44:50 - 44:51)
+That's beautiful.
+[Binyi Chen] (44:51 - 47:28)
+Exactly. So it's actually a linear relation.
+So if you fold two inputs, then say the complexity is 2 times x, then if you fold 10 inputs, then the verifier complexity will be approximately 10x. So if you fold 1000 inputs, it will be extremely large. It's like a 1000 times blowup on the verifier complexity. So that's the reason this kind of approach was deemed impractical in practise before.
+But it turns out we changed this status quo and we found that actually it is possible to do that as long as you can remove the Fiat-Shamir circuit outside the proven statements.
+So that's the first contribution we come up with a new high-arity lattice-based folding schemes for which the verifier complexity excluding the Fiat-Shamir circuit is extremely small even for really large inputs like thousands or tens of thousands of inputs.
+And the second step is to come up with a way that compiles this high-arity folding into a new proof system, which indeed does not need to embed this Fiat-Shamir circuit into the proven statements. And that solves two issues.
+The first efficiency issue, we don't need to prove this large Fiat-Shamir circuit anymore. And second is solve this kind of security issue. We no longer have this attacking surface for exploiting or conducting these KRS-like attacks.
+So that's basically the two main results.
+[Nico Mohnblatt] (47:29 - 47:35)
+So what's the secret sauce? How do you do that? How do you have a SNARK from folding that doesn't need to prove recursive statements?
+[Binyi Chen] (47:36 - 48:01)
+So actually this is a very simple idea. It is built from this so-called commit-and-prove SNARK. I wonder if you have heard about this.
+It's a special class of SNARKs for which the prover can commit part of the witness beforehand, before you prove something online. And then later you can prove a relation that involves both this committed data and some online data.
+[Nico Mohnblatt] (48:01 - 48:06)
+I guess without doing the commitment inside a circuit, right? Because that's kind of what we're trying to avoid.
+[Binyi Chen] (48:06 - 48:21)
+Exactly. Without doing the commitment inside circuits, and that makes it much more efficient as well.
+So let me give a concrete example on how it is used in another paper called VerITAS, which is another paper of me, I and Trisha and Dan.
+[Nico Mohnblatt] (48:21 - 48:26)
+Oh, we've mentioned it a lot on the show, actually. It's about proving edits on pictures, right? 
+[Binyi Chen] (48:27 - 49:44)
+Exactly. Exactly. So in that example, if you have a digital signature for some original high resolution image by taking a photo, you have some special camera, which has a special chip. Whenever you take a photo, the chip will assign this photo to make sure later you can verify this photo is taken by a human being rather than by an AI.
+But later, if you want to publish some edited images, like if you want to crop the image into a smaller one, how do you prove that this cropped photo is coming from this signed original photo?
+In this case, commit-and-prove SNARK is really useful to do that. What you do is just to prove that this online witness, which is this cropped photo, is a valid transformation of the previously committed witness, which is the signed original photo.
+And you only need to prove this transformation, you don't have to prove this commitment opening relation. And you also have this signature for the commitment that has been generated previously.
+So this is one application of commitment-and-prove SNARKs. And we found that it actually has more application for that in our scenarios.
+So we come up with a new way to make use of commit-and-prove SNARK to turn the folding scheme into a non-interactive argument without embedding Fiat-Shamir heuristics.
+[Nico Mohnblatt] (49:45 - 50:03)
+A few questions come up immediately, which is, which commit-and-prove SNARK do you use? Is that also going to be post-quantum? And then the next question is, if I'm going to use a SNARK to make an argument, can't I just use the SNARK as my argument from the beginning?
+Do I gain efficiency by introducing folding in there?
+[Binyi Chen] (50:03 - 50:33)
+So the CP SNARK is quite general. You can use any CP SNARK you want, but it is only plausibly post-quantum secure if you use a post-quantum secure commit-and-prove SNARK. If the commit-and-prove SNARK itself is not post-quantum secure, this compiler will also not be post-quantum secure.
+But it does have a lot of generality and flexibility on what kind of commit-and-prove SNARK you can choose. For example, you can choose hash-based, you can also choose KZG-based, polynomial IOP-based SNARKs.
+[Nico Mohnblatt] (50:33 - 50:36)
+Can we stay in lattice land and have a lattice-based one?
+[Anna Rose] (50:36 - 50:41)
+Yeah. That was going to be my question. I was kind of like, is there still lattice work involved here?
+[Binyi Chen] (50:42 - 51:11)
+So the lattice work mostly are in the folding side. This CP SNARK, we kind of take it as black box. If we have a really nice lattice-based commit-and-prove SNARK, we can also use that as well.
+But currently, most of the lattice-based SNARKs, they have pretty expensive verification complexity. So that's why for now we prefer to use hash-based or KZG-based schemes. But if there are even better lattice-based SNARKs coming up, we can also use that as well.
+And the second... what is the second question?
+[Nico Mohnblatt] (51:11 - 51:26)
+The second one was, you're telling us about a compiler that takes a folding scheme and a SNARK and constructs a SNARK.
+And so I'm wondering, well, if I had a SNARK to begin with, can't I just have a SNARK... do I gain something by having folding plus SNARK?
+[Binyi Chen] (51:26 - 52:21)
+So we do need a SNARK in this compiler, but the point here is that the SNARK's work is much smaller than using SNARK to directly prove the original computation. Because originally you have a really large computation, which say is like millions of input statements.
+But what you can do is compress this million input statements into one statement using the folding first, and then just prove that this last statement is correct using a SNARK, and also prove that this folding was done correctly using a commit-and-prove SNARK.
+And both the commit-and-prove SNARK and the SNARK's proving time is only related to this folding statement, or this folding verification complexity, which is much smaller than the original task you have.
+So that's the reason why you still care about folding, because it gives you much better memory efficiency and time efficiency. Does that answer your question?
+[Nico Mohnblatt] (52:21 - 52:45)
+It kind of reminds me of a discussion we had with Abhi Shelat and Matteo from Google, when they were talking about why they chose to do GKR plus Ligero. And Matteo has this quote of like, "sumcheck plus something is always better than something."
+And so it sounds like we're doing something similar here. Folding plus something is better than something on its own.
+[Anna Rose] (52:45 - 52:58)
+Are there any other techniques in Symphony? You sort of just mentioned sumcheck, for example. You talk about all of these instruments coming together and playing together. Yeah, is there any other kind of instruments that you can mention?
+[Binyi Chen] (52:59 - 55:43)
+Yes. So first, this kind of framework, I think is pretty easy and simple. But I think it's really impactful.
+I wish this could be a path forward to change what we think about folding. And that leads to a more scalable proof system, and it's also more robust and secure.
+And in terms of technical part, the folding scheme we achieve is also very interesting. It's a new lattice-based folding scheme that does support this kind of vision of using high-arity folding.
+So the reason that it can support this large-arity folding is because we do have a much better range proof than before. So the idea is the following.
+Previously in LatticeFold+, we come up with a way to do the range proof in a direct way by using these polynomial rings. The high-level idea is that you can embed these range values into the coefficients of polynomial, and then to check a value is inside this table or inside this range, to prove that with certain rotation of this polynomial, the constant will match these values. So this is a high-level idea.
+It's a very elegant idea. And if you want to range proof a long integer vector, you just need to generate another monomial vector and commit it.
+But in LatticeFold+, what you have to prove is the coefficient matrix are in a low range, in low norm, which is pretty large.
+So you do need to some kind of extra machinery called double commitments, folding double commitments. I won't talk too much about that, but it's kind of a very complex protocol, though elegant, to prove it. And what we did is we fully eliminate this overhead. And we also make this monomial embedding much easier.
+To give a very high-level idea, the one-sentence summary is that the main idea is just instead of directly prove the range of a really large matrix.
+What you can do, you can just first compress this large matrix a little bit. By doing a random projection, you compress this large matrix into a one vector or one column.
+So you compress this by a factor of d. And after that, you only need to do range proof for this projected vector rather than the original vector. And for that, you just need to run a monomial commitment, compute a monomial commitment once, and that's enough.
+And you fully eliminate the second step of double commitments. And also, even in the first step, you don't need to compute d commitments, where d is the number of columns of this matrix. You just need to compute one of them.
+And this single commitment is also very easy to compute. It's just some kind of ring additions. So in sum, what we can get is we can almost get a range proof for free. And this is a very efficient folding scheme that lies in the Symphony.
+[Nico Mohnblatt] (55:44 - 55:54)
+Could you plug that range proof into the LatticeFold and LatticeFold+ sort of folding scheme and get LatticeFold++?
+[Binyi Chen] (55:54 - 57:09)
+Yeah. You can say that. Basically that can be supported. You can just switch this range proof and use this as well.
+And that's exactly basically what we did in this paper. What we do is just we switch the range proof and make it much simpler and faster. This is the first technical point.
+This already suffices for most of applications. If you have a really good folding scheme that can fold 1,000 inputs in one shot, then you can already support many applications which need to compute thousands of inputs altogether. 
+But what if you want to do more? Suppose you want to prove billions of RISC-V instructions. In that case, maybe you want to fold for a million number of instances or statements. In that case, is it okay to still do this?
+It turns out it's harder, because if you do millions of input statements, you have to randomly combine millions of commitments and witnesses. And that itself already leads to a pretty large norm blowup.
+So to compensate for it, you have to use a larger modulus and also some larger high dimension. Basically, you have to increase the security parameters to make it secure, which makes it less efficient.
+[Nico Mohnblatt] (57:09 - 57:14)
+So bigger field, then more prover work, bigger matrices, bigger commitments.
+[Binyi Chen] (57:15 - 58:12)
+Yes. Yes. So it turns out we can actually also support slightly higher folding depths.
+So think about that this million statements is a matrix. It's a square matrix where every cell corresponds to a statement. And what you can do is that you can first compress this matrix into a column first in one step of folding, which involves the length of this square of the folding arity. So it's only 1,000 arity folding.
+And after you have this column vector, you compress again horizontally or vertically and compress it into a single cell. And this is the final folded statement.
+And if you look at it, we have been fold a million statements into one cell, which is one single fold statement, but what we have done is just folding twice, where the first folding is a 1,000 arity folding. The second folding is also 1,000 arity folding. And that's enough.
+[Nico Mohnblatt] (58:12 - 58:17)
+I wish we had video here, because Binyi is illustrating the directions of folding very well, and that's getting lost to you auditors.
+[Binyi Chen] (58:18 - 58:18)
+Yeah. So that's the basic idea at a very high level. And if you want to support really large arity folding, you can do this in two steps.
+[Nico Mohnblatt] (58:18 - 58:20)
+Could you have even more dimensions?
+[Binyi Chen] (58:22 - 58:53)
+Yeah, I think you can support higher dimensions, even though my paper doesn't mention this, because I think for all the real-world application, folding twice would already be sufficient. But I think the idea can generalise to more depths as well.
+So you go from a rectangle or square to a cube, and then a 4-dimension cube and a 5-dimension cube.
+[Anna Rose] (58:53 - 59:29)
+Yeah.
+[Nico Mohnblatt] (59:59 - 1:00:02)
+Have you ever delved into that line of work at all?
+[Binyi Chen] (1:00:02 - 1:00:08)
+Yeah. Rachel is amazing... is an amazing advisor. And I also listened to that episode recently. I'm really happy.
+[Anna Rose] (1:00:08 - 1:00:0)
+It was so fun.
+[Binyi Chen] (1:00:09 - 1:00:53)
+Yeah. Rachel has a great presentation and she's good at explaining everything. So I didn't do anything about obfuscation, even though I think it's a really promising direction. It's very interesting and it's kind of growing in the cryptography world because if you have iO, you can really do a lot of things.
+And we are kind of approaching this. Currently we already have theoretical construction and we're trying to make it practical. Maybe in 10 years, we can even run a real programme that can be obfuscated.
+But I don't have a paper in iO with Rachel, but I do have some other paper, like Oblivious RAM with Rachel, which is a great experience, a research experience with Rachel as well.
+[Anna Rose] (1:00:54 - 1:01:05)
+What do you think of iO? I mean, you sort of say it's interesting, but is that a space you might at some point spend time in? Or if not, why wouldn't you? Is it too theoretical?
+[Binyi Chen] (1:01:06 - 1:01:15)
+Yeah. My personal interest is more having some really mathematically deep problem, but also have some immediate real-world impact.
+[Anna Rose] (1:01:15 - 1:01:16)
+Okay.
+[Binyi Chen] (1:01:16 - 1:01:50)
+And this is like SNARK or post-quantum cryptography is one of them. And it's currently FHE is also one of them.
+For iO, I think it's a very beautiful problem in terms of theory right now, and hope that it can be really practical in the future. Maybe at that point, I would change my mind and then switch to iO as well.
+But on the other hand, it's also a very hard question. I think it's like doing research on purely constructing iO is a really complex process. And that's why people consider Rachel's work to be really impactful and influential as well.
+[Anna Rose] (1:01:51 - 1:01:59)
+Cool. That's such a neat connection. Nico, I'm glad you brought that one up.
+I wouldn't have known, but that's a cool link.
+[Nico Mohnblatt] (1:02:00 - 1:02:15)
+Before we wrap up, last time at the end of the ProtoStar episode, you left us with an open question about, can we do folding schemes from lattices? And 2 years later, you're back on with an answer to that question. So to continue the cycle.
+[Anna Rose] (1:02:15 - 1:02:15)
+Yeah.
+[Binyi Chen] (1:02:16 - 1:02:17)
+Oh, what's the next open problem?
+[Nico Mohnblatt] (1:02:16 - 1:02:22)
+Yeah. Are there any open questions that you think you'll come back in 2 years with an answer to?
+[Binyi Chen] (1:02:22 - 1:03:57)
+I guess in my mind now, a new, really interesting open question is that, so before Symphony, we don't even have a full security proof for folding-based SNARK, because you have to instantiate a random oracle inside circuits. After Symphony, we do have some security proof in the random oracle model for use folding.
+But now the question is, do you really need a random oracle? Can you use kind of some other more sound and more robust assumption to come up with a folding-based SNARK?
+That's a really... I think it's a really challenging question, and I encourage people to think more about it. Because even in this current framework, I think it's already sufficient in practise because we don't have this attacking surface of KRS for proving Fiat-Shamir inside circuits, but still, we don't have a standard security proof.
+And if we instantiate this random oracle into concrete hash function, in theory, still you have attacks. So the question is whether we can have a more solid foundation for this. And I think this is one of the very interesting questions.
+And the second question, I guess, is whether you can have a fully succinct lattice-based SNARK that is really efficient, even beating the hash-based SNARKs.
+Currently, we don't have such a solution yet. We have LaBRADOR, which has really small proof sizes, but the verifier complex is pretty large. But there's no signal saying that this is impossible.
+So maybe in the future, we can have even much better lattice-based SNARK compared to hash-based SNARKs. That's something I don't know yet.
+[Nico Mohnblatt] (01:03:57- 01:04:00)
+Let's book a date in two years, and we'll see you then.
+[Binyi Chen] (01:04:01- 01:04:03)
+Yeah. I'm pretty optimistic.
+[Anna Rose] (1:04:04 - 1:04:29)
+Nice. Well, Binyi, thanks so much for coming on, for giving us context into the LatticeFold work, giving us a lot of background. I think of this episode as a little bit of a compliment also to the Whiteboard Sessions of both you and Vadim that focuses on this work.
+And then also thank you for introducing us to the Symphony work, because this is the fresh stuff. It's always good to hear what you're thinking about.
+[Binyi Chen] (1:04:30 - 1:04:36)
+Yeah, my pleasure. It's always happy to be here and communicate and have conversation with you and Nico. Yeah.
+[Anna Rose] (1:04:37 - 1:04:50)
+Cool. I want to say thank you to the podcast team, Henrik, Rachel, Tanya, and Hector.
+And to our listeners, thanks for listening.
