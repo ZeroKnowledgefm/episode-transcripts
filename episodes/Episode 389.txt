@@ -1,0 +1,949 @@
+﻿ZKP-389-IanMiers MASTER 01 - Reviewed
+
+
+[Anna Rose]
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+This week, Nico and I once again chat with Ian Miers, Assistant Professor of Computer Science at the University of Maryland.
+
+
+After our episode with him last fall, where we spent time revisiting his ZK research over the years and the foundational role he played in shaping the trajectory of the ZK ecosystem, we realised there was so much more to cover. So we brought him back to dive into his latest work, zk-promises, zk-Cookies, and Cryptographic Personas.
+Together, these projects explore how ZK can be used to maintain integrity, reputation, and identity in a new class of social networks, specifically those that can operate without a centralized database while preserving strong user privacy.
+
+
+We explore how these proposed tools can work together, allowing developers to build forums that can ban bad actors without knowing who they are, building completely private group chats with rules and reputation that can be set by the moderator, and self-sovereign identities that evolve over time without being forgeable or reset.
+Ian also connects this research to real-world challenges like stolen accounts, managing trolling and abuse, age verification, and more. These are definitely tools for the frontier of ZK applications.
+
+
+Yeah, so I hope you enjoy.
+For this episode, we once again have a bonus segment, which we will be sharing exclusively with paid zkMesh+ subscribers. This bonus segment has Ian sharing his thoughts on Zcash, a project he co-founded, the renewed cultural focus on privacy, and his recent research on reducing Zcash's nullifier state size without relying on traditional pruning.
+
+
+It's a nice add-on to this episode, so consider becoming a zkMesh+ paid subscriber if you'd like to hear it.
+For those of you who aren't yet aware of zkMesh+, it's our new unified subscription space bringing together the communities of the Zero Knowledge Podcast, ZK Hack, our events, our newsletters, and other initiatives, and then offering extra perks for those who join the paid tier.
+The zkMesh+ paid subscribers will get access to bonus podcast segments like the one we have with Ian, early access and discounts for events like zkSummit and ZK Hack, and subscriber-only content including the State of ZK Report and its addendums.
+
+
+If that sounds interesting, head over to the Substack, linked in the show notes, to choose the paid tier on zkMesh and help support the show.
+Now here's our interview with Ian.
+Today Nico and I are here once again with Ian Miers, Assistant Professor of Computer Science at the University of Maryland.
+
+
+Welcome back to the show, Ian.
+
+
+[Ian Miers]
+Hi, thanks for having me again.
+
+
+[Anna Rose]
+Hi, Nico.
+
+
+[Nico Mohnblatt]
+Hey, Anna.  Hey, Ian.
+
+
+[Anna Rose]
+So we are very excited to have you back on. We did an episode with you back in September this past year. It was episode 378, and we'll add the link to this in the show notes.
+
+
+In that, we had a chance to do a full journey through your backstory, from your initial work on Zerocoin and Zerocash to Zcash founding, basically the project papers that started it all. And we went all the way up to somewhat recent work, zk-Promises.
+But I think Nico and I both felt that we speed ran the last part of that episode, basically just being like, okay, and then what about this thing and this thing? And so we thought it really made sense for you to come back for a part two.
+And in the meantime, we saw that you've been publishing all of this new work. So you have something called zk-Cookies that we're going to get a chance to dive into, and something on like anonymous personas, as well as like a Zcash note, note on notes I want to talk to you about.
+
+
+But yeah, so there's some cool stuff going on. And I think it's a good time to have you on for part two.
+
+
+[Ian Miers]
+Yeah. So as I said, thanks for having me. And it is interesting.
+
+
+We started with this history of how do you use ZK SNARKs for blockchains and covered the history of Zerocash, Zerocoin, spinning up Zcash as a company, and that's payments. And then the next thing cryptocurrency-wise was, okay, well, by the time we got Zcash up, Ethereum was a thing. So how do we make that private? How do we make private smart contracts?
+And that's all in commercial use. There's Aleo, Aztec, a number of other folks building that, a huge amount of venture funding. But the real question, I think, is, well, where do we go from there?
+Because the interesting thing in terms of the industrial uses of this stuff to date is even for smart contracts, all we've really seen get traction is payments, stablecoins specifically with compliance. That's where a lot of the interest is.
+And to me, this was a little unsatisfactory as a researcher, because I genuinely didn't know what else to use these things for when we were building these primitives.
+And finally, like a year or two ago, I think it finally clicked of, oh, this is what we had, which I'll get to in a second, this is what we can do with it.
+And it turns out the key insight for all of these techniques is we can keep sort of stateful programs where you have integrity guarantees, even if you don't trust the person holding it, even though you know nothing about them, they don't have to reveal anything.
+
+
+[Nico Mohnblatt]
+By it, when you say you don't trust the people holding it, you mean the state of the program?
+
+
+[Ian Miers]
+Yeah, the state of the program. So you can think of this as sort of self-sovereign data. You are going to hold all the data about you, for whatever domain it is, and I will know nothing about it, except that you did valid operations on it.
+And in particular, you can't tamper with it. You can't roll back to a previous state.
+
+
+So for those of you who have ever played video games, you have your nosy quick save, see if I screwed up, go back, right? That turns out to be a thing you can do in real life with programs. And for a lot of things you might want to do on the internet about reputation, identity, money laundering prevention, banning trolls, that is a fundamental problem.
+
+
+For example, let's say I had an anonymous social network, I could quick save for a moment, make some incredibly spicy trolling comment. And then when I get banned for it, I go, oop, oop, takesy-backsies, and roll back sort of. It's as if I never made that.
+
+
+Of course, the actual post is still out there. I've still flamed whoever it is I wanted, and I can still... but because I rolled back, I can go on and act as if I didn't... And that is the key thing that you can prevent.
+
+
+Normally, in a forum or something, the way you do this, you store all the state on the server, but that means you know exactly who the person is and what they're doing.
+If you move it onto the client, well, how do you know that save file, so to speak, is well-formed? How do you know that the person isn't rolling it back?
+
+
+And for those of you who saw the last podcast or know anything about the history of cryptocurrency or even e-cash before that, well, this actually is a double-spend problem.
+
+
+[Anna Rose]
+You talk about roll back, but isn't, like, in an anonymous social media, wouldn't what they do is just create a new account?  Isn't it more like you just create a new version of yourself? You sort of talk about roll back, but, like, yeah.
+
+
+[Ian Miers]
+Ah, so there are two different things going on here. One of them is, let's say you have the same account. Let's say, God forbid, you had to register with your actual state-issued ID card and you only got one account.
+
+
+You could still have a system where you're anonymous, it's not linked to your ID, nobody knows who that is, but you will get banned and various things. So that is one version of this.
+So that is a thing you could do with zk-Promises out of the box. zk-Promises being a paper we recently put up. And your assumption would be you couldn't make a new account. Okay. So that's one way to do it.
+
+
+Even in that, you have to prevent someone from pretending they didn't make a comment. Even if the account's hard to make, they can pretend they didn't make a comment and keep going.
+But where this gets really interesting, I think this is like the next 20 years of cypherpunk interests of identity and how we interact as a community online, is you don't have to do that.
+
+
+And in fact, by the way, as a civil liberties point, you should not tie everyone's comments on the internet to a single ID that could be revoked. Even if it's private, there's a massive free speech from there.
+The interesting thing you can do is you could have sort of this ambient notion of identity of, I have, say, a Gmail account that's been around for 20 years or an Uber rideshare history or any number of other things. You may have seen these demos for zkTLS systems, where you can go prove you have something, some resource on a server without revealing it.
+And those are costly to create. They're free to use as you're honest, so you can use one to make an account or two accounts or three accounts.
+But if you get banned, you've burned that resource. You can't use it again. You have to move on to, well, my Gmail history's gone. Now I move on to my Uber history. Now I move on to my Lyft history. Now I'm done. So again, I make three incendiary comments on some forum, and I'm out.
+And so the interesting thing there is that the stateful techniques that we have from zk-Promises, dating back to Zexe, dating back to whatever, allow you to start programming these kind of systems.
+
+
+And the state of ZK proofs, unlike when I started doing this stuff in 2011 and then with SNARKs in 2014, is that these are actually programmable.
+We have working zkTLS demos you can actually spin up and run. We have zkVMs. They're not the fastest, but they work, and it's pretty clear they will get fast. So you can actually have people program these kind of applications to sort of do whatever they want.
+And that's the key insight is we can keep state.
+
+
+[Anna Rose]
+Is this why you're producing so much research right now? Is it like the ideas are flowing because a lot of the optimizations have happened? You don't have to focus on that lower level of like, does it even work? And now you can start thinking about these kind of architectures and concepts almost.
+
+
+[Ian Miers]
+It's two things. One, it's yes, the software has gotten better, though in particular, most of my lab has still been using Arkworks, which Pratyush Mishra and others maintain, which has been an amazing framework for academics, because in academia, you both need to like write code reasonably well with incredibly bright, but maybe not that experienced software engineers.
+And also you need to occasionally optimize the actual underlying ZK plumbing when you find out it's not fast enough.
+
+
+But yes, one of them is that's gotten to that and we have all these techniques. And the other one is conceptually we, my grad students and I actually figured out what else we can do with sort of smart contracts and not a blockchain setting or in a blockchain setting for identity as well, and we just start running with this.
+
+
+So the first thing we use the state for, this ability that you can't fork your save file and go back, was to keep track of everything you've done and actually have this notion of callbacks. This is what is in zk-Promises.
+So if you make an incendiary forum post, well, if the forum knows who you are, it's very easy for them to ban you. But if they don't, how do you get banned? It doesn't make any sense. The forum by definition doesn't know who you are. They don't know who to apply the ban to. They don't even have your data. The save file, so to speak, is on my computer. How does that bit of banned get set?
+And so what we... there've been a long line of papers trying to do this and what's called anonymous block listing systems. But what we realize is the way to do this fundamentally is to in the save file, keep a list of like the random IDs for every post you've made, because this is anonymous, everything has to be random, and periodically you will go check, hey, was this individual post marked as banned?
+And we call that a callback. So like when you make a post, you give them capability, so to speak, that when they post that back with "ban this guy" or whatever other arguments they want to apply to the function, you will at some point in the future, and this is configurable, go and look through all of those events that have happened. And is this mine? Is this mine? Is this mine?
+No. Okay. Yes, I have to apply it.
+And in particular, you don't have to do a linear search through all the things. You can do a very quick lookup.
+
+
+[Anna Rose]
+And this is all zk-Promises, just for the listener.
+[Ian Miers]  
+This is zk-Promises.
+[Anna Rose]
+This is zk-Promises, which is work that we touched on at the end of last episode. Was zk-Promises, like is banning the sort of use case, the first use case, or is that sort of... is it like zk-Promises can do banning, but it can also do other things?
+Was that the problem you aimed to solve or did it just sort of become solved as you developed this?
+
+
+[Ian Miers]
+Ah, so it's the basic, simplest way to describe the features.
+zk-Promises is a programmable thing. You have an object, think of it literally as an object for those of you who know Python, Java, or Solidity, a smart contract is an object, and somebody can make callbacks that alter the state. You can write this as, look, here are these list of functions and someone else can run them.
+
+
+State is the simplest one. The actual problem we started out trying to solve this with, and I have ongoing work on how to apply it, was ironically money laundering.
+So back to this, the only thing we know how to do with these techniques is payments. And now all this stuff is commercialized out of my work. It's like, well, some bad people occasionally use this. Can we build a permissionless, privacy-respecting way for people to program things that like can get you reputation as a scammer or as a thief or something to freeze funds and techniques for that?
+
+
+[Anna Rose]
+But zk-Promises was not built to enable money laundering. It was built to prevent or spot money laundering, I guess.
+
+
+[Ian Miers]
+The original research problem was, how do we have tools so if we identify somebody as problematic in an anonymous payment system, can we decrement their reputation or block them, freeze them as a tool against money laundering?
+This is not actually where we ended up writing the paper. It's a standalone thing. But that's where I started thinking about is how do you deal with adaptive adversaries?
+[Anna Rose]
+And which system was in your mind when you did that? Was it Zcash or was it some of these like ZEXE? Was it, or like Aleo? Was it Aztec's model? Was it something... I'm just kind of curious like where you envisioned this being used?
+
+
+[Ian Miers]
+It was the ZEXE. So it's the model that is in both Aleo and Aztec. Everyone's gone and added a little bit for what the programming model is, like whether you can do... how you do public and private smart contracts, but the state model with this object where you can do manipulations, that is fundamentally the model for Aleo, Aztec, Miden. I'm probably leaving someone else off.
+And it was in that model because you can't quite do this in Zcash without extensions, though, ironically, ZEXE came out of exactly how do you do this extension to Zcash. But that's a story for the last podcast.
+
+
+[Anna Rose]
+Okay. So it started as preventing money laundering and then, I mean, and then it evolved... would you say it has evolved into a how to ban someone in social media or is it how to exclude, is it the block list? What is the current kind of problem space as like fully?
+
+
+[Ian Miers]
+So it ended up being... again, it's a general technique, you can do whatever you want with it. As far as I've been and thinking about it, the callbacks are for identity and reputation.
+
+
+How do you express things about your identity but not have it be a static attribute? Because in real world, like when we think about how people we know and people online, it's not I had some credentials at one point in time. It's I have a reputation in some loosely defined sense based on what I've done, and there was a notion of consequence to that.
+And so this is the set of tools where you can program that. The reason I said this is the next sort of cypherpunk thing for 10 or 20 years is what you want to program, that is the way you want those rules to work is an open question.
+There are any number of things you can do here in terms of you want to program a system where it's a simple ban. That's easy. You want to program a system where there is a timeout or a cooling down period or ramp up period, that's a different thing.
+I actually have no idea how old your listeners are, but depending on how old they are, they might have used Stack Overflow at some point.
+[Anna Rose]
+Probably. Yeah.
+[Ian Miers]
+Probably.
+
+
+[Anna Rose]
+They've gotten older, too. This show's been around since 2017, 2018.
+
+
+[Ian Miers]
+So, yeah. The thing that AI killed and we don't have to use anymore, so Stack Overflow had this interesting same problem about, like you said, if you ban an account, well, you can just go make a new one.
+
+
+[Anna Rose]
+Yeah.
+
+
+[Ian Miers]
+So what Stack Overflow did, and I'm sure other people have too, but this is the one that this document and it discusses it, when you started, you did not have that much ability to post. You couldn't post any links in your answers...
+[Anna Rose]
+You had to earn it.
+[Ian Miers]
+Because it was spam prevention. And so you had to earn it. But you built it up, you built up the capability.
+And then the point was, if you then decided to be a jackass and got banned, well, you went back, you had to make a new goose egg account and spend the time grinding.
+
+
+[Anna Rose]
+Yeah.
+
+
+[Ian Miers]
+And so using zk-Promises, you can program something like this, but with the additional feature that the user is completely anonymous across all of Stack Overflow.
+Or in fact, and this will dovetail into the other paper, Cryptographic Personas, though it's a little bit of zk-Promises, you could have different pseudonyms. You don't have to present the same exact notion of I am who I am across different settings.
+
+
+[Anna Rose]
+But the system itself could ban you if you are acting as a bad actor. But anonymously, like all cryptographically, not because there's a person there checking.
+
+
+[Ian Miers]
+Right. They could ban you. They could ban you from certain forums. They could they could make you go on a temporary ban for a couple of weeks. They could give you like three strike rules, all of these things without ever knowing who you are and never learning.
+This isn't a system where you go to some MPC, FHE enclave thing and say, hey, now I want to de-anonymize this person. They never learn. They just get the point that they've set your save file, the state, so to speak, that you can't post.
+
+
+So the next time you try to post, you're supposed to produce proof that your save file says you can post...
+[Anna Rose]
+And you can't.
+[Ian Miers]
+And of course, it can't. Similar to the way that in Zcash, you can't prove that you have $50 when you don't.
+It's like you're broke, you can't post. Reputation broke, so to speak. Your rep got set to zero, you cannot post.
+
+
+[Nico Mohnblatt]
+It's good that your example with Stack Overflow also highlights these can be like positive callbacks, like you gain reputation and you gain things.
+
+
+[Ian Miers]
+Yeah. And you can add... and this is something we actually forgot until we got to personas, you want to do badges, like when people have achievements, you can do that.
+You want to have qualification criteria for, hey, I'm an expert in this. I have these credentials... credentials in like I have a diploma, I worked at somewhere for X number of years. I have this many commits on GitHub. You could do that.
+It's a programmable system. I'm not sure that's a good idea, depending on which forum you're doing and why, but you can.
+
+
+[Nico Mohnblatt]
+And it almost feels more zk-creds-y.
+[Ian Miers]
+Yes.
+[Nico Mohnblatt]
+If you're starting to prove things about like your GitHub or whatever.
+
+
+[Ian Miers]
+Yeah. I mean, the real thing to think about it is your identity is just a piece of state. And so you can build up, and I even phrased this the way in the talk we presented for zk-creds at Real World Crypto, like you just build up various identity signals, some of which are static credentials, some of which are conduct and reputation.
+
+
+And it's a stateful thing of, hey, I have this thing from the DMV, I have this thing from the U.S. Passport Office, I have this diploma, I have these many publications, I have these many comments on the Internet that you know are mine. I have other ones that you don't. But there were callbacks on whether people thought they were good or bad or flaming.
+
+
+We can have multidimensional piece of the reputation of like, are you an arsehole? Are you smart? Are you manipulative? And you can imagine filtering things based on different things like you can participate here, but you have to be a very high, like scrupulously nice to everybody.
+
+
+[Anna Rose]
+You have a good Uber ride rating.
+
+
+[Ian Miers]
+Yeah.
+
+
+[Anna Rose]
+Interesting.
+
+
+[Nico Mohnblatt]
+So I guess all this makes your local state and the software that manages it like the one most important thing you have.
+
+
+[Ian Miers]
+Yes. So the interesting point, though, because of the way this stuff works, there's no need for it to be secret. You can have this be open source, everybody can see it. You don't need proprietary hardware on your system that you can't see and respect with. It's just a proof.
+
+
+And so provided everyone agrees the software is secure, it doesn't matter. It can run on a Mac, it can run on an iPhone, it can run on a... well, it won't run on a Raspberry Pi, proofs are not that fast yet, but it can run on your weird open Linux phone graphene thing and it won't have to have like the Play Store doing introspection or Apple doing verification of boot.
+Because actually, by the way, this is a thing that much people don't realize, a whole bunch of things on the internet,  when you see people complaining that, oh, I can't run something on graphene or like my banking app won't allow a rooted devices.
+
+
+[Nico Mohnblatt]
+Yeah.
+
+
+[Ian Miers]
+That's actually because mobile phones under the hood are doing this weird monitoring of like, is your device sketchy? What's going on? Who are you? As a security measure to try to to keep bad actors out.
+And it has some unintended consequences, but that kind of thing is a problem.
+
+
+And I'm exaggerating here to a very limited degree, you can think of this as a way of moving away from that in terms of having different notions of indicators of history and non-compromise.
+
+
+[Anna Rose]
+So you just mentioned ZK. What you're talking about here is zk-creds. That is something we did dig into in the last episode. So if people are not familiar with that work, please do listen to that. And we'll add links in the show notes.
+And yeah, this sort of feeds into the zkTLS work and this bringing together of ID from all of the Internet.
+
+
+So, yeah. So what are other tools in that sort of tool set around making it possible for you to work in these private systems without centralized databases, without people... without someone needing to see what you're doing?
+
+
+[Ian Miers]
+Yeah. So that I guess we can go to Cryptographic Personas, which is an application of those tools.
+So zk-promises built up this notion of we're going to keep state and have callbacks and we have pseudonyms, but what do you do with that? And reputation and forums is one thing, but one of the things we started thinking through is what does it look like to have a set of social forums where you want to be able to control what you're saying about yourself?
+
+
+So, for example, a really useful thing, if you are living in somewhere where the security services of your country may go look through your group chat, is you might want to have like a Signal group or something where everybody in it is anonymous.
+So there are no names on it. You might have some idea of who's posting things, but if someone just looks at the chat, they don't... But of course, if you did that, some of your friends might abuse it. One of them might troll something.
+
+
+So like you still need this ability to ban people, even though you honestly don't know who they are. You might have a suspicion, but you don't know.
+
+
+Similarly speaking, the example we used in the paper. So I'm a professor, I have to go to faculty meetings. And academic, my department's quite good, but academia notoriously, particularly in like the biological sciences, has these hierarchies of whether you're tenured or not and how senior you are, and you have to be really careful about what you say in those departments.
+And so it is very useful to have a way to speak truth to power. General comment.
+However, everybody who's ever been in a faculty chat or even been in a work meeting knows that if you let everybody in the group speak truth to power anonymously with no way to moderate them, like say you made a WhatsApp group.
+[Anna Rose]
+There's bullying.
+
+
+[Ian Miers]
+There's bullying or just trolling, and you know, everyone has the guy they want to shut up.
+[Anna Rose]
+For sure.
+
+
+[Ian Miers]
+Or girl, let's be gender neutral here. And like, but if it's anonymous and you actually don't know who they are, the only thing you can do is shut down the group.
+
+
+And so it sort of never works.
+
+
+[Anna Rose]
+Yeah.
+
+
+[Ian Miers]
+But what if you, as a group of people, wanted to self-organize a thing where like it really is anonymous. Nobody has any notion of who it is. There's no one to speak to, no one to curse, no way to do this.
+
+
+But you can all still democratically, or if you appoint a moderator, decide this person is talking too much. We want to either ban them, temporary ban them, or just rate limit them. So you can only post once an hour, dude.
+
+
+And so Cryptographic Personas started with that idea. And then we started thinking about, well, what if you had different pseudonyms?
+You know how like you have the Anonymous Leopard and various other people when you're editing a Google doc and Google doesn't know who it is, I mean, Google knows who it is, but they're not telling you the name.
+
+
+Well, what if you could create like a temporary persona to put on some comment and you could respond in that thread that way, and then you could throw it away and never use it again.
+Or if it worked out and you realized the group did actually like you and like the opinions say, actually, hey, that was me. You take off the hat, so to speak.
+
+
+And this is a thing that people have done historically. Like the Federalist Papers were done this way with people discussing things pseudonymously. And I'm not absolutely certain anyone ever like later claimed it, though I think we do know who some of the Federalist personas are.
+I have heard, though I have not read this, that like similarly the old cypherpunk mailing list, like how Finney used to play exactly this thing where he'd pseudonymously put up an idea because he wanted it to be evaluated as if it came from a rando and not him, or he wanted to prank people. Again, back to the moderation question.
+And then, he would sometimes reveal that it was him, sometimes not. This is why one of the suspicions about who Satoshi Nakamoto is, is that it was Hal Finney.
+
+
+And so this kind of like, how do you use this as a tool versus an actual useful social thing. zk-Promises was the programming techniques, but this is this notion of what do we do there, how does it work?
+
+
+What are the interesting ways to think about configuring your social groups? And it's still exactly programmable. So we're just sort of suggesting different ideas people could build there.
+
+
+[Nico Mohnblatt]
+Was it a straightforward application or was there a lot of work and massaging to do to get it to fit?
+[Ian Miers]
+It's a very straightforward application. We then did a fair amount of massaging just to make it a bit faster. So we have some pretty straightforward, if you know the weeds of it, folding techniques in the paper to do the, basically you're looping through all of the posts you've made to see if they're yours. In zk-Promises, we just had one Groth16 circuit and Arkworks and this, it's a folding thing.
+
+
+[Nico Mohnblatt]
+Right. So an incremental proof every time.
+[Ian Miers]
+It's an incremental proof. And actually just for your readers who are into the details, one really useful technique there, which is mentioned in the Nova paper, but I think is underappreciated by practitioners is you don't have to do a finalized proof. You can just re-randomize things and that's way cheaper.
+So if you're ever trying to use folding for a real application where it's intermittent computation, it's not, I'm going to do a huge amount of stuff and it's just done. So I don't care of the amortized cost.
+
+
+If you ever ran into a point and you find out that, oh, this is way too slow, which actually happened to some collaborators of mine on a paper called ALPACA, the actual answer is don't do that, do the random... fold and randomize instance.
+Not our technique, mentioned in Nova, like absolutely not ours, but nobody noticed how useful it was
+So we did that, and then we did some other stuff to make it like you can do batching, which requires us to grab old cryptography from privacy paths and all things developed by George Tankersley, Filippo Valsorda, and some other people at Cloudflare, Nick Sullivan, and I'm missing the actual grad student who was on the paper, sorry, grad student, I can't remember.
+
+
+It was an intern, it was his idea and I'm naming everybody else. That's the horrible thing I should not do as a faculty member.
+You know what? That's bad enough. I'm going to go pull this up and do this myself. So it was Alex Davidson, Ian Goldberg, who was the professor, Nick Sullivan, George Tankersley, Filippo Valsorda.
+
+
+[Anna Rose]
+Okay. So wait, who was the grad student?
+
+
+[Ian Miers]
+Alex Davidson.
+
+
+[Anna Rose]
+Okay. Credit given.
+[Ian Miers]
+Yeah.
+
+
+[Nico Mohnblatt]
+Nice.
+
+
+[Anna Rose]
+You sort of started this with this idea of doing like a private Signal group where you would have like a smaller subset of people. What kind of tool is that? I mean, you're building your own chat environment, I'm assuming, or you'd have a chat... I don't know, a chat software product that you could then deploy yourself in these small instances.
+
+
+Now, how do you... can you kind of elaborate on what that would actually look like? And actually, it kind of inspired me. I was like, wow, that would be so interesting if you had like a very small group of anonymous people, where you do know who everyone who's in the group, but do people go haywire when they... like if it's five people, would one of us still go off the rails? I wonder.
+Anyway, that's more of like a psychological experiment, but yeah, talk about the technology of it.
+
+
+[Ian Miers]
+Well, just a second, actually. That's a very good point that this, anonymity is a smaller group than I'm an anonymous stranger on the internet was really the entire thing that motivated personas. It was exactly that interest.
+The technical stuff was actually sort of a like, well, I mean, we're technologists, we will do technology things, but that exact idea is exactly what we want.
+
+
+And if anyone on this listening to this, has the requisite background and bona fides to show that you're not completely a rando, I'm really happy to talk to people and work with them on this. Because I exactly want to see these things exist.
+So how do you do it?
+
+
+So the paper, if I recall correctly, I haven't read this paper in months, we had about three different ways you could prototype it. The cryptography is all the same. It's the exact same stuff from zk-Promises and bits of this, but version one is you take Signal or something else and you modify it slightly so that you can send messages which don't have a sender.
+And it turns out that Signal's cryptography is almost there. Actually, the cryptography is literally there. They have a thing called Sealed Sender, which does not review who sends the thing, but the way the software is configured, it's actually a little hard to literally leave out the name.
+
+
+[Anna Rose]
+And they probably do that to avoid like spam and stuff like this, right?
+
+
+[Ian Miers]
+Yeah, a couple of different reasons like that. But they have an anonymous credential to avoid spam, which is linked to your phone... not linked to your phone number, so to speak, but it's within the limit of you might be able to vibe code it.
+I actually have a vibe coded file somewhere for libsignal that maybe does this, but then you'd use that and you'd integrate it into your own version of Signal and run it, and you then everybody would see all the messages, they'd see the callbacks, and basically they'd sort of run their own, it wouldn't be a blockchain, but since everybody sees the messages, they could get this list of all the ordered things that is what you'd see onchain, metaphorically speaking, and you could run it.
+
+
+So that's version one that doesn't involve a server. So that's the way you put it in a chat app if you brought it from scratch, maybe.
+The other way to do it, which we have prototype code that will go up when we update the paper is you have a proxy server. And the proxy server, say, talks to Signal or Slack.
+Right now we have it doing Slack because Slack has a nice API and you send your anonymous message anonymously to the proxy server with the ZK proof that you're authorized and all the other callback stuff. And then it says, checks this and forwards the message on your behalf to Slack as it's coming from a bot with no name on it because the server doesn't know who it's from.
+And then, if enough people react with a negative emoji, it will ban you
+[Anna Rose]  
+Interesting.
+
+
+[Ian Miers]
+That's another way to do it.
+And so these are lightweight, just software engineering. It managed to be a little annoying, but if anyone's looking at this going, oh, it's intimidating cryptography.
+
+
+No, the intimidating cryptography is factored away at a library that... I mean, grad student code, it's not the bro's library, but it's just a library. The integration bits are actually quite straightforward.
+
+
+[Anna Rose]
+In this case though, you're sitting on existing chat interfaces and you're just sort of hacking some of their features to be able to send these anonymous and then have some sort of callback, so you can actually send information backwards, banning or...
+
+
+[Ian Miers]
+Yeah, but you can use the chat channel itself as the callback. It gets posted in there and it maybe it doesn't render, it doesn't display, but it's text in there that someone knows is an event, which is the same way like the emojis happen.
+When you click on a message in Slack and respond to the emoji or in a message in Signal, what actually happens is a message gets sent right back to the group, but it's a meta message, right? It doesn't render as a message. It's the client sees and it goes, oh, I know that I should alter my local state to have it have a plus emoji.
+And just the exact same thing here where you see that message, oh, I should alter my local state to have... change my save file, change whether I banned or reputation or whatever it is.
+
+
+[Nico Mohnblatt]
+By the way, actually, in this case, local state, what are we maintaining? Because you said earlier, like with zk-Promises, I'll make a post, people can upvote, downvote, and then that affects my state.
+In personas, is the thing that people upvote, downvote my persona or the specific comments made through that persona or actually both.
+
+
+[Ian Miers]
+It's programmable. It can be both. Personas is basically some wrapper ideas on exactly Anna or what you got.
+
+
+I'm glad you mentioned that point of what is anonymity in a small group, because that really is the framing. We have this notion, it's almost an anthropological question of if you have these tools, what can you do with them?
+The tools are literally the ones from zk-Promises with some performance improvements. I hope this comment doesn't come back to bite me when I get reviewers who have read this podcast, listened to this podcast, but that's the honest answer of it.
+
+
+It's like, here's some cool applications and then here's some performance improvements on the exact same techniques. And they're basically unrelated.
+
+
+[Anna Rose]
+But I still feel like this needs to be out in the world somehow to see what people do with it. Or I mean, or can we imagine what people would actually do with it? Because I feel like there's definitely like a dark side to, I mean, any technology release.
+There's the positives like, oh, you could actually create these anonymous groups. You could share information, you could say something that you are scared to say, but should be said, et cetera.
+But like I sort of mentioned before, there's like the bullying phenomenon. There's the kind of shit talking, like being really mean to people.
+
+
+I remember there was this app many years ago, I think it was just called Secret, and I'm not talking about the blockchain. It was something before that. I think it was just called Secret or something.
+
+
+It was like, it went around the VC world in like 2013, '14. I'm possibly slightly off with my dates, but it was in the regular tech world, but it just became a cesspool of abuse. It just became this absolute abusive environment. And that I think is what these like fully private things can offer.
+You now have this feature of, well, we can ban somebody if they're really rude or whatever, but who decides that Who decides it? And then could that be weaponized as well?
+And this is the part I feel like we need to see it out in the wild to see how people actually use it.
+
+
+[Ian Miers]
+The last bit is exactly the question. So again, it's a programmable thing. So you can program any moderation version you want.
+You want to do a democracy where everyone gets to vote, you want to do a managed democracy where five people get a vote. You want to do a benevolent dictator for life and the sort of network state model of, well, if you don't like this forum, go to your next one.
+
+
+All of those have actually been successful in non-technical means of various things. They've also had horrible problems. And it's very important to understand that like this thing enforces the rules. The rules themselves, if they're set up correctly or set up incorrectly, can be a form of use by bullying and abused.
+Anybody who's dealt with real petty politics at work or anything knows that you can do that. I mean, hopefully you didn't experience firsthand, and hopefully you aren't the one doing it, but yeah, rules can be abused.
+
+
+This is a cryptographic system for defining the rules you want. You can define objectionably bad rules, or you can divide rules that are just not good and they get abused and you didn't intend it, but it's a problem.
+
+
+[Anna Rose]
+Yeah, yeah.
+
+
+[Ian Miers]
+And what these are and how they work is actually a really interesting question. And again, because this is programmable, you can at fairly low effort without having to go find a bunch of cryptographers and define a custom protocol, try various things.
+
+
+[Anna Rose]
+Run these experiments sort of in real time.
+[Ian Miers]
+Yeah.
+[Anna Rose]
+Somebody, it would be fun to do that and then maybe write about it to share what it looks like in something like this.
+
+
+[Ian Miers]
+One thing that multiple people I have mentioned this to wanted to do, and I've been thinking about it myself, is of course the modern version of Secret or whatever it was, it's called Blind. Okay. Which is this app in the Valley where people go post, hey, I'm an employee at Meta or Amazon or whatever, here's all the stuff. And it exactly has both some useful things in it and also toxicity.
+
+
+[Anna Rose]
+Just imagine the type of abuse there. Like you just don't like your manager and you say something like horrific about them. Or I could just imagine these like careers could get hurt by these things too, especially if you're like claiming like an illegal act or something.
+
+
+[Ian Miers]
+One of the things there, having talked to some of the people who created Blind, is that one of the things that it's very hard to do to get Blind to take off, because it wasn't, I think, the first app that did this, is like you need to very carefully figure out what voices you want people to have, like which things do you want to populate up to the front page versus don't.
+And the cool thing here is because these techniques are programmable, in Blind's case, I don't know how they did it, in our case, again, it's just state. You can sort of have an amplification feature if you want it, of like, look, like this post you can make, we're not rate limiting or anything, but it's not going to be as highly displayed as other things, because you're just bragging on your manager.
+And if you wanted the forum to be about something else, you could sort of steer it that way.
+Again, these things themselves could be abused. They need to be done with the transparency and a bunch of other problems there. And so that gets into some tricky questions, but the techniques exist.
+[Anna Rose]
+I wonder if like the future of moderation is also just like AIs, because you could have... if the content is actually understood, like so far you'd have to do like keywords or swear words or something, pictures that are inappropriate, blah, blah, blah.
+But if context can be understood by some other agent, that doing the moderation that isn't human... although I do think that could be completely screwed up for people, too, because like things could be misinterpreted, et cetera, et cetera.
+
+
+[Ian Miers]
+It could be, but actually a really interesting point there is that one, the way to think about this is it's contractual anonymity. Like you have zk-Promises, you have this code which contracts both how you can request yourself and how people can apply moderation events to you or anything else.
+The callbacks can do anything you want, but in the context of moderation.
+
+
+So one thing you could do is you can restrict, and this is in the system, you can restrict who can make that callback. By default it is, there's a key. But that key, instead of being held by a person, can be held by an enclave, TEE, that, for example, is running a moderation algorithm.
+
+
+So you'd say, I will only let people... let myself be moderated, downvoted, upvoted, or banned, whatever, by this enclave running this language model with this prompt. And the context has to be this. And that is a thing you could do.
+
+
+You could have agents moderating people. You could also apply the reputation to agents itself. That's a separate discussion. But you can play with all these things. So it's a really interesting laboratory for doing this.
+
+
+[Anna Rose]
+That idea of an agent participating in one of these anonymous environments, is that something that's factored into your research? Or is it like, you've created the systems, you've thought about some of the architectures, but yeah, do you imagine what happens if there's like these non-human things inside there?
+
+
+[Ian Miers]
+Yeah, definitely now. When we started this, agentic AI was more of an ill-defined buzzword than just a thing that very clearly just, oh, it's just a REPL loop with an agent that can make calls to other things. Very clearly that exists. Like, yeah, that's cool.
+So yes. The answer is yes, and it doesn't really seem to change anything. If anything, it might just make this even more impactful because like now you have questions of, well, is this a well-trained agent? Is it well-behaved? Because nobody can really do verifiable trading that doesn't scale.
+You don't necessarily know who these things are, but you might want to know whether they have good conduct or not.
+So we actually start going all the way back to like, if anyone knows any of the Prisoner's Dilemma stuff where they used to have agents competing, and that's how we did some of the equilibria studies. You can think of it that way, of like reputation and iterated games, but with anonymous users.
+
+
+[Nico Mohnblatt]
+So as you said, all this like zk-Promises, Cryptographic Persona stuff sort of lives on the fact that creating a new identity is expensive. So this is sort of the Sybil resistance or Sybil-like attack problem.
+Is the solution purely zk-creds and getting a bunch of different signals in, or do you have more there?
+
+
+[Ian Miers]
+We have more there.
+
+
+[Nico Mohnblatt]
+Nice.
+
+
+[Ian Miers]
+Two things. First of all, signals are expensive. When you have reputation and the ability to do downvotes and banning, those signals get banned.
+
+
+So that's the particular really important part. It's like you as an attacker consumed these resources to make an account. You had some set of tactics and leaks and procedures. The good guys figured that out. They banned your account.
+Now you have to go make a new account and it ups the cost of whatever it is that you're doing, be it spam, be it pig butchering scams, be it disinformation. When they get detected and interdicted by however that is, now they have to go create a whole new Uber rideshare history or a whole new Gmail history or hack and steal it or steal a passport or whatever it is.
+
+
+[Nico Mohnblatt]
+Because these signals are only usable once. I cannot create multiple accounts on which I put ZK signals. These signals are anonymous. How do you know that I'm reusing it?
+
+
+[Ian Miers]
+Yeah. You have to do deduplication there. And that is a whole can of worms, as some various folks found out the hard way.
+So like Aztec deployed a system that unfortunately had a little bug where they leaked that you registered because I have a deduplication for their sale.
+That is a question, but there are techniques to do it. And I think in fact we can create better ones. My group is working on that. But yeah, you have to do deduplication somewhere.
+So that's point one and I guess point two. Point three is we actually have techniques for making sure you can't share accounts and use them too many times across multiple instances and share the resources and that maybe is actually a good transition into what zk-Cookies is.
+
+
+[Anna Rose]
+Which we wanted to talk about. zk-Cookies, did we even mention that on the last one?
+
+
+[Nico Mohnblatt]
+I think we alluded to the problem of having to continuously authenticate. So let's say with systems like World, like you scan your eyeball once, sure. But to make sure you haven't sold your account or something, we need to scan periodically, and we're saying this doesn't scale.
+
+
+And so that's where we left it. Is that the problem tackled by zk-Cookies?
+
+
+[Ian Miers]
+I believe so. I'd have to like... yeah, I think that's about right. There might be a little gap there, but yeah.
+
+
+The question in zk-Cookies is how do you, once someone's given this evidence, built up this stateful credential, how do you make sure it's not... doesn't get stolen or shared...
+[Anna Rose]
+Or sold.
+[Ian Miers]
+Otherwise... sold. And this is a problem that exists in the traditional non-anonymous credential world, like with a Gmail account. And the solution there is the thing called continuous authentication. It goes by multiple names, but that's one of them.
+And basically it's as you use your account across the web, or if it's a single service on a single system, single server, you track how it's used. You track the IP addresses that are logged into, you track the attributes of the browser. So browser fingerprinting, for example, various other things.
+A lot of these end up being kind of sketchy, to give you an indication of if the account suddenly jumps from one place to another, it's like, oh, you shared your account or your account was broken into.
+And you've all probably seen this because if you, for example, travel a fair distance and you try to log in to a bank account, they will sometimes prompt you for additional authentication.
+
+
+Creepily, sometimes they won't, either because the system is bad or because actually they're tracking all your credit card payments so they know you bought the flights and the hotel and they already know you're there, so they don't care.
+
+
+[Anna Rose]
+I think YouTube does that, too, actually. There's like banks maybe being very serious, but there's also like Google accounts, I think, do that a little bit.
+
+
+[Ian Miers]
+Yeah. And gaming accounts, it's a common thing. You have to have these kinds of active things to protect against threats because the reality is that people's accounts get compromised, passwords get leaked, people type phishing attacks.
+
+
+And so you still, as a service provider, have to prevent this.
+
+
+[Anna Rose]
+There's another example of this that was more recent, which is like people with Twitter accounts with a number of followers that were impersonating people, they seemingly were kind of renaming and moving around.
+So they would all of a sudden be a new person, but they were keeping... what was interesting is this, I'm not seeing it so much now, but they were like keeping the number of followers somehow. So it's either being passed along, repurposed, and somehow not banned, not getting caught.
+
+
+I'm not really sure how they did that, but anyway. But yeah, it's sort of a similar thing here where like you build up some sort of credibility and then you sell. But you can't just geotrack because sometimes you are travelling, so you need some way of proving that it is you, I guess.
+
+
+[Ian Miers]
+You can do a number of things. And again, zk-Cookies is this programmable framework. It's the same programmable framework, but we're talking about specific applications.
+
+
+So one of the things we did suggest actually is you do geotracking, but instead of the server tracking you, because that's obviously privacy invasive, you track yourself. So if you're using something like Tor or Apple Private Relay, the entry node sees who you are, so they could sign that as your IP address, and then you store it locally.
+Similarly, if you're paranoid or not good at privacy and you're just willing to trust that the server isn't going to log the IP address, or more importantly, if you're the server side of this and you want to track stuff, but you've got GDPR requirements and you don't want to have IP addresses, you could sign it and give it to the user to store.
+
+
+[Nico Mohnblatt]
+And then we're back to the local state and I emit proofs about my local state that my IP is always in the same region, right?
+
+
+[Ian Miers]
+Right. And nobody has the whole history of your IPs except you. And then there was this question of what function do you prove over it? And what do you do when you're outside of say the geographic radius? And the answer is you ask for more authentication.
+Maybe now you have to do a two of factor. Maybe now you have to go use your YubiKey.
+It's an open question, but this kind of tracking fingerprints and usage and all these other things is the thing you can do locally in a privacy-respecting way. Because the server doesn't have this whole history of what you're doing, you do, and you're just showing a thing about it.
+When you go to the server, you say, I'm not going to tell you anything about my IP address history. I'm just saying it's signed by the Apple Private Relay entries or signed by you, but you didn't log it, and it's within this distance radius. Or if it isn't, I did the extra authentication checks.
+
+
+Similarly, you could show that the browser fingerprints are consistent-ish across things.
+[Nico Mohnblatt]
+We would need some kind of signature from the browser?
+
+
+[Ian Miers]
+Yeah. So I was about to say, for those of you who are thinking adversary and security, you're going, well, how the hell do you trust that? The answer is even in traditional web where this is a very effective technique, it's not perfectly secure.
+
+
+It's security by obscurity. It's like there's obfuscated JavaScript that might work to measure when it's hard for someone to reverse engineer, but it's not a hard bound. It's like sort of funny that it works, but it does in practice.
+
+
+[Anna Rose]
+How does this actually prevent people from selling their identity? Because you talk about this list, but if they have this, can't they just transfer that?
+
+
+[Ian Miers]
+You can transfer it, but if you transfer this... so it prevents theft more effectively than transfer, it prevents sharing very effectively for the same reason.
+Straight up transfer, you'll see some anomalies because the usage pattern shifts from one thing to another. And there's this sort of notion that when you do that, you might want to, for example, then ask for more authentication, like say, redo your passport proof.
+
+
+And of course, if you've sold the account, but not the passport, you've got a problem.
+
+
+[Anna Rose]
+It's downgraded somehow. It's like it's not verified to the same level anymore.
+
+
+[Ian Miers]
+And so one of the things that this becomes really important, I think, is anonymous credentials are no longer this hypothetical.
+Two years ago, three years ago, even when we did zk-creds, there was this notion of, well, maybe they're practical.
+
+
+And then, oh God, the regulatory landscape changed because one, people are really worried about deepfakes and bots on AI, and there's immense pressure there.
+
+
+And then in a lot of the world, there are these serious requirements for age verification on the internet now for access both to actual pornography, but more broadly, anything that's violent or extremist.
+So this spans the whole of Red State to the U.S. on the pornography bit to the EU and people on violence and extremism with all the cultural and political biases of which one they think is more important.
+But as a consequence of this, you need it in the internet. There are actually legal requirements for this in a number of states and countries. And everybody realizes it's a bad thing, from a privacy standpoint. So we are now getting these notions of identity where you do a ZK proof.
+
+
+And this is, for example, Google's Longfellow proposal where they're doing a ZK proof just about your passport. And that's very cool. I think actually you're going to need a more general version of that where you do zk-creds.
+
+
+And if you look in zk-creds and zk-Cookies, there's a nice... in zk-Cookies specifically, there's a nice overview of how these all techniques fit together.
+
+
+[Anna Rose]
+Oh, cool.
+
+
+[Ian Miers]
+The thing that maybe nobody realised when they're reading the proposals from Google and similarly things that Apple is building is that the way they stop theft of credentials, because this is a real problem. Now, if you try to do this for age verification for access to let's specifically do adult content for a second, you run into two problems really fast.
+One, people will share their credentials to let underage folks in or whatever. And two, people will use this for click fraud because there's a whole advertising ecosystem here and you get the same problems.
+So the way this is being done is for both high-end phones, there is a secure hardware element in here. And when you register your passport or your digital driver's license, that gets bound to the secure element in your phone.
+
+
+And then what you actually give in Longfellow, and I believe the systems Apple is building, you give a proof that I have a signed passport, signed ID from the DMV and a signature from the hardware and the ZK proof anonymous of all this.
+From a privacy standpoint, there was nothing wrong here. From a openness of the Internet standpoint, if you deploy this widely, the only two people who can do this are Apple and/or Google/Samsung, whoever owns a large enough portion of their mobile phone market to have a secure hardware and be able to do the integration. And so that's Apple.
+Actually, probably not even really Google because Pixel phones are not that widely used. Sorry, Google folks, I like you, but... and Samsung or whoever. And that, that's the death of the open Internet. You've just gated everything on proprietary platforms.
+And so how do you get around that is you need these kind of ZK stateful software architectures to do those kind of tracking and techniques in a privacy-preserving way, but without being locked into specific hardware.
+
+
+And this is really actually important that we get this right.
+
+
+[Anna Rose]
+It's such a kind of longstanding push and pull of this, like the proprietary offerings... it's almost like the open systems creating an idea, the proprietary ones taking it in, doing it really well, getting it into a lot of hands, and then sort of this open source version or new open source paradigms coming and trying to push and pull.
+Do you feel like... this is sort of a larger question, but do you feel like in the last 20 years, have we gone more proprietary or more open source? Or do you think it's the same, maybe just a different breakdown of what's where?
+
+
+[Ian Miers]
+I think I'll define the question more broadly than open source, because I think that's maybe less relevant. It's where the data has lived.
+We move from Web1 to Web2 to Web... if we think Web3 is a thing. But increasingly the data is siloed on a server, and the thing I'll say is the very good reasons for this, ignoring the unfortunate business or whatever stuff is that like that's how you got trusted integrity.
+There is honestly no way apps and techniques like what I've developed for Google to do this kind of "don't share your credential" without either storing the data on their servers, which obviously has tracking things that they don't want, like really, they actually don't want in this particular case, which is surprising, or relying on trusted hardware.
+
+
+And so we really need new techniques to make sure this stuff, we have integrity in an open system where anyone can participate.
+And blockchain is a one answer to that, but the problem with blockchain is everything is public. It's Twitter for your bank account, it's all exposed, which you clearly don't want for payments or for your identity on the internet to access age-restricted content.
+So we need new techniques to get an open system where you can do all of this stuff. And hopefully we're moving in that direction.
+
+
+[Anna Rose]
+Yeah. Do you feel like we are... like in that push and pull scenario, where are we at? Are we in a place where there's more power given to certain organizations? Or do you feel like there's this upswing of this really cool new technology, and it's getting adoption and that could take over?
+
+
+[Ian Miers]
+I think definitely the power lies with those organizations, apart because the tech didn't really exist to not have it. We now have options and it remains to be seen whether everybody wants to use those options or not.
+For identity specifically, it's interesting because there's no money in identity. Having talked to these folks, nobody actually really wants to build these things as a profit centre. They just kind of have to do like enable their other businesses, like, say, YouTube.
+So there is a real possibility that if you got the right techniques and got it, it would be quasi-open because like there's actually no incentive to close it.
+
+
+[Anna Rose]
+Because they don't need to own it. Like there's no benefit to just owning that system.
+
+
+[Ian Miers]
+Yeah. And actually the real detriments, because if you own that system, and we start using it for not just adult content, but like speech because we want bot prevention, now you have the problem of someone's going to come to you and say, hey, we want you to not allow this kind of speech off your platform. And you might not want that.
+On the other hand, maybe you do. Maybe you like control and you can monetize it.
+
+
+[Anna Rose]
+Yeah, yeah. Being the moderator is a double-edged sword. On some level, it feels good and on some level, there's a lot of pressure to get it right, and it's kind of impossible.
+
+
+[Nico Mohnblatt]
+So if we move to having local state for kind of everything, do you foresee some kind of standard of what local state looks like? Or is there like one canonical piece of software that everyone's going to be using to maintain their state and prove things?
+
+
+[Ian Miers]
+I don't know. There have been some interesting ideas where you sort of view the browser as a sandbox for this. And there sort of already is local state in the browser, it's just not authenticated.
+
+
+And so I could see that happening. There's some like almost blog post internal notes from one of the Google teams that's up online, where they sort of start talking about some of the work they did in this sort of broader concept, but their work doesn't actually enable this concept. They're just like, hey, this is an interesting idea. So I could see that happening.
+Definitely for Web3, it's sort of by definition happens because you have standards for smart contracts and interoperability and whatever system you're on. Of course, in this case, we need to move to zk-Web3.
+
+
+So that's a question of which one of the various competing projects using ZEXE wins, but they all have standards. So it'll be one of them. It'll be multiple. I don't know. But definitely I think it will happen to some degree.
+
+
+[Anna Rose]
+Can we return to the map? You sort of mentioned this like all of the different tools and how they work together, because, I mean, I love thinking in that way. I'd love to see... it actually like a visual thing that exists?
+
+
+[Ian Miers]
+No. I should actually literally visualize it. It's two paragraphs, but that's actually a very good idea.
+I should... please message me in a week, remind me of that.
+
+
+[Anna Rose]
+Maybe we can get it before the show airs. That would be cool.
+
+
+[Ian Miers]
+Yeah, yeah, yeah. That would be really good.
+Okay. So everybody has been making better and faster ZK proofs. And when we did, as far as I know, literally the first proofs about passports in zk-creds, the point wasn't, hey, we can do a fast proof about a passport. The idea was we have this signals that come in, ZK-supporting documentation, we call it paper, and then you can compose those into a larger identity.
+And what everyone did after that was just went, okay, we want faster passport proofs. And so Google built this amazing fast proof called Longfellow. And actually when I say fast, they build it into the service, because the main thing it did was it had low memory requirements, which means it can run not just on a new Android phone, but on a five-year-old Android phone, because that's Google and they really have to deploy it.
+
+
+[Anna Rose]
+This is the one that's based on Ligero, right? This is like all the...
+
+
+[Ian Miers]
+Yeah. The combination of Ligero and...
+[Nico Mohnblatt]
+GKR.
+[Ian Miers]
+GKR and whatever, the Abhi Shelat paper that was Doubly-efficient, whatever. And I forget the name of it, Hyrax.
+[Nico Mohnblatt]
+Oh, Hyrax.
+
+
+[Anna Rose]
+Yeah. Yeah. And we actually, just a quick note, we had them on the show, but we were speaking specifically about the Google ID at the time.
+
+
+Longfellow has come out since. What is Longfellow again? Is it just like...
+
+
+[Ian Miers]
+Longfellow is literally the proof system for that ID.
+
+
+[Anna Rose]
+Okay. They just named it. I think at the time they didn't have like a cool name.
+
+
+[Nico Mohnblatt]
+Yeah, correct.
+[Anna Rose]
+Okay. Got it.
+
+
+[Ian Miers]
+So these are the same exact thing, right? So this is this amazing fast proof. The trick is a great proof and I wish we had had it to use it in zk-creds.
+
+
+And in fact, you literally can use it as the proof in zk-creds. Because like you prove you have a passport and you then put that attributes into the credential.
+The thing that everybody misses is that you need more than just what's in a passport. You need other pieces of identity information, like say your address, or like for any of these things where we have pseudonyms or rate limits, you need a secret key that is known only to you.
+And the problem is that if you have a passport, all the data in the passport is known to the issuer. So you can't go use that data to have pseudonyms that are unlinkable to you on the internet or rate limits that are unlinkable... because the authority that issued passport, the U.S. state department, the Russian government, the Chinese, whoever it is, has the same data that could figure who you are.
+
+
+And so the entire thing in zk-creds is how do you compose all these various things together and take the proofs about your passport or your driver's license or whatever, and put them together into a single identity document, single credential, a self-sovereign thing, and add IDs into it. So these are all sort of techniques that work together to build up this notion of stateful identity.
+So zk-creds is the initial static state where you build it up the thing when you issue it and it doesn't mutate. And then when we went to zk-Promises, we could have it mutate with reputation based on what you did.
+And when you look at zk-Cookies, we can have it mutate based on how you're using the credential so that we can track, you can track rather, whether it's moved from one place to another on how, and give indications of how likely this [?] has been stolen or shared, and therefore do you need to re-authenticate with a YubiKey or something with a password?
+Do you need to redo some of your identity documents? Because maybe it's gotten used enough that now we need you to use your passport again.
+So maybe you made a thousand posts. Nobody else knows this, but you do. You made a thousand posts. I'm like, oh, okay. You should probably check you still have that passport and you didn't just buy it off someone when you were on vacation and don't have it.
+
+
+So that's the way these things all fit together. And zkTLS fits into that too. But to be fair to the zkTLS guys, I think they actually knew that when they were working on it, they were like, yeah, this is a way to get identity off of legacy things onto a chain or some other system.
+
+
+[Anna Rose]
+For sure. Cool. So we've just covered like the work that's out there published, but last time we had you on, you hinted at future work. I'm assuming you're thinking about lots of things still today.
+
+
+So what are you working on? What kind... is it still in that sort of map of all of these authentications and ZK-powered identity stuff? Or are you exploring other topics?
+
+
+[Ian Miers]
+Yeah. So there is definitely more work on the ZK bits and these sort of stateful architectures for state keeping and identity and reputation. One of them, Nico, as you mentioned, is this question of how do you safely de-duplicate all of this ZK-supporting documentation proofs about who you are? Hopefully we'll have some results there.
+
+
+One of them, which hopefully we should actually put up the paper in about a month, is taking zk-Cookies and zk-Promises and quite doing what happens if the state in my local save file is secret even to me. Like if the reputation score is hidden, nobody can see it.
+So this involves techniques and multiparty computation. This is the thing we are calling Private Compute Tokens. And hopefully that should be up on ePrint soon.
+[Anna Rose]
+Cool.
+[Nico Mohnblatt]
+What does that unlock?
+[Ian Miers]
+So what if you wanted to have, are you a spammer scores.
+So the problem with spam systems is that you don't want to reveal to the spammer that they got detected because then they adapt their techniques, but you do want to be able to have this.
+So you can have anonymous version of that. You can have anonymous version of, are you a pig butchering scammer, where you get to see that your reputation is good or bad, but you don't get the little minutiae of how the algorithm is scoring you.
+This gets a bit tricky technically, and also back to this, who writes the rules question.
+You can write things here that are interesting and totally above board. You can also have things that maybe we shouldn't deploy. So it's a generalized technique for sort of anonymous two-party computation.
+So that's one thing. The other one is these duplications. More broadly, we'll start to look at the intersection of these things and AI.
+
+
+How do you start detecting bots? How do you start doing... I've done some work on watermarking. Actually like the first main paper on it, watermark for large language models at ICML.
+
+
+And we're looking at now, how do some of these techniques interact together? So that's another direction of how do you deal with bots and AI on the internet.
+And then Paul Grubbs and I have some work on looking at his follow-up to some work I did on SNARKBlock and anonymous banning with folding. That was a paper called ALPACA, and how those kinds of things can be applied to make better versions of zk-Promises.
+So that's a paper that I have no idea when it's up because we haven't finished it yet. So I think that's... oh, and then like there's again, still this interest of how do you do money laundering prevention and state keeping and such for like private stablecoins and such in a way that isn't just give everyone a view key. So that's a long-term ongoing piece of research.
+And for those of you who haven't read it, there is this paper Peter Van Valkenburgh and I wrote, Peter is at Coin Center, has some long title that starts with Tear Down This Walled, something, something. You can guess that that was Peter's title. He's far better at these kind of things.
+But it looks at this whole notion of what is identity, composed identity and reputation scoring look like for money laundering prevention with the aim of don't standardize and build a system where you just give view keys to Elliptic or Chainalysis or TRM. And this is actually one of these things where living in D.C. and working at the University of Maryland, which is inside the D.C. Beltway, I actually....
+
+
+[Anna Rose]
+That's where you are.
+
+
+[Ian Miers]
+Yes.
+
+
+[Anna Rose]
+I just realised that. Okay. Crazy. You're right in the center of things.
+
+
+[Ian Miers]
+I literally work approximately halfway between Treasury and the National Security Agency, if you plot the line on distance. And that means you have the people who have to deal with the North Koreans and hacking operations, and you have the people who have regulations about this.
+
+
+And so, how do these techniques intersect with those sort of policies is an active thing that Peter and Coin Center and I are working on. Me, I'm on the technical sides of it.
+Oh, and then the SEC is over that way, and there was that whole SEC roundtable while Hester was talking about Matt and I's work. Hester Pierce is the SEC commissioner.
+
+
+[Anna Rose]
+Yeah. Ian, thank you so much for coming back on the show.
+[Ian Miers]
+Thank you for having me again. Look forward to doing it another time.
+
+
+[Nico Mohnblatt]
+Yeah. Always great to talk about all this, the stack that's being built. And I'm curious to see what listeners of this podcast will come up with or if we're going to see experiments with these things at the next ZK Hack, for example.
+
+
+[Anna Rose]
+Yeah. I definitely want to try that, like weird, like a small group anonymity. I really wonder what would happen, especially if you trust everybody.
+
+
+[Ian Miers]
+Yeah. If anyone wants to play with this, you really can't. Frankly, you can rewrite pretty good toy version of it in Circom or Noir or zkVM if you want to do... these are not hard things once you have the concepts and you have the recipe to build it. That's really what's in the paper. So run with it.
+And if you want to come talk to me and you have some info that's not I'm a rando on the internet, I really want to see this done.
+As long as I get some credit for the ideas, like it's great.
+
+
+[Anna Rose]
+If only the zk-cred, if only people could anonymously already prove something about themselves, maybe they can.
+
+
+[Ian Miers]
+How do you prove you're not just a rando on the internet would actually be a really interesting question because the text is there. But what's the proof? What is it you want to input?
+
+
+[Anna Rose]
+True. All right. So I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Hector, and to our listeners, thanks for listening.
