@@ -1,0 +1,497 @@
+[Anna Rose] (0:05 - 2:28)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+This week, we have our second episode in our 6-part miniseries on lean Ethereum. For these special episodes, we have Nico as our host.
+
+We also are releasing these in video form over on our YouTube channel. Links are in the show notes in case you want to check it out. You can also see the video on our website. And if you choose to watch the videos, be sure to subscribe to the YouTube channel while you're at it.
+
+For this week's episode, Nico chats with Benedikt Wagner and Dmitry Khovratovich, Cryptographer Researchers at the Ethereum Foundation.
+
+This is our second instalment of the lean Ethereum miniseries, and here they dive deep into post-quantum signatures, specifically leanSig, a hash-based multi-signature scheme designed to replace BLS in a quantum-secure Ethereum consensus.
+
+They unpack the security tradeoffs, encoding challenges, and the ongoing crypto analysis of Poseidon, the hash function at the heart of the design.
+
+Hope you will watch and listen along to this and other episodes in our miniseries. And yeah, let us know what you think.
+
+Please note, this episode was recorded before the recent attacks on Poseidon by Merz and Garcia, and does not take it into account when discussing the latest state of cryptanalysis on Poseidon.
+
+Before we kick off, three quick points. First, zkSummit is coming back with its 14th edition. Applications to attend and/or speak are now open. It will be on May 7th in Rome, so I hope to see you there.
+
+Second, zkMesh+, our paid subscription tier, is rolling. We have released a few bonus clips over there, as well as some of our exclusive research reports. If you want to get access, please join the paid tier.
+
+Third, if you're looking for other ways to support the show, we have donation accounts visible in the footer of our website. Support definitely goes a long way. So if you do decide to donate, thank you in advance.
+
+That's all for now. Links are in the show notes, and here is Nico's interview with Benedikt and Dmitry.
+
+
+
+[Nico Mohnblatt] (2:31 - 2:46)
+Today I'm here with Benedikt Wagner and Dmitry Khovratovich, Cryptography Researchers at the Ethereum Foundation. 
+
+This is Episode 2 of our miniseries on the lean Ethereum upgrade, and this one is dedicated to post-quantum signatures.
+
+Dmitry, you're a return guest. Welcome back to the show.
+
+[Dmitry Khovratovich] (2:46 - 2:48)
+Hi, Nico. My pleasure to be here.
+
+[Nico Mohnblatt] (2:49 - 2:52)
+Great to have you.
+
+And Benedikt, I believe this is your first time on the show?
+
+[Benedikt Wagner] (2:52 - 2:53)
+Yes.
+
+[Nico Mohnblatt] (2:53 - 2:53)
+Welcome as well.
+
+[Benedikt Wagner] (2:53 - 2:54)
+Thanks for inviting me.
+
+[Nico Mohnblatt] (2:55 - 3:14)
+Always a pleasure. You know, this is like Anna gave me the keys to the house. I get to have a little house party and bring friends in.
+
+So yeah, actually, very briefly, because we have these shorter episodes, I wanted to hear a bit about you guys and the kind of research you do.
+
+Benedikt, what was your journey into the Ethereum research team?
+
+[Benedikt Wagner] (3:15 - 3:52)
+Yeah. So I did a PhD in cryptography. I finished in 2024. And before that, like one year before I finished my PhD, I did a research internship at the Ethereum Foundation, where I worked on data availability sampling.
+
+And so I knew the team, or at least parts of the team. I knew what it was like, and it was very interesting, because it motivates a lot of interesting cryptography problems.
+
+And so I thought after finishing the PhD, this would be a good place for me. And so I ended up in the cryptography research team.
+
+[Nico Mohnblatt] (3:52 - 3:58)
+Nice. And Dmitry, I think you were there a bit before Benedikt. Were you already there when you came on the show the first time?
+
+[Dmitry Khovratovich] (3:58 - 5:06)
+Yeah. I think so. I joined the foundation in 2019.
+
+Well, I did my PhD 15 years ago in Luxembourg. And since then, I've done a lot of different things, mainly symmetric crypto.
+
+But then at some point, I was intrigued by these ZK proofs, and in particular STARKs. There were some insecure hash functions in the first proposals. And then we sort of suggested more secure proposals.
+
+And when I gave a talk about this proposal in Tel Aviv, by Eli Ben-Sassoon invitation, I met Justin Drake at the conference, and he invited me to the foundation saying that there will be cryptography research and you will be the cryptographer at the team.
+
+At the same time, he met Mary Maller and told her exactly the same, so she'll be the cryptographer. So we started together, and then we felt kind of alone and we invited other guys.
+
+And yeah, at some point, we started working with Benedikt. And so far, this has been a really good collaboration.
+
+[Nico Mohnblatt] (5:07 - 5:23)
+Yeah. It's been a very busy collaboration, actually. Preparing for the episode, I looked up the papers that you guys wrote together specifically about this topic, and over the past year, there's already five of them.
+
+And this is just one topic because I know you are doing work on other stuff on the side. So very, very busy collaboration, right?
+
+[Benedikt Wagner] (5:23 - 5:27)
+Yeah. But it's also a very nice collaboration. I really like it.
+
+[Nico Mohnblatt] (5:27 - 5:43)
+So let's get into the main topic of today, the post-quantum signatures and multi-signatures for lean Ethereum.
+
+I guess my first question is, we're used to our BLS signatures. What kind of signatures are we using here? How do we name them? What do they look like? How do they work?
+
+[Benedikt Wagner] (5:43 - 7:19)
+Okay. So maybe let's start with what BLS actually gives us right now and what we want to achieve.
+
+So BLS gives you not only a signature scheme where you can sign messages, but also a mechanism to aggregate those signatures.
+
+So if you think about elliptic curves, you can just add the points together and that would actually be an aggregated BLS signature that is equally short or equally large as a single BLS signature, but it represents a lot of them.
+
+And this is crucial for Ethereum consensus where validators vote for blocks by signing them, and then you aggregate those votes. And so you have a short certificate that says, okay, these parties have voted for the block.
+
+Now we want the same thing, but secure against quantum computers, because BLS is based on elliptic curves.
+
+And for instance, if you break the discrete logarithm problem, which a quantum computer can break, then you can forge BLS signatures. So they will be completely insecure.
+
+And now, yeah, we essentially want to move away from that to a scheme that is secure against quantum computers.
+
+And in short, what we propose here with leanSig as sort of a replacement for BLS is a hash-based scheme that is based on very classical cryptography.
+
+And the main design has been explored for decades, but we sort of tweaked it to match the needs, the very specific needs that we have in Ethereum.
+
+[Nico Mohnblatt] (7:19 - 7:27)
+Right. So this is actually an interesting point, right? The core cryptography has been around forever. It's not like...
+
+Was it even invented before elliptic curves?
+
+[Benedikt Wagner] (7:27 - 8:08)
+I think, yeah, in the early days of modern cryptography. I always learned it in like cryptography courses as more like a feasibility result.
+
+So there's a basic question in cryptography, which is, if I just give you a one-way function, which is a very basic primitive, what can you build from it?
+
+And these techniques, they were mainly developed to show that one-way functions, while they cannot give you public key encryption, they can give you digital signatures. And so it's a very... yeah, it uses a very weak primitive, in our case, just a hash function, and it gives you a very powerful primitive, like a digital signature scheme.
+
+[Nico Mohnblatt] (8:09 - 8:14)
+So what's a good mental model for how the scheme you're going to use works?
+
+[Benedikt Wagner] (8:15 - 9:52)
+I think a good mental model is to start from a simpler primitive, which is a one-time signature scheme.
+
+So you can think of it as a signature scheme, but once you have used your secret key a single time, so you have signed one message, you have to throw it away and generate a new key, because if you use it twice, it will be insecure.
+
+So if you sign two messages, it may be insecure, but it's one-time secure. So if you only use it once, then no other party can forge a signature.
+
+So this is the starting block, and this can be built from hash functions using what is called hash chains. And once you have that, this simple building block, you can put a lot of one-time public keys into a Merkle tree and commit to them.
+
+So you have a short Merkle root that's just one hash that commits to this very long sequence of one-time public keys.
+
+And then when I want to sign my, say, fifth message, then I take the fifth leaf of my Merkle tree and I sign using that one-time key pair. And then I also add a Merkle path that convinces the verifier that this public key that I include there is really the one that was committed to in the long-term public key.
+
+So I don't get a full signature scheme from that. What I get is, say, with key lifetime L, an L-time signature scheme, where I can use every leaf just once.
+
+But as it turns out, this is already sufficient for Ethereum consensus, because there we sign with respect to slots and we sign only once per slot. And so this is the perfect fit, and it's a very simple scheme.
+
+[Nico Mohnblatt] (9:53 - 9:56)
+Right. So you go from a one-time signature to a many-time signature.
+
+[Benedikt Wagner] (9:56 - 9:57)
+Yes.
+
+[Nico Mohnblatt] (9:57 - 10:03)
+And so do we have to decide ahead of time how many signatures the validators can do forever?
+
+[Benedikt Wagner] (10:04 - 10:13)
+Yeah. So we decide on a maximum, essentially. So the current thinking is like 2 to the 32.
+
+So that's a huge amount. And this will...
+
+[Nico Mohnblatt] (10:13 - 10:18)
+Do you have roughly an estimate in like how many years of Ethereum this is?
+
+[Benedikt Wagner] (10:19 - 10:52)
+I remember that I calculated it for 2 to the 26 or something, and it was already like 10 years. So if you go to 2 to the 32, this would be hundreds of years.
+
+And because of the power of Merkle trees, the Merkle path is still only 32 hashes, that contributes to the signature size. So it's actually fine. And you can think of it as unlimited lifetime, because 2 to the 32 is just so large. 
+
+[Nico Mohnblatt] (10:53 - 11:00)
+Can we extend it? Like, if we do finish the 2 to the 32, is it the end of Ethereum?
+
+[Benedikt Wagner] (11:00 - 11:14)
+Well, I would just generate a new public key, you know. You can either sign it using the last leave, sign a new public key, or you deregister as a validator and register again.
+
+[Nico Mohnblatt] (11:15 - 11:27)
+Okay. And so we have this signature scheme. I'm now curious, were there any tradeoffs you guys had to explore? Are there any downsides or any other options that maybe were considered?
+
+[Dmitry Khovratovich] (11:27 - 12:28)
+Well, the main tradeoff we actually explored was, say, size performance tradeoff.
+
+So in this hash chain-based signature that we were looking at, there is the tradeoff between the number of hashes one has to compute, like either prover or verifier, and the size of the signature. So one can imagine then for the same level of security, this construction must have either longer chains or fewer chains.
+
+So you can imagine it as a rectangle, which is either wide or tall, so that a tall rectangle means smaller signature and more hashes to compute, like more path to walk on a chain, on all the chains in total.
+
+Whereas a wide rectangle is something like a bigger signature, but in total you would have to walk a smaller distance.
+
+[Nico Mohnblatt] (12:28 - 12:31)
+Okay. So many short chains or fewer long chains?
+
+[Dmitry Khovratovich] (12:31 - 12:32)
+Exactly.
+
+[Nico Mohnblatt] (12:32 - 12:36)
+And the length of the chain is the computation we need to do, and the number of chains is the size of the proof?
+
+[Dmitry Khovratovich] (12:37 - 13:30)
+The number of chains is the size of the proof, roughly, and the length of the chain is the combined work of a prover and verifier.
+
+So on each chain, the prover has to do the beginning up to some point, and the verifier has to continue from there. 
+
+And if you optimise the signature scheme for the verifier, because, for example, we want the verifier to be encoded as a circuit for a SNARK, then we want the verifier to do smaller work, because the circuit will be smaller, and then prover would have to do more work.
+
+If you optimize on the prover side, because you sign a lot, for example, then it would be the other way around. But the sum of works for prover and verifier for a particular set of parameters stays the same.
+
+[Nico Mohnblatt] (13:31 - 13:55)
+Okay. Actually you've touched upon the next thing I want to talk about.
+
+You said, oh, if you want to do a SNARK of the verifier, that's already a little hint. And actually, Justin, in Episode 1, already told us to get multi-signatures for this, we're going to use SNARKs, right?
+
+So can you tell us a bit more about how the mechanism works and why we resorted to doing a SNARK of a signature?
+
+[Benedikt Wagner] (13:55 - 15:21)
+Yeah. So I guess the point is that we want to have aggregation.
+
+So what we explained so far was basically a signature scheme. But as you mentioned now, the term for the thing that we want is multi-signature scheme.
+
+So what is that?
+
+It's a scheme like BLS, where you can sign, but then you can also aggregate these signatures to have a short certificate or like aggregate signature that represents a long list of signatures.
+
+And in the classical world where we don't care about quantum computers, BLS gives you a very nice mechanism of doing that, and there are other structured schemes that have like the algebraic structure to give you that.
+
+In the post-quantum world, there's no scheme that has such nice features as BLS. This is very sad, but we have to deal with it. And there are certain approaches to solve this.
+
+So for instance, you could try to use more structured cryptography, like lattice-based cryptography or something. But even in the lattice-based setting, I'm not aware of a scheme that has this nice non-interactive aggregation feature like BLS.
+
+And maybe we can talk about that later, but we decided, okay, let's try to use hash-based schemes because they are minimal in terms of assumptions and so on.
+
+And if you want to... hash functions just don't have algebraic structure. That's kind of one of the points.
+
+[Nico Mohnblatt] (15:21 - 15:23)
+One of the goal of the function, right?
+
+[Benedikt Wagner] (15:23 - 15:52)
+Yeah. So if you have a hash-based scheme, it doesn't have the algebraic structure that you need to aggregate it, let's say natively.
+
+And one way you can always aggregate any signature scheme is you use a generic SNARK that proves knowledge of a long list of signatures. So this long list of signatures is your witness. And then the resulting succinct proof will be your aggregate signature.
+
+So if I see that proof, I am convinced that the party who produced the proof knew a long list of signatures.
+
+[Nico Mohnblatt] (15:52 - 15:53)
+Valid signatures, right?
+
+[Benedikt Wagner] (15:53 - 16:41)
+Right.
+
+So why do we now need to express the verifier as a circuit?
+
+Well, because this SNARK, it proves a certain NP relation, which is expressed as a circuit. And what is this relation in our concrete setting?
+
+It's: I know a long list of signatures, which all verify. I know a long list of valid signatures. So I need to express the verification algorithm of signature scheme in my NP relation, in my circuit.
+
+And the way I express it, or the way this verification algorithm is designed has a huge impact on the proving performance. So in terms of multi signatures, the aggregation performance.
+
+And this is what Dmitry was saying before.
+
+[Nico Mohnblatt] (16:41 - 16:54)
+Right. So actually circling back, now that we've had the parentheses on like why we want the verification to be fast-ish, how did you tune all these tradeoffs for what is now being called leanSig?
+
+[Dmitry Khovratovich] (16:55 - 18:05)
+Well, that was, and this is still an ongoing process. 
+
+
+The thing is, well, we have this generic idea that we have a size performance tradeoff, well, I'm calling this the cost of computing the signature on the verifier side, just performance.
+
+And we know that there is this tradeoff, and we have come up with a set of parameters for kind of the standard signature scheme, which is known as Winternitz signature, or WOTS.
+
+So for WOTS, we have come up with a set of parameters that we consider fine in terms of the security level we achieve, well, assuming certain security of the underlying hash function.
+
+But also later, when we investigated this question further, we figured out that it might be possible to improve the entire tradeoff by having both smaller and faster to verify signature.
+
+And this is the paper we eventually published at Crypto last year.
+
+[Nico Mohnblatt] (18:05 - 18:06)
+What's the title?
+
+[Dmitry Khovratovich] (18:06 - 19:20)
+The title is "At the Top of the Hypercube."
+
+Well, the name comes from viewing this set of chains as a Hypercube, and basically, we said that it's apparently better to use longer chains and use only the top of the hypercube to sign.
+
+And the problem with that idea is that it requires more effort on the verifier side to process the message and to sort of map it into these points on the chain, on each chain, where verifier starts from. And this is called encoding.
+
+And this encoding turns out to be a really sophisticated thing. So when you do it on a PC, it doesn't really matter. But whenever you try to encode it for a SNARK, you encounter certain problems. And this complexity, we haven't really overcome yet.
+
+So theoretically, it's a nice scheme, but whether we use it in its entirety for leanSig, this is still under investigation.
+
+[Nico Mohnblatt] (19:20 - 19:30)
+Okay. So specifically, you mean this At the Top of the Hypercube optimization is uncertain to make its way into lean Ethereum? Did I understand that correctly?
+
+[Benedikt Wagner] (19:30 - 20:39)
+Somewhat, yeah.
+
+But we have made progress towards this. So we just put out, in January, a new paper.
+
+It's called Aborting Random Oracles. It's a really weird name. It's about a new cryptographic model and toolkit that allows you to make an easier analysis of certain encodings in some way.
+
+When we had this whole Top of the Hypercube thing, we came up with certain encodings. And then we learned, okay, they are not that great for the verifier in a circuit, because they, for instance, use big integer arithmetic.
+
+And so there were some ideas. For instance, Dmitry had a very nice algorithm for doing it without big integer arithmetic. But it would abort some non-negligible amount of times. So it was not at all clear how to do the security analysis.
+
+So it's an elegant algorithm, and intuitively, it was clear to us that this should be secure, but of course, we aim for a very conservative workflow here. We want to have...
+
+[Nico Mohnblatt] (20:39 - 20:41)
+Yes, intuition is not enough?
+
+[Benedikt Wagner] (20:42 - 20:58)
+Right. And so we came up with a new formal model that we related to existing formal models. So it's equally conservative, let's say.
+
+And in that model, we can now prove the security of this new encoding.
+
+[Nico Mohnblatt] (20:59 - 21:08)
+Okay. So just to make sure I also understood correctly, this encoding we're talking about is how do we map messages onto operations on these hash chains? Is that correct?
+
+[Benedikt Wagner] (21:08 - 21:45)
+Right. You take a message and some random salt, and you map it to positions on each hash chain.
+
+And you can view the vector of positions of these hash chains as an element in a certain hypercube. And this is why this thing was called Top of the Hypercube. And this way of looking at it is sometimes useful.
+
+And yeah, this encoding algorithm needs to be executed by the verifier in the very first step. And so it needs to be proven inside a circuit, like in our generic SNARK, and so we need to optimise that.
+
+[Nico Mohnblatt] (21:46 - 22:12)
+So I was curious, in all these papers, I'm sure there's a lot happening. I remember reading the first one, Hash-Based Multi-Signatures for Ethereum. And it mentioned something about having to redo parts of the security analysis, or having to do something tighter.
+
+What is happening there? And is this something for Ethereum, or is this just a nice cryptographic thing to study?
+[Benedikt Wagner] (22:13 - 22:44)
+I think it's both. I mean, okay, so as Dmitry said, our goal is to minimize both the verification hashing, or optimise the performance of the verifier, and to minimize signature size, because we will transmit these signatures, they need to be sent over the network. So this has a direct impact on bandwidth.
+
+And just to give a feeling, these signatures are something like 2-4 kilobytes, whereas a BLS signature is just 48 bytes, I guess.
+
+[Nico Mohnblatt] (22:44 - 22:46)
+I think 96, Justin was saying.
+
+[Benedikt Wagner] (22:46 - 24:29)
+Ah, 96, because you do it on the G2.
+
+Yeah, okay. Depends on how you do BLS, but I guess we do it with the 96 version.
+
+Yeah. Right, so they are much larger, and so we want to squeeze signature size and verification hashing. And one way to make signatures smaller is to... these signatures are just a long list of hashes in the end. So just make one single hash smaller. So use a hash function that has a smaller output.
+
+That's one way of making it smaller.
+
+But the question is, is it still secure?
+
+So if you use a small output, for instance, it's easier to find collisions. So how does that impact security of the whole scheme?
+
+And so what we had to do is to find a very tight analysis of the scheme.
+
+What does tight mean?
+
+It means that the security of the hash function and the security of the scheme are about the same thing in terms of concrete numbers.
+
+Yeah. So there were security proofs of that, but they were done in models that we didn't like that much. I mean, in some sense, like we thought that we should do it in more conservative models.
+
+And so in these more conservative models, there were just a few proofs and they were really not tight, so they would have blown up the signature size a lot.
+
+And so that's why we had to redo a lot of this work and find the tweaks here and there to make it as tight as we can, but this is also still ongoing work. There may be even tighter analysis in the future.
+
+[Nico Mohnblatt] (24:29 - 25:14)
+Oh, interesting. Okay.
+
+I will fill in a few details of these models you're talking about, because this actually recoups something we've already discussed on the show, which is you're doing signatures that involve hashes. We, as cryptographers, like to model this as a random oracle.
+
+We say, okay, a hash function is a random oracle. Life is good.
+
+Now we're doing multi-signatures. So we're saying, all right, I'm also going to have a circuit that does the verifier. So I actually now need a circuit that does random oracle calls.
+
+And that's something we can't do. And that's something we've already seen with recursive proofs, actually, like folding schemes. We've discussed this quite a lot on the show with Binyi last time he was on, and we'll have a link in the show notes.
+
+So how do you get around that with this multi-signature scheme?
+
+[Benedikt Wagner] (25:14 - 27:41)
+Yeah. I think you summarize it pretty well why we don't like the random oracle model so much in this context.
+
+So just to be clear, I think the random oracle model is a great thing. I think you just have to be careful.
+
+There are even results that show you cannot build a proof system for relativized languages, which are just, as you said, circuits that call random oracles.
+
+There are certain impossibility results, which does not mean that it's generally insecure. It's just that we have to be careful about it.
+
+And so we thought, let's be conservative. Let's do a proof in the standard model.
+
+So the standard model is just, don't assume your hash function is a random oracle. Assume your hash function is just an algorithm where everyone knows the algorithm, everyone knows the circuit description. So this is sort of, that's why it's called the standard model. This is what actually happens in real life.
+
+Everyone can look up how Poseidon works.
+
+And so you now do the security analysis, but if you are in that model, you have to make assumptions. You can only prove your scheme is secure if you make assumptions. Otherwise, you would already prove P not equal NP.
+
+So we make certain assumptions about the hash function, for instance, target collision resistance, preimage resistance.
+
+We didn't want to use collision resistance, because that would impose very large parameters.
+
+We did define a bunch of security properties for the hash function, and then we showed if these properties hold, then the scheme is secure.
+
+And now it all boils down to, does the hash function that we use satisfy these properties? And now to set parameters, we somehow have to use, again, the random oracle model, because otherwise, how would you figure out how long the hash output needs to be so that it satisfies this?
+
+So in some sense, if you plug everything together, you get back a random oracle analysis, but it's in some sense more conservative and more structured because you reduce to standard model properties, which can already be the target for cryptanalysis. And then you just do this heuristic thing to argue that this is a reasonable way to set parameters.
+
+So I think this is more conservative and more structured and easier to verify as a proof paradigm than just proving everything from scratch in the random oracle model.
+
+[Nico Mohnblatt] (27:41 - 28:04)
+This is actually the perfect segue into the last thing I wanted to talk about with you guys, which is the hash function that's being used. You mentioned Poseidon. You mentioned cryptanalysis.
+
+We have Mr. Cryptanalysis and Mr. Poseidon here with us, so I would kick myself for not asking. What's the role that Poseidon plays here? And what's the status of cryptanalysis on Poseidon?
+
+[Dmitry Khovratovich] (28:05 - 31:40)
+Yeah. That's a great question.
+
+So there are two versions of Poseidon, actually. There was the very first one that was designed for big prime fields back at the time when SNARKs over elliptic curves were in fashion.
+
+And this was designed even before I joined the foundation in 2018. And this version stands very good, but the thing is we can't really use it in this context because to be used in post-quantum proofs, it's better to use it on small prime fields. Otherwise, you suffer a huge performance penalty.
+
+And because of that, at some point, the Poseidon team decided to make a new version with little modifications on the linear parts, I would say, and constants a little bit that was designed and tailored to small prime fields. And this is the version we actively analyze right now.
+
+So as customary in symmetric crypto, we can't prove the security formally of block cyphers or hash functions. And the way to establish our confidence in the security of these designs is through public scrutiny.
+
+So basically, we publish a design and say, okay, we've tried our best to break it from all different perspectives. We have failed. Here is the evidence that we have failed. Please try yourself.
+
+And then the community joins and try to also attack reduced versions, attack weakened versions with some components removed here and there, tries to challenge designers' decisions, whether all of them are sound, whether some of things are redundant, and so on.
+
+And this was the process, for example, when the SHA-3 hash function was selected back 15 years ago. And this is the process we sort of try to imitate here for Poseidon.
+
+Kind of two years ago, it became evident that Poseidon is used in more and more applications, if not in Ethereum itself, but on the L2, in rollups, and in many other places.
+
+And the community, kind of the bigger community, wants to know, is it really secure, this hash function, or we just kind of use it because no one bothered to try to break it.
+
+And because of that, two years ago, we started what's called Poseidon Initiative. That's a series of grants, bounties, workshops, that tries to invite as many cryptanalysts from all around the world to work on Poseidon and try to break it from all different perspectives.
+
+And of course, we didn't expect that no result is published. So of course, some new dents were made into the security of Poseidon. But so far, so good.
+
+I would say the security margin has become naturally smaller than it was, but it's still there.
+
+And this year, we plan to do more workshops and grants targeting specific applications. In particular, we target these properties that we want from Poseidon within leanSig.
+
+This is called target collision resistance and multi-target collision resistance. And there probably will be dedicated bounty for this sort of attacks.
+
+[Nico Mohnblatt] (31:40 - 31:46)
+
+Are the same properties relevant to the SNARK that's going to be used for multi-signatures?
+
+[Dmitry Khovratovich] (31:46 - 33:00)
+
+It depends on the kind of SNARKs. But if you consider, say, STARKs, where you use a hash function basically in two capacities. So one is to build the Merkle tree for commitments.
+
+And in this context, usually collision resistance is required. So there is some ongoing work trying to show that probably some weaker property is sufficient, not just collision resistance. But so far, just the collision resistance is required.
+
+And the second thing is Fiat–Shamir. For Fiat–Shamir, it's very difficult to formulate what exactly you need from a hash function. And we have tried to also come up with some kind of bounties or exercises that I invite people to break.
+
+Like Toy protocols with Fiat–Shamir and Poseidon inside. There are so-called zero-test properties that one may try to break.
+
+And actually, we expect new bounties to be public within a few weeks, and I invite everyone who wants to try their cryptanalyst capacity to try to break it, then they're up.
+
+[Nico Mohnblatt] (33:00 - 33:14)
+Nice. Great. One last thing. You also mentioned Merkle trees and the SNARK. And the last paper I have from you guys that came out most recently is called The Billion Dollar Merkle Tree.
+
+Can you touch on this very quickly? I think we only have a few minutes left.
+
+[Benedikt Wagner] (33:14 - 34:11)
+Yeah. So it's not so much related to leanSig directly. It's more related to generic SNARKs and zkVMs, which are also a big topic in Ethereum Layer 1 right now.
+
+The story of this is Merkle trees are very powerful and they are, as Dmitry said, they are used in STARKs, for instance. And essentially, a big part of the industry relies on one specific Merkle tree implementation, which is the one in the Plonky3 library.
+
+And so we looked at this and we figured out that this is a very unusual way of doing Merkle trees.
+
+The first thing we thought, Dmitry and I, when someone told us about how this design works is this sounds completely insecure.
+
+But so we looked at it closer and it turns out that there is sort of some final twist that they do that at least intuitively makes it secure.
+
+But as we said before, we don't want just intuitive security.
+
+[Nico Mohnblatt] (34:11 - 34:14)
+We want formal verification everywhere.
+
+[Benedikt Wagner] (34:14 - 34:43)
+Yeah. In the end, we want formal verification. So the first step is to have like a pen and paper, like security proofs in a PDF, you know.
+So we looked at this and we did a security analysis of this and it turns out you can formally prove security of it.
+
+So it's nice. And we communicated to the maintainers of Plonky3 so that they know about our work, and we put it on ePrint recently.
+
+Yeah. So that's a quick summary, I guess.
+
+[Nico Mohnblatt] (34:43 - 34:50)
+Amazing.
+
+Guys, I think this is a lovely way to wrap everything up.
+
+Thank you so much for coming on the show, both of you.
+
+[Benedikt Wagner] (34:50 - 34:51)
+Thanks for inviting.
+
+[Dmitry Khovratovich] (34:51 - 34:53)
+Thank you for inviting us, Nico.
+
+[Nico Mohnblatt] (34:53 - 35:03)
+I also want to say thank you to the podcast team, Anna, Rachel, Henrik, Tanya and Hector.
+
+To those of you catching us on video, thanks for watching. And to our listeners, thanks for listening.
