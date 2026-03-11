@@ -1,0 +1,483 @@
+﻿[Anna Rose] (0:05 - 2:17)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero-knowledge research and the decentralized web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, in our fourth episode of our six-part miniseries on lean Ethereum, Nico dives into the topic of LeanVM and leanSpec. He is joined by Thomas Coratger, PQ lead at the Ethereum Foundation, and Emile, researcher at the Ethereum Foundation.
+
+
+For these special episodes, we have Nico as our host.
+
+
+We are also releasing this in video form over on our YouTube channel. Links are in the show notes, in case you want to check it out over there, and be sure to subscribe to the channel while you're at it.
+
+
+In this episode, the conversation focuses on the design and implementation of LeanVM, the minimal zkVM built specifically for post-quantum signature aggregation on Ethereum's consensus layer.
+
+
+Nico, Thomas, and Emile explore why the team chose a VM over a fixed circuit, how LeanVM draws inspiration from Cairo, and what it means to enshrine such a system into Ethereum consensus. The episode examines how the team is making post-quantum SNARKs performant, simple, and secure enough for Ethereum's core protocol.
+
+
+Hope you will watch or listen along to this and other episodes in our miniseries. And yeah, let us know what you think.
+
+
+Now, before we kick off, three quick points.
+
+
+First, zkSummit is coming back with its 14th edition. Applications to attend and/or speak are now open. It will be on May 7th in Rome, so hope to see you there.
+
+
+Second, zkMesh+, our paid subscription tier, is rolling. We have already released a few bonus clips from the show, as well as some of our exclusive research reports, like the State of ZK report and its addendums. If you want access, please join the paid tier on zkMesh+.
+
+
+Third, if you're looking for other ways to support the show, we have donation accounts visible in the footer of our website. So if you choose to do so, thank you in advance.
+
+
+That's all for now. Links are in the show notes, and here's Nico's interview with Thomas and Emile.
+
+
+[Nico Mohnblatt] (2:21 - 2:45)
+Today, I'm here with Thomas Coratger, researcher and PQ team lead at the Ethereum Foundation, and Emile, also a researcher at the Ethereum Foundation. This is Episode 4 of our miniseries on the lean Ethereum upgrade, and this one is dedicated to the implementation of post-quantum SNARKs and the design of LeanVM.
+
+
+Hello, Thomas, and welcome to the show.
+
+
+[Thomas Coratger] (2:41 - 2:43)
+Hello, Nico. Thanks for having us.
+
+
+[Nico Mohnblatt] (2:44 - 2:45)
+Pleasure. And hello, Emile.
+
+
+[Emile] (2:46 - 2:48)
+Hi, Nico. Thank you very much for having us.
+
+
+[Nico Mohnblatt] (2:49 - 3:02)
+So, you know, before we get started on lean Ethereum and all these things, you guys are both first time guests. So I was curious to hear a bit more about your journey into ZK and where you are now and what you've been working on.
+
+
+[Thomas Coratger] (3:02 - 4:04)
+Yeah, I can start. So before doing all this, I have an engineering background. I did engineering school and then I did a PhD in applied math.
+
+
+It has nothing to do with crypto. It was about physics and implementing some physics equation inside a code and solving some physics problem.
+
+
+And then I came to the crypto industry, worked for a small startup and then a bit closer to StarkWare. This is where I discovered the Cairo and the world around like ZK and zkVM.
+
+
+Then I joined Kakarot, which was like a zkEVM company. And then just after the talk of Justin at Devcon Bangkok about Lean, I joined the Ethereum Foundation to work full time on lean Ethereum and everything related to crypto.
+
+
+[Nico Mohnblatt] (4:05 - 4:06)
+Nice.
+
+
+How about you, Emile?
+
+
+[Emile] (4:07 - 4:41)
+I started ZK with an internship at Linea, the L2, like three years ago when I was still in an engineering school. And I really started to read papers and research about a year ago. And then I first worked with some grants on lean Ethereum.
+
+
+And recently I joined officially the EF to work fully on this project.
+
+
+[Nico Mohnblatt] (4:42 - 5:39)
+Nice. Amazing. So probably now is a good time to get talking about the project.
+
+
+I'll quickly recap where we are with our series. So far we've been talking about the lean Ethereum upgrades. We know that the consensus layer is moving to being post-quantum secure. This requires post-quantum multi-signatures. And the solution chosen was to use hash-based signatures and aggregate them using a SNARK.
+
+
+The specific SNARK is a hash-based SNARK. We discussed this on the previous episode with Giacomo and Antonio. And we mentioned that it has sort of its own arithmetization, its own VM that's called LeanVM.
+
+
+And this is why I have you guys here today, because you both did a lot of the implementation and the design of LeanVM.
+
+
+So before we get into the weeds of LeanVM, the first question I have is, why choose a VM? Why not have a circuit that does signature aggregation and that's it?
+
+
+[Emile] (5:40 - 7:50)
+I think there are mainly two advantages. The first one is that in the network you want to be able to aggregate a certain number of signatures. And this number may vary, not always a perfect power of 2, it may depend.
+
+
+And you may then want to recursively aggregate those previously aggregated signatures. So you need recursion. And once you have aggregated let's say two previously aggregated signatures, you may want to add, like you are a validator, you just received some final XMSS, some final signature, and you want to add it to your final aggregated signature.
+
+
+And so you may want to add some small number of remaining XMSS in the end. And if you have one circuit, it means that the sizes are fixed in advance. And so you are only able to aggregate, let's say a thousand XMSS and to do two to one recursion.
+
+
+It could work in the sense that you can always reduce your aggregations to a fixed number of steps, like a thousand XMSS. And then you apply recursion until everything is aggregated.
+
+
+But the power of the VM is that the number of signatures that you aggregate and the number of recursion that you do in one step is variable. And so it gives you more flexibility on this part.
+
+
+And second, it's easier to reuse the infrastructure that you've built if it's a VM. For instance, if you want to, because for now we focus on the consensus part of Ethereum, but the execution part will obviously also move to post-quantum.
+
+
+And for instance, if you want to aggregate Sphinx-like signatures, with LeanVM, you could totally do it. And the changes needed to make it work would be very minimal.
+
+
+[Nico Mohnblatt] (7:51 - 7:57)
+By the way, just to clarify, XMSS here is the signature scheme that is also being called leanSig?
+
+
+[Emile] (7:57 - 7:57)
+Yes.
+
+
+[Nico Mohnblatt] (7:59 - 8:01)
+Okay, cool.
+
+
+So the successor to BLS, let's say.
+
+
+[Thomas Coratger] (8:01 - 9:03)
+Exactly. And if I may add something else also, we have right now discussion with some folks around this debate of zkVM versus like circuit, because a lot of people are working on how to make maybe some compiler effort to render circuits much more affordable to make.
+
+
+But we have also this aspect of security in mind, because as this minimal zkVM will have to be enshrined into the consensus of Ethereum, this means that it has to be perfect and it has to be secure and without any bugs. Otherwise it could be catastrophic.
+
+
+And so we have also formal verification effort in mind so that the whole zkVM, the LeanVM, is so simple and so lean that it could be easily formally verified, which would be much more difficult, we think, with a circuit due to the complexity of the recursion inside the circuit as well.
+
+
+[Nico Mohnblatt] (9:04 - 9:14)
+Nice. So this brings me beautifully to my next question, because I wanted to ask you about how the VM is designed. And you've both sort of been dropping hints like a minimal ZKVM, a LeanVM. What does this mean? 
+
+
+[Thomas Coratger] (9:15 - 10:32)
+I think that it means that the minimal... you can think of a VM like Cairo, because this VM is a lot inspired by Cairo, because Cairo was the first zkVM on the market and they came with beautiful new ideas and so the inspiration of LeanVM directly comes from Cairo.
+
+
+It is minimal in the sense that we have very few opcodes, just four opcodes inside the VM and a minimal number of pre-compiles as well, just two of them.
+
+
+This means that we really emphasise simplicity inside the VM in order to reduce at the maximum the number of line of code, for example, the number of logic and everything around this, so that we are sure that this VM is, it is not meant to be general purpose. That means that we can't really compare it to OpenVM or SP1 or other VMs of this kind of the market that are much bigger and much more general purpose than LeanVM.
+
+
+But LeanVM is really performant to do one job, that is signature aggregation.
+
+
+[Emile] (10:33 - 12:35)
+And there is simplicity at two levels, so this level is the VM in itself, the opcodes etc, similar to Cairo, very simple. And there is simplicity at the proving level. And for this, you can think of LeanVM as basically the simplest proving system you could think of, which is multilinear, important clarification.
+
+
+So basically you have three R tables that you commit using stacked polynomials and WHIR, then you have one logUp to prove the interactions between the R tables, and then you prove the validity of the R tables again using sumcheck. And finally, you need to... you have like a bunch of opening points and you need to provide a WHIR proof for it, and that's it.
+
+
+So historically, there was a lot of fancy proving stuff to make it faster, for instance proving Poseidon with GKR, Univariate Skip, LogUp Star.
+
+
+It helped a lot to make the prover faster, but when we had to implement recursion, it turned out that those fancy tricks made recursion much harder, both in terms of speed, because the verification program was bigger, and more importantly in terms of simplicity.
+
+
+All those fancy tricks to make the prover faster, each trick brings you like 20% prover speed, but if you cumulate them, you end up with a proving system very hard to understand and to explain.
+
+
+[Nico Mohnblatt] (12:36 - 12:43)
+Right, and even the verifier becomes harder to express, and therefore the recursion becomes harder to do. That's very interesting, this trade-off.
+
+
+[Thomas Coratger] (12:43 - 13:34)
+I think this is also very important to mention that all of these efforts are ongoing efforts, and Emile took the lead from the start on LeanVM, working full-time on it, first on the grant program, and then within this post-quantum team. And so we always try to bring simplicity to the game. We had a lot of change in the past few weeks, in the past few months, and even in the past week, we still had a lot of change.
+
+
+So everything that we are mentioning here is really fresh, and we keep improving the system step by step, improving simplicity. I think that in the past months, for example, the VM was simplified by a lot.
+
+
+[Nico Mohnblatt] (13:35 - 13:42)
+Wow, okay. What's the best way for people to follow these efforts and contribute maybe to the simplification or the understanding of the VM?
+
+
+[Thomas Coratger] (13:43 - 15:07)
+I think that we have a couple of... First, we have open discussions. We are working a lot with Telegram, and we have a dedicated PQ channel where all of this is discussed.
+
+
+We also have, on a weekly basis, post-quantum interop calls that are called to talk about full client specification, but also updates on the cryptography side. And we have a dedicated lean Ethereum GitHub organisation where we have all of these repositories.
+
+
+So we have a repository for leanSig. So this is an XMSS signature scheme that is implemented in Rust with performance in mind. And so this is a standalone repository where you can contribute to improve speed. You can directly contact me, and we will find issues together for you to tackle or anything related to speed improvement.
+
+
+And then we have this leanMultisig repository that Emile is working on full-time, and where you have also a lot of improvements to participate in.
+
+
+And even sometimes we discuss with collaborators that are also interested in the very primitive level of the stack. And so they want to contribute as well on Plonky3, for example, or on WHIR, these kind of things.
+
+
+[Nico Mohnblatt] (15:07 - 15:27)
+Cool. And we'll make sure to have links in the show notes.
+
+
+You're talking about Plonky3, and that's actually something I wanted to touch upon, is the implementation and what tools we use.
+
+
+Just before we do, a few more words about the VM. You've mentioned the comparison to Cairo often. Is it fair to say that's the closest relative or the closest comparison to the VM?
+
+
+[Emile] (15:27 - 15:28)
+Yes. Definitely. Yes.
+
+
+[Nico Mohnblatt] (15:28 - 15:28)
+Cool.
+
+
+[Emile] (15:28 - 15:44)
+Yes. It's even simpler than Cairo because we removed the AP register. So in some sense, you can think it's even simpler than Cairo, but it's very similar to Cairo.
+
+
+[Nico Mohnblatt] (15:44 - 16:01)
+I'm not sure if everyone knows what the AP register is, but for those of you in the know...
+
+
+[Emile] (15:48 - 15:49)
+Allocation Pointer.
+
+
+[Nico Mohnblatt] (15:49 - 16:01)
+It's simpler.
+
+
+Cool. And so my last question about the VM before we move on to the implementation is, how do I write program for this? Are we writing Assembly? Are we writing instruction by instruction, or do you have a DSL for it?
+
+
+[Emile] (16:02 - 17:14)
+Similar to Cairo, we have a high-level DSL that compiles to those low-level four different opcodes. And recently, the compiler has been partially updated to move from a Rust-like syntax to a Python-like syntax. Because for the recursion, we need to write the verification program using our ZKDSL.
+
+
+And we will also need to specify this verification program for LeanVM inside the specification, which is a Python specification. And by moving to a Python-like ZKDSL, we will be able in the end to have a single file, which is a subset of Python, that will be at the same time executable from the spec, and that you can compile using the LeanVM compiler to the low-level ISA for LeanVM.
+
+
+[Nico Mohnblatt] (17:15 - 17:38)
+Okay. Actually, you're now opening another topic, which will be interesting to touch upon, is the spec, like specing things. What is the role of a spec, and how do we push that forward?
+
+
+But before we go there, a bit on implementation. So Plonky3, you've mentioned already, WHIR as well. What are the implementation choices that were made, and what's the current status of the implementation?
+
+
+[Thomas Coratger] (17:38 - 19:57)
+We are working a lot with Plonky3 and with the Plonky3 folks. We implemented a lot of tricks inside Plonky3, because what we have to keep in mind is that the current other ZKVMs that are racing for L1 proving are operating on GPU. And so this is very different from our needs, because for the consensus, we want validators to run on very low-end devices.
+
+
+And so we target CPU mostly. And so our optimizations are completely different. So we can't really take inspiration from the GPU optimisation, but we have to work a lot on CPU.
+
+
+And so we made a lot of effort with Plancky3 folks to implement better parallelization for the fields, the field computation, the DFT, all of the primitives that are used inside the VM. And we are also using SIMD techniques. So in summary, these are like fancy techniques to optimize your GPU operation.
+
+
+So we worked a lot, for example, on our hash function that is Poseidon2 to implement fancy SIMD techniques on all of the available architectures, for example, on your Mac or on the Linux laptop or anything like this.
+
+
+So we are spending a lot of effort on this. And for us, even like a 10% improvement on the multiplication of fields is very important, because at the end, within the VM, you do this computation a lot and a lot and a lot.
+
+
+So this is very important for us to optimise this very low-level thing. So we are working a lot as maintainers of the Plonky3 repo.
+
+
+And also WHIR, as you mentioned, is a primitive of LeanVM directly used as a polynomial commitment scheme inside the proving system of the LeanVM.
+
+
+And so we have also a separate repo on this that we hope will soon be upstream directly into Plonky3, because we know that other teams are interested by this, such as OpenVM, who designed its new prover methods using WHIR at the core. And so we are working a lot on this to optimise also WHIR at a bunch of levels.
+
+
+[Nico Mohnblatt] (19:58 - 20:08)
+Yeah. And WHIR was chosen because it's sort of hash-based replacement for FRI, I guess, in people's minds to stay simple and has smaller proofs. Is that correct?
+
+
+[Emile] (20:08 - 21:26)
+It's basically FRI plus sumcheck. And this gives you the rate, like contrary to FRI, at each step, the rate decreases at each round. And so you get a significantly shorter proof in the end.
+
+
+To give you an idea, classical STARK-based VMs, you can do smaller, but it's often on the scale of the megabytes, the proof. Currently on LeanVM, we are below 256 kilobytes, and you can even do like 150 kilobytes using an aggressive rate.
+
+
+And this is with proven security and close to 128. It's like, contrary to most of the projects, we need... like we cannot use simply 100 bits of security for Ethereum. Obviously, you just look at the hash rate of the historical data of Bitcoin and 100 bits is clearly not enough.
+So we need more, and we use for this an extension of degree 5 for the... we use the KoalaBear prime.
+
+
+[Nico Mohnblatt] (21:26 - 21:31)
+Actually, that's a good point. I never asked, what field do you use? So that's like a small prime field. Is that correct?
+
+
+[Emile] (21:32 - 21:32)
+Yes, exactly.
+
+
+[Nico Mohnblatt] (21:33 - 21:33)
+Okay.
+
+
+[Emile] (21:33 - 21:52)
+31 bits. And most projects use the degree 4 extension because it gives you 100 bits of security. But we need the extension of degree 5 to get with WHIR in the Johnson regime to close to 128 bits of security.
+
+
+[Thomas Coratger] (21:52 - 22:32)
+Okay. There is something interesting in what you mentioned. As you just said, WHIR is in fact FRI plus sumcheck, and so we had to do a lot of effort also on sumcheck implementation on CPU using fancy SIMD technique to optimise at a very low level our sumcheck implementation using also some papers from the Jolt folks and all of this to implement this in a most efficient way. 
+
+
+We have like [?] Onur also working with us on a grant at the EF working on this very low level optimisation right now in WHIR. And yeah, so that is also a very important effort that we are conducting around sumcheck.
+
+
+[Nico Mohnblatt] (22:32 - 22:57)
+Amazing. And how do you benchmark these efforts? So you have this VM, you have this implementation, how do I know that it's fast?
+
+
+In the past, all these different VM projects have been using weird benchmarks of like, how many hashes can I do? Or like, recently, ETHproof said the benchmark to be like proving an Ethereum block. What's the benchmark that you guys use, and how does the VM do?
+
+
+[Thomas Coratger] (22:58 - 24:23)
+I think that we have different level of benchmark. And like, Emilie, you can talk about it like at higher level, I think, after that, but we have very low level benchmark on all of the primitives.
+
+
+So for example, when we work on a fancy Poseidon optimisation using parallelization or CPU techniques or SIMD or anything, we just have a specialized benchmark inside the primitive library just to do a difference with a Rust tool called Criterion, where we have very precise benchmark that are showing you the percentage of improvement or degradation of your implementation.
+
+
+So we use that for all of our primitives, like multiplication, field operation, even in WHIR, we are capable of tracking all of our optimisation with very precise benchmark on very low level stuff.
+
+
+And then we have all of the benchmark conducted by Emilie on the LeanVM side of things, where on the README page of leanMultisig, you have a very nice comparison benchmark graphs, like designed by Emilie, where you have all the numbers showing you the time for a recursion, the time for a given proving. So yeah, you can talk about this Emilie.
+
+
+[Emile] (24:23 - 24:33)
+And on the README, we find, as Thomas said, the two real world benchmarks that we want to improve, which is first recursion time, like two to one recursion basically.
+
+
+[Nico Mohnblatt] (24:33 - 24:36)
+So two proofs coming in and one new proof coming out. Yeah.
+
+
+[Emile] (24:37 - 24:47)
+Exactly.
+
+
+And second, the XMSS aggregation. So how many signatures can you aggregate in one second?
+
+
+[Nico Mohnblatt] (24:48 - 24:50)
+Right. That's the thing we were trying to do in the first place, right?
+
+
+[Emile] (24:50 - 26:31)
+Yes.
+
+
+Actually, it was surprising to me how, to some extent, it's not sufficient to prove Poseidon, so the hash we are using, fast. For instance, basically you can prove Poseidon with GKR on the Mac, it will be above a million Poseidon per second quite easily, like it's not hard.
+
+
+And it's not sufficient to prove Poseidon to prove signatures, even if our signatures, XMSS, are mostly composed of Poseidon. Because first, there is the logic, you need to glue those Poseidon together to form chain hashes, the Merkle tris, et cetera. So there is overhead at this part.
+
+
+And second, in XMSS, you need to compute what's called an encoding. Basically, you need to hash some message and randomness data into some part of a fixed layer of some hypercube. And this step must be part of your SNARK for technical reasons.
+
+
+And it turns out this trivial part is close to as costly as proving the Poseidon, because you need to decompose a lot of stuff. And in the end, my point is that proving Poseidon is not enough to prove XMSS in an efficient way.
+
+
+There is, as always, some details that need to be handled.
+
+
+[Nico Mohnblatt] (26:32 - 26:44)
+Right. By the way, I'd be curious, do you guys have real numbers of like, how many signatures can you aggregate? How quickly can you aggregate them? And how many are needed actually for the network to run correctly?
+
+
+[Emile] (26:45 - 27:45)
+Currently on the main branch, you will be above 500 XMSS aggregated per second. If you move back in the past, like a month ago, you will find a thousand XMSS. But it's on a Mac M4, so it's a pretty good laptop.
+
+
+And the reason we went down is that we implemented recursion. And so we had to get rid of all the fancy tricks that made the prover fast in order to be even able to implement recursion. And so now we end up with a very simple prover, but obviously it's a bit slower.
+
+
+But still, like a 2x slower prover, which is simple enough to be proven secure is worth much more than a 2x faster prover, which is insecure in some sense.
+
+
+[Nico Mohnblatt] (27:46 - 27:53)
+I guess. And I guess in some sense, that means the benchmarks were like almost over-optimized for signature aggregation and forgot about recursion in a way.
+[Emile] (27:53 - 27:53)
+Yes.
+
+
+[Nico Mohnblatt] (27:54 - 28:00)
+And actually, can you tell us how many signatures per second are needed for the network?
+
+
+[Thomas Coratger] (28:01 - 28:08)
+I think that we would need like a couple of thousand. Not sure about the exact number, but yeah.
+
+
+[Emile] (28:09 - 28:40)
+In the short term, it would be nice to be at a thousand XMSS aggregated per second on a Mac in the short term. But obviously, if we can do better, it's always nice. But this is on CPU and it's important to keep it in mind because at some point we may implement, and it's not very hard to implement, some like a bit of GPU acceleration will bring you at much more than a thousand XMSS per second.
+
+
+[Thomas Coratger] (28:41 - 29:54)
+And like this is very important also to keep in mind that we have always a couple of trade-offs because we have like the number of XMSS that we should aggregate per second. That is an important metric, obviously, but we have also like the recursion time. That is also important because we have some peers that we want to aggregate some fresh signatures, but we have also other peers of the network who would want to recursively aggregate signatures.
+
+
+So that is also an important metric. And another metric on top is that we have to exchange those objects which are like proofs or signatures among the network. We know that BLS signature and their aggregates are really, really small, but post-quantum objects are much larger.
+
+
+And so this is much more difficult to exchange them over the network. So we have also like this important trade-off of like number of XMSS we can aggregate, number of recursion that we can do, and also the price and the cost of exchanging information around the network.
+
+
+And so we are not obviously like peer-to-peer expert, but we know that for sure we'll have work to be done on the peer-to-peer layer side of things.
+
+
+[Nico Mohnblatt] (29:55 - 30:13)
+And actually, that is the topic for next episode. So that's a great little segue.
+
+
+One last thing I wanted to ask you guys about, you mentioned a Python spec earlier. I'm curious to know what is a spec? What does it mean? What is it used for? Why is it written in Python?
+
+
+[Thomas Coratger] (30:13 - 32:10)
+Yeah. So historically, we have this Python specification for both like the consensus layer, the execution layer, for client teams to be able to implement the spec and follow the rules of Ethereum. And so what does it mean? It means that you have a Python repo and inside this Python repo, you have all the rules of the consensus or the execution layer of Ethereum that are written down.
+
+
+This is very important because also in this spec, you have tests that the client teams can consume to be sure that their implementation is correct and satisfies the rule of Ethereum.
+
+
+So inside this Python specification, we have implemented the fork choice of Ethereum, the networking layer of Ethereum, the validators role, the state transition function, everything related to the block. And we have also implemented our new post-quantum signature scheme and the aggregation.
+
+
+And with all of this, we are able to conduct with 10 client teams, some DevNets, where those client teams communicate together, so they interop, as we say, and they are able to test the network and the validity of our assumption. Because even if we build this minimal ZKVM in stealth mode, at the end, this is very important to confront with the reality.
+
+
+And so this is very important for us to benchmark all of this effort to see if what we thought is finally okay and everything.
+
+
+So we have 10 client teams and we have weekly calls led by Will at the Ethereum Foundation, where we discuss all of this topic and all of the subject related to client implementation.
+
+
+[Nico Mohnblatt] (32:11 - 32:24)
+Oh, again, I think unknowingly you're doing some perfect advertising for the next episode. So thank you very much.
+
+
+Guys, I think that's pretty much everything I wanted to cover today.
+
+
+Thank you so much for coming on the show. This was super instructive.
+
+
+[Emile] (32:24 - 32:24)
+Thank you.
+
+
+[Thomas Coratger] (32:25 - 32:27)
+Thanks a lot for having us.
+
+
+[Nico Mohnblatt] (32:27 - 32:47)
+Yeah, it's always a pleasure. It's always nice to also see people who are very active in the community to come on the show for the first time. It's really fun to have you here.
+
+
+I would like to also thank the podcast team, Anna, Rachel, Henrik, Tanya and Hector.
+
+
+To those of you catching us on video, thanks for watching. And to our listeners, thanks for listening.
