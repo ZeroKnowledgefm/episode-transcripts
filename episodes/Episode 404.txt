@@ -1,0 +1,1042 @@
+﻿[Anna Rose] (0:05 - 1:50)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Kobi and I speak with Benedikt Bünz, Chief Scientist at Espresso Systems and Professor of Computer Science at NYU. Benedikt shares an update on Espresso Systems, how the shared sequencer architecture works now that the system is live, and what his team has been exploring. We then catch up on the ZK research front, covering his recent results on hash-based folding, with works like Arc and Warp, as well as Golden, a non-interactive distributed key generation, or DKG, protocol for threshold signatures.
+
+
+But the main new result we talk about is Flock, a high-speed batch-proof system for standard hash functions like Blake3 or SHA-256 that exceeds post-quantum proving targets for Ethereum. All of this without needing hashes like Poseidon. A unique point about this work is that it was built almost entirely with AI-written code.
+
+
+First for Benedikt, he explains how he and his co-authors audited mainly the verifier to confirm correctness, something that is uniquely possible in zero-knowledge system security. So this is a ZK research-heavy episode, and I hope you enjoy. Now here's our interview with Benedikt Bünz.
+
+
+Today, Kobi and I are here with Benedikt Bünz, Chief Scientist at Espresso Systems and Professor of Computer Science at NYU. Welcome back to the show, Benedikt.
+
+
+[Benedikt Bünz] (1:50 - 1:53)
+Thanks for having me here. Very excited for this.
+
+
+[Anna Rose] (1:53 - 3:04)
+Hey Kobi. Hello. It is very cool to have you back on the show.
+
+
+Looking back, you've been on three times, but the last time you were on was 2023. You were at the time presenting Protostar. The first time you were on was Bulletproof, the second time we were talking Selective Disclosure, the third time was Protostar.
+
+
+But since then, you've done some study clubs, but really it's been a few years since we've caught up on the work that you've done. At the same time, we have actually heard about a lot of the work through other guests or speakers at the ZK Summit. Like your name shows up on a lot of works that we mentioned.
+
+
+So I think it's great to have you here to finally kind of catch up on the work, the research, the reasons, kind of what are you excited about, what kind of research threads are you trying to follow. So I'm looking forward to it. Maybe before we dive into the research, I want to talk a bit about Espresso Systems and your role there.
+
+
+Last time we had you on, I think you were only focused on Espresso Systems. Now you're also working as a professor at NYU. I'm kind of curious about how those two roles interact.
+
+
+And maybe you can also share a little bit about what's happening in Espresso today. Yeah.
+
+
+[Benedikt Bünz] (3:04 - 4:28)
+So for me, since 2023, so I started at NYU in New York in the fall of 2023. I'm a professor here in the Grant Institute of Computer Science, and I've built a small research group. I have amazing PhD students and postdocs, and we're kind of focussing still on zero-knowledge proofs, but also other cryptography as it relates to, you know, blockchains, but also now AI and, you know, wherever we find sort of, I think the world, like the research that I like to do is very much generally, like sometimes in academia, we like to stay in our ivory tower and, you know, the meme of you do research that like five people in the world claim to understand and maybe half a person actually understands. So I really am more excited about research that sort of sees the light of day or at least has the potential of having real world impacts.
+
+
+And obviously, zero-knowledge proofs have been an amazing field for that. And it's an amazing collaboration between industry, academia, applications, and all of these things. And I'm still very much excited about that field, but also some other things as well.
+
+
+And yeah, I'm still at Espresso. So the chief scientist there, I hope we get to talk a bit about that as well. But yeah, that's basically what I've been doing.
+
+
+[Kobi Gurkan] (4:28 - 4:37)
+Yeah. And I know that you're not just saying it for the audience, that it's real world impact because your things are widely deployed in some places. So that's really cool to see.
+
+
+[Benedikt Bünz] (4:38 - 5:12)
+Yeah. It's, I mean, sometimes to, you know, people who are not in the field, I explain basically that the biggest impact of my PhD was making buying drugs online cheaper, which is Monero. Monero deployed bulletproofs and dropped the transaction fees by like 90% or something like that.
+
+
+I obviously, I think that privacy technologies have many impacts, positive, negative, neutral, whatever. And I think Monero is a great project, but it's kind of a fun five-second summary of my work.
+
+
+[Anna Rose] (5:13 - 5:26)
+I do want to understand how, because like when you were just at Espresso, that was your full-time role. Now you're also a professor. How are you balancing that?
+
+
+Yeah. Are you kind of part-time at Espresso? What are you guys working on over there?
+
+
+[Benedikt Bünz] (5:27 - 8:58)
+Yeah, I think those things really have like high synergies. So let me explain to you what we're doing at Espresso. So like the core technical product that we've built is an incredibly fast consensus system.
+
+
+Okay. So the consensus and we've recently, you know, we've worked with our amazing engineering team and Karthik Nayak, who's a professor at Duke. We've worked together at improving our consensus.
+
+
+And now on, you know, on really cheap machines, we can process like 20, 30 megabytes per second of data in consensus with really, really low latency. And so why is that? What's the product, right?
+
+
+Like a consensus is nice and faster seems always better. So what's the product? The product is, so we started out basically as kind of a finality, a so-called fast finality layer for rollups.
+
+
+So a rollup sequencer says, okay, this is my set of transactions, but then it takes like 10 minutes or an hour until they post that transaction on Ethereum. And until then, if the sequencer gets hacked, you don't really have security, right? Like you don't really, you can't really use those facts.
+
+
+You don't get finality. Basically what we do is like a very lightweight and the consensus is designed to be incredibly lightweight. Basically you can post these transactions on this lightweight, fast finality layer, and then you basically get a stamp of approval that says these transactions are final.
+
+
+They can't change anymore. There's a consensus around it and so on. And now we're extending that actually.
+
+
+And one of the reasons why we've been doing a performance push is that now we're really going into the enterprise space. So I can't say too much yet, but we've been talking with big, big financial institutions and they have very, you know, real world applications, you know, related to money market funds and big financial products. And one thing that's very interesting there is that they really have, you know, they have a lot of data and a lot of transactions.
+
+
+You know, there's been the DTCC has publicly talked about wanting to process like a million transactions per second. And, you know, sort of every single trade that DTCC is like, they clear stock trades, roughly speaking. So, so being able to process that.
+
+
+And so we're in conversations with them and also other firms. And this gets me back to, you know, sort of how do these things play together? So a lot of my work at Espresso is on, you know, for example, making that consensus system a lot faster and, you know, like using just the scientific method, you know, you have something and then you're like, well, does this make sense that it's that fast?
+
+
+You know, you kind of just ask the right critical question and we have an amazing engineering team and you ask the right critical question, wait, why is this part, this should be faster. And then it's like a little bit more digging. And then you're like, oh, okay, no, we can actually make this faster.
+
+
+And then you're like, oh, and then you had a real bottleneck. And then you need to think, wait, okay, this is a bottleneck that I didn't think about. Can we work around that somehow?
+
+
+And yeah, in that way, there's actually a lot of parallels between like consensus engineering and ZK proof engineering, because there it's also like, you think like, should this be this slow? Well, no, really, it should be that part that's slow. So like, let me dig here, you know, let me do some more benchmarks and so on.
+
+
+[Anna Rose] (8:58 - 9:05)
+Are you though, like producing the work that you're producing on the academic front? Do you use it in Espresso?
+
+
+[Benedikt Bünz] (9:05 - 11:12)
+Yeah, we've used some of it. We've been using VDFs. And I think so one thing that we've been, you know, we've used a lot of CARTEX consensus papers.
+
+
+And one thing where there's a lot of synergy now is that, so I said, Espresso developed a very lightweight consensus. So what does this mean? Well, unlike Ethereum, Solana, Bitcoin, we only agree on the order of transactions, the nodes don't actually execute the transactions.
+
+
+So what does this mean? Well, it means that I know, okay, this transaction happened first, and then this transaction, and then this transaction, and then anyone can execute it, right? Because once I know the order of the transactions, I can execute them and get the state.
+
+
+But the nodes in the consensus don't do this by default, right? By default, everything just looks like data to them. They don't really care whether that data represents, you know, a money transfer or not.
+
+
+So you need to pair that with a proof system. And what's the job of the proof system? Well, the proof system basically handles the execution.
+
+
+This is the sequencer component though, right? Exactly. This is the sequencer model.
+
+
+It's exactly the sequencer model. And so what proof system? Well, you can use, people have been using optimistic proof systems, you can rely on trusted execution environments, you can do a hybrid of it.
+
+
+But obviously, the gold standard for that is ZK proofs, right? So now I think, you know, that these ZK proofs are getting faster and faster. Like, you know, one of the motivations for this work was, you know, sort of the DTCC saying, okay, we want to process a million transactions per second.
+
+
+And, of course, there my academic mind jumps into like, wait, is this even possible? Right? Like, how many machines, how much computing power do I need in order to produce these proofs?
+
+
+And yeah, I think like, we'll get to it maybe later. But like, we have some new work coming up on, you know, sort of like exploring the limits of like, what's the out and out fastest proof system that we could design?
+
+
+[Anna Rose] (11:13 - 11:37)
+Originally, I mean, back in the day, the company that you founded had been looking at privacy, like there was the whole privacy scheme. I think we went over it actually on one of our episodes. I don't think with you, though, I think with Ben and Jill, but you moved away from that towards the shared sequencer model, which I think is what you've launched with.
+
+
+Do you have any plans to put privacy back in?
+
+
+[Benedikt Bünz] (11:38 - 13:10)
+Yeah, I mean, I think the privacy model at a very high level is called something called CAPE, where basically, you know, it's private transaction, but you can, as you mentioned, selectively disclose certain information to certain parties. I think it's, you know, maybe it was just slightly too early. You know, I think now with the rise in the regulation around stablecoins, this is a much more interesting model.
+
+
+Back then, there were just so many regulatory hurdles around it and privacy is a difficult product because of that, you know, because of the regulation around it, because of sort of user demands around it. But actually, as we're now talking with institutions, institutional clients and institutional banks, they really care about privacy. They're like, well, no, this is, you know, kind of the whole point is, and they care about it also, again, for regulatory reasons.
+
+
+They're like, no, we can't, you know, like just put all of our data on some public blockchain. This doesn't work. So I don't think it will like come back as our main product, but like as an application, you know, that runs on top of Espresso, it's certainly something that we're keeping in the back of our mind and but also happy to collaborate with others.
+
+
+And I think some of the ideas have been picked up. But yeah, it's kind of interesting how sometimes I still think it's a good idea, but sometimes, you know, it's right place, right time. I think, especially for startups, that's a lot of the story.
+
+
+[Kobi Gurkan] (13:10 - 13:31)
+Yeah. And I think it can take even different forms now, you know, like you say, you're working with big institutions, you're working with enterprises. So maybe it will not be the exact flavour of privacy that individuals would use, but they still really need it.
+
+
+So it will evolve into a different form that will fit those. Exactly.
+
+
+[Benedikt Bünz] (13:32 - 14:51)
+And I still think, I mean, I do fundamentally, this is my personal opinion, I do fundamentally think that, you know, I don't want like right now, blockchains, as we use them today, have worse privacy than our TradFi system, right? I can, you know, I get your Ethereum address, I see all of your transactions, I see how much money you have. And like most people use like one Ethereum address or, you know, like they even use the same address over multiple chains, right?
+
+
+It's really like, it's convenient, everything. It's very convenient. And then it's like even linked to an ENS name.
+
+
+So I know that kobe.ens, I don't know, I'm not to dox you, but like then, you know, I know I can find out information about you. And that's not, I don't know, like that's not what I want for my personal financial freedom. I don't need, maybe not for every application, do I need Monero Zcash level privacy?
+
+
+I think there's also very much a place for those. But I want something better than, or like something at least on the level of TradFi, where maybe only a trusted institution has, you know, some some amount of information on it. And yeah, I still have hope and know that we have the technology to do something better there.
+
+
+But maybe that's for others to solve.
+
+
+[Anna Rose] (14:51 - 15:15)
+I want to move into the research topic. We sort of mentioned some of these past works on VDFs, Bulletproofs being a very famous one, Hyperplonk, where I feel like I think it was Hyperplonk where you started to veer into IVC. Was that the first one?
+
+
+Or was it Protostar where you started to do folding?
+
+
+[Benedikt Bünz] (15:16 - 15:37)
+I think that's more Protostar. We actually had to work on it even before Nova. But, you know, as always, when you don't put the name on it, you know, BCM LMS does not sound as sexy as Nova.
+
+
+But it was around that time where I got really interested in folding and IVC.
+
+
+[Anna Rose] (15:37 - 16:21)
+Cool. Actually, this is kind of where I want to start the research conversation around folding. So the question I have is, is folding and IVC still your focus?
+
+
+How has this sort of changed? Because I will say this, we have covered folding a lot on the show over the years. Even more recently, we, you know, had Binyi on talking about the lattices and folding.
+
+
+We had Pratush on at the end of last year talking about the work that he'd been doing on the hash-based front, actually some work he did with you as well. I'm curious about if that's still a research point. Like, are you still exploring that?
+
+
+Or is that just sort of a technique that is being used across the board? Is that still the core of your focus? Or do you see it sort of pointing in a different direction?
+
+
+[Benedikt Bünz] (16:22 - 17:55)
+So I think now I see it as like it was and is a very exciting research topic. I think we've, you know, like a lot has already been said on folding and a lot of progress has been made there. So I don't expect the major, like, you know, never say never, but I don't expect the major breakthroughs to happen in that area.
+
+
+But one thing that is nice about very high level, you know, folding techniques and recursive groups techniques is that you can, you know, compose things very well. So, you know, let's say I have, you know, a fast proof system. Like one of the things that I think is the kind of one of the many killer applications of folding and recursive proving is that, let's say I have a proof system that's fast on a single core, but now I want to run it on, you know, 20 cores, but really let's say it's fast on one machine and I want to run it on like a 20 machines, a hundred machines, right?
+
+
+I want to scale it up. And I think this is where, you know, folding and various like that whole family of techniques can come in. And I really, you know, like you can, you can really get this perfect parallelism and perfect, like, you know, the machines hardly need to talk to each other and you can really scale things up.
+
+
+Yeah. I think that's, that's sort of an important tool that, that we have in our toolbox and that's going to continue to be important.
+
+
+[Kobi Gurkan] (17:56 - 18:08)
+Yeah. And I guess like depending on the use case, it could even be, you know, unrelated parties that compute this and eventually you can combine those. So that is, this is interesting.
+
+
+Yeah.
+
+
+[Benedikt Bünz] (18:08 - 19:29)
+Yeah, exactly. I think there's a lot of talk about signature aggregation where like, you know, you have some parties signing transactions and then you want to somehow aggregate them in a, in a tree-like manner. Maybe, you know, there's a European node, an African node, an Asian node and whatsoever, and then they communicate and you can really, I think there's still some things to be said, almost more on a systems engineering side of like, how do you orchestrate this?
+
+
+Like we know from a theoretical point of view, okay, there's perfect parallelism and, and sort of everything should work out. But like, how do you real world orchestrate these like many, many parties? One thing that I think is interesting, I'm just going to throw it here as a research idea, maybe I'll work on it.
+
+
+It's like, you know, now a lot of times we, you know, we've been worrying about, okay, what's the fastest prover on like a hardware? But I think like one interesting question is like, now it's like, okay, what's the cheapest prover? Right?
+
+
+Like, like, let's, let's, let's measure it in dollars, you know, like, give me a budget and like, how can I architect things on, you know, AWS or what are your favourite clouds to be like, how cheaply can I prove, you know, this computation? I think that's like, a very interesting, you know, new measuring stick.
+
+
+[Kobi Gurkan] (19:29 - 19:46)
+Yeah, that's a, that's a good point. Like, even when you're thinking about, you know, all the RAM shortage and the access to consumer device, like, what, what is the cheapest accessible proving hardware that you can use? So, yeah, that's an interesting question.
+
+
+[Benedikt Bünz] (19:46 - 21:09)
+And maybe there's like, you know, I think one thing that could be interesting is, you know, let's say like, I don't know, I'm not an expert in cloud pricing, but sometimes they have an overcapacity. So they sell compute very cheaply. Yeah.
+
+
+So can you take advantage? And I think folding there again, is very useful because you can break down your computation into really, really small chunks, right? So you can say like, Hey, dear, dear Amazon or dear Microsoft or whatever, XAI cloud, or, you know, whatever the new, new cloud is, please give me your cheapest devices.
+
+
+I don't really care how big or small they are whenever they're available. I just like, you know, like sort of price optimise this for me. And then, you know, every time there's like some cheap compute, I'm going to compute one chunk with folding and then I folding combine them in, you know, again, like a tree like manner.
+
+
+And again, I think that folding there is, is, is really, and that set of techniques is really beautiful because, you know, I don't, it doesn't have to all be, it's not like one monolithic thing that all the way, like all the cores have to be active at exactly the same time. It totally is okay if, you know, part of it is proven, you know, a minute later than another part. And, you know, you have one big machine and one small machine, just depending on what hardware do you find on the street that's currently cheap.
+
+
+[Anna Rose] (21:10 - 21:35)
+I want to go back to that idea just before actually kind of the idea you're talking about here where there's multiple parties participating, because obviously this rings the bell of like multi-party computation, but it's different, right? Maybe we should quickly identify that difference, but the use case you're proposing is actually one of the use cases that, you know, multi-party computation is often also suggested for. But yeah, let's, let's define those.
+
+
+[Benedikt Bünz] (21:36 - 22:58)
+So multi-party computation, the, the, I guess the definition is that we can compute some function together that, you know, where we all have secret inputs to the function and we learn the output, but we reveal no information about our input other than the output. So for example, we could learn our average net worth without revealing, you know, to each other, what our, our individual ones are. It is a kind of multi-party computation, but the difference here is that we're more kind of splitting the work and compute focused.
+
+
+So how can I basically use multiple parties in multiple parts of the world to combine, you know, to aggregate a signature versus MPC traditionally is a bit more privacy focused. So for example, it's used for threshold signing. So, you know, I have three out of five, like a multi-signature is really a form of multi-party computation where I say, you know, three out of five people control this wallet, but you could do much, much, much fancier things with that.
+
+
+So it's really, it's, it is a form of multi-party computation, but traditional multi-party computation focusses more on privacy. And this is really sort of distributing the work.
+
+
+[Anna Rose] (22:58 - 23:19)
+And I feel like the MPC folks have also defined it where like in MPC, the computation, everything that's happening is completely also obfuscated from each of the participants, whereas what you're describing, it's not, you just said, it's not really about privacy. It's about scaling and compute. And so that's not like the same privacy concept.
+
+
+Exactly, exactly.
+
+
+[Benedikt Bünz] (23:19 - 23:21)
+But they're certainly very related. So it's a very good question.
+
+
+[Anna Rose] (23:22 - 23:29)
+So, you know, in that IVC folding thread, what is recent work that you've released or coauthored sort of on that thread?
+
+
+[Benedikt Bünz] (23:29 - 24:54)
+Yeah, I think sort of the most recent line of work there in the folding thread was, was, you know, the work that I think Pradish talked about it here and then we continue to work on it. I guess a lot of that was with my PhD student, William Wang here at NYU on so-called hash-based folding schemes. So really the folding schemes traditionally, like kind of the original idea, you know, starting with Halo was very much based on elliptic curves.
+
+
+And in particular, it's based on this kind of beautiful idea that, you know, you can have two proofs and combine them into one proof. And generally the only trick that we have there is you take a random linear combination between the two proofs and you use the so-called homomorphism. You use that these elliptic curves are additive to then get kind of a randomly combined new proof.
+
+
+You need to do a little bit more, but that's the very high level thing. So the interesting thing, the interesting challenge with hashes was that hashes are very inherently, they're not homomorphic. So if I hash the string one and I hash the string zero, I can add that, but that certainly, or if I hash the string two and I hash the string three, there's no way that I can add the hashes and get a hash of five.
+
+
+[Anna Rose] (24:54 - 24:55)
+Okay.
+
+
+[Benedikt Bünz] (24:55 - 25:06)
+That's not a, that's not how these things work. Certainly it's not how they work. You know, in fact, there's some relation to quantum computing.
+
+
+Like you don't want them to have this property.
+
+
+[Anna Rose] (25:06 - 25:10)
+Because that's what could be broken by quantum computers?
+
+
+[Benedikt Bünz] (25:10 - 25:14)
+That's kind of what the, that's kind of the advantage that quantum computers use.
+
+
+[Anna Rose] (25:14 - 25:15)
+Oh, interesting.
+
+
+[Benedikt Bünz] (25:15 - 25:16)
+The, the, the.
+
+
+[Anna Rose] (25:16 - 25:17)
+The homomorphism is the weakness.
+
+
+[Benedikt Bünz] (25:18 - 25:38)
+The homomorphism is the weakness, right? It's, it's, it's kind of a, it's kind of a way that the encryption is broken, like the commitment is broken, which can be very useful, but unfortunately it is also the angle that quantum computers can use to, to exploit and break kind of the security properties that we have.
+
+
+[Anna Rose] (25:39 - 25:49)
+That hash-based work that you're describing though. So you, you aren't focused on the elliptic curve side. You're, you're focused more on this hash-based side.
+
+
+Is that ARK? Would ARK be an example?
+
+
+[Benedikt Bünz] (25:49 - 25:55)
+ARK is, ARK is in that line. It's exactly in that line. So there's, there's a word called ARK.
+
+
+There's this word called WARP.
+
+
+[Anna Rose] (25:56 - 25:56)
+Yes. Okay.
+
+
+[Benedikt Bünz] (25:56 - 26:52)
+So it's, it's that line. I think WARP was the, the, the latest one that was done by William Giacomo Fenzi and Alec Chiesa. So the, the key challenge in this whole line of work is that you can't do this homomorphism trick with hash-based things, like the same thing doesn't work.
+
+
+So instead we kind of have to use, you know, we have to use other, other tricks. So, you know, the, the, basically the prover will claim this is the right random linear combination. And then you can test that in fact, this is the right linear combination and, and you have to use some, some tricks for that.
+
+
+And yeah, it turns out that still though, once we've solved this problem, a lot of the nice advantages of folding schemes carry over to the hash-based world.
+
+
+[Anna Rose] (26:53 - 27:22)
+You never made the leap further to lattices though, did you? Like Binyi, or did you work on that stuff? Actually, I don't know.
+
+
+I've not actively worked on lattices, but this is, I mean, I'm just thinking because Binyi, who actually was the last time I had you on, I think he was the co-guest with you. You'd worked on Protostar together and he went, you went this hash direction and he seems to have gone this lattice direction. Yeah, yeah.
+
+
+I just, I wasn't actually clear if you had collaborated again since then.
+
+
+[Benedikt Bünz] (27:22 - 28:46)
+No, we've not collaborated on lattice-based stuff, but I mean, I think it's, it's certainly very interesting. And, and I think that it's obviously good to have a diversity of proof systems and lattices are, you know, they're, they're nicely in the middle where, you know, they have just enough homomorphism to be useful for things like folding, but they don't have enough, like, they don't have enough to be broken, broken by quantum computers. So that's, that's exactly like, like, that's exactly sort of why people like lattices, they're just like exactly in that, you know, they try to be in that sweet spot.
+
+
+Cool. I think, you know, what intrigues me right now about hashes is that at the end of the day, you know, it's, they're so, they're so minimal, right? And I think if we can build something from like the absolute minimal cryptography that just has a lot of advantages, you know, it has both advantages from a security point of view, like the more minimal the cryptography, the less likely it is to be broken.
+
+
+It has advantages from an implementation point of view. It makes it sort of like relatively simple and hopefully fast and in both software and hardware. So I think there are a lot of interesting things there, but I mean, I, I tried to work on, you know, whatever is interesting and I'm sure I will be working on lattice based stuff as well.
+
+
+[Kobi Gurkan] (28:47 - 29:14)
+Yeah. So actually going back to Anna's question about multi-party computation. So you mentioned that threshold signatures or threshold computation is one of the use cases that are happening there.
+
+
+And you had a somewhat recent work called Golden on it. So yeah, it would be interesting to hear more about that, you know, what is it? Why do we need another kind of, this kind of protocol?
+
+
+Yeah.
+
+
+[Benedikt Bünz] (29:14 - 31:24)
+So this was a work with Chelsea Como and Kevin and yeah, it was a, basically it's, it's a so-called distributed key generation protocol and non-interactive PKG. So I think, I'm sure a lot of people have heard of multi signatures and threshold signatures. So, you know, think of your safe wallet controlled by three out of five keys or something like that.
+
+
+And, you know, kind of the gold standards unintended there is, is that you have a threshold signature. So this allows you to sign the transaction and in the end you get a, like it looks like a normal signature. And as long as any three out of five of them sign, it's, it works.
+
+
+And, you know, the same setup is also what's used in MPC. It's, it's very related to that. And it has a lot of other applications as well, can be used for randomness beacons and so on and so forth.
+
+
+So, these PKGs are very, very useful. This, these, these threshold signatures and thresholds, like it's also used for threshold encryption, which can be used in front running production. So it has a lot of applications, but one question is, you know, you need to share a so-called secret.
+
+
+So, you know, the three of us need to each have a share of the secret. So it means that let's say two of us can reconstruct the secret, but no one individually knows the secret. So the problem is where do we get the secret from?
+
+
+So, okay. We could ask Kobe to come up with a secret and tell each of us to share, but then he knows it, right? And he's like, Oh, I totally forgot it.
+
+
+But like that's, it's exactly the same as kind of the trusted setup problem that we have in, in Snarks or that we, you know, some Snarks used to have. Exactly. So the question is, how do you get around that?
+
+
+And you can run something called a distributed key generation. So the three of us basically run a protocol. And at the end of it, we each get the share, but nobody actually ever had had the share.
+
+
+Interesting.
+
+
+[Anna Rose] (31:25 - 31:33)
+It's almost like a reverse MPC, eh? Where it's like MPC, you're feeding input in and then the computation happens. Here's like a computation happens and it feeds it out.
+
+
+[Benedikt Bünz] (31:34 - 32:10)
+Yeah, I think that's, that's exactly right. Right. It's like, there's no inputs in the beginning and then we have a secret run on this.
+
+
+Yeah. I think that's a great, you should write our introductions, Anna. That's a great way to, that's great.
+
+
+So this, this reverse MPC, so Golden in particular, so there's a lot of protocols for this already, but kind of what we were aiming for, the gold standard for it is a so-called non-interactive PKG. So what this means is everybody just has to send one message and then you're done. Right.
+
+
+So there's protocols where we talk back and forth and, you know, a lot of interaction.
+
+
+[Anna Rose] (32:11 - 32:11)
+Interactive, yeah.
+
+
+[Benedikt Bünz] (32:12 - 32:32)
+Yeah. But then, you know, the problem is what if one party drops off, right? Then you have to restart.
+
+
+It's, you know, very finicky. It's, you know, communication is expensive. So the idea was to build a non-interactive one.
+
+
+And, and I think Jens Groth had, had one of those. I think, Kobi, you've done some work, I think, in this area as well, right?
+
+
+[Kobi Gurkan] (32:33 - 32:35)
+Yes. On, on group elements though.
+
+
+[Benedikt Bünz] (32:35 - 34:09)
+On, on group elements. And, and so our idea was to, to design a new non-interactive PKG in kind of a new way, and, and we used sort of a tool that Dan, then Rene and others had developed called an elliptic curve VRF. And essentially the high level description or the high level insight is that normally in these PKG protocols, I need to use, I need to send Kobi a message, right?
+
+
+So I need to encrypt the message under Kobi's public key. It turns out that, you know, these public key encryption schemes are somewhat expensive. You know, you need to do range proofs.
+
+
+They're just like a little bit cumbersome. And what we realised is that the actual message that you need to encrypt, it's like a, it's just basically a short random string, you know, I just really need to encrypt kind of my randomness in just the right way and we realised that, you know, we could do this very efficiently, basically just using a one-time pad. Yeah.
+
+
+So, so this was kind of like a new protocol and it turns out to be very efficient, it's under the hood. It also uses bulletproof. So this is how I think Chelsea came up with the first version.
+
+
+And then she was like, ah, I need someone who understands zero knowledge proofs. Can you, can you help me with that? And that's how I got involved.
+
+
+And it was a very fun, fun project.
+
+
+[Anna Rose] (34:09 - 34:09)
+Nice.
+
+
+[Kobi Gurkan] (34:10 - 34:28)
+Well, one thing that's really appealing about non-interactive DKGs is like you said, what happens if a party drops? So what happens if they're even offline during the DKG? And this kind of like non-interactive DKGs allow you to help them recover after the fact, which is super interesting.
+
+
+[Benedikt Bünz] (34:28 - 34:55)
+Yeah, it's, I basically can just put like your message in your mailbox. I can just send you an email with your message and whether you open it today or like tomorrow, it doesn't really matter as long as like sort of sufficient number of parties send their emails, like the one lazy person who didn't open their email, they can still get it the next day and then they can still be online. They haven't lost kind of their keys forever.
+
+
+[Anna Rose] (34:55 - 35:08)
+They could actually access like their own. So that distributed key generation would still have happened. And then you can like get or receive your part of that, even if you haven't actually participated in it?
+
+
+[Benedikt Bünz] (35:08 - 35:52)
+Yeah. So you need, it's, it's sort of, it has the same threshold properties. So let's say...
+
+
+Certain threshold. You need two thirds or something. You need like two thirds of the people to send an email, something like that.
+
+
+You know, you need, you need like some portion of the people to send an email. But, you know, for, for like the, the minority that is, that is offline, they can then later on, as long as they've received the emails, now I'm using emails here to symbolise asymmetry or asynchronicity, they can then get those messages and still recover their secret. And then when the, when the actual signing happens, they can be online and someone else might be offline.
+
+
+Yeah. It's a very good point. I don't think I've thought about it quite that way, Kobi.
+
+
+That's a great point.
+
+
+[Anna Rose] (35:52 - 35:57)
+Does something like this get broken by quantum computers though? If it's elliptic curve based?
+
+
+[Benedikt Bünz] (35:57 - 37:51)
+This one in particular. So, yeah. So you're asked about lattices, you're asked about, you know, this is certainly something where we are, like, it is absolutely broken by quantum computing.
+
+
+It's, it's very much relies on, on elliptic curve tricks. I'll say two things about it. So we'll, first of all, we are, you know, thinking about, is there maybe a lattice based version for that?
+
+
+I don't think there's like, this is again where you need some structure. It's definitely not an obvious one. Like it's definitely, you know, things, things definitely get, get a bit harder.
+
+
+So that's one thing we're looking at. I think the other thing that I want to say though, is that with quantum computers, we can get into the details, but it's, my take is, is you have to be very nuanced, right? So for example, my public key that is on the blockchain, there for anyone to see and to attack and break.
+
+
+I really want that to be post-quantum because it's like the most obvious target. My distributed key generation that happens once, and it's really between friends, hopefully, right? Like you're setting up a three out of five wallets between friends, you know, like that's happens once it happens today.
+
+
+And after that it's, you know, maybe it's done, right? Maybe that one is more okay to be pre-quantum than other things. So I think there's like, of course it's easy to say like everything needs to be post-quantum today.
+
+
+I think having a slightly more fine grained view of like, this is the absolute number one highest priority right now. And this is like priority, like 20, I think is useful. And I think that DKGs are not necessarily priority one.
+
+
+[Anna Rose] (37:52 - 38:20)
+At this point, I guess they have not been used in like very high critical areas. But like if this, if it got leaked or wouldn't it be actually quite dangerous? Like you'd be able to say you were able to break it.
+
+
+And this is about signatures that you'd be using in a multi-party and like a multi-SIG context. You could fake three out of five and then you could sign things. I mean, these are like these bridge hacks or socially engineered versions of that, right?
+
+
+You're totally right.
+
+
+[Benedikt Bünz] (38:21 - 38:53)
+I think that it's, it's, so first of all, you know, like the question is basically what's the exact scenario. I think, for example, if like, if the only worry is that the three out of five security degrades to one out of five security, that might still be okay. Right?
+
+
+Like maybe it's like three people in the company, like, you know, three signers, four wallet and like, you know, then it's like a defence in depth thing. I'm hoping that each one of them is honest, but like, it's not great, but like, it's better.
+
+
+[Anna Rose] (38:53 - 38:57)
+Like the attacker would still have to come from the inside. Is that what you're saying?
+
+
+[Benedikt Bünz] (38:58 - 39:28)
+The calls coming from inside the building, right? Like, of course, you're right though, you have to be very, very careful with these fine-grained things, because if I'm posting my messages, you know, on some public blockchain for anyone to see, right, like doing the DKG, I'm sending messages, right? And I said, I'm sending them over email.
+
+
+I could also send them, post them on a blockchain. If they're posted on the blockchain, then you're right. Anybody could attack them and anybody who can see all of the messages can, can recover the secret.
+
+
+[Anna Rose] (39:29 - 39:33)
+Oh, but you need a quantum computer potentially. You need a quantum computer, right?
+
+
+[Benedikt Bünz] (39:33 - 40:00)
+Like it's always a quantum computer. So it's a, it's a, I think like, I guess the only point that I was trying to make is that I'm less worried about short-lived things, you know, like where it's like, okay, just us communicating and small group. Then I am about something that's like potentially going to stay there for a long, long time, used for a long, long time on a public blockchain.
+
+
+Everybody can see it. Yeah, that's, that's, yeah, that was my only point.
+
+
+[Kobi Gurkan] (40:00 - 40:21)
+Yeah, that, that's a good point. When you say short-lived things, it could also be a scenario where you use this for, let's say, to encrypt something and that this, the ciphertext gets opened anyway, after a minute or something, let's say an auction, then maybe you can have some flexibility in those scenarios. Yeah, exactly.
+
+
+[Benedikt Bünz] (40:21 - 40:25)
+Like auctions, you know, this, this has been very much proposed for front.
+
+
+[Anna Rose] (40:25 - 40:26)
+Like the validator stuff.
+
+
+[Benedikt Bünz] (40:26 - 40:48)
+Exactly. Front running protection. I think there it's like, yeah, it's just like, you know, maybe this is a more short term and it's okay, but obviously like the, the, the defence, the defence in that, then, you know, like the goal would be to, to build a, a post-quantum version of this and hopefully, you know, some of the ideas carry over.
+
+
+Okay.
+
+
+[Kobi Gurkan] (40:48 - 41:00)
+Let's shift gears a bit. So Benedikt, you've done some very interesting recent work called Flock. That's also in the hash-based realm.
+
+
+Can you tell us about that a bit?
+
+
+[Benedikt Bünz] (41:00 - 41:14)
+Yeah. So, you know, I sent you guys a draft of the paper, we just submitted it. And I hope I, by the time that this podcast come out, it's, it's hopefully up on your ePrint.
+
+
+No, I have, this time for real.
+
+
+[Anna Rose] (41:14 - 41:17)
+It should be in the next CK MASH too then, probably.
+
+
+[Benedikt Bünz] (41:18 - 42:57)
+And so what is Flock? So it's a, it's a joint work with Ron Rothblum from Succinct and William Wang, who's my PhD student here at NYU. And it's basically the, the high level story is that we were, you know, we come more from a, like a bit more from an academic theoretic side and we were like, okay, what is the fastest proof system that we can design?
+
+
+We actually started out with what are the theoretical limits for how fast a proof system can be? And the first question is, how do you measure that? And really, you know, what we were thinking is like, well, okay, my CPU here, I have like a Mac mini here, my CPU can do X gigahertz, but really, you know, you can think about some computation, like it can do this much computation per second.
+
+
+How much computation can I prove? Like, you know, is it a million times slower? Is it 10,000 times slower?
+
+
+Is it a thousand times slower? You know, like how much slower is proving on kind of same hardware than computing? Sort of a real like apples to apples comparison.
+
+
+And we first wanted to do theoretical work on that. And we might still very much do that where we, you know, really go down into the numbers and are like here, you know, what's the overhead of a so-called Boolean circuit, but then we also like, you know, started to play around and, you know, full credit to like coding agents and we're like, hey, actually we have some ideas here that, that this looks not just theoretical, this looks really, really practical. Let's try to implement this.
+
+
+[Kobi Gurkan] (42:58 - 42:59)
+Let's do another real world impact.
+
+
+[Benedikt Bünz] (43:00 - 43:07)
+Yeah, let's have another real world impact. Exactly. Well, and like, you know, normally it's kind of the other way around.
+
+
+You first write the theory paper and then you try to write the practical paper.
+
+
+[Anna Rose] (43:07 - 43:10)
+And then you find out how fast it is. Yeah.
+
+
+[Benedikt Bünz] (43:10 - 45:33)
+Yeah, it was, it's been amazing. And kind of the end result, sort of what did we measure? We were like, okay, what's the benchmark in the real world?
+
+
+So the benchmark in the real world, we were like, let's take a hash function, but not one of these hash functions that is, you know, designed to be fast for snarks. Let's take like a real world hash function, like SHA-256, Blake, Ketchup, you know, that is designed to run fast on these hardware machines and see how fast can we prove it. And kind of the headline number that we ended up getting, I can talk a little bit more about the techniques that we use, but is that sort of, we are able to prove things about like 250 times.
+
+
+Like the overhead of proving is 250x. So this is a single threat. Like it's really like a single CPU core comparison.
+
+
+So it's not like 20, you sometimes see these numbers and then it's run on like 200 GPUs. No. It's like a single core on this machine is like 250 times slower than CPU.
+
+
+I think it's very low. If you're maybe new to the field, it seems high. But you know what this also means is that if you want to prove as fast as you're computing, you're basically new to 250x parallelism.
+
+
+I think that's sort of the flip side of the equation or you need sort of more structure in your computation that you can take advantage of. But yeah, our goal here was to build something that's super, super, super fast for this. And another way to look at the results of Vitalik had this blog post a couple years ago, like 2024, where he said like, OK, what is needed for post quantum transition for Ethereum?
+
+
+And he did some back of the envelope math and he said, OK, we need to prove about 200,000 hashes per second. And he was like with, you know, Poseidon, that's possible. You know, like that's probably possible.
+
+
+We probably can get there, maybe some more improvements. And so with Poseidon, we were already there. The problem with Poseidon and these other hash functions, I like Googled, you know, writing this paper, I Googled like Poseidon on Eprint, you can like filter by attack paper and filter by Poseidon.
+
+
+And let me, let me do it again. I think they were like, if I do this right now, I find 12 papers. Right.
+
+
+OK. And, you know, a lot of them recently.
+
+
+[Anna Rose] (45:33 - 45:40)
+Is that almost like there's 12 trip wires that you have to be careful not to accidentally trigger?
+
+
+[Benedikt Bünz] (45:41 - 47:20)
+I think it's it's very much similar to what we talked about earlier with homomorphism, is that Poseidon inherently has more structure. Right. It is, you know, designed to have structure so that we can prove it faster.
+
+
+But the same structure then can be used to at least attack it or weaken it. Right. So, you know, there's always in cryptography kind of this tradeoff between structure, which is useful and structure, which is, you know, dangerous and can be exploited.
+
+
+So, you know, the simplest way, what would be great is if we didn't have to use Poseidon, if we could use a hash function that has less structure, that's more, you know, well tested. And what we showed with Flock is that we could prove, I think this was on, you know, like Ron's M4 laptop, you know, on like a powerful consumer laptop, we could prove like 500 or 600, almost 600, like three hashes per second. And so well above kind of the target that Vitalik set out.
+
+
+So what this means is now Ethereum, just from like a pure proving speed perspective, they wouldn't like they could, you know, not maybe if they want to, they don't have to rely on Poseidon. They could rely on Blake3, which has much less structure and is much more standard and is also much faster in, you know, like sort of as a pure hash function on a CPU. So I think that's, that's kind of, that's fairly exciting.
+
+
+[Kobi Gurkan] (47:20 - 47:54)
+And like hashes are everywhere. So there is one aspect of using these hashes, like you said, that are fast on CPUs, you know, Poseidon, like it's awesome. It's also a bit slower on CPUs, even though it's fast improving, but yeah, like hashes are everywhere.
+
+
+They're in like state access. And if you move something like Ethereum to be post quantum, they're going to be in signatures as well. So basically it's everywhere in recursive proofs.
+
+
+So having fast proving for hashes is really great.
+
+
+[Benedikt Bünz] (47:54 - 49:26)
+I'll say two things to this. So one thing, you know, we, we estimated kind of, again, talking about post quantum, you know, as you mentioned, Koby, there's a lot of interest in moving to hash based signatures, both actually in Ethereum, but also in Bitcoin. And so we kind of estimated that in Ethereum, you know, if they say, let's say they use like three, then, you know, we could prove about, what was it?
+
+
+3,500 transactions per second on a consumer laptop. So, you know, which more than satisfies the throughput or, you know, for, for Bitcoin, you would imagine that they want to stick with, Bitcoin is very conservative, so they want to stick with things that they already use. So they would want to stick with SHA-256.
+
+
+And for that, you know, we can prove basically a Bitcoin block, which has like 5,000 signatures, so just the hashing in that block, if it was all hash based signatures, we could, you know, prove that in one and a half seconds on consumer hardware. So it's, it's, I really hope that this and, and, you know, work and follow up really is like this real big stepping stone in like showing that fast proving and fast proving for hash based signatures is like really feasible. And that maybe we don't have to use these, like it really opens up the choice to use standard hashes and not these, these custom redesigned hashes.
+
+
+[Anna Rose] (49:26 - 49:38)
+I'm trying to place Flock though in the, like, what is it comparable to? What would it potentially replace? Because from what you said, it's sort of like, it's just a lot of hashes, right?
+
+
+[Benedikt Bünz] (49:39 - 49:49)
+So, so this is the target that we're proving. I think from a techniques point of view, it is fairly similar and builds on techniques from things like Binias.
+
+
+[Anna Rose] (49:49 - 49:50)
+Okay.
+
+
+[Benedikt Bünz] (49:50 - 52:02)
+So it also is over binary fields. You know, it, it turns out that binary fields are very good for emulating like this, these native computations. So one thing, sort of the, the, the big, I guess, caveat or, or, you know, sort of the technical caveat is that Flock is for proving so-called batch computations.
+
+
+So when you do the same thing over and over again, for example, you have one hash function and you prove it over and over again, you have many iterations. So, you know, we can, we can combine that with like kind of a, you kind of have your main power thing that can prove the same computation many times. And then you have a thin kind of layer for input outputs and moving things around, around when you want like the output of one hash to feed as the input of another hash, fortunately though.
+
+
+So this is not as, you know, it's not for an arbitrary computation. So it needs to be a computation that has this structure. Fortunately though, many, many, I would say almost all of the computation that we care about do have this structure, right?
+
+
+So signature verification, it's a lot of the same hash, even, you know, sort of, you could, you know, like in, in virtual machines, I mean, I think there's like interesting followup work on, can we extend this to virtual machine computations? But even in a virtual machine, you're kind of doing the same computation, the same machine step over and over again, or you have like some precompiled that you're doing over and over again. And so, so it's really tailored for these computations and we focused on kind of hashes as, as sort of the first obvious target, but I do think that there will be some followup work by us or others on like, can we, you know, use these techniques, like, can we formulate other computations in this manner, in this, in this batch manner, because I think that it essentially simplifies the problem a lot and it makes it a lot faster. That's one key thing where we get a lot of the speed up compared to prior work.
+
+
+[Anna Rose] (52:02 - 52:06)
+Are you using folding or any IVC in here at all?
+
+
+[Benedikt Bünz] (52:06 - 52:10)
+So no, but I think it could be combined with folding.
+
+
+[Anna Rose] (52:10 - 52:10)
+Okay.
+
+
+[Benedikt Bünz] (52:10 - 52:14)
+So you could use, or at least with IVC PCD.
+
+
+[Anna Rose] (52:14 - 52:27)
+This almost sounds like, is this like the vanilla first version and now you're going to start experimenting with a lot of the techniques that we've been exploring, like, would you be able to add lookups to this? I know it's, it's maybe doesn't work with hashes so well.
+
+
+[Benedikt Bünz] (52:27 - 54:02)
+So there's no lookups here yet. So with respect to folding, I think that you can absolutely, so one computation that also involves a lot of hashes is proof verification. So you can build basically like recursive proofs, like the system itself uses a hash based polynomial commitment.
+
+
+So it can prove itself relatively efficiently, which is exactly what you need in these recursive proofs in these folding techniques. So I imagine that it, you know, these things can be very easily, or it can be extended to work with like recursive proof techniques and then, you know, all these things that we talked about, about like, you know, running it on different machines, running it with different people, having better parallelism. I think this should all extend to this kind of work.
+
+
+So this is why I was saying it's kind of a tool in the toolbox, but here now we've focused on, you know, a single, even a single core and a single CPU. How fast can that one prove? By the way, it is a proof system, but is it ZK?
+
+
+It is not ZK. So that's a very good question. This is definitely also one of the open questions.
+
+
+It at least is like somewhat, you know, challenging to get ZK without losing performance. It's not challenging to get ZK, but like you want to get ZK without losing performance. One thing you can do, again, using recursive proofs is you can kind of wrap things in the end in some zero-knowledge proof.
+
+
+[Anna Rose] (54:02 - 54:05)
+And are you talking ZK in the private context here?
+
+
+[Benedikt Bünz] (54:05 - 55:25)
+Fully private, like, yeah. So it's not, you know, I guess it's, it shouldn't be allowed on this podcast. It's not ZK yet, you know, but it's.
+
+
+Oh, we've, we've ventured out and nowhere is. No, I know that. So it is not ZK yet.
+
+
+That's certainly also an open problem. You know how to do that without losing performance. But this was really, you know, the goal was really like, how can we get the fastest thing out there?
+
+
+And the fun thing is that, you know, sort of Ron and I, especially Ron comes really, like, we've converted him from a theoretician, I think he would say this himself, to like, you know, a practitioner. Like, Kobi has worked with him. Yeah.
+
+
+I mean, and like, you know, full disclosure, like we, this project would not have been possible without AI. Like it is amazing in multiple ways. So first of all, like we, in the end, we looked at the verifier, like at one, you know, funny, funny anecdote.
+
+
+So I think there was a long time. I don't know if a single line of code here was human written. Like, it's just all AI written, but it's not a, you know, it's not a like, Hey, Claude, please implement this.
+
+
+It's like a very much an iterative process of like, Hey, please benchmark this thing. Wait, this should be faster. Let's work on this.
+
+
+Like, Hey, no, this should be faster. Like, let's, you know, here's some idea.
+
+
+[Anna Rose] (55:25 - 55:28)
+Sounds like echoes of you working with your dev team, actually.
+
+
+[Benedikt Bünz] (55:28 - 57:05)
+It's exactly that, right? Like, it's like, you know, I think it can really leverage someone, you know, I think we have a pretty good algorithmic understanding of how the protocol should work and, you know, now we can translate that. It, it kind of, yeah, it takes away the boring part of coding and, you know, there's like, you can only do the very fun parts of it.
+
+
+But so, so that was a huge aspect, but one thing that's also kind of a fun anecdote, we were obviously that at some point we were like, what if the AI is completely fooling us, right? Like what if, you know, what if none of this is real? Uh, so the beauty of zero knowledge proofs is that like, okay, there were, you know, a couple of thousand, I don't know, a lot of code written and we're like, wait, we can't look at all of this, but we only had to look at the verifier, like we don't actually care what the prover looks like as long as the verifier is correctly implemented, the system is secure, right?
+
+
+This is like the whole property of zero knowledge proofs or snarks is that all you need to trust is that the verifier is correct and secure. So we then like, you know, more manually looked at the verifier and made sure that we're not being fooled and this is real and, and it's also like, and it makes sense, you know, where the improvements come from, let's say compared to Binious, we're like six to 12 times faster, like, you know, six times faster compared to Clunky. Similarly, it really depends.
+
+
+So yeah, it sort of made sense, you know, where these improvements came from. And, but yeah, what we did is we just looked at the verifier, which is kind of a funny anecdote of, of zero knowledge proofs and AI.
+
+
+[Kobi Gurkan] (57:06 - 57:36)
+Yeah, I think that's a great way to use AI and like I, it matches my experience as well and as long as you have a good anchor, like you said, you audit the verifier or maybe you have a slow prover implementation that produces the same hash or something like that. So as long as you have an anchor, that becomes a really powerful loop that you can run. So yeah, I think that's a great way to use that.
+
+
+Yeah, you can, you can do a lot that, that's awesome.
+
+
+[Benedikt Bünz] (57:37 - 57:43)
+Yeah. I mean, this is like this project, I don't know, six engineers have a year or something like this. Like it's just like, It's what it would have taken.
+
+
+[Anna Rose] (57:43 - 57:44)
+How long did it take you?
+
+
+[Benedikt Bünz] (57:45 - 58:17)
+I mean, really, like we've been thinking about these ideas and we've, we've had a prior work called TensorSwitch. So we've been thinking a lot in this direction. I think Ron had been working with Kobi on like a very fast code based thing called Bolt, like essentially like a month or two.
+
+
+Like it's, it's really, you know, very, very fast, like from, you know, like starting to implement to basically making this a reality. So yeah, it's been kind of very, very fast, but very fun.
+
+
+[Anna Rose] (58:18 - 58:29)
+You just mentioned Bolt. Did you use this in this project? And actually, can you describe what it is?
+
+
+Because Kobi, you're one of the co-creators of this, so maybe we should talk about it.
+
+
+[Kobi Gurkan] (58:29 - 59:24)
+I mean, I can describe it in a sentence, but, but yeah, Bolt really wanted to achieve really fast proving time, especially on the target machines that we use, which were consumer hardware. It was like a Mac mini, an M4. And that's something that we've been able to achieve using special kinds of code, like Xpander's combination with Reed Solomon.
+
+
+And there we were using a few different components. So some of the code or a lot of the code have been optimised by AI. We had this like nice anchors that we could target, which was cool.
+
+
+And actually we're using one of Benedict's paper as well for some of Bolt. Which one? One that we haven't gotten to talk to you about yet, and maybe we should, which is called MULPERM, which is about permutation arguments.
+
+
+[Anna Rose] (59:24 - 59:29)
+What is the MUL? Is it multiple permutation? Okay.
+
+
+MULPERM.
+
+
+[Benedikt Bünz] (59:31 - 59:32)
+Yeah, the BIPERM.
+
+
+[Anna Rose] (59:33 - 59:33)
+Okay.
+
+
+[Benedikt Bünz] (59:34 - 59:34)
+Yeah.
+
+
+[Anna Rose] (59:35 - 59:35)
+UNIPERM?
+
+
+[Benedikt Bünz] (59:36 - 59:42)
+UNIPERM you shouldn't use. UNIPERM isn't good. UNIPERM exists, but it's not good.
+
+
+[Kobi Gurkan] (59:43 - 59:57)
+Yeah. Yeah. Yeah.
+
+
+But my understanding is that this group's use of the code that we created was not too big, like it was pretty minimal. It was using an implementation of the Ligurito, following my commit win scheme.
+
+
+[Benedikt Bünz] (59:57 - 1:01:03)
+Yeah. So we use Ligurito. So we haven't like for, let's just stick with Flock.
+
+
+So we, we are just using kind of standard Reed Solomon code, which is we haven't used Bolt yet. I definitely think that it can help. There's some kind of tricky challenges with it.
+
+
+I think Bolt works from a technical point of view, Bolt works best over like a GF2 to the 32 or something like this. And we need it to work over exactly GF2 and sort of, there's like a small technical hurdle that, you know, we need to overcome. But yeah.
+
+
+This could definitely, you know, speed up, like we're using Ligurito from Kobe. So we're using, you know, a lot of techniques there. We're not quite using Bolt yet.
+
+
+There's a technical hurdle to overcome. I think it is overcomable and surmountable, I guess is the real English word. And yeah, definitely interesting to see sort of how much extra bang that could give us.
+
+
+[Kobi Gurkan] (1:01:03 - 1:01:11)
+I'll just give a shout out to Andrea, which is like the Ligurito guy. And most of the credit belongs to him.
+
+
+[Anna Rose] (1:01:11 - 1:01:12)
+And Guillermo.
+
+
+[Kobi Gurkan] (1:01:12 - 1:01:16)
+Oh, yes. I mean, in the Bolt aspect, but yes, Guillermo and Andrea.
+
+
+[Anna Rose] (1:01:17 - 1:01:27)
+You just mentioned mulperm. Going back to that. What, what is, so we said this is multiple permutation arguments or multi permutation arguments?
+
+
+[Benedikt Bünz] (1:01:28 - 1:01:42)
+No, I guess. I don't, I don't know if it has a, is a really an acronym. It's really these ideas of permutation arguments and, you know, lookup arguments.
+
+
+They're very, very related. It turns out.
+
+
+[Anna Rose] (1:01:42 - 1:01:52)
+What, wait, let's, let's define permutation arguments. Lookup arguments are really, I mean, I, that's very clear to me. I actually don't have, when you say it, it doesn't, I don't exactly know what that means.
+
+
+[Benedikt Bünz] (1:01:53 - 1:02:51)
+So permutation argument proves that, you know, I have a list and I prove that basically basically, you know, let's say the first input is the same as the third input and the fourth is the same as the seventh or something like that. So why is this useful? Why, why would I care?
+
+
+Well, one of the key applications is that if I want to prove an arithmetic circuit, so this is a bunch of additions and multiplications, then I want to prove that each multiplication gate is correct, right? So I prove that left input times right input is equal to output. I can do the same for the addition gate, but that's not enough.
+
+
+Right? Because I also need to prove the wiring. So what do I need to prove for the wiring?
+
+
+Well, I need to prove that the output of the first gate is the, let's say, left input for the second gate or that the, you know, whatever, like the third, the left input for the fifth and sixth gate are exactly the same. So this is where we use the permutation argument for.
+
+
+[Anna Rose] (1:02:51 - 1:03:04)
+Is this like a test, like because of that characteristic of the first and the third being the same or the second and the fourth being the same or whatever, like, are you then using that characteristic to test the system?
+
+
+[Benedikt Bünz] (1:03:05 - 1:03:33)
+Yeah, basically. So you're proving that basically if I shuffle things around, right, if I swap the first and the third and I swap the fourth and the things, I still get the same thing. That's why it's a permutation argument.
+
+
+It's like I permute it and then I see whether I get the same list. And if I do, that's exactly the test, then yes, this sort of the wiring is correct. So it is exactly a test.
+
+
+Interesting.
+
+
+[Kobi Gurkan] (1:03:34 - 1:03:43)
+Yeah. So that's what people call like copy constraints, let's say in Plonk, where that's how they basically can carry computation over a long, like a long period.
+
+
+[Anna Rose] (1:03:43 - 1:03:45)
+So then what's MULPERM?
+
+
+[Benedikt Bünz] (1:03:46 - 1:05:56)
+So MULPERM, it's funnily enough, this started actually as like, nobody really knows this, but we wrote in Hyperplonk, we had like one subsection and, you know, like, oh, can you do this permutation argument with, basically the question is, can you do a permutation argument with just a sum check? Like, you know, can you do it with, with a sum check? And I think basically Aleksej asked us this as a question, like, hey, oh, this looks really cool.
+
+
+But like, you know, we use some other permutation arguments, something that's more Plonk inspired and from like a paper called Quarks, and he was like, wait, could you just do like everything else in Hyperplonk with sum checks? Could you do this step also using sum checks? It also has some other benefits, like you need to commit to less data and, you know, it has better soundness.
+
+
+So we then, like Bini and I then wrote this, this up in like a subsection of Hyperplonk, I think after the paper was published, like nobody noticed maybe and nobody cared, but that's okay. And, and then, you know, fast forward, I had sort of this in the back of my mind, sort of, I was talking about it with Jessica and my students and we also got Zach, another student here involved. And then we basically improved this original idea from Hyperplonk a lot.
+
+
+And it's a permutation argument that can also be used as a lookup argument that uses the sum check. You know, that's sort of like solely based on a sum check, which makes it, I guess the hope is that it makes it more lightweight. It's actually, you can view twists and shouts, which are these papers by, by Srinath and Justin, you can view them as they're basically the bi-perm version of, of more perm.
+
+
+And so, so it's just some check based and it has nice properties in that it works very well over smaller fields and, and just sum checks and sum checks are fast and good and so that's, that's kind of the short summary of more perm.
+
+
+[Anna Rose] (1:05:56 - 1:06:37)
+Nice. For some reason, as you described this, the permutation arguments can also be used in lookup tables or lookup arguments using sum check. I started to be like, we should make ZK proving systems bingo with all of these techniques and like when they appear.
+
+
+I don't know how this game actually would work, but it's just so, it's so interesting to see these techniques kind of reemerge. It's like, I love that, I love it when like a new one gets invented or like, not even invented, it's usually like gets described, like it's already there somewhere, but we don't know why it works exactly. We haven't like analysed it and then someone pulls it out and then it starts being used everywhere.
+
+
+[Benedikt Bünz] (1:06:37 - 1:07:19)
+And I think there's a lot of value in, in the end you can always be like, oh, you know, this was kind of like, it's kind of the same like X and kind of the same like Y and, you know, and in the end it's all polynomials and, you know, whatever. Right. It's all the same.
+
+
+But I think there's like tremendous value in, you know, as you said, pulling things out, cleanly describing them, you know, saying like, oh, this is, you propose a name, we should call it this technique. And, you know, this is what it does. And I think that this is absolutely, even if it's similar to something that happened before, it's absolutely not to be dismissed.
+
+
+And, you know, now has a, has a lot of value. And I think that's, that's great.
+
+
+[Anna Rose] (1:07:19 - 1:08:20)
+By the way, I just, you just said, it's very funny in our last episode with Wyatt Benno, he actually quoted you. He just said, I want to call out Benedikt for this little piece of advice that he gave me at an event one time, which was, he asked you, what are the key things about ZK? And you answered, it's just polynomial evaluations.
+
+
+It's just funny that we got almost that quote again. Very cool. It's still true.
+
+
+But not true, apparently. But more nuanced this time. Slightly, slightly more.
+
+
+That's funny. Cool. So I want to say thank you, Benedikt, for doing this interview with us.
+
+
+Thank you for updating us on all of this work. I feel like we haven't really covered all of it. I know that there are other lines of work that we didn't get to.
+
+
+We kind of ran out of time. But I also want to thank you for defining some of these things that we do use often on the show. Yeah, just kind of outlining them.
+
+
+It's helped me at least to understand some of this work a little bit deeper. So thank you for that.
+
+
+[Kobi Gurkan] (1:08:21 - 1:08:37)
+Yeah. Thanks for having me. Yeah.
+
+
+Thanks, Benedikt. Like we said, you've done a bunch of impactful work and it's always a pleasure to keep up and you're doing also a lot of work. So I'm sure that there are a bunch of things we haven't covered as well.
+
+
+Maybe next time.
+
+
+[Anna Rose] (1:08:37 - 1:08:37)
+Yeah.
+
+
+[Kobi Gurkan] (1:08:38 - 1:08:39)
+Yeah, I would love to be back. Thank you.
+
+
+[Anna Rose] (1:08:40 - 1:08:47)
+All right. I want to say thank you to the podcast team, Rachel, Henrik, Tanya and Hector, and to our listeners. Thanks for listening.
