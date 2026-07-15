@@ -1,0 +1,1253 @@
+﻿[Anna Rose] (0:05 - 1:41)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Nico and I catch up with Alex Ozdemir, assistant professor at Georgia Tech, for a discussion about formal verification and theorem proving, specifically in ZK.
+
+
+We start with a recap of the changing ZK DSL landscape since 2021, the topic he was covering last time we had him on, and how CirC, his compiler infrastructure project, has evolved to support more expressive and efficient ZK proof systems. We then dive into formal verification and theorem proving, discussing the difference between SMT solvers and interactive theorem provers like Lean, how ZK proofs can be used to verify Lean proofs without revealing the underlying code, and the new system zkPi, a ZK-SNARK for proofs expressed in Lean, allowing a prover to convince a verifier that a Lean theorem is true without revealing the proof itself.
+
+
+We also explore formal verification, the threat of security theatre, and how building verifiably correct systems will be ever more important moving forward. Hope you enjoy. Now here is our episode with Alex Ozdemir.
+
+
+Today Nico and I are here with Alex Ozdemir, professor at Georgia Tech. Hi Alex. Welcome back to the show.
+
+
+[Alex Ozdemir] (1:42 - 1:45)
+Hi Anna. Good to see you again. Hi Nico.
+
+
+Nice to meet you, I think, for the first time.
+
+
+[Anna Rose] (1:45 - 1:46)
+Oh.
+
+
+[Alex Ozdemir] (1:46 - 1:48)
+Yeah. Great to meet you. Hi both.
+
+
+Nice to be here.
+
+
+[Anna Rose] (1:49 - 2:32)
+Alex, I'm excited to catch up. A little bit of backstory. A few years ago on the show, I did a series on ZK-DSLs.
+
+
+You at the same time were doing a lot of kind of work researching all of these ZK-DSLs, and so we had you on then. I think we also did a ZK Sessions with you, a study club, like there's a bunch of content that we'll link to, but this is actually a few years ago. This is 2021 that we were doing that.
+
+
+I'm very excited to catch up on all of your research that you've been working on, but I think maybe a starting point could be those languages. What's happened sort of in the language space for ZK since we last spoke? And also, let's talk about SIRC, which was kind of what you were presenting back then.
+
+
+[Alex Ozdemir] (2:33 - 4:03)
+Yeah. So I think there's two things to discuss here. First, what has happened to languages in general, and then where does SIRC fit into that?
+
+
+And so, you know, let's start with languages in general. There basically have been two parallel and complementary threads of research that have been going on. One is that circuit DSLs, people have continued to build new ones, they've started to explore new computational models for them, like, you know, what is this thing that we're building?
+
+
+Is it really a circuit, or is it like a variation of a circuit, maybe it's a little bit different. And then also just like, can we get the compilers for these DSLs to be better, better user experience? All that has continued, and SIRC is very much part of that trend.
+
+
+And I can say later, what exactly we've done in SIRC to contribute to that. Simultaneously, there's been a lot of attention on building ZKVMs, which are also a language tool for building knowledge proofs. They live typically on top of the circuit level.
+
+
+So the implementation of the VM is a circuit and some other things, but then people can programme on top of that. And that's also been very exciting, and the ZKVMs have been getting better and better. And, you know, the reason, of course, that the ZKVMs are really important is because in some sense, they make the circuit DSLs and the circuits like an implementation detail rather than an interface that a ZK application developer needs to know about.
+
+
+So actually, that was a little bit unclear. So to put it more clearly, with a ZKVM, the application developer doesn't need to know about circuits. The VM developer knows about circuits.
+
+
+The application developer just knows about the VM.
+
+
+[Anna Rose] (4:03 - 4:21)
+Those ZK DSLs, you mentioned that there's new ones. Back then, we would have listed ArcWorks, I think Noir was already out in 2021, Cairo. What else has happened since then?
+
+
+Maybe I'm missing some from there too. But yeah, can you share, like, what are the new ZK DSLs?
+
+
+[Alex Ozdemir] (4:22 - 4:49)
+Yeah. So Noir has continued to see a lot of effort go into its compiler. So back when we talked before, the compiler was kind of a stub that did very little.
+
+
+And now it's certainly the lines of code, the biggest of the compilers. They put a lot of effort into it. So another new one is called Clean, like cleaning your room.
+
+
+And this is a DSL, a ZK DSL that aims to be verification first. So the goal is not only...
+
+
+[Anna Rose] (4:50 - 4:53)
+Like a Clean, maybe? Is that what it's standing for?
+
+
+[Alex Ozdemir] (4:54 - 7:03)
+This is from ZK Security, by the way. It's from my colleague, Gregor, and a lot of the team, of course. Exactly.
+
+
+So here, the goal is, OK, we don't just want to describe a ZK circuit, but we also want to verify that that circuit matches our intentions. And we think that a co-design process between the DSL and the verification toolchain will help. And so that's what Clean represents.
+
+
+So that's another exciting one. It already sort of existed in very informal and weird ways in 2021, but there wasn't much around it was this idea of building DSLs not for circuits, but for randomised circuits or for circuits that model interactive proof systems. This is like, you know, to discuss this will take a little bit more time.
+
+
+But to put it simply, you know, what if your circuit, in addition to doing computations and enforcing constraints, could also flip coins? And then, you know, you want your circuit to only accept if the property holds. So if the property doesn't hold, it's OK if the circuit accepts with some very small probability over these random coins that you flip.
+
+
+So this existed in Halo 2, which existed in 2021. But there wasn't much like it existed in the proof system support for that, but there wasn't much tooling. And so that's been something that people have been exploring in different ways, like how does the circuit DSL allow the programmer to use this randomness in their circuit?
+
+
+And so there's been a lot of work on the language tooling for that, but also then using that to build better ZK applications, getting improving times to be faster for important kinds of properties. In some way, this is something we're already doing with lookups and like permutation arguments, right? These are interactive circuits in a way.
+
+
+Exactly. Yeah, yeah. So these lookups, so you can implement the lookup arguments using these random coins.
+
+
+So in some sense, random coins subsume the stuff that you can do with lookups. And so that's like one way that you can do lookups is that you can have support for random coins. But then another option is to say, actually, you know, really, I don't know if I want random coins in general.
+
+
+I just want lookups. So then you can bake lookups specifically into the DSL and then random coins become an implementation detail. Although I would really advocate putting random coins in the language because there are lots of cool things that you can do with them.
+
+
+[Anna Rose] (7:03 - 7:13)
+What are these coins that you just described when you say flip coins? I'm not sure if I know, like that isn't really the language we were using back then. What does that mean?
+
+
+[Alex Ozdemir] (7:13 - 7:32)
+Yeah. So that particular phrasing really comes out of complexity, where like everything, complexity theory, where everything is a bit. And so if you want randomness, you flip a coin, heads or tails, and that sets the bit.
+
+
+Actually, typically in these circuits, we're working over a finite field. So really you just sample a uniformly random finite field element.
+
+
+[Anna Rose] (7:32 - 7:38)
+OK. But are you getting a one or a zero? Is this like you're getting one of two options, like a bit?
+
+
+[Alex Ozdemir] (7:38 - 8:06)
+So you'd probably be getting a random element from a finite field. So like one of 32 to 32 options, approximately, or two to the 256 options. Yeah.
+
+
+In our sort of interactive proof IOP language, this is getting a verifier challenge. Correct. Or what do you mean?
+
+
+As in you as a prover will do some things. And once you've done that, you can ask for a challenge from the verifier. And using that challenge, you can do more things.
+
+
+So I'll commit to my tables, I'll get a challenge and then I'll do a lookup.
+
+
+[Anna Rose] (8:08 - 8:11)
+So it's like sequential based on certain requests.
+
+
+[Alex Ozdemir] (8:11 - 8:45)
+Exactly. And that phrasing is like perfect because, you know, when we introduce this informally, we say, oh, your circuit has random challenges. So it's a randomised circuit.
+
+
+But that's not really right because there's this question about ordering. The prover can put in values to the circuit and you can flip coins, you can you can sample challenges and you can actually alternate. So what's really going on here from a theoretical perspective is that this this circuit is now defining an interactive proof system that's public coin.
+
+
+And then what happens behind the scenes is that the generic snark turns your interactive proof system into a snark for the same property.
+
+
+[Anna Rose] (8:46 - 9:13)
+I do realise that. So you just mentioned just going back a little bit, you mentioned Halo 2 was a proving system at the time and now kind of has more of a characteristic of a language. I actually was going to ask you about that, too, because all of these teams we knew were doing these workshops on Halo 2 using Halo 2 sounded like a DSL.
+
+
+But it's yeah. What what is that actually? Was there other languages involved in Halo 2 or was it actually its own thing?
+
+
+[Alex Ozdemir] (9:13 - 9:21)
+Yeah, so that's sort of the classic story in ZK tooling research, which is that you come up with some cool new proof system that has a cool new capability.
+
+
+[Anna Rose] (9:22 - 9:26)
+And then you have to make a language that can interface with that, I guess.
+
+
+[Alex Ozdemir] (9:26 - 10:15)
+Exactly. Exactly. This was the case for LibSnark back in the day during the first implementation of Zcash.
+
+
+So they had the proof system and then they also had the gadget library. I think they sometimes called the gadget library gadget lib, but sometimes they just called it LibSnark as well. So, you know, tool, language.
+
+
+And then again with with Vellman when they did this happening implementation of Zcash, they had Vellman was an implementation of the cross-system proof system, but also a gadget library on top of it. So the language and then and then this happens again with Halo 2. So you've got a proof system, you've got the something like a gadget library.
+
+
+And to that, you add the joys of open source development, which means all these teams did different forks of it to replace different parts of Halo 2, different commitment schemes, etc. So, yeah, it's a chameleon with many heads and God knows what is Halo 2, but thank God for Halo 2.
+
+
+[Anna Rose] (10:17 - 10:32)
+Yeah, wow. We forgot to actually mention one of the OG languages that was used a lot, Circom. What's happened with Circom?
+
+
+Do people still use it? Has it as Noir kind of like taken its mantle?
+
+
+[Alex Ozdemir] (10:33 - 10:39)
+Circom is still used. OK. Circom is still used.
+
+
+And I think just by like in terms of like sheer number of projects, it's still the majority.
+
+
+[Anna Rose] (10:40 - 10:40)
+Oh, wow.
+
+
+[Alex Ozdemir] (10:40 - 11:11)
+And people still write new projects in Circom. I think as a percentage, its market share is declining a bit just because other languages are also succeeding and they're adding new projects faster. But Circom actually, frankly, is better than ever.
+
+
+They reimplemented their whole compiler tool chain in Rust. They have lots of verification infrastructure for Circom now. And like the Zisk ZKVM.
+
+
+Yeah. So this is like a VM. Like it would be totally reasonable for them to not use a circuit language at all and just try to like write the constraints themselves.
+
+
+But they don't. They actually use Circom and that works very well for them.
+
+
+[Anna Rose] (11:12 - 11:46)
+Interesting. It's funny, I actually had ZKVMs as like the final question to this section. You've already brought it up.
+
+
+This idea that like don't ZKVMs kind of make all of this unnecessary. Where are they still being used? Are they necessary?
+
+
+Like does the ZKVM mean that like developer mindshare application developers are all going to be using standard like standard languages like Rust or whatever is in the ZKVM? Or are there still people who feel the need to kind of go into these tools and build with the ZK DSL itself?
+
+
+[Alex Ozdemir] (11:46 - 13:15)
+Yeah, circuits are not going to go away. So, you know, the ZK, the advent of ZKVMs just means that the situation is going to be more complicated and developers are going to have more choices. And so, you know, to think about why circuits won't go away, there's two reasons.
+
+
+One, the VMs are implemented using circuits. So the people who implement the VMs are still going to need to know this. And then the other reason is that the VM imposes significant performance costs in terms of proving time.
+
+
+Because essentially, you have your application and instead of getting, you know, the best possible circuit for your application, you are shepherding your application into some instructions and architecture like RISC-V. And then you're doing a generic proof about RISC-V. And this this like level of indirection just ends up being expensive, especially because instruction set architectures like RISC-V were not designed to be efficient for zero knowledge proofs.
+
+
+They're designed to be efficient for processors. You know, the abstraction is kind of wrong. So, you know, what this means is that I think we're going to enter a world where for an application developer, the easiest approach from an engineering perspective is going to be to use a VM.
+
+
+And if that meets your performance needs, great. You know, you're done right under the hood. There are some circuits used in the implementation, but you don't care about that.
+
+
+Of course, sometimes that's not going to meet your performance needs. And so to give a reference point, very recently, Google put out this library for doing anonymous credentials using ZK. The library is called Longfellow.
+
+
+Longfellow is definitely not using a ZK VM. They have their own circuits.
+
+
+[Anna Rose] (13:16 - 13:29)
+I actually wondered another example maybe was like a project like Lighter, because I think they're a bespoke ZK VM or ZK EVM or not even. They're a roll up or something. But they seem to have developed their own circuit.
+
+
+We actually had them on last year.
+
+
+[Alex Ozdemir] (13:30 - 13:54)
+Yeah, yeah, exactly. So there, if I remember right, correctly, they're basically operating an order book. So they're operating a marketplace.
+
+
+And yeah, they have like a bespoke circuit flash VM situation that's very good for implementing an order book, an order book actually. I actually talked to them. And actually, I think all this randomness stuff that we were mentioning is quite useful for them already and could probably be even more useful.
+
+
+And that's written in Plancky, too, if I'm not mistaken, which is another one that we can add to the list.
+
+
+[Anna Rose] (13:54 - 13:56)
+Oh, wow. Yes. Have we forgotten any?
+
+
+[Alex Ozdemir] (13:58 - 13:58)
+Probably.
+
+
+[Anna Rose] (13:59 - 14:01)
+We didn't. I mean, Cairo, has it evolved at all?
+
+
+[Alex Ozdemir] (14:02 - 14:03)
+A lot. Yeah, I'm not up to date.
+
+
+[Anna Rose] (14:04 - 14:04)
+Yeah.
+
+
+[Alex Ozdemir] (14:04 - 14:21)
+Cairo went from being a Python-like language to a very Rust-like language. And it's an interesting one because it's a DSL, but it sits on top of a VM, right? It's actually like the instructions for the Cairo VM.
+
+
+So it's a slightly different thing. It's these like, you know, custom VMs that have these custom languages.
+
+
+[Anna Rose] (14:22 - 14:32)
+I want to now talk about CirC and how that has developed. Can you remind us what CirC was and what it has become? What is it?
+
+
+[Alex Ozdemir] (14:32 - 15:44)
+Yeah, so CirC is a compiler infrastructure. So what does that mean? It's not a compiler.
+
+
+So it doesn't have one source language and one target language that is translating between. Rather, really, it's a library for building compilers. So it's a common intermediate representation with transformations over that.
+
+
+And instead of having one source language, there are multiple. And instead of having one target, like one particular zk-snark, or even just zk-snarks in general, it has multiple targets that it has in mind. And the idea is to try to share compiler logic between different source target pairs.
+
+
+And to give you a sense, the targets that CirC originally supported included not just zk-snarks. I think specifically we were hooking into Bellman at the time, but I guess you should think of that as R1CS in general. But also we are compiling to multiparty computation protocols and we are compiling to SMT logical formulas in order to do verification on the programmes that were being compiled.
+
+
+We were compiling to integer linear programming constraints in order to solve optimisation problems. And then probably after we talked, we went on to compile to different homomorphic encryption schemes as well.
+
+
+[Anna Rose] (15:44 - 15:50)
+Interesting. I was going to ask you if it sort of like branched out past zk, because it sounds like it. Why not?
+
+
+[Alex Ozdemir] (15:51 - 16:13)
+Yeah, yeah. Personally, the zk target continues to be the one that's closest to my heart, just because out of all these cryptographic technologies, the zk seems to be having the most impact right now and needs tooling the most for that reason. But it does do these other things and we continue to do research on how to do those other things as well.
+
+
+So we've done lots of research into optimising compilation for FHC and MPC.
+
+
+[Anna Rose] (16:13 - 16:25)
+Cool. I feel like I.O. is probably too far off, but like, is there a language for I.O.? I feel like I'm getting ahead of myself here. But yeah, have you even looked at that?
+
+
+[Alex Ozdemir] (16:25 - 16:56)
+So it's not something that I've looked at and I don't think other people have looked at this from a language level, although there's a lot of excitement right now on basically taking I.O. constructions. So not not the compilation problem, but the crypto system itself from from theory to practise. So traditionally, this is something that the theoretical cryptographers worked on.
+
+
+And, you know, they don't even really know like how long things take, so they can't make things efficient. And so there's some some attention on trying to get more practical constructions. Once that happens, then we'll need language level tooling as well.
+
+
+[Anna Rose] (16:56 - 17:07)
+Got it. What is new with CirC, though? Because I feel like I've seen I don't know if it was a research paper of yours, like from just like last year or two years ago.
+
+
+So, yeah, I'm curious what what was in there.
+
+
+[Alex Ozdemir] (17:08 - 18:04)
+Yeah. So CirC has been making a lot of progress on two fronts. One front is functionality, like kinds of things that we can compile.
+
+
+And the other front is correctness. How do we know that CirC is correct as a compiler? And the functionality point actually relates to something that we were discussing a few minutes ago, which is this idea of in-circuit randomness.
+
+
+So over a sequence of projects where we were using CirC to do various things, we wanted to use in-circuit randomness like like everyone else. And we started to ask, like, what does it mean to have an automatic compiler that is automatically optimising how you use randomness inside your circuit? And so that's something that that we've been doing in CirC now for about two years.
+
+
+And to my knowledge, we're like, in some sense, the only game in town for this. So there are lots of languages that will let you use randomness, but CirC is the only compiler that will take how you use randomness and then change it and optimise it.
+
+
+[Anna Rose] (18:04 - 18:12)
+What do you mean here? So let's dig in a little bit. So it's not that it generates randomness.
+
+
+You already have randomness. How do you use it differently?
+
+
+[Alex Ozdemir] (18:12 - 19:03)
+So it'll kind of do both things. So so first of all, maybe your programme, your original circuit programme, is actually deterministic. So it's doing deterministic operations.
+
+
+Maybe it builds an array. It puts some stuff in the array. It gets stuff out of the array.
+
+
+So CirC will actually come in and look at your deterministic operations. And if it knows how to, it will replace those deterministic operations with optimised, randomised versions. So it'll like plug in the interactive protocol that does a lookup argument or does a memory argument.
+
+
+And it knows like four different memory arguments. And it will choose the optimal one based off of the size of your memory and the number of accesses. Maybe you're multiplying matrices.
+
+
+It'll plug in randomised tests of matrix multiplication. Instead, it will rearrange your lookup tables and like range checks. So it'll add randomness, even if you're not using it already.
+
+
+[Nico Mohnblatt] (19:04 - 19:04)
+Oh, cool.
+
+
+[Alex Ozdemir] (19:04 - 20:12)
+But then the second thing is once it's added all this randomness or once it's looked at the randomness that you've added yourself, it will try to use that randomness better. And what do we mean by that? Maybe you've, you know, in your programme, you've got a thousand challenges, but maybe just ten will do because maybe some of some different components of your programme can actually share challenges.
+
+
+Cersei will reason about that. Maybe, you know, you get some challenges and then the prover commits to some more stuff and you get some more challenges. And, you know, there are actually many rounds of challenges.
+
+
+Cersei will try to figure out if some of those rounds can actually be combined. Sometimes they can, sometimes they can't. So it'll rearrange the implicit interaction structure of these challenges.
+
+
+So this stuff is all like very new and like we don't totally know the limits of what kinds of optimisations are sound. But that's something that we've been exploring in Cersei. How can you optimise not circuits, but optimise interactive first?
+
+
+And I guess this is where proving correctness becomes even more important, right? Yeah, yeah. And that's the other thing that we've been working on, which is how do we know that Cersei is correct?
+
+
+And so we started asking that question basically from the very beginning.
+
+
+[Anna Rose] (20:13 - 20:33)
+And this you're talking about like that the compiler has acted the way it's supposed to? Or is it like, are we talking a little bit like in the direction of formal verification? And actually a question here, like, are you proving at the end of it that it's acted correctly?
+
+
+Or are you trying to prove beforehand that this is going to act correctly?
+
+
+[Alex Ozdemir] (20:33 - 21:36)
+Yeah, both of those approaches. So let's break that down. So, yeah, this is formal verification.
+
+
+That's the goal. The compiler is a piece of software. There is some specification, often implicit, of what it should do.
+
+
+We want to know that it's doing that. And for compilers, when you verify them, there are two dominant approaches. One approach is I think what you are referring to as verifying before.
+
+
+And what this means is verifying that the compiler as a piece of software is correct for any programme that you give it, it will compile it correctly. There's also verifying after, which we often call translation validation. And this and this approach, you don't verify the compiler once and for all, but you modify the compiler, you instrument it so that as it compiles.
+
+
+It also creates a programme specific proof that it compiled the particular programme that you gave it correctly. So if the compiler succeeds in an execution, it will output not only target code, but it will also output a proof in some language that that target code matched your original programme. So the flatter approach is translation validation.
+
+
+[Anna Rose] (21:36 - 22:37)
+OK, I want to just do a quick throwback to a recent episode, actually, I think it was our last or two episodes ago, where we had Benedict on and we were talking about ZK and how because of the structure of a ZK proof, if the verifier accepts a proof, kind of like you don't have to do as much verification to how the proof is generated. I mean, maybe I'm being a little vague on this explanation, but in the case of a compiler, are you in like the like the translation validation you just talked about? Can you do something similar where it's like if the output is correct and accepted, then you know that the input worked well enough?
+
+
+Or in the case of compilers, is it more complicated and you actually need to test in different ways? I'm making a bit of a funny comparison here, I realise, because I'm talking about a proof system and a language and engineering question. But yeah.
+
+
+[Alex Ozdemir] (22:37 - 23:03)
+Yeah, that's a really good question. I think the natural formalisation of this question is saying, OK, the compiler has some input source and an output target. When we do translation validation, when we output a proof that the target is correct, is that proof a proof of a standalone theorem about the target that the target is correct on its own?
+
+
+We don't even really care what the source was. Or are we instead proving that the target matches the source?
+
+
+[Anna Rose] (23:03 - 23:04)
+Right.
+
+
+[Alex Ozdemir] (23:04 - 23:32)
+So for proving that the target matches the source, then, of course, the source also has to be correct. Yeah, it has to be a correct implementation of some predicate that's relevant to your application, basically across the board. Well, people do a little bit of both of these, to be frank.
+
+
+But the more common approach is to verify that the target matches the source. And the reason is, if you wanted to prove that the target is correct on its own, like, what does that really mean? Like, really, it's more about, like, you want to know that the target matches the intent of the application.
+
+
+[Anna Rose] (23:32 - 23:43)
+You're trying to understand that this, like, from point A to point B, whatever happened in the middle happened the way you expected it to. And you're not just trying to get point B to land on something.
+
+
+[Alex Ozdemir] (23:44 - 24:29)
+Exactly. Yeah, yeah, yeah. So for sure, you want to link application to target.
+
+
+And it's just not really clear how to get compilers to do that very well, because compilers are designed to understand the source code, not the application. So it sort of makes more sense, typically, to go source. So application to source code, those two things are supposed to correspond to each other and then source code to target.
+
+
+Yeah, by the way, I'll plug a recent blog post by my colleague, Yoichi, that talks about this and saying, let's just verify the target against the application. And on the way to the target, let's not even have compilers that we trust. We can have, you know, LLMs go crazy, write assembly code if they want.
+
+
+And then we go and verify that code against our spec of what we want the application to do. That's a very interesting and fun way to think about it.
+
+
+[Anna Rose] (24:29 - 24:46)
+When you talk about formal verification in the CirC context, what kind of work are you doing? Are you doing both of those approaches? Or are you focused on this formal verification and spec and building it from that point perfectly, always?
+
+
+Are you taking chances?
+
+
+[Alex Ozdemir] (24:48 - 25:47)
+What we did with CirC is actually quite specific. So we actually did the verify before. Verify the compiler once and for all.
+
+
+But we did this only for one pass in the compiler, specifically the pass that massages everything into finite field elements. So this type mapping. We did that because those passes are often incorrect.
+
+
+So we thought there would be bugs. And indeed, we found a few before we were able to verify that pass. But also because basically our belief was when we started this project, this was back in, oh my God, like 2021, 2022.
+
+
+Whatever kind of verification you're doing, you need underlying tools for basically SMT solvers for reasoning about the correctness, about verification in general. And those tools didn't exist. So sort of like whatever path you choose at a verification level, you're going to need to build those tools.
+
+
+And those tools will probably be useful for many different kinds of verification. Yeah. So we did the verify once and for all.
+
+
+But like in some sense, really, just the goal was to build out the basic foundational infrastructure to enable all of this.
+
+
+[Anna Rose] (25:47 - 26:19)
+Cool. Do you have to do for every so because you mentioned the different types of languages, tools, plate like you're compiling, you're moving from one thing to another. You also mentioned MPC and that you were doing some homomorphic encryption.
+
+
+I'm just kind of wondering here is like, do you have to re-formal verify each one of those things? Is there like a overarching commonality between all of these that you can just do once? I'm just trying to figure out the effort needed here to spec everything first.
+
+
+[Alex Ozdemir] (26:20 - 26:36)
+Yeah. So this is like another appeal of the compiler infrastructure approach, which is, you know, the infrastructure is in some sense a bag of transformations. And every particular compiler will use some subset.
+
+
+And if you verify one of those transformations and it's useful for multiple compilers, then they both they both benefit.
+
+
+[Anna Rose] (26:37 - 26:37)
+Oh, cool.
+
+
+[Alex Ozdemir] (26:37 - 27:03)
+But also every every compiler probably does have some special transformation that's just specific to that compiler. So you'll have to verify that. And and for what it's worth, this this first verification project we did in CirC was for this finite field encoding pass, which is very specific to ZK.
+
+
+So that's that's a pass that we probably would not read. We would reuse it for different kinds of zero knowledge proofs, but we wouldn't reuse it for, say, multiparty computation.
+
+
+[Anna Rose] (27:04 - 27:21)
+I did not realise that that is how like compilers work or CirC works. I don't know if all compilers work this way, where it's this bag of transformations and you choose depending on the system. Are most compilers more like historically, were they more specific, like single line from this to this?
+
+
+[Alex Ozdemir] (27:21 - 27:22)
+Historically, yeah. Yeah.
+
+
+[Anna Rose] (27:23 - 27:23)
+OK.
+
+
+[Alex Ozdemir] (27:23 - 27:45)
+But but certainly now, yeah, basically every big compiler is more of a bag of transformations, because even if even if you say, oh, I just have a compiler, it's not a compiler infrastructure. Like, yeah, but you probably want to run on ARM and also x86. So, you know, really everybody does have multiple targets in mind.
+
+
+Sometimes they really only have one source, but almost everybody has multiple targets in mind.
+
+
+[Anna Rose] (27:45 - 27:58)
+So now let's dive into what it what you have to do to actually formally verify like these individual transformations in the bag of transformations. I'm curious what this like work even looks like.
+
+
+[Alex Ozdemir] (27:58 - 28:54)
+Yeah. So usually the first task is in verification. There are always two tasks.
+
+
+One, you actually have to specify. You have to say the verification means showing that my code does what it's supposed to do. First, you have to know what it's supposed to do.
+
+
+And this actually is quite hard. So in the case of the compiler, usually that means saying very specifically what the semantics, what the meaning of an input programme is in general, like what what the input programming language is. And then also saying what the output programming language is and saying what it means for those two things to match.
+
+
+So that's step one. And then step two is you have to prove that your compiler's code is meeting that specification. So for any input programme, it will output an output programme that matches the input.
+
+
+The specification, verification, those are like the two, the two phases. So you mentioned the SMT solvers. Where do they come into play in this pipeline that you're describing?
+
+
+The second, the second phase. Yeah.
+
+
+[Anna Rose] (28:55 - 28:55)
+The verification.
+
+
+[Alex Ozdemir] (28:56 - 28:56)
+Yes.
+
+
+[Anna Rose] (28:58 - 29:16)
+Let's define SMT. We did talk about it on the show. I honestly, I'm still a little confused about what it actually is.
+
+
+It's what does it stand for again? It's like an odd collection of words that don't tell me very much. What does it stand for?
+
+
+[Alex Ozdemir] (29:17 - 29:20)
+I'll tell you what it stands for, but also I'll say what I think it should stand for.
+
+
+[Anna Rose] (29:20 - 29:21)
+OK.
+
+
+[Alex Ozdemir] (29:21 - 29:26)
+So it stands for satisfiability modulo theories.
+
+
+[Anna Rose] (29:26 - 29:46)
+Guys, this is why I kind of blank on it as well. I'm like, but I don't know. Is it like a list of directives?
+
+
+Is it a tool? Is it a library? Is it a is it a programme?
+
+
+Like, I'm so lost. Is it like a concept? Yeah.
+
+
+[Alex Ozdemir] (29:47 - 30:37)
+So, so, yeah, an SMT is really two things. It's a tool and it's also an interface to the tool. The tool tells you whether a mathematical theorem expressed as a formula is true or false.
+
+
+Is it a topology or or is not? OK, so is this formula true for all inputs? And, you know, for example, a formula might express the fact that when I feed, when I execute my programme, it doesn't segment, it doesn't crash.
+
+
+Is that true for every input to the programme or not? So the SMT solver is the tool that answers this question. And SMT is also, in some sense, like a language for formulas that you would input into the solver.
+
+
+And sometimes people will refer to the language as SMT lib, SMT library, which is just a specification essentially for how you write down formulas.
+
+
+[Anna Rose] (30:38 - 30:39)
+Now, what do you think it should be called?
+
+
+[Alex Ozdemir] (30:40 - 30:57)
+Yeah, I think it should be called satisfiability modulo types. Oh, so replacing theories with types? Yes.
+
+
+Yes. And I am here to tell you that, you know, theories is like arcane logic speak for for different mathematical types.
+
+
+[Anna Rose] (30:59 - 31:16)
+This breakdown of SMT as a solver tool and SMT a language, does that same breakdown exist for Lean? Like I kind of want to compare them maybe here just to understand what is Lean, because is Lean like a programme or a tool or a language?
+
+
+[Alex Ozdemir] (31:16 - 32:04)
+I think this whole like interface tool distinction can be made for like almost any piece of software to some extent. OK, but I think it's a lot less useful for Lean. And I'll say the reason, too.
+
+
+SMT solvers and SMT is about automatic theorem proving. You write down your formula. The tool automatically proves it.
+
+
+Lean is an interactive theorem proving tool, an ITP as opposed to an ATP automatic theorem prover. OK, and when you're doing interactive theorem proving, you don't need as strong a separation between the tool and the language that you use to talk to it. It makes a lot more sense to complete these two.
+
+
+So, for example, we have like one Lean proof checker. When you look at the kernel, there's a few different implementations, but for the most part, there's one piece of software that's the Lean toolchain.
+
+
+[Anna Rose] (32:05 - 32:10)
+Is this something you built or just generally there is only one piece of software that is the Lean toolchain?
+
+
+[Alex Ozdemir] (32:11 - 32:14)
+Yeah, there's one. And it's maintained by, I guess, now the Lean FRO.
+
+
+[Anna Rose] (32:14 - 32:17)
+OK, like that. OK, that is what Lean exists as. OK.
+
+
+[Alex Ozdemir] (32:18 - 33:00)
+Yes. But for SMT solvers, there's a common interface and there's like 10, 12. There's lots and lots of different solvers that all meet the same interface and you can choose the one that's performing best or the theorems that you want to prove.
+
+
+So, you know, the fact that in the case of SMT, the interface actually allows you to multiplex between different solver implementations. That means that thinking about the distinction between the solver and the interface is much more useful because there are actually many solvers. And in the case of Lean, that's less true.
+
+
+Now, of course, interaction and automation both are valuable. And so both SMT allows some kind of interaction and Lean allows many kinds of automation. So in some sense, the two approaches do meet in the middle, but they start from opposite sides.
+
+
+[Anna Rose] (33:01 - 33:44)
+Last year, we had an episode on a project called ACORN, which is a theorem prover utilising AI. And that was where, like for me, I was introduced to Lean for the first time. It was not a world I had been part of.
+
+
+But in that episode, we were kind of comparing this system to Lean. So, you know, I've still been a little bit unclear on how to actually use Lean. But I do want to sort of bring in just also this AI part, because last year ACORN was doing something different from these SMT or Lean things in using AI.
+
+
+I have a few questions, actually, after what I just said. A, what is the category of Lean and SMT? And B, are they actually using AI now?
+
+
+[Alex Ozdemir] (33:45 - 34:21)
+Yeah, great. Yeah. So SMT and Lean are both theorem proving technologies.
+
+
+So that's the category. SMT being the automatic theorem proving and Lean being the interactive theorem proving. And, you know, the goals are different.
+
+
+On the ATP side, you want automatic proofs. You get big solvers, huge pieces of software that are doing the automation. On the Lean side, you're OK with, we'll say, manual proofs, although they try to automate as well.
+
+
+And what you want is like a tiny trusted code base that's checking those proofs. So you can have real certainty when you say that a theorem is true, it's true. So that's what they are.
+
+
+So theorem provers?
+
+
+[Anna Rose] (34:22 - 34:22)
+Yeah.
+
+
+[Alex Ozdemir] (34:22 - 34:42)
+Yeah. And do they use AI? So actually, SMT solvers, I mean, traditionally they were considered AI research, not statistical, not machine learning.
+
+
+But they were AI, like they were AI research and they still are. Nowadays, they even use some statistics internally, although I think that you should think of them as fundamentally not based on statistics, fundamentally much more based on search and logic.
+
+
+[Anna Rose] (34:42 - 34:55)
+What would you mean by that in terms of statistics? Are you talking like statistical probabilities? So like it would be like this is most likely true, but not entirely true.
+
+
+Is that sort of what you mean by statistics? Yeah, yeah.
+
+
+[Alex Ozdemir] (34:55 - 35:32)
+I guess statistics, statistics is in some sense like what gives you a machine learning. Right. So machine learning is the approach to AI where, you know, we don't know how something works.
+
+
+You know, we want we want we want to be able to solve a problem, but we don't really know the underlying dynamics. And instead, we're going to define a statistical model. We're going to look at a lot of data and we're going to fit our model to the data.
+
+
+And then we're going to use that to approximate the system that we're trying to solve and having this model. Yeah, good. So that's kind of what I mean by statistics, like we're fitting a model to the data.
+
+
+And if you take like a machine learning class, this will be like the first lecture, this view of like, OK, you've got some thing in the world that gives you data. You're going to define a model. You're going to fit the model to the data.
+
+
+[Anna Rose] (35:33 - 35:50)
+And it won't 100 percent nail it every time, but you're going to get a threshold where you're happy enough with this result. Yes. But now go back to like sort of theorem proving and you say it's using some statistics.
+
+
+Does that mean like we're like 95 percent certain this is correct?
+
+
+[Alex Ozdemir] (35:50 - 36:08)
+So the theorem provers never give up on correctness. They always insist when they output true, that thing needs to be true 100 percent. OK.
+
+
+But in order to say that something is true, they have to find a proof. And that's like a search problem. You have to figure out how to prove it.
+
+
+And they're OK with using statistics and potentially machine learning to guide the search for the proof.
+
+
+[Anna Rose] (36:08 - 36:11)
+Oh, I see. OK, to find it.
+
+
+[Alex Ozdemir] (36:11 - 36:11)
+Yes.
+
+
+[Anna Rose] (36:11 - 36:30)
+I've been also trying to figure out, like, where are they getting where are they like they these theorem provers, where are they getting all of this information? Do they have like a big database? Do they have access to all mathematical information online ever?
+
+
+Like I'm kind of trying to understand where it could even draw these things from.
+
+
+[Alex Ozdemir] (36:31 - 36:48)
+Yeah. Are you thinking about like in general, like if we're trying to do math and using a theorem prover, like how does the theorem prover know about math? Are you thinking more like if you're trying to do machine learning and you're trying to build an AI based proof search, we're going to need machine learning always needs data.
+
+
+It's like one of the axioms. Where does that data come from?
+
+
+[Anna Rose] (36:49 - 37:06)
+No, it's the I think it's the first one, actually. It's it's maybe I'm thinking about it wrong, but I'm sort of thinking about this SMT as a tool that will like you're going to put something forward. And it I'm assuming will like check what you've put forward against other things.
+
+
+Where are those other things?
+
+
+[Alex Ozdemir] (37:06 - 40:16)
+I think you should think of this as different for SMT and Lean. OK, so in Lean, Lean will provide a language that allows you to define math so you can define what is the set. You can define what is an actual number.
+
+
+You can define real numbers as sets of integer. Yeah, you know, that's a rationales, I guess. Some human needs to like write down the mathematical definitions in the language.
+
+
+And that's how Lean knows about like what the basic mathematical objects are. So some human does that translation. Yeah.
+
+
+And the idea of Lean is to express like lots of very sophisticated mathematical objects. And so humans write very sophisticated definitions. And the SMT world, it's a little bit different in that the goal is to automate proof search.
+
+
+So they express only simpler mathematical concepts. So actually, we would express all the things that I just said, but like like cohomology or something like people to find that in Lean, they don't define that in SMT. And so someone at some point writes down different, they call them theories.
+
+
+This is where this comes in. They define different mathematical types for SMT. And then the SMT solvers are built to search for proofs for theorems that involve those types.
+
+
+I see. So in some sense, in both worlds, a human at some point writes this down. But in Lean, we imagine like continuously writing new definitions, teaching Lean about new mathematical objects.
+
+
+And we don't expect Lean to find the proofs for us. In the SMT world, you would write definitions when you know a proof search procedure for them. So you have a much smaller set of definitions, but you have very strong automation.
+
+
+So you did say we don't expect Lean to find proofs for us, but this is, you know, sort of tying back to Acorn. I guess that's the idea there, right? It's like instead of having humans do Lean proofs, let's put an LLM and let it try to do the thing.
+
+
+Yeah, exactly. So Lean, you know, the Lean software on its own, it doesn't promise to find proofs for you. It gives you a language for defining things and a language for checking proofs.
+
+
+And it also gives you a metaprogramming language for expressing proof search procedures. And then people come in on top and they try to build those proof search procedures. And maybe that proof search procedure uses a language model.
+
+
+Maybe it uses some kind of machine learning. People also spend a lot of time building proof search procedures that don't use statistics or machine learning. They're just classical, but very effective.
+
+
+And this is the way, you know, I mentioned earlier that, you know, ITPs and ATPs have this gap. But really, they both want to bridge the gap. This is the way that that Lean based systems bridge the gap is that people build proof search on top of Lean.
+
+
+So if you hear about like tactics, that's when people talk about tactics. They're talking about proof search procedures in Lean. So should we think of pure ITP interactive theorem provers as actually like user theorem provers?
+
+
+Like it's people doing the theorem proving? Yeah, maybe so. And then we have a whole spectrum all the way to fully automated.
+
+
+Yeah. And I mean, people actually just bridge these things as well. So, for example, people will have Lean tactics that create SMT formulas for something that you want to prove in Lean.
+
+
+And then they ship that formula over to the SMT solver. And the SMT solver solves it, finds a proof, and then they'll ship the SMT proof back into Lean. And they'll like build a Lean acceptable, like they'll use the SMT solution to build a Lean acceptable proof so that now Lean is convinced.
+
+
+So another way you bridge the gap is actually just interfacing the two tools, not just like conceptually trying to behave more like each other.
+
+
+[Anna Rose] (40:17 - 40:37)
+So I want to wind back a little bit to what we were saying about theorem proving. At one point, you mentioned a few things that define theorem proving, SMT, Lean, and then you mentioned statistics. I sort of have gone down that rabbit hole, but let's like sort of wrap that up and bring it back to what else it is, because I think it's definitely more than that.
+
+
+[Alex Ozdemir] (40:38 - 43:19)
+Yeah, yeah. So, yeah, so sort of like recapping, I guess now we have the right language for seeing how machine learning and statistics fit into theorem proving. You know, the theorem provers, as we said, for them, truth is absolute.
+
+
+They'll never tell you that a theorem is true if it's not. But in order to say that a theorem is true, they have to search for and find a proof of the theorem. And search is a really hard problem.
+
+
+And one of the tools that theorem provers use, both Lean-based tools and SMT-based tools, is they'll use statistical reasoning, machine learning, in order to try to do a better proof search. So they'll learn, oh, you know, if a theorem looks like this, then this is the kind of proof that I should look for most of the time. So maybe, Alex, this is a good time to ask you, I see you've been doing a lot of work in SMT solvers yourself.
+
+
+Can you tell us a bit more about what you've been up to? Yeah, of course. So this relates to something that we were saying, which is, you know, in the context of an SMT solver, adding a new type, adding a new theory, adding a new domain of mathematical reasoning is kind of a big thing because you don't just need to define the type.
+
+
+So let's say, you know, in the context of cryptography, finite fields are king. Basically, everything is a finite field. People talk about elliptic curves, they're finite fields, they're pairs of finite fields, you know, elements, right?
+
+
+So finite fields are a big deal. And if you want SMT to be useful about reasoning about finite fields, then you need to not only define what a finite field is, but also come up with a good proof search procedure for them. And so that's what I've been working on for the last few years.
+
+
+So writing down the definition of finite fields, which is very easy, but then coming up with proof search procedures for proving things about finite fields. And we've written a number of papers with different proof search procedures that all these are motivated by, oh, we have some ZK system we want to verify. What's a good proof search procedure that allows us to verify systems of that kind?
+
+
+Is this for one specific SMT solver or is this something that can plug into all solvers? Like how how does this work? How does this world look like?
+
+
+Yeah, so I mean, I did my research in the context of an SMT solver called CVC5 that we built at Stanford. But one of the I think one of the best things about this research that I was doing is it got a lot of other people excited. So CVC5 is no longer the only solver that's useful for reasoning about finite fields.
+
+
+So there are some people in Vienna who built like sort of like a one off solver just for finite fields. That's very nice. Yikes is another big SMT solver that supports lots of different types.
+
+
+It supports finite fields as well. Now, recently, the Costa group in Spain built a bespoke solver for finite fields as well. That's quite exciting.
+
+
+So, you know, this is what we mentioned earlier. SMT is one interface, many solvers, you know, CVC5 was the first effective solver in this domain. But now there are lots, which is really great.
+
+
+And the idea is that they're interoperable.
+
+
+[Anna Rose] (43:20 - 43:33)
+CVC5 is that you sort of mentioned if it's about reasoning about finite fields, can it be used then to prove like to verify the ZK systems as they're being built? Like, is that one of the use cases or is that the main use case?
+
+
+[Alex Ozdemir] (43:33 - 43:45)
+That's that's why we did it. I think that you could actually use it for verifying other kinds of cryptography as well that are field based. But we built it.
+
+
+There was a real need for ZK and there weren't other approaches at the time. So that's that's what we focused on.
+
+
+[Anna Rose] (43:45 - 44:35)
+Cool. I want to go back. You had sort of mentioned earlier this idea of like proving ZK systems or using ZK to prove systems.
+
+
+And so, yeah, I'm just sort of wondering, like what you just described in CVC5, this is proving ZK systems. This is using this SMT to or what do you call it? An SMT like instance?
+
+
+Now, what is an SMT solver? Okay. To make sure that a ZK system is acting correctly, that it's formally verified.
+
+
+Do you also like when you're talking about adding ZK to prove systems, would you still is this still within the SMT world or is that something else? And I don't want to step too far outside of the formal verification if we're not ready. But I'm just kind of curious if it's like, is it part of a formal verification process to use ZK to prove systems?
+
+
+[Alex Ozdemir] (44:36 - 45:00)
+So it depends on how the computer system is built and on who knows what and on whether like your computer system itself has some secrets or some intellectual property associated with it. But sometimes in the context or we believe that in the context of formal verification, sometimes there will be secrets. So you'll want not just proofs of the correctness of the software, but you might also want privacy preserving proofs of the correctness of the software.
+
+
+[Anna Rose] (45:01 - 45:14)
+What would that look like? Would that be like an algorithm that you're trying to protect? Like, is it what is the IP in this context?
+
+
+Because it's not it's not the input, I'm assuming it's like the construction or something. It's a piece of the construction, right?
+
+
+[Alex Ozdemir] (45:14 - 45:40)
+Yeah, yeah, exactly. So this is this whole direction, the kind of software that it has in mind is proprietary software. So this is very different than open source.
+
+
+When open source works, it's great. Like, I'm a huge fan of open source. All my work is open source.
+
+
+But like right now, we're using Riverside to film this or to record this podcast. And I'm not familiar with Riverside specifically, but I would I would bet dollars to doughnuts that Riverside is not open source.
+
+
+[Anna Rose] (45:40 - 45:43)
+No, definitely not. Well, as far as I can tell. Yeah.
+
+
+[Alex Ozdemir] (45:43 - 45:49)
+And here I am running it on my iPad and I hope it's not stealing my secrets. I hope it's not like wrecking my iPad.
+
+
+[Anna Rose] (45:49 - 45:55)
+Well, it does have your access to your camera and audio and microphone. Yeah.
+
+
+[Alex Ozdemir] (45:55 - 46:05)
+Yeah. And I hope that those multimedia streams are going to your engineer, to Henrik and not to Riverside HQ. Yeah.
+
+
+[Anna Rose] (46:05 - 46:08)
+Well, I mean, it's sitting on their server for sure.
+
+
+[Alex Ozdemir] (46:08 - 46:24)
+But so anyways, if if the software that you're trying to verify is proprietary, then that means there are some secrets associated with it. And what I would love is for Riverside to be able to come to me and be like, hey, Alex, here's the proof that our software is not doing bad things with your data.
+
+
+[Anna Rose] (46:24 - 46:24)
+Yeah.
+
+
+[Alex Ozdemir] (46:25 - 46:44)
+And, you know, now you can be confident that your data is being protected. And, you know, of course, if they're willing to show me their source code and do a formal verification, like standard formal verification will work if they can show me their source code. But if they're not willing to do that, then perhaps zero knowledge formal verification would suffice.
+
+
+Interesting.
+
+
+[Anna Rose] (46:44 - 46:50)
+But here, how do you prove how do you prove it's not doing something bad? Can't it only just prove what it does?
+
+
+[Alex Ozdemir] (46:50 - 47:00)
+Yeah, that's a great question. And that's kind of like the question that launched this whole thing. So it's like people have been doing zero knowledge proofs for a long time and they always prove things like I run this programme.
+
+
+Yeah.
+
+
+[Nico Mohnblatt] (47:00 - 47:02)
+Correctly. Right. Yeah.
+
+
+[Alex Ozdemir] (47:02 - 47:10)
+Yeah. It tells you about an execution of the programme, not all executions. So, like, what does it even mean to to write a proof for all executions?
+
+
+[Anna Rose] (47:10 - 47:21)
+Or the what's the other? It's like the opposite of doing it's the non-execution. I think Dan and I might have mentioned this.
+
+
+I don't know if it was on the air in a conversation around this, which is like proving you didn't do something is really hard.
+
+
+[Alex Ozdemir] (47:22 - 48:40)
+It really is. Yeah. Yeah.
+
+
+So to answer the question of how to do that, we have to forget about ZK for a second and just think, OK, forget about privacy. How do I know that a programme is buggy? How do I know that programme is correct?
+
+
+To know that a programme is buggy, all I need is an input. I take the input. I run the programme.
+
+
+Bad thing happens. I can observe the bug, like the programme crashes. Great.
+
+
+How do I know that a programme is correct? Much harder. You do formal verification.
+
+
+I write down, for example, a lean theorem that expresses the correctness of the programme for all inputs to this programme. It will never send your secret data to the adversary servers. And then I come up with a proof of that theorem, perhaps a lean proof.
+
+
+So that's what formal verification is all about. It's about proving things for all executions, for no execution, knowing knowing that the programme is always safe. And so, you know, in some sense, like what we want to do is we want to be able to, in zero knowledge, prove that this lean proof exists.
+
+
+The idea is like if I'm running when I run Riverside, they're going to send me Riverside, like the binary, and they're also going to send me a theorem. They're going to say this binary will never do X, Y and Z. And I also want to say, you know, we've got a theorem and I want to know that that theorem is true.
+
+
+Yeah. And the question is, how can they write a proof of the truth of that theorem without revealing secrets that they might want to protect, like how their software is designed?
+
+
+[Anna Rose] (48:41 - 48:59)
+So it's almost like you write the software. Maybe you start with the spec. Actually, you write the spec of what it's supposed to do.
+
+
+Somehow something extracts from that what it will do and what it won't do, because what you're trying to understand is what it won't do. Right. You're trying to make sure a guarantee that it won't do something malicious.
+
+
+[Alex Ozdemir] (49:00 - 49:00)
+Yes.
+
+
+[Anna Rose] (49:01 - 49:04)
+And then there's a proof made about that won't do feature.
+
+
+[Alex Ozdemir] (49:05 - 49:11)
+Yes. And let's say they do that in lean and Riverside does that. So they've got the proof now, but I don't have the proof.
+
+
+So they want to convince me.
+
+
+[Anna Rose] (49:12 - 49:14)
+Yeah. And then you make it ZK. Got it.
+
+
+[Alex Ozdemir] (49:14 - 49:22)
+So is it just a zero knowledge proof of a lean proof? Exactly. That's that's what we're trying to do.
+
+
+Zero knowledge proofs of lean theorems. OK.
+
+
+[Anna Rose] (49:22 - 50:23)
+I have a bit of a spicy question about formal verification. The way I've understood this is like you create a spec and then you create the software and then you proofs that it's right. But software is big and like there's lots of softwares that work together.
+
+
+And is it possible, say you were malicious and you still want to have this formal verification stuff. Can you hide in formal verification? Like, is there a line through that that could be like obfuscated but still show some sort of formal verification that it acts the way it's supposed to act?
+
+
+I don't know if this is like maybe there's no use case where this would ever happen and like this is not an attack vector. But I just yeah, I just wondered if there's like it would be almost like hiding with with the sense of security. Like you'd have the badge of a verification and yet there's something awful happening.
+
+
+But on purpose, like I think a lot of times formal verification is used because the developers themselves want to ensure to themselves that this is acting right. But yeah, is there a way to hide something in it?
+
+
+[Alex Ozdemir] (50:23 - 50:58)
+Yeah, so in a formal sense, no, there's no. So these formal verification tools, they always like insist that if they say a theorem is true, the theorem is true. And they're pretty good at doing that.
+
+
+But if you know, let's say that I'm an adversary and I'm trying to do what you say, the way that I'm going to do it is I'm going to write the wrong theorem. And I'm going to try to convince you that the theorem is the right theorem. So for example, you know, maybe my computer system has like five servers and I'm going to write a really great description, a really great theorem about what four of those servers do.
+
+
+And my theorem is going to say sometimes they send the data to the fifth server, but the theorem isn't going to say anything about what the fifth server does with that data.
+
+
+[Anna Rose] (50:58 - 51:02)
+OK, but you're going to still be able to prove that those four servers do what they say they're going to do.
+
+
+[Alex Ozdemir] (51:03 - 51:32)
+Yeah, yeah. So these theorems, you know, these specifications, they really have to be thought about. So, you know, formal verification, it means you no longer have to think about the code.
+
+
+You no longer have to think about the implication, but you do have to think the implementation. But you do have to think about the theorem and you need to think about what the specification is and whether it really captures everything that you care about. So there are also tricks that you can do to have a passing proof of something that's not really formally verified or not a true theorem, for example, including an axiom that is false.
+
+
+[Nico Mohnblatt] (51:33 - 51:33)
+Yeah.
+
+
+[Alex Ozdemir] (51:33 - 51:49)
+So you start with a false premise. You write a theorem that will, you know, make you look great. And then you get a proof that this theorem is fine.
+
+
+So, yeah, there's always there is a way to do security theatre through formal verification. And we've seen some recent cases in the community.
+
+
+[Anna Rose] (51:50 - 51:50)
+Oh, really?
+
+
+[Alex Ozdemir] (51:50 - 54:03)
+Yeah, yeah. Nadim Kobayeshi has been very vocal about certain cases. Shout out to him and his great work.
+
+
+But yeah, it is tricky. And this is why I was going to ask you, Alex, about verifying, doing a Zekir proof of lean proof. How do you avoid these pitfalls of, you know, wrong proofs or proofs that, you know, sneak in wrong things?
+
+
+Yeah. So so when you do a zero knowledge proof of a lean proof, you're hiding the lean proof, but you're not hiding the theorem. So you're not going to be hiding the axioms that you're using.
+
+
+And these these kinds of examples that you're mentioning, that's always the flavour. The flavour is always the theorem is wrong, you know, because, you know, when you talk about an axiom, an axiom is a hypothesis under which the theorem is true. Part of the theorem.
+
+
+Right. So so this in this approach, we never hide what is being proved. And that's that's where people can engage in this kind of security theatre by proving something that's not is the wrong thing.
+
+
+Or as you were mentioning, maybe something that's not even meaningful, because if the hypotheses are false, then it means nothing. So I guess I think of the whole like zero knowledge thing is kind of orthogonal to this question of whether the theorem is is correct. And I think this question of like, hey, how do we stop people from constructing or like how do we detect if someone's writing out a theorem that's not right?
+
+
+I think that's a really interesting research question for sure. By the way, is there a succinctness element? You've been talking about ZK and the privacy aspect.
+
+
+Are lean proofs big and it doesn't make sense to make them shorter? Yes, they are big. And yes, it might make that make sense to take that.
+
+
+So there is a succinctness aspect here. It's something that we're really still trying to understand, because like scalability and like how big the lean proofs are and how fast they can be checked is already a huge priority for the lean project. And like forgetting, you know, they're not using cryptography, but they're using systems techniques to try to to improve performance.
+
+
+But maybe cryptography could help, too. You know, zkPi's proofs are like 200 bytes. So, you know, potentially it's useful to them.
+
+
+But then the question becomes, what happens with some this error? You know, if you ever get something that goes wrong, then the whole of mathematics breaks down, you know, or like the whole of formal verification breaks down. Some logicians are worried about this kind of stuff.
+
+
+Yeah, it's true. We don't actually have a proof, right? We have a proof that, you know, somebody solved a hard problem or your theorem is true.
+
+
+[Anna Rose] (54:03 - 54:19)
+So I feel like we still haven't actually dug into zkPi. Like we sort of mentioned it, I don't know, 20, 30 minutes ago is like the reason that we're actually diving into this topic. But yeah, what is zkPi?
+
+
+How does it fit into all of this?
+
+
+[Alex Ozdemir] (54:19 - 56:36)
+It's exactly the system that we've been describing. So zkPi is to ZK-SNARK. So it's a prover and verifier and setup.
+
+
+And the prover takes in a Lean theorem and a Lean proof and it outputs a very small number of bytes. And the verifier, which is the ZK proof, the verifier inputs the ZK proof and the Lean theorem and says, I'm convinced or I'm not convinced. So you should think of zkPi as like, yeah, it's this level of indirection on top of Lean that adds zero knowledge to the proofs and also compresses them.
+
+
+Can you tell us a bit more, Alex, about sort of the main challenges that went into constructing zkPi? Like, was it straightforward, you know, write a ZK proof of what Lean does or is there like difficulty? How did you make this efficient?
+
+
+Yeah, so I think there's two things to say here. What is the core technical challenge that needed to be solved to make zkPi? And then like roughly how did we solve that challenge?
+
+
+And, you know, our goal, of course, is to verify Lean proofs. But, you know, this topic of how do you verify proofs, old topic in logic, people have lots of thoughts about how to do this. And the dominant view of what it means to check a proof and the view that Lean adopts is something called the Curry-Howard Correspondence, which, yeah, it's named for some old logicians.
+
+
+And it says the way that you should view proof checking is that you should reduce proof checking to type checking, like in the programming languages sense, like is my programme well typed? And you need a sufficiently advanced, a sufficiently complicated type system. So think like Haskell, but even more complex.
+
+
+These type systems are called dependent type systems. So Lean uses a dependent type system called the Calculus of Inductive Constructions. And so basically like inside, you know, Lean is like a big piece of software, but at the core, it's reducing the truth of your theorem to the well-typedness of a Calculus of Inductive Constructions programme.
+
+
+And what zkPi does, what it needs to do is prove in zero knowledge that a dependent programme is well-typed. And, you know, how do we do that? Like, you know, maybe that's a little bit too detailed for today, but, you know, suffice it to say that like the classic ZK techniques of how the prover provide things and then check them instead of trying to compute them yourself, use randomness to optimise data structures.
+
+
+All of this came into play in doing this.
+
+
+[Anna Rose] (56:36 - 56:48)
+So kind of bringing in some of that work we talked about earlier in the episode on bringing in the randomness, using it in an effective way. Yeah. Is it a standalone proving system?
+
+
+Does it sit on top of something else?
+
+
+[Alex Ozdemir] (56:49 - 57:23)
+So zkPi, actually, it was like the, I mentioned that, you know, the reason that we started caring about randomness and zero knowledge circuits was because we were solving various zero knowledge problems and needed it. zkPi was the first problem like this for us personally. So we needed randomness in a proof system.
+
+
+So we had to define what that meant and come up with a proof system. So we have one that's called Mirage Plus. It's got some security theorem that says if your circuit encodes an interactive proof that is sound and complete for some language, then the ZK snark.
+
+
+So you had that and then you had Cersei on top of that. And then you had zkPi implemented on top of Cersei on top of this proof system.
+
+
+[Anna Rose] (57:23 - 57:26)
+So the underlying proving system is this Mirage?
+
+
+[Alex Ozdemir] (57:26 - 57:53)
+Yeah, Mirage Plus is the name of the system. And you should think of the Mirage Plus's construction as being similar to the Halo 2 construction and similar to the Mirage construction, which came before it, which is based on Grot 16. I guess the innovation there was that nobody, people have been using this in-circuit randomness for a long time, but nobody had ever like said formally what it was supposed to do or like, when I have a snark for a randomised circuit, what does that mean?
+
+
+So I guess Mirage Plus comes with a security theorem that captures what that means.
+
+
+[Anna Rose] (57:54 - 58:07)
+It's cool. I'm surprised I haven't heard that much about this. Like it's almost it sounds like a cool technique that could be incorporated into some of these other systems.
+
+
+And this is sort of an example system that did that. Yeah.
+
+
+[Alex Ozdemir] (58:07 - 58:18)
+So I know that people have been sort of mimicking this interaction in-circuit by sort of taking challenges in-circuit. They sort of hash plenty of data, get a challenge and then do a randomised check.
+
+
+[Anna Rose] (58:18 - 58:19)
+OK.
+
+
+[Alex Ozdemir] (58:19 - 58:56)
+In this case, you're sort of doing it inside your circuit and it's quite expensive. Whereas what Alex is describing makes this interaction sort of, you know, a first class citizen of your proof system and of your circuit rather than like shoehorned into it. Ah, yeah.
+
+
+And I mean, Halo 2 does this. This is this is they don't have like a security theorem to my knowledge that that matches. But, you know, I imagine that that one could write down the theorem and that it would be true and we could prove it.
+
+
+And, you know, Halo 2 is going to be a better choice for many projects than Mirage Plus, because Mirage Plus is based on Grot-16 and it's got this pure per-circuit trusted setup. So, you know, good for an academic project. But probably if you're building a system, you don't want to incur those additional trust requirements.
+
+
+[Anna Rose] (58:56 - 58:56)
+Got it.
+
+
+[Alex Ozdemir] (58:56 - 58:58)
+Doing one of these ceremonies. Yeah.
+
+
+[Anna Rose] (58:58 - 59:03)
+Yes. Those trusted ceremonies, they've been purged. Right?
+
+
+[Alex Ozdemir] (59:04 - 59:17)
+Yeah. Yeah. So, for example, even us, when we were doing research on how to use this for anonymous credentials, we we built another proof system for these randomised circuits called Dorian, which is basically a modification to Spartan, which doesn't have these trusted setups.
+
+
+[Anna Rose] (59:18 - 59:44)
+Alex, I feel like we've had a chance to cover part of your research. I actually know that you've also done work on collaborative snarks. Your name has popped up on lots of papers that we have featured in ZK Mesh, our kind of collection of links that we share every month.
+
+
+But I am curious, and we don't have too much time here, but what kind of thing are you focused on today? Would you say this is the core of your focus? Do you have some sort of threads that you're exploring?
+
+
+[Alex Ozdemir] (59:45 - 1:00:54)
+Yeah, I'm always interested in secure computation in all its forms. So everything related to zero knowledge, multi-party computation, it's not a very specific answer, but maybe to be a little bit more specific, I think one thing that I tend to think about a lot when there's a secure computation system is, you know, when you have secure computation, you have security properties, but you also have circuits, randomised circuits, VMs. At different levels of the stack, you often have different computational models.
+
+
+Sometimes I feel like these models are understudied. The cryptographers aren't really positioned well to study them because they don't think about programming languages. The programming languages, people don't understand the cryptography.
+
+
+So like the model, like they don't even know, they don't have any intuition about how to define the model because like the model sometimes involves randomness and other things that they don't like. So I spend a lot of time thinking, you know, this whole randomised circuits thing is that lately we've been thinking about like shuffling and multi-party computation for secure statistics. That's another example, like maybe shuffling there as part of the model.
+
+
+Even the collaborative proofs there, I guess, you know, it's like, oh, actually, we're going to keep the computational model the same, but we want different security properties. Yeah, we want like, you know, distributed secrets instead of centralised secrets.
+
+
+[Anna Rose] (1:00:55 - 1:01:16)
+Very cool. I like that. It's like a through line through the work we've just discussed and also the work before and maybe the work to come.
+
+
+So, yeah, thank you for doing this deep dive into theorem proving and letting me ask a lot of questions that I've had about what these things are, how they could work, how they're evolving, how they hit ZK. Yeah, and how important they're probably going to become. Thanks so much.
+
+
+[Alex Ozdemir] (1:01:17 - 1:01:40)
+My pleasure. And, you know, I think it's great that ZK is really starting to touch a number of deployed systems in the world. And that just makes this kind of verification more important.
+
+
+So the more people that know it and understand it, the better. I'm so happy to be here. Yeah, thank you both.
+
+
+This was incredibly enlightening. Like you said, Anna, this difference between theorem proofs like Lean and SMTs for me is something that was always very hazy and today has made it incredibly clear. So thanks a lot, Alex.
+
+
+[Anna Rose] (1:01:41 - 1:01:48)
+Cool. I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners. Thanks for listening.
