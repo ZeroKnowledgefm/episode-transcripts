@@ -1,0 +1,976 @@
+﻿[Anna Rose] (0:05 - 1:49)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Kobi and I chat with Alex Hoover from the Stevens Institute of Technology about PIR, or private information retrieval.
+
+
+Alex explains what makes PIR such a unique primitive. It allows a client to retrieve an entry from a public database without the server ever learning which entry they asked for. We trace the 30-year journey of PIR from its information-theoretic origins, through single-server computational constructions, to the modern version which are using client-side preprocessing schemes.
+
+
+Along the way, we cover the many variants of PIR, keyword PIR, batch PIR, symmetric PIR. We also explore why PIR matters for blockchains, from LiteClient's privately querying state to Merkleproof's generation for private transfers. And here, where PIR is already deployed in the wild today.
+
+
+From the conversation, it sounds like PIR is one of those incredibly useful primitives, a bit akin to ZK, and we do expect to see it to be adopted in a big way in the coming years. So hope you enjoy. Now, here is our interview with Alex Hoover all about PIR.
+
+
+So today, Kobi and I are here with Alex Hoover, cryptographer and assistant professor at Stevens Institute of Technology. Welcome to the show, Alex.
+
+
+[Alex Hoover] (1:49 - 1:51)
+Thanks for having me. I'm excited to be here.
+
+
+[Anna Rose] (1:51 - 2:13)
+And hey, Kobi. Hi. So for today's episode, we're going to be diving into the concept of PIR.
+
+
+That is private information retrieval. And this has come up a number of times over the last few years in conversations. Kobi, I feel like you've brought it up a bunch of times as like a topic to dive into.
+
+
+So it's very cool to finally get a chance to do an episode on it.
+
+
+[Kobi Gurkan] (2:13 - 2:16)
+Yeah, it's a topic I'm interested in for many years now.
+
+
+[Anna Rose] (2:17 - 2:25)
+Why don't we actually start with a quick definition of PIR or PIR, as some people call it. Alex, do you want to just tell us what this actually is?
+
+
+[Alex Hoover] (2:26 - 4:02)
+Yeah, absolutely. So PIR is really powerful and also very unique cryptographic primitive, I would say. Fundamentally, what it protects is a lot different than other types of cryptography you might see.
+
+
+So it's a lot different compared to encryption or even authentication like signatures. The task of what private information retrieval protects is that it protects what's called an access pattern, or you can think of this as like how a user is querying a database. So what we should have in our minds when we think about PIR or PIR is there's some database that's public.
+
+
+So we don't care about confidentiality of this database. If you want that, you can use other cryptographic tools to get it. PIR is focused on a public database.
+
+
+And you have a client who wants to learn some particular entry of this database. So think of the database just as an array for simplicity. Some people think of it as like Wikipedia, maybe we can think of it as like the blockchain.
+
+
+And we want to access some particular block of the blockchain. Everyone knows the blockchain if they want it, but some people don't have the capacity to store the blockchain entirely on their local state. And so for these clients that don't have this much memory, they can use a PIR protocol to obtain one of the let's say blocks from the blockchain without whoever's holding the blockchain, learning which of the blocks that they retrieved.
+
+
+Right. So that's the simple definition. And there are all sorts of PIR variants that have been defined over the years.
+
+
+This was introduced 30 years ago. And there have since been lots and lots of variations to try to make this either more efficient or to get you some sort of specialised feature.
+
+
+[Kobi Gurkan] (4:03 - 5:23)
+I think it's pretty interesting, like I'm sure we'll cover a bunch of the variants and what has changed in the last, I guess, 20-25 years. But it has become increasingly important for blockchain applications. And a couple that come immediately to mind, which were the ones that I've seen around me were around, for example, light clients.
+
+
+So if clients want to learn the value of something in, let's say, the state tree of Ethereum, it's something that they would either have to get the entire state or they would have to ask someone, but then they would give up privacy, which kind of sucks for some reason. Either for reasons of just privacy, you don't want people to know what you're looking at, but also for reasons of censorship, for example, that can be annoying. Another one that I think captured my attention was around more of the privacy-orientated protocols.
+
+
+So let's say identity or private transfers, where there you really have to maintain a lot of data and to synchronise the entire blockchain in order to just be able to even make a transfer. And that's something that PIR, if it is efficient enough, can handle and help. But let's see how efficient it is when we talk.
+
+
+[Anna Rose] (5:25 - 5:40)
+So Alex, I want to learn a little bit about you as well. Thank you for that definition, actually to both of you, for what PIR is. We will dive more into it.
+
+
+But yeah, let's learn a little bit about you, Alex. Why are you working on cryptography and why this topic in particular?
+
+
+[Alex Hoover] (5:41 - 7:15)
+So I started in cryptography during my PhD, basically. So I went into my PhD, I don't know, like eight years ago now. And I was interested in, I guess, CS theory broadly.
+
+
+And then while I was there, I took a cryptography class that was a lot better than the one that I took in undergrad with someone who became my advisor, David Cash. And that got me really interested in cryptography broadly. And so then I worked with him to finish my PhD.
+
+
+And during that time, most of what I worked on were what I would call like either oblivious or encrypted data structures. So this is a very broad class of cryptography that's interested in trying to outsource some data structure onto a maybe honest but curious, maybe malicious server, and then supporting different data types, like you could have an encrypted dictionary or an encrypted multimap. And so I studied this, which is connected to other primitives like oblivious RAM.
+
+
+And then toward the end of my PhD, I went to work as a student researcher at Google. And I worked with the crypto team there. And they were also very interested in this broad class, but they had me work on private information retrieval, which I kind of just fell in love with because of all the different variations.
+
+
+And there are just so many open problems. And it's like this primitive that's right on the cusp of being practically efficient for all these very many applications, both like within blockchain and like throughout, you know, the ecosystem of secure computing. And so I just really enjoyed my time there.
+
+
+And since then I've been working on it kind of persistently.
+
+
+[Anna Rose] (7:16 - 7:34)
+It's funny because like, I've heard it, I mean, we're the Zero Knowledge Podcast, I've heard it sort of from the context of ZK, but it's quite different, right? Like, is it used in tandem with ZK? Does it borrow anything from ZK?
+
+
+Could it be a ZK PIR? Like, could it be a, could you, could you use ZK in this concept?
+
+
+[Alex Hoover] (7:35 - 9:03)
+So if you construe zero knowledge broadly enough, you could maybe think of it as a type of zero knowledge. Which we tend to on the show, actually. I wouldn't say if it's the traditional zero knowledge definition that you might get in like, you know, CS theory type class.
+
+
+But there's a lot of applications where the two kind of coincide. So like, in addition to the applications that Kobi mentioned, like one kind of toy application, if you just want a really simple abstraction, if you imagine a blockchain where every transaction was like a zero knowledge proof of the transaction, right? So you have like this kind of, you can think of this as like a write privacy.
+
+
+So like I write transactions onto the blockchain, but maintain confidentiality of what my transaction was. And now you might care also about the read privacy, right? If I go and look at a specific transaction, like I need to verify a specific proof and I go and grab it off the blockchain, then the right was private.
+
+
+But now the fact that I have gone and accessed that transaction might reveal something about the transaction that I'm doing now or who I am or what I'm interested in more broadly. And so you can kind of think about it as like a type of read privacy in that type of application. Also zero knowledge proofs can have applications in the deployment of PIR.
+
+
+So you can combine PIR with other crypto primitives. Like I said, you can combine PIR with encryption to get confidentiality. You could also add zero knowledge proofs to provide some form of authenticity, which is kind of an active research field right now.
+
+
+[Anna Rose] (9:03 - 9:08)
+Oh, interesting. To prove that what you're retrieving is actually correct, something like that?
+
+
+[Alex Hoover] (9:08 - 9:59)
+Yeah. So there's a recent line of work that has looked at what are called authenticated PIR or verifiable PIR or malicious PIR. So these are all kind of, I don't think we've settled on a name for this primitive exactly yet.
+
+
+But in some contexts, you may want to protect against not just a semi-honest or honest but curious server. You might want to protect against a potentially malicious server who might try to feed one person, one version of the database and feed someone else a different version of the database. That's what you want to prevent in that setting.
+
+
+And like I said, this is very new. I think there are some very generic techniques you could do to try to get some form of authenticity here. But the definitions are quite nuanced and the constructions are also interesting.
+
+
+Something that I'm currently trying to pursue research on. So it's a little hairy.
+
+
+[Kobi Gurkan] (10:00 - 10:26)
+Alex, in my knowledge, there are a bunch of different constructions of PIR with very, very different security assumptions, computational assumptions, and so on. And this has been going on for a while, for decades, I guess. So it would be interesting to learn about the whole journey that PIR went to and where it got to, like the information theoretic stuff, computational constructions, what's going on.
+
+
+[Alex Hoover] (10:26 - 12:08)
+Yeah, that's a very long story, I guess, in its entirety. But yeah, PIR celebrated its, I think, 30th birthday last year, was introduced originally in 1995. Actually, it's older than I am.
+
+
+So I can't tell you the full story. I guess I wasn't there for it. But when it was introduced, it was actually introduced in, like you said, this information theoretic setting.
+
+
+So in this setting, you have, you think of the database as replicated across more than one server. So you can have, I think, two, three, or in general, K servers. And then you have a client who issues a query to each of these servers and gets back the database element that they want.
+
+
+And the security guarantee in information theoretic PIR is that each database's perspective, the query sent to that or that server, is information theoretically secure, meaning that even given unbounded time, that server can't learn anything about the particular query. But the real caveat in that definition is that there's this critical non-collusion assumption. So you have to assume that basically these servers don't collude with each other.
+
+
+If even two servers get together, right, so you have K servers in general, and if two get together, in a lot of these schemes, they can immediately learn the query that you ask. And this is something that's been mitigated in the information theoretic setting. And like I said, there are lots of variants.
+
+
+So I would say that the focus after its introduction shifted away from this information theoretic PIR and toward what's called computational PIR, or usually when people say PIR in the cryptographic community today, they mean single server computational security.
+
+
+[Kobi Gurkan] (12:09 - 12:44)
+Before we move on to the computational stuff, so just to try to clarify what it looks like for the information theoretic variants. So something that a lot of people in the blockchain world are used to is kind of a threshold assumption where, you know, if you have a threshold signature, then T out of N can collaborate and construct a signature. So for example, you assume that there is an honesty threshold, but here it's very different.
+
+
+Like what you're saying is that if you have K servers, then even if two of them like collude, then you would have a problem already.
+
+
+[Alex Hoover] (12:45 - 13:44)
+Yeah, that's right. So there are, I will say there are variants of this information theoretic notion that have been defined and explored. There's not as much literature on them compared to that non-collusion variant.
+
+
+There's something called robust PIR, where if you are robust, then you still preserve privacy even if R servers collude, let's say. There's also another variation. It's not called robust.
+
+
+I'm forgetting the name now, but it's basically this, you only need, it's a threshold type assumption where you only need T out of the N servers to respond, and the other ones could drop your query. There are other ones where the servers that they don't just drop your query, but they actually give you a maliciously constructed query, and you only need T honest or like a majority honest type setting. So all of these have been explored.
+
+
+I think there are still open questions in the information theoretic setting for robust and threshold type PIR, but a lot of the focus has shifted off of that in the community, I would say.
+
+
+[Anna Rose] (13:45 - 13:49)
+So the focus today is on the single server computational model. What does that look like?
+
+
+[Alex Hoover] (13:49 - 14:27)
+So in the single server setting, it's not possible to achieve a non-trivial information theoretic PIR. And so what I mean by that is in PIR, there's typically a non-triviality condition because as I've described it, right, the client issues a query to a server, and one trivial way to privately obtain the entry that I'm interested in is for the server to just give me the entire database. If the server just gives me all of the entries of the database, then I haven't revealed which one I'm interested in to the server, and I can pick out the one that I care about and drop the rest, right?
+
+
+This is the trivial PIR. So that's the best you can do.
+
+
+[Kobi Gurkan] (14:27 - 14:31)
+What's wrong with that? That's what people, some people do that today. It's fine.
+
+
+Okay.
+
+
+[Alex Hoover] (14:32 - 15:11)
+Yeah, sometimes you just have to download the entire database. And if you do, then that, you know, sucks. But so that's the best you can do information theoretically in the single server setting.
+
+
+And it turns out you can do better if you introduce some sort of computational assumption. And there's a lot of literature on what kind of computational assumption you need. In fact, it turns out you need what's called like a public key type operation.
+
+
+So you can't do this just from one-way functions. That's a theoretical result. So you have to use something like group operations on the server side or like lattice operations.
+
+
+So you have to use some sort of maybe expensive cryptography in order to enter these PIR queries and be computationally secure.
+
+
+[Anna Rose] (15:12 - 15:24)
+But is that a bad thing? Is that something you're trying to like engineer away? Or is that just sort of like you can either do it where you download the entire thing, or you will be using some of this expensive cryptography.
+
+
+And it's kind of like those are the ends of the trade off space.
+
+
+[Alex Hoover] (15:25 - 16:35)
+That is a really, really great question. So people aren't always happy with doing public key operations. And so there have been other models introduced.
+
+
+So this lower bound that was shown basically only applies to PIR that don't have any, what I'll call client-side preprocessing. And this is something that's kind of taken off in the last eight years. And it was introduced kind of concurrently by some of my co-authors at Google, introduced it in a 2018 paper, and then kind of again by Corrigan, Gibbs, and Kogan, Eurocrypt in 2020, where they introduced this notion of like offline-online private information retrieval.
+
+
+And this is one way that you can get around the need for public key operations. And in fact, it's basically the only way. There are some other lower bounds that show that in the kind of traditional non-preprocessing setting, you're going to need actually a linear number of public key operations.
+
+
+So there was a recent result that said PIR doesn't just require public key operations, but it actually requires a number of public key operations that is linear in the size of the database. So you have to do like a whole bunch of like RLWE multiplications or something like that.
+
+
+[Kobi Gurkan] (16:36 - 16:47)
+Yeah, a bunch of lattice operations. So these lower bounds, do they apply, let's say, if you're talking about offline-online settings, how does it look like there is that during each phase?
+
+
+[Alex Hoover] (16:47 - 18:17)
+So when you introduce preprocessing, the picture gets a lot more nuanced. So the lower bound says that the total communication, if the total communication between the offline and the online phase is sublinear, then you must have used a public key operation. So what this means is that you either are going to have to use public key operations, or the offline phase will have to be your expensive part.
+
+
+So a lot of these schemes will have an offline phase that can kind of be run in two modes. One is you stream the entire database upfront before you know the queries that you're interested in, and then the client will store some sort of small localised hint. And then online, they're going to issue the queries using their hint.
+
+
+And this online phase uses no public key operations. In fact, it barely uses any cryptography at all. All the server is going to do is XOR things together.
+
+
+It doesn't have to do any group operations. This offline phase, I mentioned that you have to do it in this streaming fashion. That's basically to get around this lower bound.
+
+
+There are other things you can do. You could use public key operations in the offline phase. And people have proposed you could use fully homomorphic encryption in general to compress the communication there.
+
+
+Currently, I think the FHE offline preprocessing is too slow for practise. And people have usually tested assuming this streaming setting. But that's also kind of an open question is to speed that up as much as possible for practise.
+
+
+[Kobi Gurkan] (18:18 - 18:30)
+Yeah. So the streaming setting, for example, could fit, let's say, the light client use case very, very well. If you're allowing yourselves to synchronise the blockchain once, let's say.
+
+
+Because then you can query whatever you want.
+
+
+[Alex Hoover] (18:31 - 19:03)
+Yeah, there is like another bottleneck that comes up. So you do this one time offline streaming phase. And the way that most of these schemes work is that you issue many queries using this one hint set.
+
+
+But while you're issuing these queries, you also have to kind of refresh your hints. And so you do ultimately have to like redownload the blockchain, but it's amortised over many queries. That's one of the caveats, I'll say.
+
+
+But like amortised, your communication will be like, let's say, square root in versus linear. So it's square root in per query.
+
+
+[Anna Rose] (19:03 - 19:46)
+I just want to kind of cover what you just said again, because you kind of identified these like different ways that you're like retrieving this. So just kind of going back, it was like one is download the entire or like access all of the data. The other is use the public key expensive cryptography.
+
+
+And then the third is do client side processing on that first part, I guess, of accessing the entire data set. And then some smaller and I'm guessing like less expensive public key cryptography for the online part. And then you also mentioned using the public key in the offline.
+
+
+So yeah, I just I just am trying to follow like, how do you shift that around so that it's the most efficient? Is that the question that you are all working on?
+
+
+[Alex Hoover] (19:48 - 21:53)
+Yeah, I would. This is a very, very active research field. So it's possible someone uploaded something on Eprint by the time, you know, this goes out that, you know, kind of invalidates a lot of what I'm saying.
+
+
+Fortunately, I think there are some broad things we can say. And like recently, I had a paper that extended some lower bounds and showed that some things are impossible that we didn't know before. So let me slow down with the public key operations.
+
+
+So in these client side preprocessing schemes, a lot of times the offline phase is flexible. So many of them are just trying to optimise the online phase as much as possible. And then they say the offline phase can be done in one of two ways, one of which is by streaming the database and one of which is by public key operations.
+
+
+Whichever one you choose there, it doesn't matter for the online phase. In the online phase, there are no public key operations whatsoever. That's the main speed up that they're trying to get.
+
+
+So the client maybe runs, you can think like AES calls or SHA-256 calls. They run those locally and that's mostly for compression. They send something to the server and the server does usually a very efficient computation.
+
+
+In many of these, it's literally taking database entries and like XORing them together and sending them back to the client. Sometimes it's just sending the database entries to the client. It's just that the database doesn't send very many of these.
+
+
+And another thing that helps with this is that these online queries are much faster, not just in terms of public key operations, but they're also faster in terms of their asymptotic behaviour. So each of these online queries only takes the server about square root in time if they're in database elements. So the server doesn't even have to access every single element of the database the way that it would in traditional PIR.
+
+
+So preprocessing speeds up the asymptotics and also can get rid of these public key operations that slow down a lot of things in practise. And the cost is that the client has to do this offline phase one time up front.
+
+
+[Kobi Gurkan] (21:54 - 22:13)
+Yeah, although that's pretty nice because you can imagine that the offline phase you would be doing at home when you have a good internet connection, when you're on your powerful PC, and then you move the hints to your phone and then you can do whatever you want when you're on the go and on the plane with Starlink or whatever. So it's fine.
+
+
+[Alex Hoover] (22:14 - 22:24)
+Yeah, I think it will depend on the application, but I definitely... People have been interested in this, I think for a reason, because it does have some applications where it's acceptable to do this offline phase.
+
+
+[Anna Rose] (22:24 - 22:41)
+If the online side is not using any of the public key expensive cryptography, what is it actually? What are you sending? What does that connection look like?
+
+
+Is it interactive? Are you waiting for something to come? Yeah, I'm just kind of curious what you're actually doing.
+
+
+What are you sending?
+
+
+[Alex Hoover] (22:41 - 22:53)
+So it might help to go through a concrete scheme. I'll say up front that almost all PIR are one round operations. So they're not very interactive.
+
+
+Usually there's one query and then there's one response from the server.
+
+
+[Kobi Gurkan] (22:54 - 23:01)
+Maybe it's a good opportunity to just jump to Plinko itself because then we could talk about that scheme, I guess.
+
+
+[Alex Hoover] (23:01 - 23:43)
+Yeah, so the shape of these online queries might seem a bit mysterious, right? We haven't talked about how you would actually implement PIR in practise. And I guess for the purposes of right now, we can just talk about this offline online or this client-side preprocessing PIR.
+
+
+And so in this setting, we can think of it abstractly as... I'm going to give a sketch of the original scheme, of which pretty much all the other schemes derive in different variations. And so the high-level idea is in the offline phase, I want to learn the XOR, or I'll call it the parity, of some random subset of the database.
+
+
+[Anna Rose] (23:43 - 23:44)
+What does that mean?
+
+
+[Alex Hoover] (23:44 - 23:46)
+Yeah, that's a good question.
+
+
+[Anna Rose] (23:46 - 23:47)
+Non-computer scientist here.
+
+
+[Alex Hoover] (23:48 - 24:24)
+Imagine the client just sent like square root n indices. So the database is an array with n elements. And I just want to learn square root n, so a small part of this array.
+
+
+And I just pick these entries at random. I take them out of the array and I XOR them together. I like add them mod 2.
+
+
+Okay. And that gives me one. So like if each of these entries is b bits long, then I XOR them all together and I get one b bit value.
+
+
+And I'll call that the parity. And so the client in the offline phase stores a whole lot of these parities.
+
+
+[Anna Rose] (24:24 - 24:27)
+Which are like subsets of the larger data pool.
+
+
+[Alex Hoover] (24:28 - 25:16)
+Exactly. Exactly. And so the client will store also about square root n of these.
+
+
+And we can pick the numbers a little bit later. But the rough idea is that I want every single element of the database to appear in one of these random subsets. So I just pick enough of them so that every element of the database appears in one of these hints.
+
+
+Then in the online phase, what I'll do is if I want to query some index i, then I'll find a set that contains i, let's say. So I have square root n sets. One of them has i in it.
+
+
+And I'll go and find that. I'll find that set. And next to the set, I have some parity.
+
+
+I have some b bit value that's the XOR of those database entries. Now what I want to do roughly is I just want to take out i from that set. And then send the set to the server.
+
+
+[Anna Rose] (25:17 - 25:21)
+Like the sort of the subset that where that lives. Is that what you're saying?
+
+
+[Alex Hoover] (25:21 - 25:36)
+Doesn't that reveal what you're looking for then? So what I'm sending to the server is a subset that doesn't have my index in it. Oh.
+
+
+But you're right to point out this isn't exactly secure. We'll fix security a little bit later. But yeah, so I take this subset that has i.
+
+
+[Anna Rose] (25:36 - 25:36)
+Yeah.
+
+
+[Alex Hoover] (25:36 - 25:40)
+I pull out i. And then I send the remainder to the server.
+
+
+[Anna Rose] (25:40 - 25:41)
+Ah, I see.
+
+
+[Alex Hoover] (25:41 - 25:47)
+Okay, so to the server, this looks kind of like a square root n minus one sized subset.
+
+
+[Anna Rose] (25:47 - 25:50)
+But can it identify what the i is in that moment?
+
+
+[Alex Hoover] (25:50 - 25:58)
+Yeah, so in that moment, the server could infer that i is not one of the indices that I did in fact send.
+
+
+[Anna Rose] (25:58 - 25:58)
+Yeah.
+
+
+[Alex Hoover] (25:59 - 26:33)
+So you're right that we have some security loss there. We can fix this using a couple of different tricks. So you can either structure these hints slightly differently.
+
+
+That's what most modern schemes do. Another thing is that you just sometimes include i. And you do this with a probability that makes the distribution like happen to match.
+
+
+So this is what the original Corrigan-Gibbs-Kogan paper did. It was a really clever trick where like they just kind of fail sometimes. So if you do include i, you won't get the right answer.
+
+
+But then you can kind of just replicate it. So you can do it like 10 times and take like the majority vote. And like you'll be able to get i most of the time.
+
+
+[Anna Rose] (26:34 - 26:39)
+Cool. Okay, so yeah, you send the subset minus the i. And then do you get something back?
+
+
+[Alex Hoover] (26:40 - 27:32)
+The client is holding a parity, right? It's holding some bit string that is the XOR of every element in the set. And the server, let's say, sends back a parity that is the XOR of every element in the set, except for i, except for the index we're interested in.
+
+
+So what we can do as the client is we can just take these two parities and XOR them together. And everything cancels off except the one entry that we care about. This like specific entry at i.
+
+
+And that's how you get the information that you want. Exactly, exactly. And to make this private, like I said, you have to randomly fail and multiply a few times.
+
+
+But actually what's more common now is to structure the hints in such a way that you don't have to fail. You can just be a little bit more careful. Instead of picking random subsets, you can pick more structured subsets.
+
+
+But the same idea is roughly there.
+
+
+[Anna Rose] (27:32 - 27:43)
+Would you be picking subsets that sort of border on the i? Like are you kind of, I'm trying to picture this visually, but like are you kind of like mapping around this piece that you want?
+
+
+[Alex Hoover] (27:43 - 28:09)
+Yes, yeah, yeah, exactly. So you like, in pretty much all of these schemes, you have a subset with i. And then you know that parity.
+
+
+And then you remove i. And then you learn the parity of the subset without i. That's almost all of the schemes.
+
+
+And sometimes when you remove i, you can set up your hints in a more complicated fashion so that you don't have to sometimes fail.
+
+
+[Kobi Gurkan] (28:10 - 28:13)
+You did something a bit different in Plinko though, right?
+
+
+[Alex Hoover] (28:13 - 32:22)
+Yeah, so Plinko in particular builds on two different prior works. So I would say Plinko kind of as a paper shows how to improve two prior works to obtain better algorithmic efficiency. So in both of these prior works, I don't think I should go into all of the details of how they work.
+
+
+I'll tell you, I'll try to focus in on what Plinko is doing in that paper. But we can go into the details of the schemes if it's helpful later. But both of these prior works have some particular way that they construct their hints.
+
+
+And in particular, they construct their subsets so that every single set has one element from each of what I'll call like chunks. So if you imagine your database is in elements, then I can chunk the database into square root n consecutive chunks, right? So the first chunk is just indices 0 up to square root n minus 1, and then square root n, 2 square root n minus 1, and so on, right?
+
+
+So I just chunk the database. And for each of these chunks, I'm going to pick out a random offset of that chunk. And then that's going to define my set.
+
+
+Okay, so I just pick like, here's offset, here's offset, here's offset. And the way that we derive these offsets for efficiency, right? Because if the client stores the sets directly, the client storage is going to be way too big.
+
+
+Because each set takes like square root n bits to write down. And if you store square root n of them, that would take n bits. And that's unacceptable, right?
+
+
+We could have just basically downloaded the whole database and stored it locally. So instead, what we use to derive these offsets and derive these random sets more generally is some sort of pseudorandom function. So you can think of this as like AES or SHA-256 or your favourite pseudorandom function.
+
+
+And this way, we can basically just store one key per hint, and then use that key to derive these offsets whenever we want to issue the query. And actually, this also lets us more efficiently test whether or not a specific index i is in a set, right? So if you give me an index i, I know what chunk it belongs to.
+
+
+And so for each of these hints, all I have to do is run the PRF, the pseudorandom function, for that particular chunk to figure out whether the offset lines up with the index i that I'm interested in. I don't care about any of the other indices in the database. It's either like the offset matches on this chunk, or it doesn't.
+
+
+And so I can kind of just scan through my hint. That's how prior works did it. And what we observed in our paper is that this linear scan through the hints in order to test whether or not a specific index is in a hint comes with some knock-on consequences.
+
+
+So backing up a little bit, one big drawback of client-side preprocessing PIR is that you have to preprocess on the database at a particular point in time. And in practise, a lot of these databases are dynamic. They change all the time.
+
+
+This is definitely the case in like blockchain. You're doing append, of course. And in a lot of other contexts, you have database updates.
+
+
+And that causes all sorts of changes to the database. But we've preprocessed on the database at time t. And once it goes to time t plus one, it's actually just not clear at all whether your preprocessing is useful or not.
+
+
+And so this was something that hadn't really been explored in prior works, except through very generic and inefficient constructions. So this linear scan comes with a lot of knock-on inefficient things. And what we do in Plinko is we show that actually you don't have to do this linear scan.
+
+
+We can use a new primitive called an invertible PRF in order to do this lookup much faster, at least asymptotically.
+
+
+[Anna Rose] (32:22 - 32:24)
+What did you just call it? An invertible PRF?
+
+
+[Alex Hoover] (32:25 - 32:27)
+Yeah, an invertible pseudorandom function.
+
+
+[Anna Rose] (32:27 - 32:27)
+Oh, yeah. Okay.
+
+
+[Alex Hoover] (32:28 - 32:50)
+So pseudorandom functions let you go one way usually. You take an input, and then the output looks uniformly random. But if I give you a random output, can I find an input that matches to that output?
+
+
+And this sounds like a bad property, right? You don't want this for someone who doesn't know the key. But for someone who does know the key, this is an okay property to have.
+
+
+Cool.
+
+
+[Anna Rose] (32:50 - 32:58)
+You mentioned the prior works. And I don't know, is it your prior work? What are they?
+
+
+I don't know if we want to reference them.
+
+
+[Alex Hoover] (32:58 - 33:48)
+The two that we improved directly on are Piano, which was a big breakthrough paper that kind of showed how to do multiple queries kind of concretely efficiently. And then another paper by Lingren, Moogies, and Sun, which was a follow-up work that achieved, I would say, better concrete efficiency and also reduced the server response size compared to Piano. So both of these, and actually, since then, there are other schemes that use kind of a similar hint structure.
+
+
+This is a very, very general hint structure that we can kind of speed up. It's not quite in a black box way. But for anything that generates these hint offsets from PRFs, there's a decent chance that an invertible PRF could be used to speed it up algorithmically.
+
+
+[Anna Rose] (33:49 - 33:58)
+You keep mentioning hints, and I feel like earlier we talked about kind of the sending the subset minus the I. But I don't know, is that the hint or does hint mean something else?
+
+
+[Alex Hoover] (33:59 - 34:46)
+So hint means the, when I say hint, yeah, I should have clarified this earlier. I'm referring to the set that you pre-processed together with its parity. Yeah, okay.
+
+
+XOR of those entries. So that quantity together is one hint. And what the client does in pretty much all these schemes, there's no reason it necessarily has to do this.
+
+
+It's just the way that it's worked up until now. The client stores a bunch of these hints. So square root n of these hints.
+
+
+And whenever they want to issue an online query, they find a hint that is useful to them. So they basically scan through these sets until they find a good hint. So yeah, sorry, maybe I should just call them sets.
+
+
+But usually it's important that you have the set and the parity together. And this is kind of like one object in the algorithm.
+
+
+[Anna Rose] (34:47 - 34:54)
+And in the Plinko work, have you changed that approach? Or are you still treating hints this way?
+
+
+[Alex Hoover] (34:54 - 35:43)
+We still treat hints this way. We have to change how we derive the offsets of the hint. So in prior works, every hint, right, you had the set.
+
+
+And the way that you compressed the set was by using a pseudorandom function key, a PRF key. In Plinko, instead of having a pseudorandom function key per hint, we have to shift it. And so we have a pseudorandom function key per chunk, right?
+
+
+So we have square root n of these chunks. And so we have the same key that's shared across all of the hints. This is kind of necessary in order to do a fast search over the hints.
+
+
+If each hint is independently drawn with no shared key or anything, then there doesn't seem much hope to do a faster search over the whole set or the whole collection of hints.
+
+
+[Kobi Gurkan] (35:43 - 35:57)
+Yeah, just to find even the hint that the index that you're interested in exists there, right? So that is like the problem that you're trying to solve because otherwise the client side does a lot of work to even find a relevant hint.
+
+
+[Alex Hoover] (35:57 - 36:41)
+Exactly. This especially matters in settings where you want the client to store more in order to speed up the server's computation time. So there is an inherent trade-off in these schemes where the client, they don't necessarily have to store square root n hints.
+
+
+Maybe they store like n to the two-thirds hints. And if they do that, then the server's query time and also its response will become like n to the one-third. So there's this trade-off where the client can store more and the server will run faster, where the client can store less and the server can return more.
+
+
+That's a trade-off that previously you couldn't explore the whole trade-off there. But with Plinko, you can actually pick any client storage size and obtain the matching runtime of the protocol.
+
+
+[Kobi Gurkan] (36:42 - 37:13)
+So one way that you mentioned that we can solve the privacy problem that Anna mentioned with the hints was, okay, let's do aborts. But if I remember correctly, the way that you do it in Plinko, and also I guess in Piano before that, is that instead of sending just that subset that you're interested in, you're basically sending the entire set of indices. You just don't tell the server which one you're interested in.
+
+
+[Alex Hoover] (37:14 - 38:56)
+So it's a little bit more nuanced than that. If I send the entire set of indices, then the server would know, with i in it, the server would know that I'm interested in one of these square root n indices. That would also break privacy.
+
+
+So what they do in Piano, and something similar is done in later works, is you remove i. If we imagine these hints as one per chunk, then we remove i. And so now we're missing some index from that chunk.
+
+
+And so what we do is we just replace that with a uniformly random index within the chunk. So we send basically the whole set, except now we've just swapped out i for a new random value. And because of this, it comes with a downside, is that the server can no longer just compute the XOR on their side.
+
+
+And that's because if the server did compute the XOR of these entries, then you would get back the original set minus i, but plus some random value. And so if you XOR'd these parities together, then you kind of lose the benefit that you had. And so what Piano does, there are actually a number of ways you can resolve this.
+
+
+The easiest one is you just have the server send back the database entries directly, right? So the server sends back square root in database entries, and the client will just compute the XOR on their side locally without any problem, right? So they just ignore the entry that they kind of randomly added.
+
+
+They XOR these together, and then they XOR it onto their parity bit, and then they'll recover the information that they wanted.
+
+
+[Anna Rose] (38:56 - 39:20)
+So I feel like we have sort of explored the hints, the subsets, but I think what we haven't really discussed is the information, the i. I'm curious, what is that? How big is it?
+
+
+And when you're actually trying to get information, are you usually doing multiple i's? Are you searching all at the same time for a bunch of things, or are you always searching for one thing?
+
+
+[Alex Hoover] (39:20 - 40:52)
+It depends on the context, unfortunately. So PIR in general, I mean, it's a good thing and a bad thing. It's a very powerful primitive that has all sorts of applications.
+
+
+And in some applications, you might be searching for many i at once. So this is usually what's called a batch PIR or a batch query. And there are general techniques you can do to convert any PIR into a batch PIR.
+
+
+And so in a batch PIR, let's say I have like a thousand queries, then what you can do actually generically is batch these thousand queries. And instead of paying a thousand times the normal PIR cost, you can just pay like about the normal PIR cost, maybe with like a factor two or three. So you can batch many things together without increasing the server computation by that same factor.
+
+
+And there's a lot of work that kind of specialises in like trying to make batch PIR as efficient as possible. And that might be useful in some contexts. In other contexts, maybe you only care about one particular query.
+
+
+It's like one kind of fictitious example is like in a DNS lookup. If I imagine that the like DNS server who like anytime I type in some URL, it goes and pings this DNS server to figure out what IP corresponds to that server. I might want that to be implemented by a PIR so that the DNS server doesn't learn, you know, which URLs I'm navigating to.
+
+
+And so in that one, it makes sense that like, I might only care about a single query at a time, unless you're doing pretty insane browsing.
+
+
+[Anna Rose] (40:52 - 41:02)
+I see. Okay. The batch PIR, you just mentioned like some work on that.
+
+
+This is also useful for us because we can add these to the show notes. If people are curious about that, who's working on that?
+
+
+[Alex Hoover] (41:02 - 41:48)
+So my co-authors at Google have a paper from a couple of years ago called Don't Be Dense that builds an efficient keyword PIR. And I think that they also talk about generic batching. There are a couple other papers that I'm forgetting the names of that use something called probabilistic batch codes to build these batch PIRs.
+
+
+There's another work by Ling Ren that does vectorised batch private information retrieval, VB-PIR, that comes to mind. Yeah. But like I said, this is a popular field.
+
+
+I can't remember all of the papers off the top of my head, unfortunately. But people can look at those papers and the references they're in and who cites them, and that will give them good pointers.
+
+
+[Anna Rose] (41:49 - 42:09)
+In the case of Plinko, though, you're talking about a single I, right? Is that like, is the construction really, it's not about batching. It's about a single one.
+
+
+How big is it? I say this almost because I think in my head, I'm thinking like you're going into a database, you're pulling out something. I realise it's not exactly that, but yeah, how big could it be?
+
+
+[Alex Hoover] (42:09 - 42:21)
+Are you asking how big the index I is or how big the database entry is? Those are two different, oh, both. Okay.
+
+
+The I, so it will depend on how many entries you have in your database.
+
+
+[Anna Rose] (42:21 - 42:21)
+Okay.
+
+
+[Alex Hoover] (42:22 - 44:21)
+It's actually a good question though, because there's another dichotomy in PIR. As with almost any question you can ask, there are people who explore variants of these different notions of PIR. So what we focus on in Plinko and what these client-side preprocessing PIR to date that I'm aware of are what are called, you can call them point PIR or array PIR.
+
+
+So the index I is just like an array index. So the database, you treat it like an array. It's indexed from, you know, zero to N minus one or one to N.
+
+
+And then the client just, they're interested in some particular index I. So this is only like log N bit. So if we think of N for practical deployment might be making this up a little bit, like two to the 32 or something, you can think of I as like a 32 bit number.
+
+
+So it's not, I itself is not very big. It's interesting if you could try to build PIR for bigger databases, but that's still kind of a research question to try to make the efficiency get to that level. But there is another variant of PIR called keyword PIR, keyword private information retrieval.
+
+
+So like I said, don't be dense, build one of these keyword PIRs. And in this setting, you're, you can think of it as a private dictionary retrieval, right? So you treat the database, not as an array, but as a dictionary that has values for specific keywords and maybe not for others, right?
+
+
+And I want to be able to look up the particular value that I want given a keyword from maybe in a very big universe, right? So here we don't really care. Like it could be gigantic and we don't have an entry for every single thing.
+
+
+So this might even be more analogous to something like the DNS application, where I don't want to look at like google.com is not an index, but I could look it up maybe as a keyword in a dictionary that maps to the IP address that I want to connect to.
+
+
+[Anna Rose] (44:22 - 44:28)
+And you can still use all these techniques you described, like with these XOR and the subset and even for words?
+
+
+[Alex Hoover] (44:29 - 45:23)
+So there are general transformations from this point or array PIR to keyword PIR. I'll say that up front. The efficiency of these transformations may or may not match your, you know, intended use case.
+
+
+And I would say it's, I think it's actually an open question to build client-side pre-processing specifically for keyword private information retrieval. Usual constructions can convert one into the other via something called cuckoo hashing, which is just a particular way of storing keyword entries into what amounts to an array. And so then what the client has to do is they just hash the particular value that they're interested in.
+
+
+So if they have a keyword, they just hash the keyword. And then out of the hash or multiple hashes, they get some indices and they query those indices using the point PIR. Cool.
+
+
+[Anna Rose] (45:24 - 45:52)
+And I guess if you're seeking a bigger eye, that's when you start looking into the batch PIRs, right? Like you're like, if it's not just a word, it's like that word anytime or multiple account information. I don't know if you'd need that for some reason.
+
+
+Or like, yeah, interfacing with like what interfaced with a contract. And you want to actually see a number of individual information points. Yeah.
+
+
+Would you then use batch PIR or is batch PIR only for the array index type?
+
+
+[Alex Hoover] (45:52 - 47:24)
+So you can do batch PIR in either setting. So almost every, you know, like binary decision like this, you can kind of choose your own adventure and end up with a different definition of PIR. So you can have batch keyword, you can have batch point.
+
+
+Like I said, there's this transformation, which I think a lot of the batch keyword PIRs make use of. And there are settings where like this batch might make more sense. Like, yeah, if you know that you need to issue a query to like these specific nodes or like, let's say, so one application in blockchain that I think I know, and you guys can correct me if not, because I'm not perfectly familiar with everything here, is a private Merkle proof generation.
+
+
+So I don't store an entire Merkle tree, but let's say I'm interacting with someone who stores an entire Merkle tree. But if I want to generate a Merkle proof for a Merkle tree, one thing that I have to do, I have to learn the intermediate hash value at a bunch of these internal nodes, or maybe not a bunch, but log the depth of the tree. I have to learn that many intermediate nodes.
+
+
+And if I have the location for the place that I'm trying to generate a Merkle proof of, then I already know what all of the indices or what all the locations I need to query are. And so this would be an example of where I just need a batch PIR, and I can maybe be more efficient, because I could query all log in of these at once. And that would be a little bit faster than querying each one individually, especially if the depth of the tree was pretty big.
+
+
+[Anna Rose] (47:24 - 47:26)
+Huh, cool example.
+
+
+[Kobi Gurkan] (47:26 - 48:19)
+Yeah, and this is a very relevant application, because this is exactly what you need to generate identity proofs, private transfer proofs. Like you need to know the path to the root to put it in your SNAR, to show that you know what you're spending or what you're using as your identity. So actually, I wanted to ask about the alternatives a bit, in the sense that, for example, one of the disadvantages of that style of client-side pre-processing is that you have to go over all the database at least once, and you have to keep track of it, maybe before the disadvantage.
+
+
+So one advantage that I think it has is that the server doesn't have to store anything per client, right? Like the server stays the same for everyone. They don't need to know anything about a specific client or anything of that sort.
+
+
+[Alex Hoover] (48:20 - 51:11)
+So the alternatives to client-side pre-processing, we covered one of them is by introducing another server, right? So if you have some non-collusion assumption, then you have an efficient PIR. And that's kind of been solved for over 10 years now.
+
+
+But another solution, if you still want, you know, the same strong guarantees that PIR gives you, would be what's called like server-side pre-processing PIR. And usually in this setting, the holy grail is what's called doubly efficient PIR. And a doubly efficient PIR, which I don't really like the name, but what makes it doubly efficient is that it's a PIR where the online phase has sublinear communication and sublinear computation, okay?
+
+
+And ideally, you would just have all the pre-processing done on the server. So there's like one expensive server pre-processing phase that's done once and for all. It's not done per client.
+
+
+So that's a really big benefit of the server-side pre-processing. And then the online phase, like you can think of this offline phase as basically encoding the database to be into some like PIR-friendly form, right? So we have lower bounds for like what the server has to do.
+
+
+The server has to do like, it has to do linear computation when the database is just encoded as it normally is. But if we re-encode the database in a friendly way, there's some potential for some speed up. And this like general approach was introduced a long time ago.
+
+
+But what was really notable is that Lin, Mooks, and Wicks in 2023 showed that you could actually build this doubly efficient PIR theoretically from something called Ring LWE, which is a pretty standard assumption, especially in post-quantum crypto. And they showed that you can actually like do this one-time server pre-processing phase. And then online, your queries would be like, would take polylog, like logarithmic time in the size of the database.
+
+
+So this is like a crazy asymptotic speed up. And it was a breakthrough result and very awesome. It's also not practical.
+
+
+It's very far from practical. There have been, I think, two works that have tried to implement their scheme through like very aggressive optimisation of the theoretical results and some of the data structures that they rely on. And I'm not familiar with the like concrete optimisations that they put in, but I know that the like server encoding size just blows up so much.
+
+
+Like even if you want like a gigabyte-sized database, you have to store, I think like terabytes of information that may or may not be perfectly accurate. But it's far from practise, especially compared to the other more traditional PIRs and even the client-side PIRs. But that would be like the holy grail.
+
+
+And that's kind of what everyone hopes to achieve one day.
+
+
+[Kobi Gurkan] (51:12 - 51:21)
+And in those constructions, the theoretical ones that are not practical, let's say, what does the client have to do in terms of storage or in terms of offline work?
+
+
+[Alex Hoover] (51:21 - 52:00)
+So actually in their scheme, the client doesn't have to store anything. It's a very, I mean, it's called unkeyed doubly efficient PIR. People have considered public key doubly efficient PIR where the client would have to store some public key or it could just be posted somewhere that the client could maybe trust or like grab it every query.
+
+
+But yeah, the client doesn't have to store anything. All they have to do is generate their query, just like in a normal PIR. They just have to know that the databases is encoded in a particular way.
+
+
+And then the server does some computation and sends it back to the client. It's actually a really asymptotically an amazing scheme that doesn't require the client to store anything.
+
+
+[Kobi Gurkan] (52:01 - 52:05)
+And what about this concept of, I think I've heard, stateless PIR?
+
+
+[Alex Hoover] (52:06 - 53:49)
+I think stateless PIR would refer to the traditional PIR setting. But I think I know it might depend on the context exactly. I'm not familiar with the technical term.
+
+
+But in the normal PIR setting, you don't think of the client as storing anything. The client has no information that is related to the database at all. And they generate a query, the server processes the query and returns it back to the client.
+
+
+And so that is stateless in that sense. There are PIRs for a while now that have considered preprocessing in a way that's not the client-side preprocessing and it's not the doubly efficient PIR. So these are schemes where the server is still going to perform linear computation.
+
+
+So the server is going to do all of that computation. But you can get some concrete speedups through some other form of preprocessing. So one scheme that does this is called simple PIR.
+
+
+And since there have been lots and lots of works that build on simple PIR, where basically there's a matrix multiplication that can be done beforehand. It's something that is independent of the database and that you don't have to have the client do online. You can do it beforehand.
+
+
+And so in simple PIR, you imagine basically releasing this matrix A to the client as well as some particular matrix multiplication. And this information can be stored by the client. And so this is stateful in the sense that the client has preprocessed something with the server.
+
+
+And then you can run online queries faster. But it's different from the client-side preprocessing setting because this preprocessing is basically done by the server once and given to all of these clients. And it's also independent of the actual database itself.
+
+
+[Anna Rose] (53:49 - 55:08)
+SONIA DARA Is there ever a situation where the database itself has privacy components? Like, I'm just curious with the PIRs. Right now, I feel like we're only looking at the privacy side for the one who's making the request for information.
+
+
+Like, I'm the client. I want to access something in that database. I don't want the server to know what I'm looking for.
+
+
+I shouldn't say database. Like data space, like thing with information. But then what if you were dealing with something like a more private data pool and you as a user of that do have access to certain things but not everything, and you still don't want them to know what you're seeing?
+
+
+Would that overcomplicate things? Or is that something that's even explorable? Like the case in my mind would be something like the Zcash shielded environment and you have viewing keys and you want to do like a search on those viewing keys but you don't want the server to know that you're doing that search.
+
+
+And maybe it already is all ZK in it. You don't see anything anyway. But I'm just like, say you have like multiple points of entry where you can get information.
+
+
+You don't want your search, your query to be tracked. But the thing itself is partly private. Like, are there any cases like that that you've encountered?
+
+
+And would that affect how a PIR would work?
+
+
+[Alex Hoover] (55:08 - 57:08)
+I can think of applications like the one you mentioned that have this like fine-grained confidentiality requirement. And this hasn't really been a focus in PIR literature that I'm aware of. And I think it's usually because you could solve this with other cryptography.
+
+
+So if you just imagine the database is encrypted with some sort of identity-based encryption or some other like access pattern respecting encryption, then the client who like wants to access some particular entry can just run a PIR over this. And they're not going to be able to decrypt anything that they don't have the key for. So the client will like have their keys and these keys will let them decrypt some elements and not others.
+
+
+And so they can just grab the entries that they're interested in. And if they happen to learn other entries, then they won't be able to decrypt it. There is a notion of PIR, also called symmetric private information retrieval, where you do have confidentiality of the server.
+
+
+I don't think this would really fit the use case you're talking about, but here you have a client who wants to learn a particular database entry. And so you have one side of privacy where you want the server not to learn which entry the client learned. But what makes it symmetric is that you now just want the client to only learn the entry that they queried and to learn nothing else about the database.
+
+
+AMANDA SCHADE So this is a type of like, you can also think of this as like one out of in oblivious transfer. For anyone who knows what oblivious transfer is, this is basically an efficient form of oblivious transfer. I don't think it really maps onto what you're saying.
+
+
+And also there are kind of generic transformations from PIR to symmetric PIR using other cryptography. So there's a very easy transformation using something called an oblivious PRF, an oblivious pseudorandom function. And there are other tricks you can use as well.
+
+
+So I don't think that also like hasn't been studied as much because these like generic transformations exist.
+
+
+[Anna Rose] (57:08 - 57:22)
+COLLEEN O'BRIEN And also apologies for the slightly clumsy description on my part. It's like, it's like a half-baked idea right here. But it just, yeah, I sort of wondered about the other direction and like, or limiting what the client could actually access or something.
+
+
+[Alex Hoover] (57:22 - 57:26)
+ALEX LANGSHUR Yeah, there might be open questions there. I just haven't thought about it significantly.
+
+
+[Kobi Gurkan] (57:26 - 57:42)
+Alex, one thing I've seen around me is a bit of confusion about the concepts of oblivious RAM and PIR and how they relate to each other. So I was wondering if you could touch on that a bit.
+
+
+[Alex Hoover] (57:43 - 1:01:36)
+ALEX LANGSHUR Yeah, this is a really easy thing to get tripped up on because they sound like very similar primitives. And at some level, they're doing a very similar thing. So oblivious RAM is a primitive that I've worked on that purports to protect access patterns.
+
+
+So it takes any RAM programme that like, accesses the random access memory. So it accesses an array at various points, and it can kind of compile it into an equivalent programme where these accesses are what are called oblivious. Basically, they don't reveal anything about which entries the programme actually wants to access.
+
+
+So this is a very related primitive to PIR, but it's critically different in a few ways. And maybe the main way is that in oblivious RAM, there's only one client, whereas in PIR, you have many clients. So in oblivious RAM, there's usually like a secret key that the client is holding.
+
+
+And you usually also think of the array as entirely encrypted. The thing that oblivious RAM is attacking are these access patterns. And it assumes kind of beforehand, it's not even in the security definition, it assumes that all of the data, it doesn't reveal anything about the access pattern to the adversary sitting on the server.
+
+
+And so what the client can do is they set up their key, both for encryption and for the ORAM beforehand. And then that one client who has that one secret key can run some programme using the secret key and make their access pattern oblivious. And that's a lot different compared to the PIR setting, where in the most general form, you have a database and it's public, everyone knows it.
+
+
+And any client is allowed to query it. There's no like secret that's being used by the client to like encrypt the database, let's say. So ORAM is used in like this one particular, like one client, one server setting.
+
+
+I should also add though, that these two primitives can be used for very similar things. So one application that's kind of illustrative of this is usually what's called private contact discovery. So we can imagine that there's some database, a public database, that's like a list of users, maybe.
+
+
+So this is actually something that's come up in like the signal messaging application, let's say. And if I have like someone's phone number and I wanna know if they use Signal, then I wanna look up whether or not they're in this database. So one thing that Signal wants to do though is they don't wanna know who you're looking up, right?
+
+
+They're a privacy orientated company. And so they would want you to be able to issue some query on this big database in a way that doesn't reveal to them which contact you're looking up. They don't wanna get a map of who everyone's friends are because that's just something that they don't wanna know.
+
+
+And so you could use private information retrieval for this. But actually, interestingly, Signal, as far as I know, has chosen not to use PIR. And they did that mostly because of efficiency constraints.
+
+
+So at least as far as I'm aware now and also when they wrote like a blog post about this a few years ago, private information retrieval just wasn't efficient enough for like the number of users they had and the size of the data. It just wasn't something practical that they could do. And so what they opted for was using Oblivious RAM plus Secure Enclave.
+
+
+So if you combine Oblivious RAM with the Secure Enclave, in certain applications, you can get something analogous to what you get with private information retrieval. So in their solution, as best I remember it, a client will communicate with the Secure Enclave. The Secure Enclave will perform the lookup on behalf of the client using an Oblivious RAM to access this database.
+
+
+And so when it uses this Oblivious RAM, if no one has access to the interior of this Secure Enclave, they won't be able to learn who you're looking up, just the fact that you have looked someone up.
+
+
+[Kobi Gurkan] (1:01:36 - 1:01:52)
+Yeah, so like if someone, let's say, looked inside the programme that's running in the Enclave, they would have seen what's being accessed. But like you're assuming that you can only see kind of some pattern of queries that are being made, and that's what you want to hide using Oblivious RAM here. Exactly, that's right, yeah.
+
+
+[Alex Hoover] (1:01:52 - 1:01:59)
+I mean, if you're in the Enclave, you would literally see the client sending you the phone number. Yeah, okay, cool. That's awesome.
+
+
+[Anna Rose] (1:01:59 - 1:02:06)
+So what is the status of PIR today? And maybe what work should we keep our eyes out for?
+
+
+[Alex Hoover] (1:02:07 - 1:03:03)
+I would say it's a very exciting time for PIR, broadly. It's already been deployed by a bunch of big companies. I would say mostly for like niche applications, like Apple uses it for a type of caller ID.
+
+
+Google uses it as a sub-protocol of something they call private set membership, basically like trying to check passwords, like if you have a reused password, they don't want to reveal that password to Google. So it has a lot of these kind of more niche applications that work because of the sizes of the database and the sizes of the entries there. And people have made PIR efficient enough that it actually does get deployed.
+
+
+And it's really exciting. Unfortunately, things have kind of only been getting better. And PIR is such this fundamental like primitive that has all sorts of applications.
+
+
+And so what's really exciting is that as it gets more efficient, I think that the applications are just going to explode in terms of what it can be used for in finding different models.
+
+
+[Anna Rose] (1:03:03 - 1:03:05)
+You're going to see it in lots of places then.
+
+
+[Alex Hoover] (1:03:05 - 1:03:26)
+Yeah, it's just such a like low level primitive that could be used in so many places, but just isn't for efficiency reasons. And so I think the thing to look out for is just like big landmark like efficiency updates in terms of, you know, either preprocessing or even just in normal PIR being able to do it faster through other means. Cool.
+
+
+[Anna Rose] (1:03:27 - 1:03:43)
+Well, Alex, thank you so much for coming on the show and sharing with us PIR, kind of going in depth, letting us ask all these questions to sort of tease out what this is exactly and some of the techniques that you guys are exploring. And yeah, thank you so much for explaining it to us. Thanks for having me.
+
+
+[Kobi Gurkan] (1:03:44 - 1:03:51)
+Yeah, I'm happy that we have a PIR expert on the show. Like I said, I wanted to talk about it for a while, so it's very fun.
+
+
+[Anna Rose] (1:03:52 - 1:04:05)
+And now we have an episode to point to when it comes up in the future or two. True. Nice.
+
+
+All right. I want to say thank you to the podcast team, Henrik, Rachel and Tanya and to our listeners. Thanks for listening.
