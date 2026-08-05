@@ -1,0 +1,1551 @@
+﻿[Anna Rose] (0:05 - 1:34)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Guillermo and I chat with Patrick O'Grady, founder of Commonware. Patrick shared with us his path into the space, being introduced early to Bitcoin, then joining Coinbase and then several years working on Protocol at Avalanche, and what led him to start Commonware, a Rust library of composable primitives for building blockchains. In this episode, we explore the Commonware design philosophy that is allowing builders to customise at all layers of the stack.
+
+
+The bulk of our conversation is on the research that the Commonware team has done on consensus. Patrick walks us through how a shift in the industry's fault tolerance assumptions opened up faster designs and discusses two protocols Commonware has published in response, that is Minimmit and Multimmit. This is very much a catch-up for me on consensus research, so it was very cool to hear what's happened since.
+
+
+I hope you enjoy. Now here is our episode with Patrick O'Grady from Commonware. So today, Guillermo and I are here with Patrick O'Grady, founder of Commonware.
+
+
+Welcome to the show, Patrick.
+
+
+[Patrick O'Grady] (1:35 - 1:39)
+Thanks for having me. Long-time listener, first-time caller, so this should be fun.
+
+
+[Anna Rose] (1:40 - 1:44)
+Nice. Hi, Guillermo. How are you doing?
+
+
+Hi. It's been a hot sec.
+
+
+[Guillermo Angeris] (1:44 - 1:45)
+Doing well. Cool.
+
+
+[Anna Rose] (1:46 - 2:03)
+So this episode came together, I think actually Zucky was the, he recommended I bring you on. He spoke to you. And then I mentioned to Guillermo that I was having you on, and Guillermo, you were like, yeah.
+
+
+Yeah, I love Pat. And Patrick, you were interviewing Guillermo last time. You guys met or something?
+
+
+[Patrick O'Grady] (2:04 - 2:08)
+Yeah, you know, it just depends on what side of the table you're on, right? Yeah, no, Guillermo. How the turns table, you know?
+
+
+[Guillermo Angeris] (2:08 - 2:10)
+It's something you're worried about the whole thing. Literally, yeah.
+
+
+[Patrick O'Grady] (2:10 - 2:28)
+But no, Guillermo and Alex were the first guests on our podcast we run. And so had a great time. Enjoyed having my mind blown by some of the math-y stuff they were doing at that time.
+
+
+So yeah, hoping to repay the favour, at least in small terms. Yeah. We'll see.
+
+
+[Anna Rose] (2:28 - 2:39)
+Cool, cool. So Patrick, let's get to know you a little bit. What were you working on before?
+
+
+What led you to build Commonware? And then we're going to dive in after that into what is Commonware? Yeah.
+
+
+[Patrick O'Grady] (2:39 - 3:35)
+So I grew up in Wisconsin, so far away from all of this fancy schmancy blockchain consensus stuff. So I think like Olaf in his origin story talks about how he was like a lumberjack in Minnesota and somehow found out about Bitcoin. Yeah, I was not as lucky in Wisconsin, so I didn't really know about it much until I came out to school in Palo Alto, learned about it out here and got really, really nerd sniped in it.
+
+
+It's pretty much right away, as long as I can remember. Actually, funny enough, I first got into it, it had no personal impact on me, but it was during the Greece kind of like debt crisis where they were limiting withdrawals of Greek citizens because of like the currency crisis. And then there was this Bloomberg article I saw that was like, yeah, people can still withdraw their money from these Bitcoin ATMs. And I was like, I totally get it. This is so wild. I have no need for this at that time, but like, wow, this is sick.
+
+
+[Anna Rose] (3:36 - 3:37)
+What year are we thinking here?
+
+
+[Patrick O'Grady] (3:37 - 3:40)
+I first got into it in like 2014 time.
+
+
+[Anna Rose] (3:41 - 3:42)
+Okay, pretty early.
+
+
+[Patrick O'Grady] (3:42 - 4:06)
+It was a long time ago. You have to give me some credit because that was when I was 18. So like any earlier I think would have given me like the high school discount or whatever like that.
+
+
+But yeah, then I was like, oh, this is crazy. So I took all the money I had, which was like two thousand dollars and like bought some bitcoins. And then it like doubled in price from like three hundred, hundred fifty to three hundred bucks.
+
+
+And I sold it all. And I was like, this is crazy.
+
+
+[Anna Rose] (4:06 - 4:07)
+And you were like, done.
+
+
+[Patrick O'Grady] (4:07 - 4:35)
+And here we are now at $60,000 or whatever. So I'm not a trader. I am an engineer.
+
+
+And even if I had not sold it, then there's no way I would have held, you know, but in any case, that's how I got interested originally was actually like learning about how there were people around that had basically couldn't access their owner, like their possessions and stuff like that. And that clicked with me as like a motivating factor, I think. Basically, so we did the whole college thing at Stanford.
+
+
+[Guillermo Angeris] (4:35 - 4:43)
+I think we met not too long after that episode, by the way. I actually don't remember. Possible.
+
+
+Was it 16 or 17 or something like that? I think we met.
+
+
+[Patrick O'Grady] (4:43 - 4:50)
+I think it would have been my sophomore year, I think. So it would have been. Yeah.
+
+
+So probably 15 or 16 years.
+
+
+[Guillermo Angeris] (4:50 - 4:50)
+Yeah.
+
+
+[Patrick O'Grady] (4:51 - 6:23)
+Yeah. So did that, like learned how to become an engineer, had a lot of fun at Stanford. But ultimately, you know, when I was graduating, I thought, you know, I should probably get a real job.
+
+
+I started to like interview at a bunch of like SaaS companies and like because I was like SaaS back then, even pre-AI, I was like, you know, like a collaborative document editor. Right. Like I was like, oh, it's gonna be sick.
+
+
+And then I was, funny enough, was actually leaving the engineering school one day and there was like free tacos outside, which is often what these like recruiting things do to, you know, get the get those students attention. Right. So I walked up and yeah, I don't know, I literally was like, what do I got to do to get some free tacos?
+
+
+And it was an A16Z recruiter. And she was like, well, all you got to do is like, you know, give us your resume on this whatever platform thing that had built. And I was like, OK.
+
+
+So I clicked through some stuff, literally didn't click anything crypto. And then she called back like a day later and was like, hey, like I know you didn't click anything crypto, but I think you'd be a perfect fit for Coinbase given the stuff you've been doing. And so I was like, I don't know, like I got to get a real job like I'm trying to graduate.
+
+
+And then I went to Coinbase. Funny enough, I was late for my interview. So I showed up 15 minutes late, ended up fortunately passing the first few technical interviews there in hilarious fashion, which we can talk about later, but passing it.
+
+
+But then I ended up getting an offer and decided after calling a few people that were like, hey, yeah, like this was like Bitcoin was down like 80, 90 percent from that point.
+
+
+[Anna Rose] (6:23 - 6:26)
+What year is this? Are we talking 2016?
+
+
+[Patrick O'Grady] (6:27 - 7:04)
+No, this would have been in like 2018, 2018, 2019, like basically the 2017 run up. I've been like messing around, like doing a bunch of random stuff. And then, yeah, had come down.
+
+
+So like basically this was another case of like Bitcoin is dead. Right. And so everyone I talked to was like, yeah, you probably shouldn't do that.
+
+
+Like half the engineering team at Coinbase had just left. But then ultimately I came to the conclusion that like, well, you know, money or like value over bits is like too good of an idea for this not to work. And if if it does work, Coinbase is going to somehow be related to that.
+
+
+[Anna Rose] (7:05 - 7:05)
+Yeah.
+
+
+[Patrick O'Grady] (7:05 - 7:13)
+And they have at least somewhat of a reasonable engineering culture so that if it does go belly up, at least I think I'll be able to get a new job.
+
+
+[Anna Rose] (7:13 - 7:14)
+Yeah, OK.
+
+
+[Patrick O'Grady] (7:15 - 7:47)
+So then I decided to take it, joined Coinbase. And so, yeah, I worked there for just under two years or so on what was called the crypto engineering team, a crypto platform team. And so what we did was oversee anything that touched crypto, like the blockchain itself.
+
+
+Now, you would think from the outside looking in, like, wow, Coinbase, that's like what they do. That must be like the biggest team at the company. No.
+
+
+So when I joined, it was about 20 people and we maintained everything that touched blockchain at Coinbase. So that was like cold storage. That was like management of, you know, the pod.
+
+
+[Guillermo Angeris] (7:47 - 7:49)
+How big was Coinbase at the time, roughly, do you know?
+
+
+[Patrick O'Grady] (7:51 - 7:55)
+At that point, I think there were 200 engineers left. OK, damn.
+
+
+[Anna Rose] (7:56 - 7:58)
+So most of them were working on like front end stuff.
+
+
+[Patrick O'Grady] (7:58 - 8:27)
+Well, I mean, so you have to imagine like Coinbase is a huge product suite, right? It's like there's like custody. There's like markets trading.
+
+
+There's like a lot like and it wasn't meant to be that thin. Right. But like the market had, you know, a lot of people had given up lately.
+
+
+And so it was a wild time to be there. So like my first week, my boss quit. Team was reordered.
+
+
+But, you know, like I think what they what's that term from Game of Thrones, like chaos is a ladder or whatever like that. So basically the people that were left were amazing.
+
+
+[Anna Rose] (8:28 - 8:28)
+Yeah.
+
+
+[Patrick O'Grady] (8:28 - 10:14)
+Like just they were there for the right reasons and they were incredible engineers. And fortunately, they were generous enough to take me under their wing and really mentor me and teach me. And I mean, you think, you know, crypto and then you go to Coinbase, you didn't know crypto.
+
+
+Like there's nothing quite like, you know, quite like moving hundreds of millions of dollars on chain. So and having confidence that that's not going to be, you know, you're not going to lose the money is a whole different world. So, yeah, really got deeper into it there.
+
+
+While I was there, I worked on a project that I that I started called Rosetta, which is like a universal read and write abstraction for interacting with blockchains. And so the goal was like, how can we basically accelerate listings on Coinbase by making more of the integration asset issuer driven rather than Coinbase trying to figure out how to integrate your chain? And so like automating integration and testing and yeah, Coinbase uses that today.
+
+
+I don't know if they still do, but for a long time, for any asset that was listed on Coinbase had to implement the specification I was working on. So that was a great way for me to like really get deep into all these protocols and like talking to them about like how you would actually implement the spec. Some things I'm responsible for that people might not be aware of.
+
+
+I requested that Solana add timestamps. I requested that Cosmos add atomic balance lookups and a number of other protocol breaking changes that got into hub three. Yeah, there's a longer list, but I will keep that where it is.
+
+
+But ultimately had to figure out ways to integrate certain assets that never really were designed for maybe like production grade integration and what it requires from like law enforcement and all these different things. So it was it was an interesting experience, but ultimately left with like, well, we got to the point where I was like, hmm, you know, it's really cool integrating with these chains, but it would be fun to be on the other side.
+
+
+[Anna Rose] (10:14 - 10:23)
+So you made you made a leap at one point. You headed over to the other side to go deeper. And which chain did you choose?
+
+
+[Patrick O'Grady] (10:23 - 11:31)
+So, yeah, when I was at Coinbase at this time, literally I was I literally had told my boss, you know, the week before, like, yeah, I'm really loving this, like the Rosetta stuff. I feel like I have a tonne of opportunity and ownership to grow my career. And then some people reached out on Twitter from Avalanche and I was like, well, maybe maybe I should do the protocol thing.
+
+
+And so this was right after Avalanche launched Mainnet. So this would have been in 2020. And, you know, I was like, oh, you know, I'll, you know, I'll spend another year or two working on this Rosetta thing at Coinbase, like try to stay like three or four years and then, you know, go for maybe moving deeper in the protocol layer.
+
+
+And basically when I was talking to Professor, like, Emin Gunsur and then Kevin, who's one of the co-founders there, they actually made a really compelling case. It was like, hey, actually, this is the time to go if you want to do meaningful protocol work, because like basically the protocol growth seemed to happen in like waves. And so at that time was basically when there was a lot of investment into like this whole like heterogeneous scaling technique.
+
+
+So like, you know, Polkadot was about to come live, Filecoin was about to go live. And so they're like, hey, if you want to come in, like there's not going to be another chance for like, you know, a couple more years. So like it's now or you wait a while.
+
+
+[Anna Rose] (11:32 - 11:41)
+And there was so much research to do and so much implementation, experimentation. I just I like you talk about that time and it's I have nostalgia for that.
+
+
+[Guillermo Angeris] (11:41 - 11:43)
+It was a wild time. Wild time.
+
+
+[Anna Rose] (11:43 - 12:03)
+It was fun. It was just like and they're like all those chains you're talking about were also competing at times brutally with one another. There was like camps or if you were in the Ava camp, you maybe weren't as invited to the Polkadot camp or what have you.
+
+
+All of this now looking back seems kind of funny, but like at the time, it was pretty serious.
+
+
+[Patrick O'Grady] (12:03 - 12:49)
+Well, because that's funny because it's that's around the time I actually met you the first time was that I think we were texting at this like this Polkadot meetup in San Francisco when I was still at Coinbase because I led the integration of Polkadot. And so I got really deep into that and how that worked. And so I was like learning a bit more about the Polkadot ecosystem and like what it was.
+
+
+So I came at it from a different perspective, which was like, I'm not a maxi. I'm like, I actually really enjoyed learning about the differences of all these protocols, but I just wanted to to actually do it myself, like if someone was to actually go build something. So, yeah, long story short, but like basically Avalanche at that time was super interesting because one proof of stake protocols were not big.
+
+
+So if you're talking like 20, maybe 100 nodes. And so Avalanche, you know, proposed a whole different architecture to really scale up the participation, which.
+
+
+[Anna Rose] (12:49 - 12:52)
+Yes, I remember it was like 600 nodes or something, right?
+
+
+[Patrick O'Grady] (12:52 - 13:51)
+I think at one point we got up to a couple thousand validating nodes, which was, I mean, you know, if you're coming from proof of work and you're like, you know, Bitcoin and Ethereum at that time, it's like this is the robust thing where you have tonnes of people. Proof of stake was like, oh, no, Libra, 20 nodes, like Cosmos, 50, like 100 nodes, a little different tier. And so I was like, if this is going to be taken seriously with like the properties that proof of stake has, we need to be bigger.
+
+
+Obviously, we've a lot of research has come out since then of how to even make it scalable with traditional PBFT things. But at that time, totally crazy. And then the other thing was I thought that, you know, people don't agree on anything.
+
+
+The idea that somehow blockchain is the place where all of a sudden we agree to have one single mondo chain, not a realistic outcome. And so in that case, you're going to want to have like native interoperability. And so at that point in time with where cryptography was at, the solution proposed by Avalanche also was something that I thought was really interesting of like having this like heterogeneous zone thing that was kind of connected.
+
+
+[Anna Rose] (13:52 - 14:04)
+Yeah, yeah. I do want to understand where the kind of initial idea for commonware comes about. Is that in your time in Coinbase or was it already in Ava or yeah.
+
+
+[Patrick O'Grady] (14:05 - 16:57)
+Yeah, where commonware comes in is basically after spending like three and a half years at Avalanche, like in getting deeper into the protocol, building a bunch of different things, I started to have different views. I guess I'm like what what I thought the best engineers would be doing over the next decade. And so that's where converse the idea started.
+
+
+So, you know, if you talk to great folks and you're like, hey, you know, your job, you know, your your task is to build this like really compelling product. And you're like, yeah, except like there's all these constraints that to you probably sound pretty arbitrary, which is like you can't you know, you can't change execution in that way. You can't like change the peering in a certain way.
+
+
+You can't do storage in a certain way. And like now, like do the best you can. Like, I don't know any engineers that are just kind of like, oh, yeah, I'm not going to touch and tweak and like try to work around all these things.
+
+
+It's not it's not a thought process you go through if you talk to great engineers. And so usually it's a product of compromise that people would, you know, deploy things on all these like pretty standard virtual machines that don't touch the layers beneath. And I think for a while people thought and many people still do that virtual machines for blockchains can more or less replicate operating systems and like the experience people have deploying on operating systems where like everything beneath it, like maybe it's not optimal, but it's good enough for you.
+
+
+Right. Like we don't have an Excel laptop and a Word laptop. And like, you know, we're able to run all these programmes on the same kind of backbone.
+
+
+And I think for a long time that was pretty clear. But then as things scale up, you know, throughput and as you try to reduce latency, you got to make more compelling tradeoffs where you can't just have general everything all the way up and down the stack. And the problem is today's frameworks are like even at that time, like not built for that.
+
+
+In fact, you were pretty much actively encouraged not to do that sort of thing because like, you know, don't fork the framework. You're going to introduce your own bugs. You're going to mess this thing up.
+
+
+Like, definitely don't do that. And so the idea with Commonware was like, well, what if we did do that? What would we do differently?
+
+
+And how would we design the actual architecture to allow you to tune and tweak everything to best showcase your application? And so with what we're doing at Avalanche, like it was pretty, it became pretty focused on the EVM and basically running a bunch of EVMs that could communicate with each other. And I think like there's definitely obviously product demand for an EVM.
+
+
+But I thought that the best applications over the next decade would would think more broadly about the problem and would would would benefit from more interesting capabilities. And so with Commonware, the idea was like, could we build a toolkit of Legos that you could actually compose in a bunch of different ways without like going crazy in terms of like complexity or bugs or any of these sort of things to make the best applications better?
+
+
+[Anna Rose] (16:57 - 17:17)
+You described it, I mean, I was reading a bit of the old blog post as like the anti framework. But as you describe it, part of me can't help but wonder, is it similar to like the Cosmos SDK or like the, because a lot of the networks had these like these sort of underlying things that you were supposed to be able to customise, especially if you were launching like a chain.
+
+
+[Patrick O'Grady] (17:17 - 17:32)
+Yeah. So I think if you look at Commonware, you know, like if you look at 10,000 feet, you could be like, does it help you build your chain? Yes.
+
+
+So is that the same as like Cosmos or Polkadot or whatever? Like and I think a lot of people come to us and that's like that 10,000 foot comp.
+
+
+[Anna Rose] (17:33 - 17:33)
+Yeah.
+
+
+[Patrick O'Grady] (17:33 - 19:32)
+But if you look at Commonware, actually what it does, it diverges sharply from a lot of those other implementations. So like we give you control over everything, like how the P2P layer works, like how you even form connections on the network layer, how consensus plugs into that, how you then define execution on top of that consensus or not even define execution at all, how the cryptography works, how you have different, like all of those decisions are not exposed in most other frameworks or it's just one way and then you can like customise at this level. So like the Cosmos SDK, you can customise everything at a certain level above execution, above the state machine, but the state machine tenderment and like what it manages for you, you're not like breaking that thing open. Like you can use different configs maybe, but like it has its own state tree, it has its own like P2P mechanism and like the idea, right, is like, well, this is the best and this is as good as it could be.
+
+
+So like you're not, don't change this. It's the same reason why like most people don't run like a forked Linux kernel if you're running Linux, right? Like it's like you use Linux for that.
+
+
+And I think what has been shown in recent years, I mean, like obviously like the stuff that Tendermint was pioneering, I'm a huge Tendermint Cosmos fan, just to be clear and integrated that at Coinbase as well. But a lot of research has come out in the subsequent 10 years since Tendermint was first released and announced that changes how you would architect something for performance. So that alone is enough of a motivation for people to be like, well, maybe we should rebuild this thing.
+
+
+The second part is, while we understand as an industry a lot more of the challenges now, we would benefit from having probably more control over this thing and how we build applications. And so I think with any new project, there's always a question around timing, which is like, why now? And the two things are like new mechanisms, new algorithms.
+
+
+That's one thing that we do. The other one is like actually changing how the whole thing is architected together. Both of those are new and we think the right time to kind of explore those things.
+
+
+[Guillermo Angeris] (19:33 - 19:53)
+But philosophically, I think it's like somewhat similar in spirit as in like, oh, yeah, cool. You should build your own application on top of the thing. But like, again, you're mentioning right at the time, Tendermint was the thing.
+
+
+And but it was like it was like a solution for a huge problem space. People were like, oh, we can just black box this and give you the the right.
+
+
+[Patrick O'Grady] (19:54 - 20:16)
+I mean, you know, not to imagine all the complexity they were hiding inside of Cosmos was incredible. Like if you were going to build your own chain, most like all these topics were so out there at that time, like you definitely wouldn't want to mess with them. Yeah.
+
+
+Like the idea that you could somehow define your application as like one participant in the state machine, a replicated state machine, and it just worked crazy.
+
+
+[Guillermo Angeris] (20:16 - 20:16)
+Yeah.
+
+
+[Patrick O'Grady] (20:17 - 20:19)
+People today, much more ambitious. Yes.
+
+
+[Guillermo Angeris] (20:20 - 21:09)
+Well, I think also what has improved substantially, right, which you mentioned in the research is there's been a lot of work in kind of untangling the pieces themselves that make up a replicated state machine, including both like, of course, which you will hope I really hope you will talk about, you know, consensus, but also the cryptography that goes into it, also like the DKG that goes into it, also like all of these other pieces. Right.
+
+
+And at the time, it was kind of annoying. Right. When you designed a system, it was this like complicated thing that solved the problem.
+
+
+Right. But it wasn't until later that the individual pieces kind of got taken out and cleaned carefully and put back together. And now they have nice abstractions that like how they fit together.
+
+
+And this is one of the things that I believe you are very good at doing. But commonware in general has been pretty pioneering on is like designing this very nice interfaces for these like different pieces to fit together.
+
+
+[Patrick O'Grady] (21:09 - 22:09)
+That's what I would call the taste component of this all, which is not papers. It's not whatever. It's like if you were to actually like, how would you actually allow people to pull these things together without being too overbearing, but still helpful?
+
+
+Like the way we think about product is like, you know, Cosmos, you could whip up a chain in an hour. With commonware, like we target someone whipping up a chain in like two to three months. OK, that's that's the level of abstraction we're working with here.
+
+
+And the reason why it's interesting is like, well, if you want to do all these crazy things, you know, two to three months is a lot better than two, three years of rebuilding the whole thing from scratch, auditing it and whatever. And oftentimes that additional delay is worth the more control in terms of like maintenance and how you actually integrate it with your application compared to maybe what you could get with Cosmos. So like we're targeting like a slightly different part of the curve and hilariously with LLMs and AI and everything, that two to three months is now much shorter.
+
+
+But that was not necessarily planned, let's say, when we when I kicked it off.
+
+
+[Anna Rose] (22:09 - 22:09)
+Yeah.
+
+
+[Guillermo Angeris] (22:11 - 22:27)
+So maybe, yeah, maybe one of the things to follow up on, you know, in the previous discussion is like, what is the common where the library, what does it look like? Like what like what is the thing that I touch when I go, you know, to to common word at XYZ and I'm like, I would like to do a common where. What does that mean in practise?
+
+
+[Patrick O'Grady] (22:27 - 23:57)
+First thing you see, like a plain text website, which is beautiful. Either you're into that or you're not into that. And that's our first gate to make sure that this is the right thing for you.
+
+
+No, so I mean, common word today, we call it the common word library, which is all these primitives that you can that you can interact with today. There's over like 40 different primitives and primitive what we call dialects. So different versions of a primitive for different things.
+
+
+So the way it all started was like after I decided to start common where I took no days off. So I left Avalanche next day, started common where next day had money in the bank account. So it was all good, you know, good start.
+
+
+And then the first thing was like, well, obviously, P2P, like without P2P, we're nothing. And so started building an authenticated P2P network. Once I had that, I was like, cool, this works ish consensus, obviously.
+
+
+Next. So actually cryptography. So I've built like some threshold DKG stuff and then I was like, OK, consensus on top of that.
+
+
+And then I was testing it and I was like, I have no idea if this is right. I need to like take two steps backwards to like actually make sure we can test this stuff. So that's where we started to like work on deterministic simulation testing.
+
+
+And we have our own runtime in Rust that lets you do all sorts of crazy simulation and mocking. That's how we keep this whole thing stable. Do that, come back to consensus, rewrite P2P to use this new runtime.
+
+
+Build consensus out. And then by that point in time, like you could run a chain. So like you have P2P cryptography consensus.
+
+
+And that's pretty much all you need.
+
+
+[Anna Rose] (23:57 - 23:57)
+OK.
+
+
+[Patrick O'Grady] (23:58 - 24:43)
+We had some basic storage primitives, so like a wall or kind of like a journal. That was it. And so then on top of that, you then start to add all sorts of different layers.
+
+
+So that's like maybe like if you're building an execution environment, you want state, so like state management on like applications and accounts. So we build that. You want more cryptography.
+
+
+So like you want, you know, private mempools. You want, you know, time lock encryption. You want all these different things.
+
+
+So you built that, you built that. But really, it's like a, you know, box of Legos. Like the whole idea is that like nothing relies on anything else.
+
+
+They just share types. And then the testing comes from the runtime. And so they all make a pretty hard requirement on this like core runtime existing that can orchestrate everything, but also test it to keep things somewhat hopefully reliable.
+
+
+[Anna Rose] (24:44 - 24:47)
+Is it all built in Rust? Is it just like Rust libraries?
+
+
+[Patrick O'Grady] (24:47 - 24:49)
+It's all Rust, MIT, Apache 2.
+
+
+[Anna Rose] (24:49 - 25:07)
+OK. I just wonder as you talk about and like there is the list of primitives, you have actor, broadcast, like I checked out your website before. But I wondered, like, do you then go and audit each of these?
+
+
+Like, do you like how do you guarantee that they're not, you know, weird when they go, when they are used together?
+
+
+[Patrick O'Grady] (25:07 - 26:41)
+Guarantee is a careful word. You can never, you can never guarantee anything. We make a very concerted effort to make sure that they're stable and reliable, though.
+
+
+So we do a lot of testing, first of all, of our own unit testing and everything. We've been working with Asymmetric Research for the last, you know, over a year on fuzzing everything. So everything you see is like heavily fuzzed 24-7, huge.
+
+
+I mean, fuzzing, if you don't fuzz, what are you doing? But like fuzzing is like, it's the best engineer you've ever worked with. They find bugs you could have never imagined and things LLMs would never find.
+
+
+So like fuzzing, key. So we run that 24-7. I'm not a huge believer in like point-in-time audits because the code's always changing, especially with these like sort of stack things.
+
+
+So the first thing for us was like, can we actually build like a continuous security framework that we feel like has confidence, that we have confidence in? We also work with another team called QED Audit, which has this like crazy like LL bug finding bot that's been incredible to work with. So that's like our continuous auditing outside of just manual review.
+
+
+But then we are actually doing a point-in-time audit right now over a number of different things with ZK security. So, you know, Kobe, so Kobe is looking at stuff, you know, David Wong and stuff. So we're fortunate to be collaborating with them and working on it.
+
+
+So, yeah. So we, I mean, you use Commonware not because it's just like useful for you, but the whole idea is that we're doing all this like crazy security research and security engineering so that even if you were to like whip up the same thing, you know, maybe it's within 10% of the performance that we're currently getting, but you don't have to maintain it.
+
+
+[Anna Rose] (26:42 - 26:53)
+Would you say, though, if somebody builds something with you, with this stack, would they still, should they still be doing their own testing security? Like, or do you just have a security piece that they can just lock in?
+
+
+[Patrick O'Grady] (26:54 - 26:59)
+So they get access to the runtime, so they can do all of the simulation testing all the way through their code.
+
+
+[Anna Rose] (26:59 - 26:59)
+Okay.
+
+
+[Patrick O'Grady] (26:59 - 29:17)
+So you can run up like a spin up like infinite virtual clusters that all have like different simulation testing outcomes to like help uncover bugs, which is huge in terms of just general reliability. But most people building on Commonware will also do their own security audits on top of it, just like you would, if you were building a Cosmos chain, like the Cosmos things on top of them will also get audited because it, you know, it assumes certain things about the core, but then you add your own, you know, logic and primitives on top of that. So it's, there's no silver bullets here.
+
+
+That's for sure. The whole point though, is like, can we make it better for you or like easier to manage, not just at launch, but over time? Like, I think the big question that ultimately becomes difficult with frameworks is like, how do you keep someone building in that world as they, like, their problem becomes more interesting and more challenging, more pointed, oftentimes people will be like, well, the problem that's holding me back here, the thing that's holding me back, not helping me is now the framework.
+
+
+I need to diverge. So I'm going to fork this thing. I'm going to do whatever.
+
+
+And so the grand challenge of Commonware is like, can we give you enough flexibility, which sometimes could lead to you hurt, like, you know, messing things up, but enough flexibility that you can stay on the runtime as you as a, you know, project evolve, and that's really interesting, but ultimately the idea is like, there's a bunch of great state-of-the-art research that now is at like the theoretical bounds for how good things could perform.
+
+
+So like, unlike back in the 2020 days, you're not going to have someone like drop a new paper that like does way better, right? Like we're, we're pretty close to the bounds unless you like change some assumptions, which I think we're pretty comfortable with a lot of the assumptions we're making, but ZK and prolific, you know, ZK could change a lot of this, but there's my blood for ZK, but generally we think we're pretty close to that frontier. And so, you know, you could do this and reimplement what we have, but you're not going to be like, you know, a factor better or something like that.
+
+
+And so we hope that this just lets people save time. It's not associated with any ecosystem or whatever. You can just like, it's open code.
+
+
+You can run whole, whole point being like, can we emulate Linux in this way so that we focus as an industry, our efforts on the application part, instead of continuing to reinvent some very slightly modded version of consensus 10 times again. That's the dream. That's, that's the goal.
+
+
+Fair enough.
+
+
+[Anna Rose] (29:17 - 30:09)
+It's funny. You talk about sort of breaking down the components of this sort of blockchain tech stack into its pieces and then better understanding them auditing. Obviously I hear in that, like the echoes of what happened in ZK systems, where it's like, like at first they were just a monolith, you know, one piece and then slowly and surely everyone started to define what the pieces underneath were and then optimise those.
+
+
+What you're talking about though, in the case is more, I guess, on the engineering front and less on the research front, but you also like are, you kind of said that you don't feel like there's, it's not these kind of breaking research pieces coming out that are really changing things, but you also have like a pretty research heavy part of your business. So what are you researching if you're not researching sort of things in like to do with these primitives?
+
+
+[Patrick O'Grady] (30:09 - 30:55)
+Yeah. So I think the question there would be, if, if we're so close to the frontier, why do we ourselves also, you know, employ multiple researchers and do research? Great question.
+
+
+So when we started off, that was not the goal. So when we started off, I had fallen in love previously with Simplex consensus and thought I literally, I was, it was at an IC3 retreat in Switzerland, you know, one of these like 10 minute lightning talks and the author of Simplex, one of them, Ben was there and he gave this 10 minute talk on Simplex, which I had previously never heard about. And I walked out of that thing and I was like, this is the first consensus protocol I've ever heard where I feel like I can implement it in a weekend.
+
+
+Obviously it was much more complicated than that.
+
+
+[Anna Rose] (30:55 - 30:57)
+Is there anything we know that's built with this?
+
+
+[Patrick O'Grady] (30:57 - 31:04)
+So that was the first consensus algorithm we implemented. And so Tempo, for example, runs on Simplex.
+
+
+[Anna Rose] (31:04 - 31:05)
+Oh, wow. Okay.
+
+
+[Patrick O'Grady] (31:05 - 33:29)
+And it's become much more popular lately, especially so like Tom now runs on Simplex, Solana is migrating to like a Simplex inspired protocol, Alpenglow. So it's become much more popular. And the reason and the rationale for that is like for a long time, people thought consensus and the dream of it was linear broadcast.
+
+
+And so the idea is that votes would like run through the leader and then the leader would help disseminate everywhere. So this is like hot stuff and some of the ideas there. Turns out everyone just all to all voting, not that bad.
+
+
+And it ends up simplifying the protocols quite a bit and also improving their performance. So with Simplex, when I first saw it, I was like, if you do all the all, like these protocols are way simpler. And so I saw it and I was like, this is incredible.
+
+
+This was like when I was at Avalanche in 2022. So I ended up like building a few derivative protocols off Simplex that like allowed you to scale it in different ways and whatever, but basically just got really familiar with Simplex. And so when it came time to like build one for Atcomware, like there was no other choice, like Simplex was the one to build and the contribution we made was like figuring out a way to like natively embed threshold consensus into it, and then also a VRF as part of it, which you use for like random leader election and then yeah, pestered Ben on the side, you know, in the early commonware days being like, is this correct? Is this correct?
+
+
+And then, you know, 25 versions of that later, we finally got something correct-ish implementable. Cool. So that was the plan originally.
+
+
+It was like, Simplex is what we need. We don't need to do any of this crazy research. And then things changed.
+
+
+So I was at Solana Accelerate in 2025. So I was speaking on some like ordered broadcast stuff we were doing, which was like this kind of like decoupled consensus construction or whatever, unrelated and well, actually very related. We'll get to it later, I think, with some of the other consensus work we've been doing lately.
+
+
+But the idea was like this was the, this was the conference where Roger unveiled Alpenglow. And the line in the sand that had always been drawn and the one I had always been working around was like, BFT, you want 3f plus one as like the, the configuration, anything less, like, you know, 33% tolerance was already, you know, low relative to what people thought. And now it's like, oh, 20% Byzantine is now cool.
+
+
+That changes everything.
+
+
+[Anna Rose] (33:29 - 33:30)
+This is Alpenglow?
+
+
+[Patrick O'Grady] (33:30 - 33:54)
+So Alpenglow is Solana's. So they had a totally different security model, which was what they called 2020, really interesting stuff. Like in full credit to Roger, I think for like reorienting the industry to like kind of consider this as a reasonable option because the performance implications are huge.
+
+
+So the idea was what if we have 20% Byzantine fault tolerance and 20% crash fault tolerance?
+
+
+[Anna Rose] (33:54 - 33:55)
+Okay.
+
+
+[Patrick O'Grady] (33:55 - 33:59)
+That was the pitch with Alpenglow. And so you get this 20 plus 20.
+
+
+[Anna Rose] (34:00 - 34:18)
+Wait, so sorry, say that again. So 20% Byzantine, so normally like, so just picture, by the way, Patrick, this is a revisiting of consensus that I have not done in a while. There was a time where I felt very up to date.
+
+
+Like I, you know, we had Itay Abram on for hot, we had hot stuff. We had all these great consensus protocols.
+
+
+[Patrick O'Grady] (34:18 - 34:20)
+But Itay's a legend, just to be clear.
+
+
+[Anna Rose] (34:20 - 34:29)
+But it's been a while. So like, I am so out of the loop. Like Alpenglow, clearly totally over my head.
+
+
+But yeah, say this again. So the Byzantine, what was it before?
+
+
+[Patrick O'Grady] (34:30 - 35:01)
+So usually, not the best, but just like what people were comfortable with. Like, if you were going to ship a BFT system in a prob, like you're not going below 33% tolerance, and that 33% is either Byzantine or crash, not delineated. Crash here means like honest participant shuts down.
+
+
+Byzantine here means arbitrary protocol behaviour, like if someone hacking the protocol. And so those were lopped in one bucket and it was like, okay, as long as less than 33% of that sum, we're good under a certain network.
+
+
+[Anna Rose] (35:01 - 35:06)
+Was 33% under 33% had to be malicious or under 33% had to be?
+
+
+[Patrick O'Grady] (35:06 - 35:08)
+If under 33% was malicious.
+
+
+[Anna Rose] (35:09 - 35:11)
+Yeah. So it's two thirds had to be. Yeah.
+
+
+Okay. Got it.
+
+
+[Patrick O'Grady] (35:11 - 35:12)
+You're good.
+
+
+[Anna Rose] (35:12 - 35:21)
+So it was like, yeah. So two, if two thirds were acting appropriately, you're good. That's what I've always understood.
+
+
+I did not realise that that had evolved. Okay. Continue.
+
+
+[Patrick O'Grady] (35:21 - 35:28)
+So this, so this is exactly why I was like, well, we're at Simplex takes us to the bounds really in terms of like how good you can do in that world.
+
+
+[Anna Rose] (35:28 - 35:28)
+Okay.
+
+
+[Patrick O'Grady] (35:28 - 35:54)
+So I was like, well, we were good. We don't need to do any more research. We have all that Simplex.
+
+
+No one can beat us, right? Like it's as fast as you can go. No problems.
+
+
+All right. I'm at this conference and Roger's like, well, what if we didn't do 33% and instead we said 20 plus 20, so we treated them as separate 20% Byzantine, we're tolerant to that and we're tolerant up to 20% crash.
+
+
+[Anna Rose] (35:55 - 36:14)
+Okay. So this is, let me just articulate this. This is 20% malicious, up to 20% malicious actors and up to 20% people just going off, nodes going offline.
+
+
+Like, because I guess your assumption, but why? Like, how are you able to do this? I mean, together it's 30%, but I don't know if that helps.
+
+
+[Guillermo Angeris] (36:14 - 36:14)
+Yeah.
+
+
+[Patrick O'Grady] (36:14 - 36:21)
+To be clear, it's, it's 20% additional could crash. Yes. So like the tolerance you're not talking about is 40%.
+
+
+Okay.
+
+
+[Anna Rose] (36:22 - 36:22)
+Okay.
+
+
+[Patrick O'Grady] (36:22 - 36:26)
+But there's a limit to how much each bucket can be faulted.
+
+
+[Anna Rose] (36:26 - 36:27)
+Okay. Okay. I see.
+
+
+[Patrick O'Grady] (36:27 - 36:49)
+Now the motivation for that, like that's one part of it. Like you could argue that's more robust. We're not going to have that conversation.
+
+
+The thing that's interesting is when you go to 20% Byzantine fault tolerant, a whole new world opens up to you in terms of performance because you can get finality in one vote instead of two votes.
+
+
+[Anna Rose] (36:49 - 36:50)
+Oh, right.
+
+
+[Patrick O'Grady] (36:50 - 36:51)
+Which is huge.
+
+
+[Anna Rose] (36:51 - 36:52)
+Hmm.
+
+
+[Patrick O'Grady] (36:52 - 36:59)
+So like the best you can do, 3F plus one is two votes. So like you have a voting round and then you have a finalisation round.
+
+
+[Anna Rose] (36:59 - 36:59)
+I see.
+
+
+[Patrick O'Grady] (37:00 - 37:09)
+If you go down and change your fault tolerance such that 20% Byzantine fault, you can go down to one vote, meaning that I can, we can single shot finalise this thing.
+
+
+[Anna Rose] (37:09 - 37:21)
+Wow. And I mean, I don't know if we should get into the details of ALP and GLO, but I guess you're giving this as an example of like a new paradigm that created the need for research, right?
+
+
+[Patrick O'Grady] (37:21 - 38:11)
+Basically the sands shifted. Okay. And you're like, ah, actually there is research to do.
+
+
+There's a now, because now there's a whole new world that people are okay with a different fault tolerant model, which opens up a whole new world of like how you could structure consensus to hit certain goals. And let's just say the focus for this industry at least had been on the 3F plus one case. So like all the research was done with that assumption.
+
+
+But if you now can change it to 5F plus one, you can, or 5F minus one. Some people, you know, that's the bound. Like you can do totally different things where maybe doing research may be interesting.
+
+
+And so immediately I left that thing. I was like, shoot, we got to like, we don't have an option for 5F plus one. And like the op, like the performance is clear.
+
+
+Like it's a whole round less of voting.
+
+
+[Anna Rose] (38:11 - 38:18)
+Like, yeah. Like, what does it mean though? Like if as a, as a user of this, does it like double the speed of something being accepted?
+
+
+[Patrick O'Grady] (38:18 - 39:04)
+So the finalisation, the finalisation latency is now one delta less. So what that means is like, you know, instead of, let's just say like your delta is like your network level, like assumption for how long it takes one message to pass to another participant. Let's just say on the modern internet and a globally distributed network, that's like 80 milliseconds or a hundred milliseconds on average.
+
+
+We'll just call it a hundred milliseconds to keep it easy. So like in a traditional simplex world, you have proposal goes out, 100 milliseconds, one round of voting, a hundred milliseconds, one round of finalisation voting, a hundred milliseconds. So end to end in one view, you're getting finalisation in like 300 milliseconds.
+
+
+Now that can shift based on a number of other things, but let's just say that that's what we're working with.
+
+
+[Guillermo Angeris] (39:04 - 39:13)
+That's pretty close to like, I would say like 50 percentile latency. You get a little faster if you do weird stuff with switches, but like that's pretty, pretty on the money.
+
+
+[Patrick O'Grady] (39:13 - 39:18)
+Okay. Idea with 5f plus one is like, well, 100 milliseconds for the proposal.
+
+
+[Anna Rose] (39:19 - 39:19)
+Yeah.
+
+
+[Patrick O'Grady] (39:19 - 39:21)
+100 milliseconds for the vote. That's it.
+
+
+[Anna Rose] (39:22 - 39:22)
+Done.
+
+
+[Patrick O'Grady] (39:22 - 39:30)
+Yep. So it's like a 50 percent or, you know, it depends on how you do it. Like we're massive reduction in finalisation latency.
+
+
+[Anna Rose] (39:30 - 39:41)
+And what does that open up? Like, obviously everyone's trying to get things fast, but is it because of this goal of like being visa fast? I think that was often like the target.
+
+
+[Patrick O'Grady] (39:42 - 39:48)
+I mean, our view on things is like, if there's a way to go faster, in the end, people will go faster.
+
+
+[Anna Rose] (39:49 - 39:53)
+But is there a point where like the user doesn't care or like it won't matter?
+
+
+[Patrick O'Grady] (39:54 - 40:11)
+So that's where, I mean, like you could argue that Simplex already achieves that with like 300 milliseconds, right? Cause like, is that faster than users can perceive? Maybe.
+
+
+But in a world where it's like agents and like, you know, whatever, like, and most people interact with these chains are bots, you know, it may matter.
+
+
+[Anna Rose] (40:11 - 40:11)
+Wow.
+
+
+[Patrick O'Grady] (40:11 - 40:49)
+Or in trading where like every, you know, millisecond has its impact on like liquidity and how long, like it does matter. So yeah. So the idea was like, well, okay.
+
+
+So people are cool with this one round voting. Is Alpenglow the best you could do? And so that was our first research paper we put out was this thing called Minimate, which is a consensus protocol in the five F plus one setting with very different trade-offs than Alpenglow.
+
+
+What we said was like, well, the resilience to the 20% crash on top. What if we just, we didn't want that. We only cared about the 20% Byzantine or crash.
+
+
+[Anna Rose] (40:50 - 40:50)
+Okay.
+
+
+[Patrick O'Grady] (40:50 - 41:37)
+So kind of like what the three F plus one setting is typically analysed under. And then could you do something differently in terms of performance? And so what Minimate show is that if you like did reorient the quorums a bit, you could get even faster block production with the same finality, so like faster views, basically, and that's useful because view latency plus finalisation latency is what you would call your transaction latency.
+
+
+So that's like, if you're a user submitting a transaction, that's what you're going to see in terms of finality. You're not, cause like your transaction may land right after a block is built. And so you have to wait that view and then you get the finalisation.
+
+
+So the shorter views you can do, the better transaction latency you're going to have. Minimate. So that was our first one.
+
+
+That was a year ago.
+
+
+[Anna Rose] (41:38 - 41:44)
+Okay. And then you started a podcast or did that happen before?
+
+
+[Patrick O'Grady] (41:44 - 42:44)
+And then it was natural, natural to become a podcaster at that point, once we were doing research, but no, no, I think the podcast came before that basically the idea was, you know, when people try to get more into crypto, like I got so many, still get a lot of questions from people that are like, Hey, I want to like, get more into this, like, where did you start? And I'm like, I don't remember. Like there's tonnes of blogs.
+
+
+There's like tonnes of random things. I don't even know if half of them are up anymore, trying to understand like conceptually what people are doing and what the goal is. And so we started this podcast called how things work.
+
+
+And the idea is just like take big ideas and create like blockchains and like try to break them down and like understand what they're used for so that if someone was trying to come into like a blockchain kind of a study for the first time that we would try to cover like the kind of like the core ideas of like what you would need if you were to build a chain or like why things exist. Yeah. So we do it sporadically, but yeah, that's, that's the, the Guillermo episode was on the DA.
+
+
+Yeah.
+
+
+[Guillermo Angeris] (42:45 - 43:42)
+That's right. Speaking of, of DA and to think Peruse and ZK and all this stuff, right. And research is like one of, one of the natural things that I think a lot of people are converging to is kind of an integration of all of these individual.
+
+
+I mean, obviously you start with the DKG part, right. The distributed key generation and how that applies to consensus, but, but it seems like other parts are kind of starting to come in and play nicely or not so nicely with consensus, you know, things like, like data availability and their weird combination of that and succinct proofs, but also like literal zero knowledge, right? Like you want privacy for your transactions.
+
+
+I don't know if you guys are doing research on this type of stuff or if you guys have been like implementing some of this type of stuff and, you know, making all of these nice primitive, I'm curious what you're, you're thinking as they're where you're seeing the future kind of evolve. And I also have a gajillion questions about how AI and all of this stuff has been speeding up your workflow and integration and all of these things, but maybe that's a separate one that we'll get to later.
+
+
+[Patrick O'Grady] (43:43 - 45:18)
+Yes. So we do cryptography research, which is also not something I had originally expected us to do, but like basically the way, the way it works is like at commonware, we build things, we talk to smart people building with commonware or not, and they have needs. And sometimes those needs are not satisfied by the current state of the art.
+
+
+And so if we see an opportunity to improve upon that, you know, we will try to, and so we try to hire people that are capable of that level of research, not a lot of people would fit that definition. So in research itself, obviously is like a bit of a crapshoot. So you don't necessarily know, you know, what you're going to get.
+
+
+Like, it's a lot easier to say, let's beat the state of the art than doing anything like that. So yeah, we did, we started cryptography research with, so the first person we hired in that domain directly was Lucas, who had been working at Penumbra. And so Lucas, who goes online by like ChronoKirby, basically I was, I was doing the cryptography, and that's a terrifying place to be.
+
+
+And so I was like, I should not be doing the cryptography. So brought in Lucas to like kind of look over it and like, make sure this is good. And so he did that, looked around and proved some things.
+
+
+But Lucas, for those that don't know, wrote his own DKG protocol that is very commonly used in the ECDSA setting. So like Near Intense, for example, uses his DKG protocol.
+
+
+[Anna Rose] (45:18 - 45:18)
+Oh, nice.
+
+
+[Patrick O'Grady] (45:19 - 46:36)
+And so, or Threshold Signing Protocol for ECDSA with Beaver Triples. There's, he has a tonne of stuff online. You can learn about it.
+
+
+But basically I was like, someone that's like really into threshold stuff, that was awesome as the person to hire. So brought him in. So he's been doing that.
+
+
+He's actually working on our implementation of Golden, which I think you've had people on the podcast to talk about. So like that's Chelsea and like Benedict had a new DKG protocol, which is really interesting. And so we've also implemented that.
+
+
+That's not yet ready for production use, but like our DKG protocol is like synchronous, partially synchronous, whereas theirs is like fully, you know, safe and like a more challenging network setting, which is interesting given that this is like the key that secures the network. So there's reason you would want to be as conservative as possible. So, so we've implemented that and Lucas drove that.
+
+
+But then I was like, well, people are really liking this, like encrypted mempool stuff. We should work on that transaction privacy in general. And so then had the opportunity to work with, his name is Vamsi, who just graduated from Berkeley, got his PhD, but has been a coauthor on a number of interesting papers.
+
+
+So like if you've heard of like TRX from Aptos and some other stuff, but he's super into witness encryption.
+
+
+[Anna Rose] (46:36 - 46:36)
+Okay.
+
+
+[Patrick O'Grady] (46:36 - 47:08)
+And so he then published a work, which is, you know, we'll see if it gets in a conference here soon, but on a new way to do batch threshold encryption, which is useful for encrypted mempools. And then we just released some followup work on that last week on something called multi-label IBE, which is also useful for like this like batched threshold encryption setting or like mempool encryption. Yeah.
+
+
+I'll be honest with you. Don't ask me any questions on that. Cause that is, we hired somebody.
+
+
+[Anna Rose] (47:08 - 47:14)
+Yeah. I thought witness encryption is sort of an unsolved problem though. Like I don't think, is it close to engineering?
+
+
+[Patrick O'Grady] (47:14 - 47:24)
+So he came out of the lab that's like the leader there in Berkeley. And so like they, he's been working on it for a while and like some of the work we've done is like trying to make it more practical.
+
+
+[Anna Rose] (47:24 - 47:38)
+Cool. That's very frontier. But do you feel like, I mean with that kind of thing with, you know, if you were to implement witness encryption, like, and I guess you'd use it in the threshold encryption, like sort of for validator thresholds, is that where you would probably put it?
+
+
+[Patrick O'Grady] (47:39 - 47:42)
+Yeah. So the idea with that is like, you know, you got a chain, you're trading.
+
+
+[Anna Rose] (47:43 - 47:43)
+Yeah.
+
+
+[Patrick O'Grady] (47:43 - 47:49)
+You don't want people to see what's going on until the data is finalised. How do you do that most efficiently?
+
+
+[Anna Rose] (47:50 - 48:01)
+Yeah. It's kind of a way to keep the validators honest, right? It's just to make sure that they don't see, and it prevents sandwiching and it prevents like a lot of the MEV stuff, I guess.
+
+
+[Patrick O'Grady] (48:02 - 49:09)
+So the dream, right, is like, you're a user, you encrypt your transaction to like some set of validators. They then package all of these encrypted transactions in the blocks. So like they don't know what any of them are.
+
+
+Some versions of this problem, they know who you are, but they don't know what you're doing. Full encryption is possible, which is like, they don't even know who you are. You just have to figure out how to like pay transaction fees in that setting.
+
+
+So we're not going to talk about that for now, but like, let's just say it's hidden and then consensus happens over this encrypted data. And then after it's finalised or really in our world during finalisation, you decrypt it. And so this is the crazy stuff is like, if finalisation fails, like it doesn't leak anything.
+
+
+So there's a lot of cool stuff that goes into that. But let's just say that you're pipelining the decryption so that right when the block is finalised, the data is decryptable. And so then that's the kind of the setting.
+
+
+So validators, like they get a bunch of encrypted stuff. They have no idea what it is, but they know it can somehow pay fees. They swap it into the block.
+
+
+And then after finalisation, it's like somehow randomly done and then decrypted it. Yeah.
+
+
+[Anna Rose] (49:09 - 49:09)
+Yeah.
+
+
+[Patrick O'Grady] (49:10 - 49:43)
+So we landed on the same construction for this as Monad did. We had some concurrent work that went out and then we have further explored like kind of the tradeoffs you could make to like minimise the overhead of the DKG or like minimise the overhead of the CRS or like the size of the, like there's a tonne of different ways you can kind of mess with it. So we did research there because we thought it was interesting and we wanted to see if we could do better and VOMS we found a way.
+
+
+And then we also have some private payment stuff we've also been working on. Some of that's been released. Some of it is yet to be released.
+
+
+[Anna Rose] (49:43 - 49:54)
+And this would see like the form it would take is like new primitives or like in the primitives, you'd add, I don't know, options. Like, what does that look like when you release this stuff?
+
+
+[Patrick O'Grady] (49:54 - 50:26)
+Usually it's new primitives. So if there's a paper out there that we're content with and we're like, we couldn't, we don't think we could do better than this. We would try to implement that if it's like open and, you know, useful.
+
+
+If that's not the case, then we'll try our hand and see if we can do better and then implement that. But oftentimes in our, in the Commodore library, you'll see all the primitives are like named what they are. So like consensus is just called simplex.
+
+
+So like, we'll try to be honest with like what this is rather than like rebranding it as like commonware, you know, special sauce or something like that.
+
+
+[Anna Rose] (50:26 - 50:34)
+Like going back to that consensus example, then do you have simplex and then another one? Like did you, cause you implemented the 20% one as well. What is that called by the way?
+
+
+[Patrick O'Grady] (50:35 - 50:56)
+So the Minimet one, we did, we have a open PR that we implemented, but then with the work we released over the weekend with Multimet, which is the more research that I said wasn't necessary. We will, we will probably implement that one directly instead and not actually implement Minimet directly. But we'll see.
+
+
+[Anna Rose] (50:57 - 51:06)
+Guillermo, you had a question about AI and I want to get to that, but I wonder if we should dive into Multimet, wait, what did you say? It was like commit, Multimet, Multimet, there we go. Okay.
+
+
+[Patrick O'Grady] (51:06 - 51:16)
+So the idea with Minimet is like mini commit. And so the idea of the fast views is powered by this thing we created called like a mini commit.
+
+
+[Anna Rose] (51:16 - 51:16)
+Okay.
+
+
+[Patrick O'Grady] (51:16 - 51:32)
+But it's single leader. So just think of normal consensus. The idea with Multimet was multiple mini commits and it builds on Minimet.
+
+
+So that's the, like kind of the naming topology that gets us to Multimet.
+
+
+[Anna Rose] (51:32 - 51:44)
+Who's doing the multiple commitments, like mini commitments? Is this the, is like valid, are validators, cause I have seen like the blog post and there's a nice graph there where it looks, I guess this is a bit more of a DAG.
+
+
+[Patrick O'Grady] (51:44 - 53:34)
+You can thank AI for all those graphs, by the way, that was not, that was not possible six months ago. And like, I literally was like, I want this, I want this, I want this, I want this. I want them all to be consistent.
+
+
+Like, and it literally, that's hard. That's like raw JavaScript. That's like, there's no frameworks.
+
+
+Like it just cooked up raw JavaScript. Then I was like, Hey, make some GIFs. And so it made GIFs of all like, it's crazy.
+
+
+Like, I mean, it makes my life dramatically easier. Like if you look at the Minimet blog from a year ago, it's like some really crudely drawn Excalidraws or whatever, like me trying to like make it work. And then, yeah, the blog here is like obviously much better and interactive and like, I didn't do any of that.
+
+
+So it was faster for me and better, which to me is like LLVs in a nutshell. Okay, so back up. So the idea with Multimet to take way back.
+
+
+So I've been obsessed with this like kind of direction and many people have, this is not just me, nor was I the first. So in this thing called decoupled state machine replication. So the natural question when you start to work on consensus stuff is like, how do we do more consensus throughput?
+
+
+Reasonable question. So there was a paper released originally by Libra folks in like 2021-ish called Narwhal-Tusk, or I don't remember the original name of the paper, but this is what I would say, like repopularise this idea of decoupled state machine replication. It was actually originally proposed by like Barbara Liskov and all the people back in like 04, but like many great ideas was ignored until we needed it.
+
+
+And so when we needed it, the idea that the Libra folks had was beautiful, which is like, what if all the validators just send data out at the same time and then you make consensus over that broadcast directly? So you don't need a whole nother consensus layer. It's like the broadcast itself forms consensus.
+
+
+Beautiful.
+
+
+[Anna Rose] (53:34 - 53:38)
+So what's the challenge though? What's, why, why wouldn't people do that? Like, why couldn't they do it?
+
+
+[Patrick O'Grady] (53:39 - 53:40)
+So this is a DAG.
+
+
+[Anna Rose] (53:41 - 53:41)
+Yes.
+
+
+[Patrick O'Grady] (53:41 - 53:55)
+This was the whole argument years ago. It's like DAG or not DAG, like Avalanche was a DAG, but a different kind of DAG. I've spent years working on DAGs, shutting down DAGs, like, yeah, it's a whole, it's a whole thing.
+
+
+[Anna Rose] (53:55 - 54:05)
+I think the first time I heard of a DAG was by, I don't remember the name of the company. It was a 2017 era company that had sort of like a fake DAG, but was very famous. I hope.
+
+
+[Patrick O'Grady] (54:06 - 54:11)
+There was a, I mean, I'm not going to, we're not going to name names here cause I don't want to, you know, draw the eye of it.
+
+
+[Anna Rose] (54:11 - 54:18)
+There was a project that was like sort of not, not really functional, but like introduced everyone to DAGs. Yeah. That one.
+
+
+[Patrick O'Grady] (54:18 - 54:21)
+So the original dream of DAGs was that it was leaderless.
+
+
+[Anna Rose] (54:21 - 54:22)
+Yeah.
+
+
+[Patrick O'Grady] (54:22 - 54:58)
+So like there was no leader in consensus. Like you kind of like somehow the DAG just like worked. Narwhal Tusk was a little different in that there like was a anchor in each wave of consensus.
+
+
+There like was a leader that was kind of determined by a ranking, but the cool thing was that the consensus like was built on the broadcast in an interesting way. And so like, it was just really well articulate, articulated. And for the first time, I think people would generally say this, like really robust and well-defined.
+
+
+Very cool stuff. I saw it for the first time. I'm like, this is crazy because they were the first people that were like, hey, we can hit TPS over a hundred K.
+
+
+[Anna Rose] (54:58 - 55:00)
+You find, they finally cracked it.
+
+
+[Patrick O'Grady] (55:00 - 56:42)
+Which seemed, seemed like a crazy thing at that time. Cause like, right. Like the whole way consensus typically works is you have a transaction, go to the leader, the leader broadcasts it to everybody else.
+
+
+You have, sometimes you have mempools, sometimes you have other stuff, but like there's all this time during the protocol where like people are just waiting around doing nothing. What if we could find a way to saturate the network and the storage and like the CPU of everybody at the same time? That's the way you maximise throughput.
+
+
+This was like the first, in my opinion, like real, like plausible, implementable version of that. So I was blown away. I thought that was the coolest thing ever.
+
+
+And then in the preceding years, like Aptos and SUI have taken that idea further. So like SUI has like Misticeti now, which is like an uncertified DAG, which is like a whole different way to kind of try to make it faster. So instead of like, when you send data out, instead of having a certificate that two F plus one people have the data, you use the graph to like, kind of infer that people have that, which reduces like some of the Delta in finalisation.
+
+
+There are trade-offs there, right? Like if you withhold data, you can force people to fetch that. So, but the happy path is incredible.
+
+
+And then Aptos had their own ideas, but they've shifted to this whole different thing called prefix consensus with somebody called Raptor. Funny enough, they've like written three or four papers on DAG consensus, but have not actually run it in prod. They've been using a version of hot stuff and have now like done a different.
+
+
+So there are reasons that our DAGs are cool, I think, but ultimately I landed somewhere where I'm just not a fan of the properties of a DAG and what it means to deploy one in production. And so I have instead preferred trying to find a way to have decoupled transaction broadcast with traditional consensus.
+
+
+[Anna Rose] (56:42 - 56:45)
+Okay. And is that what multi MIT is?
+
+
+[Patrick O'Grady] (56:46 - 57:22)
+So the problem historically has been that if you try to do that, you end up having this latency delay. So the best paper I think that like kind of summarises the pros and cons is this paper called Autobahn from a few years ago. Came out of Berkeley from Natasha Crooks and like a handful of other folks, like incredible paper again.
+
+
+But the idea is that you broadcast transaction data out. Everyone does. You get back a vote back that says like, hey, I've got it.
+
+
+So like a proof of availability. And then you just basically take that proof of availability and put that in consensus. And you're like, okay, consensus is over these certificates rather than like the transactions themselves.
+
+
+[Anna Rose] (57:22 - 57:27)
+And the note coming back is just from some node heard your broadcast. Yeah.
+
+
+[Patrick O'Grady] (57:27 - 57:32)
+Basically you're trying to just show that like if data gets in consensus, it's available.
+
+
+[Anna Rose] (57:32 - 57:32)
+Okay.
+
+
+[Patrick O'Grady] (57:33 - 58:20)
+Because if it's not available, you're deadlocking because you no longer can get the data needed to produce the, basically the effects of consensus, which is a, would be a catastrophic failure of the system. So it's like, okay, I can convince anyone that like this data is around. Cause I said, I have two F plus one people that have said I've got it.
+
+
+So if I don't have it, at least I know I can go get it if it's finalised. Okay. So the problem though, is that pre-step adds latency.
+
+
+Okay. So like I have to go send this block out or like this mini block out. I then get back a vote back, generate the certificate.
+
+
+And then often in Audubon, you then have that producer then send the certificate out, like you don't like broadcast the vote to everybody. And then when you have that certificate, then you can put it in a block and then run, you know, two more rounds of consensus.
+
+
+[Anna Rose] (58:20 - 58:22)
+Okay. So there's like seven steps here.
+
+
+[Patrick O'Grady] (58:23 - 58:48)
+Yes. So like the typical trade-off and like what a DAGs have always excelled at is like the latency overhead of trying to couple this, like to couple broadcast thing with traditional consensus has just been slower. So if you want it, usually the best option was a DAG.
+
+
+For, you care about latency. If you're willing to accept one additional Delta, you can get a lot more arguably like robustness from like having this approach rather than a DAG.
+
+
+[Anna Rose] (58:48 - 58:49)
+Okay.
+
+
+[Patrick O'Grady] (58:49 - 59:32)
+That's what the Audubon paper talks about. Okay. So just to orient ourselves here, the whole idea is what if you didn't have to pay that latency penalty?
+
+
+In fact, what if you could even beat a DAG? Okay. That is multi-mit.
+
+
+Oh. So the idea with multi-mit is what if you can have concurrent broadcast, this decoupled transaction dissemination, but you pay no penalty for this like pre-step. Hmm.
+
+
+And if you're not the leader, you can still get your data included in consensus in that view, even if the proposer doesn't reference it, which sounds crazy.
+
+
+[Anna Rose] (59:32 - 59:38)
+But I wait, I want to, you, cause you said mini-mit comes from multi-mit and I'm just trying to remember what mini-mit does.
+
+
+[Patrick O'Grady] (59:38 - 59:43)
+So mini-mit is just like a clean, what we think of as a clean construction for this like 5F plus one setting.
+
+
+[Anna Rose] (59:43 - 59:44)
+Oh yeah. Okay.
+
+
+[Patrick O'Grady] (59:44 - 1:00:08)
+That's like a really, really simple consensus algorithm for this like 5F plus one world that makes it really easy to reason about this like one shot vote thing. Got it. It turns out the quorums that came out of that paper ended up unlocking multi-mit.
+
+
+Yes. So like some really interesting properties of how like the quorums and votes are constructed allows us to do this like really crazy concurrent broadcasting.
+
+
+[Anna Rose] (1:00:08 - 1:00:17)
+Okay. And so, yeah, is it the, like, I'm just trying to understand how you're skipping those steps using multi-mit or using this like multiple version of mini-mit.
+
+
+[Patrick O'Grady] (1:00:17 - 1:00:23)
+Yeah. So the idea in a nutshell is we're okay with bigger certificates.
+
+
+[Anna Rose] (1:00:23 - 1:00:28)
+Oh, so like less, is it less often, but bigger? Like what is a bigger certificate?
+
+
+[Patrick O'Grady] (1:00:28 - 1:00:42)
+So normally you want a certificate, like in Simplex, for example, we all vote over the same digest and so with like a threshold signature, we can get the certificate down to like, you know, maybe 200 bytes, maybe 150 bytes, super small.
+
+
+[Anna Rose] (1:00:42 - 1:00:45)
+And that's what's included in the chain.
+
+
+[Patrick O'Grady] (1:00:45 - 1:01:07)
+So like when you broadcast like, oh, like, hey, I finalised something, you'll broadcast a certificate to everybody. This is the thing that you do all to all. So the certificates are not included in the chain in Simplex.
+
+
+It's like kind of done asynchronously. But every participant, when they generate a certificate, sends it out. So if these things were like a gigabyte, you're going to have serious problems in terms of like doing something.
+
+
+[Anna Rose] (1:01:07 - 1:01:09)
+But in your case, you don't mind if they're bigger.
+
+
+[Patrick O'Grady] (1:01:09 - 1:01:10)
+A little bigger.
+
+
+[Anna Rose] (1:01:10 - 1:01:11)
+Okay. A little bigger. Okay.
+
+
+[Patrick O'Grady] (1:01:11 - 1:01:21)
+So this is almost like the comparison I would get. So like I, I mean, I think you guys have had Justin Baylor on before. But not for a while.
+
+
+When he was talking about like Jolt and whatever.
+
+
+[Anna Rose] (1:01:21 - 1:01:21)
+Yeah.
+
+
+[Patrick O'Grady] (1:01:22 - 1:02:08)
+And I was talking about him when he was, this was before he released it. And he was like, yeah, I've got this crazy idea for this new thing, but it's not succinct or like some component of it wasn't succinct. And I was like, well, I'm an engineer.
+
+
+Like, what does that mean? Because cryptographer's version of succinct is very different than an engineer's version of succinct. And he's like, you know, like a graph 16 proof is super small.
+
+
+Like succinct, succinct. Like it's tiny. Right.
+
+
+What if it was like, you know, a couple of kilobytes though? For an engineer, like that's succinct as far as I can see. But to a cryptographer, it's like, no, no, it's huge.
+
+
+Like we can't do that. And so for me, when we were doing multi-mit, like I would say, you could almost say like the traditional simplex certificates and Minimmit certificates are succinct. They're very small.
+
+
+[Anna Rose] (1:02:08 - 1:02:09)
+OK.
+
+
+[Patrick O'Grady] (1:02:09 - 1:02:12)
+Multi-mit, it's like we're talking like a couple of kilobytes.
+
+
+[Anna Rose] (1:02:12 - 1:02:21)
+So they're bigger, but still. They're bigger, but they're not like. Clogging everything up.
+
+
+OK. How does making it bigger speed everything up, though?
+
+
+[Patrick O'Grady] (1:02:21 - 1:02:27)
+So the key part is like when you in multi-mit, you vote on many things at the same time.
+
+
+[Anna Rose] (1:02:27 - 1:02:28)
+OK.
+
+
+[Patrick O'Grady] (1:02:28 - 1:03:05)
+So instead of just voting on the consensus, like the one digest of a block, like you would think about a consensus, right? Like, is this block good or bad? That's consensus, right?
+
+
+In multi-mit, it's more complicated. It's like, I'm actually going to vote on all of the validators tips of like what their tip of block. Remember, these are things going out concurrently.
+
+
+And I'm going to let you add additional digests on top of what the leader is saying their tip is in consensus. So it's like the leader hasn't even included it. And I'm like, no, no, no.
+
+
+I saw this actually this tip that even extends further than what you're proposing. I'd also like to include that in my vote.
+
+
+[Anna Rose] (1:03:06 - 1:03:06)
+OK. OK.
+
+
+[Patrick O'Grady] (1:03:07 - 1:03:58)
+And so you then send that out to everybody. Certificate is constructed. And what you'll very quickly see is like, well, the certificates can vary, like based on what votes you've seen.
+
+
+So like some certificates may have more votes or like more digests or whatever. And will be bigger. They may be bigger.
+
+
+They may, you know, you as a Byzantine could stuff arbitrary digests in this thing, right? Like you could make it, you know, within some bound bigger than it is. The crazy leap is with the minima quorums, the max any two certificates can differ is very limited such that, you know, that if something is finalised by anyone on the network and the certificate they have locally, the leader of the next round must extend that tip, even if they don't see it finalised.
+
+
+[Anna Rose] (1:03:58 - 1:04:05)
+Oh, wow. This is so hard to follow just verbally. I'm trying.
+
+
+I think I got I've gotten parts of it.
+
+
+[Patrick O'Grady] (1:04:05 - 1:04:12)
+So this is a 50 page archive, to be clear. So I'm there's like diagrams online to kind of try to explain it.
+
+
+[Anna Rose] (1:04:13 - 1:04:17)
+But even Jero's kind of scratching his head, which I'm like, oh, good.
+
+
+[Patrick O'Grady] (1:04:17 - 1:04:24)
+So to take a step back, let's just say, like, why are we going through this hell for like, what are we trying to achieve here, right?
+
+
+[Anna Rose] (1:04:24 - 1:04:24)
+Yeah.
+
+
+[Patrick O'Grady] (1:04:25 - 1:04:39)
+The crazy thing that happens is like you're on a blockchain. You got validators all over the world. You send your transaction to the closest validator to you.
+
+
+Okay. Maybe they're like 20 milliseconds away or something like that. Maybe even less if you're like in the middle of downtown.
+
+
+[Anna Rose] (1:04:39 - 1:04:40)
+Do they add it to a certificate?
+
+
+[Patrick O'Grady] (1:04:40 - 1:04:48)
+So this is the thing. They send out whatever block include like everyone all the time sends out whatever blocks they have of new transaction data.
+
+
+[Anna Rose] (1:04:48 - 1:04:48)
+Okay.
+
+
+[Patrick O'Grady] (1:04:49 - 1:04:57)
+And while a view is going up, the current view, that block can be finalised without even being referenced by the leader.
+
+
+[Guillermo Angeris] (1:04:57 - 1:05:24)
+Okay. The idea essentially like is this idea that like at some point, if like, I don't know what the threshold is, 3 or plus 1 or something like that, right? The second that like that happens, right, you know for sure at some point the leader is going to receive that block and therefore sign it ahead of time before the leader has technically confirmed that they have seen it.
+
+
+Like, that's the idea. Like, like, you know that like this thing is going to be disseminated to the leader and the leader will for sure end up be end up agreeing.
+
+
+[Anna Rose] (1:05:25 - 1:05:29)
+Therefore it's included. Therefore it's immutable. Therefore it's fine.
+
+
+[Guillermo Angeris] (1:05:29 - 1:05:39)
+Even though they have no confirmation that that has happened yet and therefore that saves you kind of like a round trip because you could just kind of pipeline yourself to the next step while the, it's like you're, you have overlapping steps ish.
+
+
+[Patrick O'Grady] (1:05:39 - 1:06:46)
+It has two properties, which are really interesting. The one is the fast finality. So like you as a user, no matter where you are in the world, no matter who the leader is, you're seeing your data finalised in the best case in like two Delta, three Delta from the user.
+
+
+So like, we're talking like end to end anywhere in the world, like 203 milliseconds. We're talking like a couple hundred milliseconds faster in a global network than any other construction. Okay.
+
+
+The crazy property though, that comes out of that is you can override the leader. So if everyone says, no, we've seen this block from this other person, you can prevent the leader from censoring whoever that person is that's broadcasting data. So let's just say, right.
+
+
+You know, you're, you're doing some sort of auction or exchange and it's like, well, the leader sees all the blocks and like, well, I'll win if I don't include this guy's stuff, because it has like some more transactions in it. Well, with this property, if the network is honest, they can actually just be like, actually, this block is finalised. You know, I don't care what you say is the tip leader.
+
+
+This is, is included. Correct.
+
+
+[Guillermo Angeris] (1:06:46 - 1:07:08)
+You have a certificate that says like, like you have retribution, right? Like so long as somebody has seen that the certificate has been finalised independent of whether or not the leader has signed it. You know, for sure that majority has accepted it or enough of the majority has accepted it for it to be fine.
+
+
+Any future view must build on it. Yeah. You need to do a bunch of weird stuff though, because now you have like a four choice rule where like the leader like needs to like get kicked and then have a new leader and then you do the next thing.
+
+
+[Anna Rose] (1:07:08 - 1:07:14)
+Do you also have to use a lot of randomness here so that like the person who's receiving isn't like in any way colluding?
+
+
+[Patrick O'Grady] (1:07:15 - 1:08:05)
+So there's no randomness in the protocol at the moment. Like if you had randomness, then it would change like kind of the emitted log, which would lead to like basically the, so it's actually very important. You don't have randomness and that it's deterministic.
+
+
+Now you could include a VRF input into that to then kind of change up the order of what's actually gets executed when you have the log, but like that's, we, we kind of document that as like further researcher kind of optimisations because our, our motivation for this is like just speed. How fast can we get a user transaction finalised? And for that, we believe in like a decoupled world.
+
+
+This is, this is as good as you get. The idea that you as the leader used to be the only one who could finalise your block in that minimal time. Now everyone does it the same time.
+
+
+That's the leap. Cool.
+
+
+[Anna Rose] (1:08:05 - 1:08:13)
+Okay. This is an older, an older system, but like, do you remember grandpa from Polkadot? Didn't they do something a little bit like this?
+
+
+[Patrick O'Grady] (1:08:13 - 1:08:13)
+Faith and grandpa.
+
+
+[Anna Rose] (1:08:14 - 1:08:17)
+Yeah. Was there any, was there any sort of echo of this there?
+
+
+[Patrick O'Grady] (1:08:18 - 1:08:25)
+So back then the idea was that you would have a separate block production from finalisation gadget.
+
+
+[Anna Rose] (1:08:25 - 1:08:26)
+Yeah.
+
+
+[Patrick O'Grady] (1:08:26 - 1:09:03)
+So babe was like, build the blocks. We don't care what happened. Well, don't care what happens with finalisation.
+
+
+And then you have a separate gadget that kind of falls along and finalises. This is also how E2 works, just to be clear. Okay.
+
+
+Same, same concept. I have completely departed from that line. You should.
+
+
+Uh, we do exclusively single, what you would call like a single shot protocols where like you, that may not be exactly the right term here, but like the view production happens at the same time that you would determine finality, we don't have like block production or view production happening before finality.
+
+
+[Anna Rose] (1:09:04 - 1:09:04)
+Okay.
+
+
+[Patrick O'Grady] (1:09:04 - 1:09:20)
+Turns out for engineering, just much easier to reason about. So in terms of the overlap with what this is and like what you would do for that, I would say architecturally pretty different. I'm not quite sure how close they might be.
+
+
+I haven't really thought about it from that lens.
+
+
+[Anna Rose] (1:09:20 - 1:09:26)
+For some reason, it just sort of like, for me, it gave me a little memory of, of that protocol, but maybe it's not connected.
+
+
+[Patrick O'Grady] (1:09:26 - 1:09:40)
+What do you have to reconcile with and grandpa, which is arguably related is that people collect different votes at different times and then you have to land somewhere where you all agree on the same finalised prefix of the log.
+
+
+[Anna Rose] (1:09:40 - 1:09:40)
+Yeah.
+
+
+[Patrick O'Grady] (1:09:40 - 1:09:49)
+And so, but that's, I think more a problem just inherent to consensus than I think it is like particular to grandpa. So I wouldn't like overstate the similarity between those two.
+
+
+[Anna Rose] (1:09:49 - 1:09:54)
+But yeah. Thanks for explaining Multimmit to us and some of the...
+
+
+[Patrick O'Grady] (1:09:54 - 1:09:57)
+Two days old. So this is, this is fresh off the road. Two days old.
+
+
+[Anna Rose] (1:09:57 - 1:10:01)
+That's by the time this, oh, the episode doesn't come out tomorrow. So it'll be like in a week, but yeah.
+
+
+[Patrick O'Grady] (1:10:02 - 1:10:06)
+Fresh off the farm. Bleeding edge. Yeah.
+
+
+Hopefully we don't find an issue with it before then. Yeah.
+
+
+[Anna Rose] (1:10:07 - 1:10:29)
+Yeah. That has sometimes happened with our episodes where like we will record and then release two weeks later. And in the meantime, you know, some crazy event in the ecosystem had happened.
+
+
+Patrick, it's been really cool getting to know you again and learning about all of your work at Commonwear and like what Commonwear is doing. I did, I did actually want to ask you how big is Commonwear today?
+
+
+[Patrick O'Grady] (1:10:29 - 1:10:32)
+We got, we got 11 engineers and a lot of LLMs. So that's pretty much it.
+
+
+[Anna Rose] (1:10:32 - 1:10:33)
+Wow.
+
+
+[Patrick O'Grady] (1:10:34 - 1:10:58)
+So, I mean, I, I've been inspired, inspired by the whole, like some of these stories where you like, I don't know, Instagram sold like five people, like WhatsApp had like 22 people or something like that. Like we are willing to spend money instead of hire more people to keep the team like really capable and cohesive. So yeah, we try to keep the team as small as we can get away with has been our goal.
+
+
+[Anna Rose] (1:10:58 - 1:11:15)
+Very cool. Yeah. But thanks so much for sharing with us kind of your story, the story of Commonwear, the story of sort of the problem spaces that started to open up after you, you thought it was all solved.
+
+
+And thanks for walking us through Multimid.
+
+
+[Patrick O'Grady] (1:11:15 - 1:11:17)
+Research is always required.
+
+
+[Guillermo Angeris] (1:11:18 - 1:11:22)
+The fundamental problem really comes for us all, man. It's such a shame.
+
+
+[Patrick O'Grady] (1:11:23 - 1:11:28)
+Started from Wisconsin and now we're here. So that's the way we describe it.
+
+
+[Guillermo Angeris] (1:11:28 - 1:11:33)
+No, yeah. Thank you, Pat. Always, always fun.
+
+
+Always a pleasure. Always a good time to hang out.
+
+
+[Patrick O'Grady] (1:11:33 - 1:11:42)
+You know, thanks for thanks for having me and asking, you know, a number of good questions on things. And, you know, next time, maybe in six months from now, I'll just send my agent to do something like this.
+
+
+[Anna Rose] (1:11:44 - 1:11:53)
+All right. I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners. Thanks for listening.
