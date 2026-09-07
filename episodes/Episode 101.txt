@@ -1,0 +1,515 @@
+[Anna Rose] (0:06 - 0:16)
+Welcome to Zero Knowledge, a podcast where we explore the latest in blockchain technology and the decentralised web. The show is hosted by me, Anna.
+
+[Frederik] (0:17 - 0:18)
+And me, Frederick.
+
+[Anna Rose] (0:24 - 1:48)
+In this episode, we chat with Yan Michalevsky, CTO and co-founder of Anjuna Security. We talk about TEEs, or Trusted Execution Environments, and dig a little bit deeper into the topic. So before we start, we want to say thank you to this week's sponsor, O1 Labs.
+
+O1 Labs is the company behind Coda Protocol, the world's first succinct blockchain, using recursive zero knowledge proofs to make cryptocurrency decentralised at scale. Coda swaps the traditional blockchain for a tiny cryptographic proof, enabling a far more accessible cryptocurrency. This makes it dramatically easier to develop user-friendly, privacy-preserving crypto apps that run natively in the browser and enable more inclusive, sustainable consensus.
+
+Their testnet is live in beta and has consistently been one of the most active testnets in crypto today. You can join their community of engineers, cryptographers, and researchers by visiting codaprotocol.com. Sign up for their newsletter to receive updates on testnet progress, mainnet launch, and their forthcoming developer SDK.
+
+So thank you again, O1 Labs. And now, here's our interview with Yan from Anjuna. So today we're sitting with Yan from Anjuna Security.
+
+Welcome to the show, Yan.
+
+[Yan Michalevsky] (1:48 - 1:51)
+Thanks, Anna and Frederik. Excited to be on the podcast.
+
+[Anna Rose] (1:52 - 2:24)
+So today we're going to continue on a topic that we touched on some time ago, that is of TEEs, Trusted Execution Environments. The last episode we did was with Chai Che and Lukas from Gollum, and we had talked about the Graphene project. We talked a little bit about TEEs and some of their threat models, and we're hoping that in this episode we can actually dig a little deeper into TEEs and what Anjuna's doing and basically get a little deeper into this topic.
+
+This is the first time we meet, so I'm very curious to hear about who you are.
+
+[Yan Michalevsky] (2:24 - 4:16)
+Yeah, so a little bit about myself. I started my career in software engineering as a developer and a software architect, managed development teams back in Israel. And about seven years ago, I moved to the Bay Area to pursue my PhD at Stanford, and basically got drawn back to security, which is something I was working on previously in the industry.
+
+And I actually imagined I would do signal processing and more Wi-Fi-related stuff, but then I started working with Dan Bonnet, and we started working on side-channel attacks on mobile devices, which actually combined disciplines like machine learning, signal processing, and security. So I basically got to use my knowledge in signal processing from an electrical engineering degree and applying it to security, and we had a couple of works that were pretty successful. So I continued working with him, then drifted into things like cryptography, specifically attribute-based encryption.
+
+And towards the end of my PhD, when SGX came out and started gaining traction, both with academia and industry, there were a lot of publications in the space of trusted execution environments. I got interested in that, basically because of the tremendous promise of it for practical security in the industry, and started thinking of what can we improve in terms of the software stack around Intel SGX. Started some academic work that we'll probably talk about later in the podcast, something called COSMICS, which was a pretty long collaboration that resulted in a recent publication.
+
+But also once I finished my PhD and defended my thesis, I basically started looking into how to commercialise something and how to productize something around those new technologies.
+
+[Anna Rose] (4:17 - 4:19)
+And I guess this is where Anjuna comes in.
+
+[Yan Michalevsky] (4:19 - 4:38)
+Yes, and that was the technical basis to Anjuna. So I found my founder and partner at the time that actually knew previously from Israel, and we partnered to start Anjuna, and basically with the mission of delivering privacy and security for cloud-based and server-side applications.
+
+[Anna Rose] (4:39 - 4:46)
+Cool. I have just a couple questions about your background here. So you said you were in Israel before.
+
+Were you studying there? Were you working there?
+
+[Yan Michalevsky] (4:46 - 4:59)
+So that's where I grew up since I was about eight years old. Yeah. So growing up, went to the Technion there.
+
+So if you're familiar with Starks, that's where Elephant Sun is teaching.
+
+[Anna Rose] (4:59 - 4:59)
+We know them.
+
+[Yan Michalevsky] (5:00 - 5:51)
+Yeah. So, okay. Familiar with the institution.
+
+Yeah. That's my alma mater. That's where I did my electrical engineering degree.
+
+Worked at a couple of startups there, and then seven years ago, I moved to the Bay Area. Why are there so many good crypto people coming out of Israel? It's a good question.
+
+I think one answer to that is probably some of the military background people have and kind of the interest in SIGINT. And basically, if you look at kind of where you have strong crypto disciplines, you can kind of look at those countries and see that there are some background of intelligence there. Basically, it would be probably things like Britain, Germany, US, Israel.
+
+Actually, I heard that Belgium has the highest number of cryptographers per capita, so I'm not sure what's going on there.
+
+[Anna Rose] (5:51 - 6:20)
+Well, I think that's maybe because of Leuven, right? That's such an interesting idea, is the way that the cryptography and encryption and sort of blockchain cryptography, where that's being developed the most, these hubs that seem to be emerging. I mean, for zero knowledge, I've said this a couple times, but I seem to be seeing like San Francisco, I'm going to put like Berlin, Leuven, and London in one category, and then Tel Aviv is definitely another spot for that.
+
+Do you know of any other hubs? Would you list something else there?
+
+[Yan Michalevsky] (6:20 - 6:24)
+Additional hubs for cryptography. Did you mention the Bay Area?
+
+[Anna Rose] (6:24 - 6:24)
+Yeah.
+
+[Yan Michalevsky] (6:25 - 6:58)
+I guess in those disciplines, specifically with cryptography, doing good work on cryptography doesn't necessarily require a lot of resources or a lot of people. So once you have one kind of leading figure, you can have groups of students forming around this lab and doing interesting work. So for instance, in Israel, it would be someone like Adi Shamir, or Eran Tromer, Eli Ben-Sasson, the Technion.
+
+There are people who are doing way more theoretic crypto.
+
+[Anna Rose] (6:59 - 7:04)
+Here that seems to be, I mean, you have the Berkeley crew, and then you have the Dan Boneh lab.
+
+[Yan Michalevsky] (7:04 - 7:22)
+Yeah, you have the Dan Boneh lab at Stanford. And in Berkeley, you have Alessandro Chiesa. And then you have the East Coast cryptographers, Shafi Goldwasser, and some of them are more on the theoretic side.
+
+And you have Ron Rivest that did a lot around practical cryptography.
+
+[Anna Rose] (7:22 - 7:23)
+Where are they based? What cities?
+
+[Yan Michalevsky] (7:24 - 7:26)
+That's Cambridge. That's MIT.
+
+[Anna Rose] (7:26 - 7:26)
+Okay.
+
+[Yan Michalevsky] (7:27 - 7:30)
+You have Boston University, where you have Ron Conetti.
+
+[Anna Rose] (7:31 - 7:39)
+So maybe that's my next stop on my kind of, like, lately I've been on a journey to hit up the zero-knowledge hubs. So maybe that's the next spot I got to go.
+
+[Yan Michalevsky] (7:39 - 7:43)
+Yeah, they're definitely becoming a hub. They recently had the Cryptoeconomic Summit. Cool.
+
+[Anna Rose] (7:44 - 7:58)
+All right. So let's jump into our topic, which is TEEs. We did define this on the previous episode we did on TEEs.
+
+But I think it's really important to introduce it again. So maybe in your words, what's a TEE?
+
+[Yan Michalevsky] (7:59 - 9:09)
+So TEE stands for a Trusted Execution Environment. And it's a bit of a vague definition. It can be all kinds of things.
+
+I guess you already talked about some of those definitions in the previous episode about TEEs and SGX. But it's basically an execution environment, which means some environment where you can execute code, execute some logic, some computations, and you trust it. And then the question is, what is this trust based on?
+
+For instance, in the case of the technologies that we're going to talk about, like Intel software guard extensions and AMD's secure encrypted virtualisation, you basically have some hardware root of trust. And to some extent, you trust some of the manufacturing process and eventually the companies behind those chips. You can also imagine some other trusted execution environments.
+
+For instance, there are more use case specific execution environments like hardware security models or HSMs, which are basically trusted execution environments for specifically cryptographic operations. So those are actual hardware appliances that you trust to do something correctly and deliver a result you can trust.
+
+[Anna Rose] (9:09 - 9:13)
+And that's where Intel SGX would be a hardware version.
+
+[Yan Michalevsky] (9:13 - 9:13)
+Yes.
+
+[Anna Rose] (9:14 - 9:23)
+But there are also, and this is actually, I just learned this from going through some of your material, but there is actually a software TEE. Is there a standalone software TEE style? Is that a thing?
+
+[Yan Michalevsky] (9:24 - 10:31)
+I guess what you were referring to is a virtualized trusted execution environment. So for instance, in many cases, we trust the hypervisor, something that runs multiple virtual machines to basically manage and properly isolate access to memory, whether it's between different virtual machines or within a virtual machine that's running the whole operating system to isolate a certain memory region and create an enclave, similar to what hardware-based trusted execution environments provide. So we have those technologies as well.
+
+For instance, Hyper-V implements something called virtual secure mode and virtualisation-based security. There was a publication from several years ago that was called Overshadow. And that was basically an introduction of this concept of the hypervisor creating a memory region that even the root users inside the virtual machines wouldn't be able to access.
+
+So in this case, you trust the hypervisor.
+
+[Anna Rose] (10:32 - 10:42)
+Fredrik, this is kind of a question to you, but I know in ETH2 research right now, there's a lot of talk about execution environments, maybe not TEEs, but EEs. Is this sort of a similar concept?
+
+[Frederik] (10:42 - 11:17)
+No, not really. So the ETH2 execution environments are basically derived from the Polkadot execution environment, which is just a broad term of like... For ETH2 and Polkadot specifically, they're an environment that you execute Wasm code in.
+
+It's basically a container, like similar to how Docker is an execution environment. It's a way to containerise certain code. And it doesn't have the same security guarantees or implications of like TEEs or even maybe to some extent virtualisation.
+
+[Anna Rose] (11:17 - 11:22)
+So I guess what you're saying is the TEE in TEEs matters. Yeah.
+
+[Yan Michalevsky] (11:23 - 12:00)
+So I guess one parallel is in the context of blockchain, we often also try to achieve trusted execution, basically executing some logic and getting a result that we trust. But we gain this trust from having a wide consensus over the computation and over the result. Whereas with those hardware-based trusted execution environments, there is only a single element that provides this trust that is supposedly very hard to break.
+
+And that's how you get to trust the computation result. So that might be the parallel between the blockchain and the hardware-based trusted execution environment.
+
+[Frederik] (12:01 - 12:51)
+And that's sort of how when we're looking at TEEs and their applications in blockchain, it's usually as a means to not have to re-execute something. So in a blockchain, because you want consensus on something, each node has to re-execute the computation. And if you have a thousand nodes participating in consensus, then all of them need to re-execute it.
+
+And usually, because of the way blockchain history is, usually people re-execute the computation when you're syncing as well. And so basically all nodes re-do it every time. And the charm of a TEE and what it could bring if you wanted to trust one was that, or is that, you not only have to execute it once, and then you can put the result on the blockchain and say it was executed by this TEE.
+
+No one else has to do this again. Just trust this result.
+
+[Yan Michalevsky] (12:52 - 14:38)
+And I think the two can be basically complementary. So for instance, let's look at the example of Byzantine fault-tolerant protocols. There we basically have a consensus over some computation.
+
+And you hope that an attacker doesn't take over more than a third of the network, because that would compromise the protocol and you can no longer trust the result. So you can combine the two. You can both have some group of users or computers that achieve a consensus, but you can also try to secure each individual node or each individual user with something like a trusted execution environment to provide some guarantees around the hardness of getting more than this third malicious majority for a powerful attacker.
+
+So that's actually something that we were looking into a bit. And what we did there is taking Tendermint. Are you familiar with the...
+
+We know it. So yeah, so we took Tendermint, which is a part of the Cosmos framework. And we basically run Tendermint nodes inside the trusted execution environment, basically hardening each node and preventing an attacker from taking over those nodes.
+
+And that can be especially interesting when you're just bootstrapping this kind of network, because at the beginning, you might not have too many nodes, and it actually might not be so hard to create this one third malicious majority. So this combination of a trusted execution environment and a consensus can be something powerful that enables you to bootstrap such a network until you get to many users that would actually guarantee the correctness of the results through the consensus.
+
+[Anna Rose] (14:39 - 14:43)
+Wow. I mean, the Cosmos on launch, they didn't actually do that.
+
+[Yan Michalevsky] (14:43 - 14:55)
+No, they didn't do that. And that's kind of orthogonal. Basically, we don't require any changes in Tendermint or Cosmos.
+
+We just take those nodes as is and just put them in trusted execution environment.
+
+[Anna Rose] (14:55 - 15:04)
+So where would that be useful going forward? Is that like if any of the zones launch and are using a similar setup? Is that kind of why you did those testing?
+
+[Yan Michalevsky] (15:04 - 15:34)
+So we actually thought of it as kind of an interesting thing to do, or a demo, just some exploratory use case. But then we were actually approached by some users, companies that are looking to deploy Tendermint and are interested in securing those nodes because they worry about the compromise of the validator and nodes that are responsible to basically validate the transactions. And if an attacker is capable of compromising enough of them, that might break the protocol.
+
+[Anna Rose] (15:35 - 15:45)
+I remember hearing about that, actually, on launch of Cosmos and the fear that they had for exactly that happening. Is this proven? Is this still very much an experiment?
+
+It sounds like something that could actually solve for that.
+
+[Yan Michalevsky] (15:46 - 16:01)
+It works. I mean, we run those Tendermint nodes inside SGX and still early experimentation. It's not something that's deployed yet, but nothing basically prevents from deploying it in practise.
+
+[Frederik] (16:02 - 16:27)
+Cool. Something we started touching on a little bit in the last episode, but I don't think we really covered well, is how powerful is a typical TEE? When you say you're running a Tendermint node in there, are you running a full blockchain node that does everything that a blockchain node typically does?
+
+Or is it just the block signing part? What can you actually fit in a TEE?
+
+[Yan Michalevsky] (16:28 - 18:07)
+It depends. It depends on the TEE and it also depends on the software stack you're using, what kind of solutions you're using for that and how much work you're willing to put in. So there are also different approaches to that.
+
+So for instance, Intel Software Guard Extensions or SGX initially was intended to run small enclaves, small trusted code that would perform specific operations. And on the other hand, AMD with secure encrypted virtualisation took basically the extreme opposite approach of running a whole virtual machine and hardening it with the memory encryption and providing a similar route of trust, but basically running a very large surface inside the TEE. So those are two very different approaches, but you can also to some extent abuse them.
+
+And that's exactly, for instance, what we're doing at Anjuna. So with Software Guard Extensions, we build a software stack that enables you to take an entire application without even recompiling it, without modifying anything in the application and run the application entirely inside the SGX. And with the AMD secure encrypted virtualisation, we're doing sort of the opposite.
+
+Instead of running a whole virtual machine that runs a full blown operating system, we run a micro virtual machine that runs a single application. So this way we basically with both technologies, we kind of get to the same scenario where we shrink the attack surface so that instead of being the host itself, it becomes a perimeter around the application.
+
+[Frederik] (18:07 - 18:11)
+And is there a performance penalty for doing this sort of trickery?
+
+[Yan Michalevsky] (18:12 - 20:20)
+Yeah, so that's a great question. And the answer is different for different technologies. It's also a very nuanced tensor.
+
+It really depends on the type of workload you run inside the trusted execution environment. So there are different bottlenecks. For instance, with Intel Software Guard Extensions, there are a couple of performance bottlenecks.
+
+One of them is related to transitioning between trusted execution inside the enclave and untrusted execution outside the enclave. So those transitions introduce quite a bit of a performance penalty and the goal is to avoid them as much as possible. Another bottleneck is related to memory consumption.
+
+So Intel Software Guard Extensions provide a fairly small amount of physical memory dedicated to the enclave. It's in total, the current version of SGX, it's 128 megabytes, of which 96 are practically available to the enclave. So you can still run the workflows that are way bigger than that.
+
+But when you do that, you basically start encountering paging in and out of what's called the PC, the enclave page cache, to the rest of the DRAM. And that's an operation that can be very costly. With the MD technology, they actually take a different approach to that.
+
+They don't limit the amount of memory that can be secured using the MD memory encryption. And in terms of the performance of accessing this memory, they avoid this integrity check that Intel introduced in the Software Guard Extensions, which on one hand provides a somewhat weaker security model. So there are certain types of attacks that are hard to carry out, but certain attacks are possible, where you can swap some content with something else and continue running your trusted execution environment, which is something SGX prevents.
+
+So avoiding this integrity check enables them to operate way faster. So there with certain workloads, we see faster performance compared to SGX.
+
+[Anna Rose] (20:20 - 20:36)
+I sort of want to go a little deeper into these trade-offs that you're describing. So security is a trade-off, time to execute is a trade-off, and size, or like the amount of capacity? I wasn't quite clear on the MD side.
+
+[Yan Michalevsky] (20:36 - 21:18)
+So size can affect it indirectly. It doesn't necessarily mean that a large enclave running under Intel SGX wouldn't be performant. It really depends on the pattern of accessing the memory and how you process the data, how much memory do you need to access at once?
+
+If an enclave is big, but the typical working set, sort of the amount of memory you normally access is fairly small and fits within this enclave page cache, then you might not see any penalties. But on the other hand, if you constantly access a large working set that exceeds this APC, you'll encounter those penalties.
+
+[Anna Rose] (21:19 - 21:23)
+Are there any other characteristics where you see them fitting into this trade-off model?
+
+[Yan Michalevsky] (21:24 - 22:25)
+I guess in terms of security, to clarify the differences, one important one is this memory integrity. To really prove that you get a trusted execution result, you need this memory integrity. It's hard to prove something formally when you're using a secure encrypted virtualisation if you assume the attacker is actually able to modify the content of the memory pages.
+
+If you assume that the attacker is only passive and doesn't do that, you can prove certain things. But to achieve this kind of full security, up to side channel attacks, by the way, which SGX is still concerned with them. But if you rule that out, you can actually provide some very strong security guarantees around SGX that you cannot fully provide with secure encrypted virtualisation.
+
+In terms of practical concerns, something like secure encrypted virtualisation tremendously raises the bar for attackers. So we'd love to see either one of them deployed at scale in the industry.
+
+[Anna Rose] (22:25 - 22:30)
+When you started to talk about the different security models, you mentioned the one, but is there others?
+
+[Yan Michalevsky] (22:31 - 23:21)
+I guess going back to you're bringing up a software-based trusted execution environment, that can be a different security model where you trust the hypervisor, but you don't trust applications running inside the virtual machine. So that as well can be a significant improvement in terms of security in the industry. So we're all running the virtual machines on the cloud.
+
+And whereas something like SGX can actually prevent the cloud operator from accessing your application and your data, often that's not the main concern. What you're more concerned with is attackers breaking and hacking into your VM, obtaining the root administrative privileges on the virtual machine and then breaking into your application. And that's something that software-based, hypervisor-based protections can prevent.
+
+[Frederik] (23:22 - 23:40)
+When you talk about these characteristics of a TE, and like, take memory as an example, you have 100 megs memory that you need to be concerned with. How often will I page out? What's my total workload?
+
+It starts sounding very similar to doing embedded programming. How similar to that is it?
+
+[Yan Michalevsky] (23:40 - 23:48)
+You mean in terms of kind of being very conscious about your code, your performance? Exactly.
+
+[Frederik] (23:48 - 23:54)
+And I guess the tooling as well, like how you actually measure this, how you test it and everything else.
+
+[Yan Michalevsky] (23:54 - 24:53)
+I think you nailed it. You're correct. You're totally right about it.
+
+I'm actually coming from a background of real-time embedded systems in the past. Our engineering team has very good knowledge around the low-level programming, assembly, performance optimisation. So definitely, we need to be very conscious about performance, about minimising the footprint of our software.
+
+So for instance, our stack is very small and doesn't take too much of the PC so that you can use most of it for the application itself. So yeah, definitely. Definitely reminds embedded programming in the sense that you craft a very performant code.
+
+And you also care a lot about the security. You basically cannot afford the bugs, overflows in your software stack because that's running in the enclave and that has to not enable an attacker to execute code inside the enclave.
+
+[Frederik] (24:54 - 25:29)
+Talking about tooling, I assume this is in part like what you would classify as what you're working on in your company. What tools are there to make it easier to write applications for TEs? Or as you mentioned, you have an environment where you can now deploy any application, but obviously you're not going to take your Telegram binary and just run it in there because it's not going to work out that well probably.
+
+How do you suggest that people work with TEs and what tools do you provide? I assume there's compiler stuff going on to help out and et cetera.
+
+[Yan Michalevsky] (25:30 - 26:35)
+So I think the answer is twofold. By the way, why wouldn't you run a whole Telegram server inside this trusted execution environment? What I mean by that is actually, that's kind of the vision.
+
+We envision running very complex, big applications inside SGX and SEV. And just to give some examples, we do this kind of stuff. So we don't only run small enclaves, but we run entire databases, secrets management solutions, pretty complex applications inside the enclave.
+
+And that sometimes surprises people because it's a fairly new concept. So JJ in the previous podcast on SGX was also mentioning it. That's basically the vision of those library OSs to enable you to lift and shift applications without doing too much or any engineering work into trusted execution environments.
+
+You still have some concerns around the performance, potentially side channel attacks. I think performance is the most crucial one.
+
+[Frederik] (26:36 - 26:49)
+So that's the one I'm thinking about because like most application developers these days have gotten lazy, right? Chrome uses 12 gigs of RAM on my machine. Like it's probably not gonna run that well in a CE.
+
+[Yan Michalevsky] (26:50 - 28:53)
+Yes, so that brings us to the second part of the answer around tooling. And there I would like to talk about this work called COSMICS, which was a joint research with researchers from the Technion and from TU Dresden. And it's basically a compiler-based technique for what's called the technical term is a secure memory instrumentation for execution in enclaves.
+
+What it practically means is that it enables us to avoid some of the things, some of the factors that introduce performance penalties when running SGX. And specifically, the one I talked about previously, which is related to paging. So just to recap, if you're exceeding the APC, if you're exceeding the size of the enclave page cache with your workload, there is this driver provided by Intel that seamlessly takes care of paging memory in and out of the enclave while also providing, executing those integrity checks.
+
+And that's something that causes transition from trusted to untrusted execution. And the integrity check is also super heavy. So that results in a significant performance penalty potentially.
+
+If we could avoid this sort of paging that's managed by the hardware and specifically the page faults that cause a transition in and out of the enclave, we could potentially speed up execution. So that was one of the purposes of COSMICS. What was done there is provide a compiler that you would use to compile your application that you intend to run in an enclave in a way that instruments the memory accesses seamlessly to the developer.
+
+So you don't need to change any code. But at the background, what happens on the memory access is that instead of just directly accessing the virtual memory, it accesses the memory through a thin runtime component that can do things like paging without actually causing a hardware page fault that would cause this transition in and out of the enclave.
+
+[Anna Rose] (28:53 - 28:59)
+I kind of want to go back to Frederik's question there about tooling. Is that tooling? Does that fall under that category?
+
+[Yan Michalevsky] (29:00 - 29:23)
+I think it falls into tooling, yeah. So I guess it's an optional piece. It's not required to run in a trusted execution environment, but it's something that once you get to optimisation and trying to squeeze performance out of your workload is something you can apply in, say, your CI-CD, use this extension to the compiler to achieve better performance.
+
+So I would count that as tooling.
+
+[Anna Rose] (29:23 - 29:36)
+So I kind of want to throw back to the question that Frederik originally asked, which is about tooling. Maybe you can help understand what other kinds of tooling is Adruna working on or is being developed generally that is helping with this?
+
+[Yan Michalevsky] (29:36 - 30:36)
+So I guess the broader context is this general protection and privacy around data in use. Basically, how do you protect data when it's actually being processed? And there are different approaches to that.
+
+So we're on the Zero Knowledge podcast and the listeners are obviously familiar with a multitude of cryptographic techniques to provide the protection for data in use. So there are cryptographic techniques and there are those trusted execution environments that provide a different approach to that and sometimes you combine both. So that's kind of the more general space and I think we're in this general space kind of looking down the road.
+
+It's just there's enough work to be done now specifically around trusted execution environments and specifically more narrowly around SGX, more specifically around usability around that and making it easy to use those trusted execution environments. So that would provide enough work for us for probably a couple of years.
+
+[Anna Rose] (30:36 - 30:51)
+But that's how you think about tooling. It's like often this combination of other cryptographic ideas and like applying them. I'm just curious, how do you use Zero Knowledge Proofs and TEs together?
+
+How would that actually work? I know I'm sure there's many ways it could work together but maybe you can help with an example.
+
+[Yan Michalevsky] (30:52 - 32:54)
+Sure, so I guess it's an alternative. I guess using the trusted execution environments you can provide attestation to statements by means that are not cryptographic. At the end there is some cryptography so attestation itself is, as was mentioned in the previous episode about SGX, it's based on a signature where you trust that only the trusted execution environment can sign some statement.
+
+But the statement itself and kind of getting to a certain result doesn't need to happen cryptographically. You just kind of execute a regular logic inside your trusted execution environment and then you prove cryptographically that you got to this result by running this in the trusted execution environment. That can be an alternative approach to some of the things that zero-knowledge techniques are trying to solve.
+
+There are potentially additional applications so for instance things like trusted setup that's needed for some of those protocols. That's always been a concern. Basically how do we carry out a reliable ceremony that enables us to trust the protocol from that point on and that's potentially where trusted execution environments can come to rescue and provide an additional route of trust.
+
+What we see in the industry, I think the main obstacle with TEs is usability. How do you make this stuff friendly? And that's exactly what we're looking into.
+
+Basically how to alleviate all this work for the engineers and just enable you to focus on developing your application logic, your business logic and then run it in trusted execution environment. And it starts with this runtime we built for transparently running applications in side trust execution environments. But it goes further into paying attention to the command line tools to making it very intuitive for users to use those tools.
+
+Provisioning data into the enclaves and things like that.
+
+[Anna Rose] (32:54 - 33:04)
+So I know that we want to move on a little bit to the topic of attacks and some of the vulnerabilities. But just before that, you just mentioned the users. Who are the users?
+
+[Yan Michalevsky] (33:04 - 33:22)
+It's a good question. This space is still emerging. It's still early on.
+
+What we see in the market is an interest from a couple of verticals. Some of them are actually knowledgeable about SGX and are looking into it. So some of those users would be in the financial space.
+
+[Anna Rose] (33:22 - 33:26)
+Are they banks? Are they technical teams?
+
+[Yan Michalevsky] (33:26 - 34:25)
+Yeah, it would be something like technical people at banks, some of the major financial institutions, kind of very traditional banking. There's a lot of interest in the blockchain space, both because some of those protocols are actually based on having a trusted execution environment, but also because pretty much all the blockchains, they rely on holding the keys to certain assets or keys to executing the smart contracts. And securing those keys is of very high importance.
+
+Basically, those keys are what guarantees that the blockchain can be trusted. So securing those keys is something that can be done by more traditional means of just securing the hosts that hold those keys, using call storage for keys that you don't need to use immediately. But it can also leverage trusted execution environments for protecting the wallets or the secrets management solutions where you store those keys.
+
+[Anna Rose] (34:25 - 34:50)
+That's interesting because then it starts to like, that's also a problem that's being solved by MPC work. I think that was a question in our last episode. And this also helps to illuminate why you see MPCs, zero-knowledge proofs, and TEs put in the same category, even though they're super different construction systems, everything, they're super different.
+
+But this sounds like why. It's because there's these use cases where you could use one or the other.
+
+[Yan Michalevsky] (34:51 - 35:46)
+So you can use one or the other, but you can also use both. So for instance, with something like MPC or say, threshold signatures, one approach, for instance, to securing transactions and signing something is instead of having a private key in one place, splitting the keys between, and storing them on multiple machines that have to sign transaction together, and only then the transaction goes through. So that basically increases the hardness of the attack linearly.
+
+It scales it linearly with the amount of machines or the key shares you used. But on top of that, you might want to also secure each one of the key storages on those machines with something that provides additional security guarantees Yeah, exactly, like a T. So you're benefiting from this combination of scaling across multiple machines that the attacker would need to break to, and also adding those hardware routes of trust.
+
+[Frederik] (35:46 - 36:20)
+I think this becomes a bit more relevant in a proof-of-stake world as well, because we're switching from where miners basically don't have to have their keys available at all. They can just take them offline and have them cold stored, to when you run a validator, your key has to be online and available all the time. So there's protocols I know of that have started integrating hardware security modules and like CloudHSM on Amazon, stuff like this, to basically do the signing for them.
+
+But I think TEs could fill this role pretty well.
+
+[Yan Michalevsky] (36:21 - 37:38)
+I want to actually mention one problem. I guess we can call it maybe secret zero. One problem with just using hardware security models for securing those keys is that you store the key securely, and maybe you can assume that you cannot extract this key as an attacker, you cannot break into the hardware security model.
+
+But if you take over the machine that is connected to the HSM, to the hardware security model, you can basically use it as a signing oracle. So you can still ask it to sign some transactions on your behalf, some malicious transactions. And that's a problem.
+
+You didn't extract the key. You cannot go elsewhere with this key and do it offline, but you can still do it on this machine. So that's why it's basically hard to reason about the security of the overall system if you just secure this component.
+
+What we want to do in this space is to provide the security for the whole workflow. So if we talk about the flow, you would connect to some service via some HTTPS or TLS connection. And this service has access to keys and it can sign transactions, but the workflow is secured entirely, basically, starting with the connection to the service and including the keys and the signing.
+
+[Frederik] (37:39 - 37:59)
+Yeah, that makes sense. I think I can get out behind that kind of use case a lot more than I can using it for off-chain computation, where basically you're now sort of at mercy of whoever is the TE manufacturer. Where here, yeah, each individual might still be at mercy, but not the chain as a whole.
+
+[Yan Michalevsky] (37:59 - 38:05)
+Yeah, I think the kind of combination of the chain and those techniques provide something powerful.
+
+[Frederik] (38:06 - 38:49)
+So one thing that I want to dig into a little bit is the attacks that are available on TEs because we covered it a bit in the last episode, but then we talked to, I think it was when we talked to Nigel Smart, like we talked to someone and they were like, why haven't SGX, you know, been side-channel attacks proofed? Like, why did they go this way? And like, they were outrageous and how this choice could have been made.
+
+And you coming with your electrical engineering background, I mean, you said you'd worked specifically on like trying to prevent side-channel attacks on mobile devices. And how does someone from your background come in and look at this problem? Is it unique to SGX or does it exist generally in the TE space?
+
+[Yan Michalevsky] (38:50 - 40:17)
+I guess we need to kind of look at different side-channel attacks and think about the hardness of carrying each one of them to approach it intelligently and to be able to reason about what to do in practise and what's secure and what's not. If we look at security in the industry today, I will start with that. If we look at security in the industry today, there are far bigger concerns than side-channel attacks.
+
+Also depends on which kinds of side-channel attacks. And we're obviously talking whenever you're using TEs, you're assuming pretty powerful adversaries. So you do concern yourself with this possibility.
+
+But even if we ignore those attacks, we still would really raise the bar on security in practise. Because what you see if you follow security news is that pretty much every month or even more, you have some new security vulnerability in things like containers, VMs, Linux, other operating systems. There are so many privilege escalation attacks that are available in the wild.
+
+And there must be many zero-day vulnerabilities that we are not even aware of that are addressing this larger attack surface of the operating system. So deploying those protections can rule out many of them. And that would require the attackers to step up and start potentially using the side-channel attacks.
+
+[Anna Rose] (40:18 - 40:28)
+Can you actually define those side-channel attacks? You sort of mentioned there's a few different kinds. What are they?
+
+Maybe not all of them, but like the most dangerous, the ones that people are really worried about.
+
+[Yan Michalevsky] (40:28 - 40:45)
+Yeah, so I guess in general, side-channel attacks mean something like stepping out of the design of the system and kind of using something that's not part of the architecture, some kind of side effect to circumvent the architecture, even if the architecture itself is secure.
+
+[Anna Rose] (40:45 - 40:56)
+Could this be like if like the electrical signal... I mean, this is the ones I've heard. It's like the beats of how much electricity is running to it, which you could actually use that to potentially decipher something.
+
+[Yan Michalevsky] (40:57 - 41:37)
+Yeah, so for instance, power analysis is one example of a side-channel attack. In some scenarios, this is actually a concern. For instance, something like credit cards chip that you can take, analyse offline, run through power analysis and potentially extract keys.
+
+That's a space where people are really concerned about those. Something like your host that's connected to your power network. If it's a reasonably physically isolated, and even if not, it's still not an easy attack to carry out.
+
+There might be only several groups. There might be... You might be able to count the number of people in the world that are able to carry out those attacks in practise on an actual processor.
+
+[Anna Rose] (41:38 - 41:43)
+Would that be like an actual... Would that be a government or you mean like the technology doesn't exist to do it?
+
+[Yan Michalevsky] (41:44 - 42:07)
+The technology exists, but it is also very different between different processors. So some microprocessors are more susceptible to those side-channel attacks. If you take something like an Intel CPU, yeah, there are proofs of concept.
+
+It's possible, but it's not easy. It's a very complex architecture. It's been shown, but there aren't many organisations that are capable of carrying out those attacks.
+
+[Anna Rose] (42:08 - 42:18)
+So let's go now though to the side-channel attacks of TEEs specifically. What you just described is like a general definition of side-channel attacks. But what would be a side-channel attack for TEEs?
+
+[Yan Michalevsky] (42:19 - 43:15)
+Yeah, so what's more interesting in the context of TEEs and specifically Intel SGX is micro-architectural side-channel attacks. So the previous year was a pretty bad year for processors with things like Meltdown, Spectre, and then Foreshadow that specifically targeted SGX. So let's talk about those.
+
+Meltdown was probably the biggest concern. It's a pretty easy attack to carry out. It's possible to carry it out from any process to compromise the private data of the operating system and through that basically compromise the whole system.
+
+So that was the biggest concern. And that's something that SGX is not directly susceptible to. Foreshadow can be seen as a certain variant of Meltdown, but it's not exactly the same.
+
+So Foreshadow was a concern for SGX.
+
+[Anna Rose] (43:15 - 43:16)
+Is that foreshadow?
+
+[Yan Michalevsky] (43:17 - 43:17)
+Foreshadow.
+
+[Anna Rose] (43:17 - 43:19)
+Starts with an F. Yes. Okay.
+
+[Yan Michalevsky] (43:19 - 46:00)
+Yeah. So just yesterday, actually, I was talking to one of the authors of this work to kind of recap on the attack and all the protections that came out. What's important is to see trusted execution environments not as a product that's done, but as something that's evolving.
+
+So SGX is not done. Intel are constantly updating the microarchitecture coming with the newer versions of SGX and protections to those side channels. So for instance, Foreshadow was leveraging cache timing side channels.
+
+And that's something that Intel introduced countermeasures to by flashing the cache on transitions between execution in the enclave and untrusted execution. And also differentiating between running with hyperthreading enabled, which is something that can enable carrying out a foreshadow attack and running with hyperthreading disabled, which together with flashing this cache can basically prevent foreshadow. Another concern is Spectre side channels.
+
+So that's something, I guess, that can be viewed as sort of an application level vulnerability. So the trusted execution environment in this case might provide protection from anything else on the host, but you still need to care about code gadgets that are vulnerable to Spectre inside your application. And some of the approaches include formal analysis of the code or the binaries.
+
+Some of the approaches like SpecFuzz, it's a work that's been done by researchers at Technion and also researchers at Europe. I don't remember exactly the whole group, but that's something that basically enables to identify and apply fuzzing techniques to discover Spectre vulnerable gadgets in applications. And if you combine all those different tools, you can probably get to something very secure.
+
+But I'd like to actually mention the talk that Paul Kocher, who stands behind Meltdown and Spectre, he gave a talk at the RSA conference and he was showing this slide. He was basically painting this picture of Meltdown and Spectre as a piece of poop but then his point was that it's a small piece of poop on a larger amount of poop that basically constitutes kind of the state of security in the industry in practise. And he's the man behind those attacks.
+
+So the point was that basically we have probably way bigger problems in practise in the industry.
+
+[Anna Rose] (46:01 - 46:05)
+So this is only the tip of the iceberg. Not just the tip of the poop.
+
+[Frederik] (46:06 - 46:52)
+Yeah, I mean, that's for sure. I remember, like, I listened to a couple of security podcasts and I remember when Spectre came out, you know, it was big news and it was sort of like, oh, here's a core vulnerability, like everyone is affected and they were talking about like, oh, all these cloud providers who could leak so much data. And then the other hosts were like, okay, so what data has been leaked?
+
+Well, probably nothing because it's extremely hard to do and it was patched so quickly, it was et cetera, et cetera. While like any other topic on the podcast is like, oh yeah, this company lost a hundred thousand dollars or this whole city block shut down or this hospital lost, a couple of people died because their power went out. Yeah, it is the tip of the poop for sure.
+
+[Yan Michalevsky] (46:53 - 47:57)
+Yeah, so here I would differentiate between different scenarios where you're applying those protections. For instance, if you want to do something like deploy blockchain nodes that run, that you protect only by a trusted execution environment on completely untrusted machine and they actually hold the keys to assets and that an attack on that translate directly to monetary loss, that might be a decision you would like to consider very carefully and kind of understand what are the possibilities to carry out such an attack there. But many of the defences are defences in depth that are applied in combination with other defences.
+
+So for instance, in the industry, you'd have some data centre, you'd have monitoring tools that you'd have intrusion prevention systems. On top of that, you might also want to add those protections for your most sensitive workloads. So it's not the only defence you have.
+
+And there, it should be a no-brainer. You lose nothing. Well, we need to kind of consider performance in the applications of those environments on performance, but...
+
+[Anna Rose] (47:57 - 47:58)
+You lose little.
+
+[Yan Michalevsky] (47:58 - 48:14)
+Yeah, you lose very little by applying those attacks. You tremendously raise the bar on security and you don't lose anything because it's not that you're now opening your system to attackers after you applied this kind of protection and just letting anybody in.
+
+[Frederik] (48:15 - 48:33)
+So to wrap up, I'm curious about your thoughts on a topic that keeps popping up. And that is, we don't want to trust these companies, blah, blah, blah. What's your hope that we'll see some open source enclave actually become successful and deployed in practise?
+
+[Yan Michalevsky] (48:35 - 50:21)
+I hope that such a thing will emerge. So there is the Keystone project. There was the Sanctum Research at MIT that aimed at providing open source trusted execution environment with somewhat different guarantees compared to SGX.
+
+So personally, I hope something like that would emerge and it would be adapted in the industry. I definitely would like to see multiple competitive architectures with different properties. Myself and Juna, we're in the business of providing the software stack that would be cross-platform.
+
+So in terms of what we build is something that we would like to run on multiple TEs. And definitely, in terms of adoption in the market, it would be beneficial to have something that's open source with well-understood guarantees. I don't expect it to happen very quickly because Intel and AMD still dominate the majority of the data centre market, specifically Intel.
+
+And to some extent, anyway, we trust those manufacturers. I mean, security people might like to kind of complain about that and about this route of trust. But anyway, you run your workloads on those processors.
+
+So whatever happens there, you kind of trust the processor to do stuff correctly. So to some extent, practically, that's the best thing you can hope for. Instead of trusting way more components, like additional hardware components, the supply chain, physical security on your premises, the people around you, if you can limit the trust to the processor manufacturing, you've gone pretty far in terms of improving your security.
+
+[Anna Rose] (50:22 - 50:24)
+I'm sure some of our listeners will disagree with you, but...
+
+[Yan Michalevsky] (50:24 - 50:26)
+I bet. I bet. I bet.
+
+[Anna Rose] (50:27 - 50:28)
+Cool.
+
+[Yan Michalevsky] (50:28 - 51:02)
+And just to kind of wrap this up, I think there are different roles for industry and academia. The academia definitely needs to continue exploring cryptographic approaches, theoretic approaches to provide provable guarantees for security. And the role of the industry is to find pragmatic, practical solutions that actually make things safer for us.
+
+So yeah, on that note, thank you very much for being on the show. It was fascinating. Thank you very much, Fredrik and Anna.
+
+It was great being hosted on the podcast.
+
+[Anna Rose] (51:02 - 51:08)
+And I guess we'll keep an eye on the work that you guys are doing and curious to see what comes out around TEs.
+
+[Frederik] (51:09 - 51:11)
+And to our listeners, thanks for listening.
+
+[Anna Rose] (51:11 - 51:12)
+Thanks for listening.
