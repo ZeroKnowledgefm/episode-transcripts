@@ -1,0 +1,670 @@
+[Anna Rose] (0:06 - 1:49)
+Welcome to Zero Knowledge, a podcast where we explore the latest in blockchain technology and the decentralised web. The show is hosted by me, Anna, and me, Frederick. In this week's episode, I sit down with the guys from Beam to dive deeper into the MimbleWimble protocol, to discuss the Beam implementation and look at how this protocol might be used in the future.
+
+Before we start, we want to say thank you to this week's sponsor, Streamr. Streamr has just launched their global PubSub network for machine data, and so if you are a Web3 systems architect looking for a trustless real-time messaging solution, this will be something for you. Unlike a cloud-based data pipeline, the Streamr network runs peer-to-peer in a system that offers a smart balance between high privacy and low latency, as well as MQTT support.
+
+They are currently looking for individuals and projects to join the network and jump in on this important and exciting research. If you want to start using it today, just visit streamr.network. There you can find additional material about what drove their design choices, as well as metrics and measurements about their network. For more on the Streamr offering, have a listen to an episode we did last year with one of Streamr's co-founders, Henry.
+
+So thanks again, Streamr, for supporting this podcast. And now, here's our interview with the guys from Beam. So today I'm sitting with Alex and Alexander from Beam.
+
+Welcome to the show, guys.
+
+[Alexander Zaidelson] (1:49 - 1:52)
+Thank you. Pleasure to be here. Thanks.
+
+[Anna Rose] (1:52 - 2:03)
+This is not the first time that we have two Alexes on our show. I think with MatterLabs, we had Alex and Alex as well. Alexander, do you want to just say what you do at Beam?
+
+[Alexander Zaidelson] (2:04 - 2:15)
+Sure. So I'm the CEO of Beam. My job is mostly talking and trying to make sure that I'm not getting too much in the way of people doing the actual work here.
+
+[Anna Rose] (2:15 - 2:16)
+Very good. And Alex?
+
+[Alex Romanov] (2:17 - 2:26)
+I'm the CTO of Beam. And my job is actually making sure that the people that are actually doing things are doing that uninterrupted. So yeah, that's what I do.
+
+[Anna Rose] (2:26 - 2:27)
+The general?
+
+[Alex Romanov] (2:27 - 2:28)
+Kind of.
+
+[Anna Rose] (2:29 - 3:21)
+All right. So this is the second episode that we're doing where we dig kind of into the topic of MimbleWimble. We've done an episode with Daniel from Grin, and we talked about the way that Grin implemented MimbleWimble.
+
+But I think it's really cool that we get a chance to speak to you guys who are implementing it independently. And yet there's a lot of connection between these two groups and kind of back and forth and sharing of ideas and stuff like that. So I'd like to explore that in today's episode.
+
+But before we start in on Beam, I think even though we've covered roughly what MimbleWimble is in that episode, I want to kind of go over some of it again with you guys. But actually, the first question I have is sort of like what got you excited about MimbleWimble specifically? And maybe when did you find out about it?
+
+[Alexander Zaidelson] (3:22 - 3:52)
+Sure. We found out about MimbleWimble more or less like about half a year or a year after it became popular and used. Maybe some of the team learned about it on day one.
+
+And I think what's exciting about it is that it solves privacy right from the get-go. And it gives privacy without the scalability trade-offs that all other protocols that offer privacy on blockchain have.
+
+[Anna Rose] (3:53 - 3:54)
+Are you thinking like Monero and Zcash?
+
+[Alexander Zaidelson] (3:54 - 4:52)
+Yeah, Monero and Zcash, definitely. Yes. Because those protocols, and I'm talking very much in layman's terms, but they took the basic architecture of Bitcoin and added stuff onto it to hide the information.
+
+So what's beautiful about MimbleWimble is that it's built in such a way that there is, I could almost say, nothing to hide because there's no information on the blockchain itself. It's built in a different way. So there are trade-offs to achieve that the protocol has to have some interactivity between the two wallets in order to create a transaction.
+
+But the way it's built is actually, it presents a new look on how the blockchain can work. And it really solves for both privacy and scalability in the same one. And it's very elegant.
+
+It uses standard cryptography that is really well understood. So there is much less chance there to be like a terrible, catastrophic bug than in something that's very new.
+
+[Anna Rose] (4:53 - 4:54)
+What about yourself?
+
+[Alex Romanov] (4:55 - 7:50)
+Yeah, so the MimbleWimble paper was published in June, I think, or July 2016. And it immediately attracted a lot of attention because, as Alexander mentioned, it provided a very elegant and simple solution to this very non-trivial problem of combining confidentiality on blockchain with scalability. And the idea behind the protocol was basically to structure the UTXO model in a way that would allow for this cutoff feature, we will probably discuss again several times, and thus eliminate the need to store every single transaction, every single UTXO on chain.
+
+And basically, it means that the blockchain now scales as a function of the UTXOs and not as a function of transactions, which is the major problem that does not allow the same scalability in Bitcoin, for example, because in Bitcoin, you have to store all the transactions on chain, which makes the blockchain eventually much larger. So right from the start, it got attention from both enthusiasts of the privacy field and well-known cryptographers. And Andrew Poelstra was one of the first who has researched the protocol and published a separate paper about it, basically doing a deeper research and eventually proving that it could be a good model to build.
+
+And almost immediately, like, I think, a few months after the initial publication in November 2016, Green started working on their implementation of the protocol. When we started working with it in March 2018, it was already an existing buzz. There was a lot of interest from both technical and crypto privacy enthusiasts communities.
+
+And it was, I think, at that time, one of the more promising developments in this field. And so we were interested for quite a while before we started the actual implementation. But at some point, we realised that we do want to make our own implementation of this protocol.
+
+So basically, we have assembled the team in March 2018 and started working on it. And nine or 10 months later, we launched our mainnet, which was on January 3rd this year, 2018, which was the 10th anniversary of the Bitcoin, the first Bitcoin block. Yeah, it was kind of an interesting date.
+
+Yeah, very symbolic. So we did this very quickly by assembling a professional team of developers, most of whom I knew personally and worked before previously on different projects. Many of them are my personal friends.
+
+So I basically went to the top of the line of all the people that I knew from all my previous years of different kinds of software. And that's what allowed us to launch it fairly quickly.
+
+[Anna Rose] (7:50 - 7:55)
+Cool. Were you working in blockchain technologies before this? Or was this the first?
+
+[Alex Romanov] (7:56 - 8:10)
+No, I was not. And actually, none of our team had any previous experience with any blockchain projects. Even more so the first cryptocurrency I have ever actually owned was Beam.
+
+So I didn't even have a Bitcoin before that.
+
+[Anna Rose] (8:10 - 8:15)
+What did you have to do differently? How do you have to think differently when you're working in this space?
+
+[Alex Romanov] (8:15 - 9:52)
+Well, it was a completely new technological field for us. So we had to do a lot of learning very quickly. Luckily, our developers are very talented, and most of them have either mathematical or physical physics background.
+
+So they could understand both the math behind this and also the implementation details. Of course, when dealing with cryptography, there are a lot of nuances that you do not have with the regular software. And of course, in blockchain, it's a completely different animal in terms of how all this ecosystem is being deployed and updated and how you actually test it.
+
+So we had to overcome a lot of challenges and learn very quickly how to deal with these aspects that were completely new to us. And I think we managed to do this rather well. We did everything by ourselves.
+
+So it was not a fork, it was not a clone. Outside of the most basic libraries, we didn't take one line of code from any other project. So we built everything from scratch.
+
+And it gave us a lot of experience and understanding of the really deep inner workings of the essential components such as node logic and wallet logic. So it allowed us to control a lot of aspects of this implementation. And I think the result is very good.
+
+We have right now a very stable and well-functioning software. We had the hard fork recently, which also went very well. So I think it was mostly a success story in terms of the implementation.
+
+[Anna Rose] (9:53 - 9:55)
+Yeah. And what about you, Alexander? Have you worked in blockchain?
+
+[Alexander Zaidelson] (9:56 - 10:44)
+So I haven't worked in blockchain either. So I got interested in blockchain several years ago, and I did play with Bitcoin and Ethereum and stuff like this, but not in a very heavy way. And to me, it's also the first project in blockchain.
+
+So I think what we have on the team is a healthy combination because some members of the team or some of our advisors are very much old-timers and know the space very well. On the other hand, part of the team is relatively new in blockchain. Well, now we're also kind of old-timers, Alice and myself, we could say, because a year is a lot of time.
+
+But there's a healthy combination of people with experience in the space and people with experience elsewhere. So answering your question, no, I didn't have much work experience in blockchain before that.
+
+[Anna Rose] (10:44 - 10:48)
+But there was something about this that made you go, you know what? Now I'm going to jump in.
+
+[Alexander Zaidelson] (10:48 - 10:49)
+Yeah, right.
+
+[Anna Rose] (10:49 - 10:50)
+What was that?
+
+[Alexander Zaidelson] (10:50 - 11:17)
+That was the potential of the field. Because this dream of replacing the monetary system, it's a huge dream. And right now, our whole industry is tiny compared to the financial system in general.
+
+And thus, the potential is just mind-blowing. I don't think there is, right now, there is any technology field that has such a potential to grow hundreds of times.
+
+[Anna Rose] (11:17 - 11:25)
+So you have a live network. What was launching that like?
+
+[Alexander Zaidelson] (11:27 - 12:24)
+That was stressful and funny. And I remember the day, January the 3rd, we were sitting in our office, like in another tower, right here in Tel Aviv. I mean, myself and other guys were spread out in the world where they were.
+
+And I remember it took us about half an hour to launch because the website got so much load that it took us time to publish the binaries. And there was one more thing. Before we launched, we had to set the network difficulty, right?
+
+Because you have to set the difficulty to some figure so that it kind of makes sense. And we were kind of debating internally like, okay, how many GPUs are going to minus, maybe 3,000, maybe 4,000. So we set it initially at roughly around 10,000 GPUs, I think.
+
+And we thought, well, there's no way. And it was like 100,000 when we launched. So it was a surprise.
+
+[Anna Rose] (12:24 - 12:27)
+Because you actually, this launched before Grin launched.
+
+[Alexander Zaidelson] (12:27 - 12:34)
+Yes, this was the first Membo Wembo project to launch. Grin followed up on January the 15th, in two weeks.
+
+[Anna Rose] (12:35 - 12:45)
+Wow. And so you got that. And that was like right during the moment that there was like a lot of eyes on this project.
+
+Did anything break?
+
+[Alexander Zaidelson] (12:47 - 13:36)
+Not immediately. No, not immediately. But we did have two issues in that January.
+
+One was some hole in the wallet that we found and patched immediately. And another one was a pretty stressful event. It was a blockchain stop.
+
+There was a certain condition of two UTXOs that were sent from two wallets with the same seed that somehow created the stop. And that was like the second event. And we were already kind of better prepared to it.
+
+And we were communicating like every half hour. So we fixed it in like three to four hours. But it was a stressful event.
+
+Since then, I don't think we had any issues. And I hope we won't. Although, you know, it's software, so you never know.
+
+[Anna Rose] (13:37 - 13:48)
+So I kind of want to ask you a few more questions about the tech taking from what you just described before. You mentioned something called a cut through function. I actually don't know what a cut through function is.
+
+[Alex Romanov] (13:48 - 15:58)
+Okay, so the whole idea behind Membo Wembo is to get rid of the Bitcoin script, which is the way the transactions are actually created in Bitcoin. In Bitcoin, sort of a condition, you should give this UTXO to whoever knows the secret of specific address. So Membo Wembo structures UTXO differently.
+
+By using this cryptographic primitive called the Pedersen commitment, it basically allows you to take several UTXOs and combine them together. So basically, in any transaction, like in Bitcoin, or any other cryptocurrency, you have inputs and outputs, the coins you spend and the new coins that you create. The difference is that when you combine a lot of inputs and a lot of outputs together, so basically merge several transactions, you can eliminate all the intermediate UTXOs, the ones that you spend already are no longer relevant.
+
+Let me give an example. Let's say I send you a transaction with some UTXO and then you send it to somebody else, the same UTXO exactly. So if we just add together all these factors, you see that in the intermediate it falls out because it's like plus the input or minus the output.
+
+And this allows you to basically ignore all the intermediate information. And the only thing you're interested in is where this UTXO came from originally, and they all come from the blocks that mine them, so called Coinbase reward. And then you're interested in who is the owner of this specific UTXO on this specific moment.
+
+And this is the only information that you actually need to store on the blockchain. And if you take this logic and you expand it to the entire blockchain, so basically all you get is these headers of the blocks, which prove two things. First of all, that the exact amount of UTXOs was created for each block, the mining reward, and the tree that it's called the Merkle tree, this data structure that holds all the UTXOs that are currently unspent.
+
+And this is the only information that you as a new node in the system need to download to start working and verifying. So the cut through is actually this process of compacting this blockchain and removing all these intermediate UTXOs that are no longer relevant.
+
+[Anna Rose] (15:58 - 16:04)
+Is that something that's just in standard Bitcoin, or is this something that's really novel to MimbleWimble?
+
+[Alex Romanov] (16:04 - 16:42)
+This is exactly the novelty of MimbleWimble. This is exactly the elegant trick that it has this trade-off of having to give up on Bitcoin script. Bitcoin script today allows for a lot of different interesting operations that you can do on the blockchain.
+
+And you kind of have to give it up in order to get this elegant structure that you can then compress. However, there are different ways to achieve the same concepts and ideas that are currently implemented in Bitcoin script today. And in Ethereum smart context, for example, it's called scriptless script.
+
+It's kind of an extension on this entire concept, but it's probably for another question.
+
+[Alexander Zaidelson] (16:43 - 18:18)
+So maybe to say the same in more layman's terms. So the blockchain only holds the currently existing coins, UTXOs, and the ownership structure, right? So it just lists whatever coins are in existence right now.
+
+And it also lists all the coins that were ever minted. And it proves that the transition from the minted coins to the current state was correct. And the thing that proves that is actually the kernels.
+
+So for each transaction, there is a small thing that remains on the blockchain, and it's the transaction kernel. It's a very small data structure that actually contains, it is signed by both parties, and it contains a proof that the amount of inputs in that particular transaction equalled the amount of outputs. So no new money was published.
+
+And also it has a proof, well actually, and the UTXOs have approved that their values are positive. So the only thing that remains per transaction is a kernel. And it's very small, it's about 100, 112 bytes.
+
+So that's why the blockchain size, while it does grow a little bit with the number of transactions, but the most growth is with the number of the UTXOs, which does not even have to grow. Because if I want to pay you 100 BIM and I have 100 coins of one BIM, then actually the number of UTXOs in the system will become smaller after I do this transaction. It doesn't even have to grow.
+
+[Anna Rose] (18:19 - 18:34)
+So now I have a question. BIM is one implementation of MimbleWimble, and Grin is a different one. Do you use the same proof-of-work function?
+
+[Alexander Zaidelson] (18:35 - 18:44)
+No. We both use proof-of-work as consensus mechanisms, but the algorithms are different.
+
+[Anna Rose] (18:44 - 18:46)
+I see. What do you use?
+
+[Alexander Zaidelson] (18:46 - 19:42)
+We're using something we call BeamHash, which is actually a variant of AquiHash. So we had BeamHash 1 before the fork, and now we have BeamHash 2. So it is basically modified AquiHash.
+
+While Grin is using something that they developed on their own, it was developed by John Tromp. Very interesting technology called CuckooCycle with several variants. Again, I guess the Grin guys can relate to that much better.
+
+So they're not compatible. Those are different algorithms. And ours is, I mean, it's not simpler, but it doesn't have that much innovation.
+
+So we took the existing AquiHash, modified it a little bit and make it work for us, while Grin developed their own very elaborate system with two or even more different algorithms that actually the percentage of blocks mined with each one is changing. So it's much more innovation there.
+
+[Anna Rose] (19:42 - 19:54)
+Okay. I think one of the things, because we just recently had Grin on, I'd love to hear if there's any other sort of pieces of the build that are significantly different.
+
+[Alexander Zaidelson] (19:56 - 20:19)
+So I think there are a lot of things that are different. So the monetary policy is different. This is something that is very, very much observable and relevant for everyone, right?
+
+So Grin is inflationary. They will be minting 60 Grin per minute or one Grin per second forever, while Beam follows an emission curve very similar to Bitcoin.
+
+[Anna Rose] (20:19 - 20:23)
+So it means like later miners will get less.
+
+[Alexander Zaidelson] (20:23 - 20:46)
+The early miners, there is a benefit to being So the first year is 100 coins per block, and the second to fifth year is 50 coins per block, and then halving every four years until year 133. So that's one difference. Another difference is the funding mechanism.
+
+So we use something that's called Founder's Reward.
+
+[Anna Rose] (20:46 - 20:47)
+Oh, you do have Founder's Reward.
+
+[Alexander Zaidelson] (20:47 - 20:49)
+Yeah, we do have Founder's Reward.
+
+[Anna Rose] (20:49 - 20:49)
+Interesting.
+
+[Alexander Zaidelson] (20:49 - 21:15)
+Very much so. So in the first five years of operation, 20% of all the mined coins go to the treasury. And this treasury is distributed between the venture investors who put in the money that actually lets us develop and operate, between the core team and advisors, and a large chunk is set away for a non-profit foundation that we're now in the process of setting up.
+
+[Anna Rose] (21:15 - 21:20)
+And that, I guess, would have some sort of board that makes decisions about funding.
+
+[Alexander Zaidelson] (21:20 - 21:30)
+Yes. The foundation, it will start with a board, and all the decisions will be made by the board. But eventually, we're already looking at ways to make it decentralised, like a DAO.
+
+[Anna Rose] (21:30 - 21:30)
+Wow.
+
+[Alexander Zaidelson] (21:30 - 21:40)
+It will take time. So initially, it will be operated by the board in a consensus method, but still kind of centralised.
+
+[Anna Rose] (21:40 - 21:47)
+Have you been, like, given that you also have a Founder's Reward, have you been following the Zcash Founder Reward conversation closely?
+
+[Alexander Zaidelson] (21:48 - 21:51)
+Yes. Yes, we have. We have followed it.
+
+[Anna Rose] (21:51 - 22:40)
+I mean, it's interesting, because that question of, like, how a project funds itself, personally, I find it more and more interesting. And I catch myself asking that, to understand better what the plan is going forward. And I think in some cases, the plan has been, we will pay our early developers in token, they will make a lot of money with that, and that is a motivation.
+
+That works to a level. But then there's also a conversation of how do you continue with maintenance? How do you continue development?
+
+After, especially after, like, those early contributors who maybe have made a lot of, you know, have done very well for themselves, they either no longer want to work, or maybe they're not as into it, or they're doing something else. How do you then incentivise this new group of people who are arriving? Because you can't promise the price will always go up forever.
+
+[Alexander Zaidelson] (22:41 - 23:51)
+So this is a challenge. This is a challenge. But we are starting to address it early.
+
+So the foundation will solicit and will pay for development done by third parties. By the way, in the beginning, a lot of it will still be done by the company, right? Because it takes time to build this community.
+
+But the foundation will bring in more people and incentivise them with payment, with the goal of having, you know, after five, six, seven years, having this global community that already continues itself, right? So the original contributors will hopefully be still out there and still interested in the well-being of the protocol. But our goal is to make their contribution smaller, our contribution smaller in, you know, percentage-wise, with time.
+
+Also, the more we move forward, there will be less need for very fast innovation, right? So it will be, the speed of development will be much more relaxed.
+
+[Anna Rose] (23:51 - 23:54)
+Do you feel like, was there any pushback for having a founder's reward?
+
+[Alexander Zaidelson] (23:55 - 25:34)
+Well, especially in the beginning when we kind of published this whole idea and when it became public, we got a lot of heat from, you know, all kinds of maximalists and just people who are bored and they said, you are scammers and it's not fair and you're stealing. But right now, when we actually demonstrated that we're developing and delivering quality stuff that's working, then a lot of people, and we're also doing it quickly in high quality and very usable, then I think more people understand that there's nothing wrong with, you know, people getting paid for their work and also getting some upside if their work is something really great. In my view, that's like, that's how the world works, right?
+
+Any startup is built in that fashion, right? Now, the important thing is to be upfront and to tell everything to everyone, right? Not to hide anything which we never did and are not going to do.
+
+So I think right now there is much more acceptance of this model. Although, of course, green model is totally different and it also has its advantages, right? They're not dependent on anyone at all.
+
+They're not dependent on money. So they can develop forever. So it's, I think both models have their good sides.
+
+Now, but what we can see with Beam and Grin very specifically that our model allows for much faster and feature and more feature-rich development and creating software, more software faster.
+
+[Anna Rose] (25:34 - 25:39)
+Is that just because you have a bigger pool? Like you have a bigger pool of funding?
+
+[Alexander Zaidelson] (25:40 - 26:22)
+Well, I don't think it's about the size of the team and the time everybody spends. We have a full-time team of about 24 people, most of whom are developers. And that's their job, right?
+
+And they're part of the team, part of the family, but they're not working on anything else. While most of the people who work on Grin and other open-source projects have to, you know, find time for their passion. Now, again, the positive thing is that they're like really super passionate about what they're doing because they're doing that just as an extra, most of them.
+
+Our guys are also very passionate, but again, this is their plan for us as well. It's like what we do. We get up and we work on this project and then we continue.
+
+[Anna Rose] (26:22 - 26:32)
+Cool. What about, I want to pass it to you. Alex, what other technical differences could you say exist between Beam and Grin?
+
+[Alex Romanov] (26:33 - 26:54)
+Well, quite a lot. Outside of the fact that we are both using MimbleWimble as the underlying protocol, I think that there are more differences than commonalities. Different programming language, we're using C++ and Grin is using Rust.
+
+Rust is kind of an evolution of C++, more modern and getting more popular every day.
+
+[Anna Rose] (26:54 - 26:58)
+Yeah, we talk about it a lot on this podcast. Fredrik is a fan.
+
+[Alex Romanov] (26:59 - 28:07)
+There are a lot of fans and I completely understand why. However, when we started our implementation, we needed to find people fast and obviously there are still more experienced C++ developers out there, so it was easier for us. We have a lot of differences in terms of how exactly we implemented this protocol, how it works, how the communication between the wallets work in order to create a transaction.
+
+For example, we have created our SBBS system, which is a secure bulletin board that allows you to exchange encrypted messages between the wallets and thus you make it very easy for two wallets to connect and create a transaction. I think it's a great addition to our usability, which is one of the core aspects that we're really, really focussing on because one of the problems that we see in this space is that a lot of technology is not really accessible to non-geek or non-technical people. We want to improve on that as much as we can, which is why we have invested a lot of time and effort and product thinking about the usability to make it as usable as possible.
+
+So that's quite another difference.
+
+[Anna Rose] (28:08 - 28:13)
+When you say usability in this case, though, do you mean usability for devs or do you mean usability for end users?
+
+[Alex Romanov] (28:14 - 28:15)
+No, I mean usability for end users.
+
+[Anna Rose] (28:15 - 28:17)
+Oh, wow. Like at the wallet level?
+
+[Alex Romanov] (28:18 - 29:43)
+First and foremost at the wallet level, yes. We have developed wallets for all existing platforms. So our desktop wallets, they run on Linux, Mac and Windows.
+
+And we also have two different mobile wallets for Android and iOS. So it's very convenient to use Beam from any device that you might have, which is very important for us. But also thinking about how the wallet looks like, how easy it is to operate, how we try to hide some of the technical details behind easy-to-use structures and features.
+
+So it's quite a lot of work because UI and UX is always very time consuming. So that's yet another difference. We have also had some additional differences on the protocol level, the way we use Dandelion, which is the transport protocol that sends transactions between the nodes.
+
+In general, in Bitcoin, for example, whenever a node receives a new transaction, it just immediately broadcasts it to all the peers that it knows. And this might allow for some very interesting timing attacks when you're monitoring a large amount of the network, you can try to figure out which was the node that originated the transaction. So Dandelion is a concept proposed by a group of researchers led by Giulio Fanti.
+
+And the idea is that you first send this transaction through a series of nodes, and only then you fluff it.
+
+[Anna Rose] (29:44 - 29:46)
+It's also like a mixer for messages.
+
+[Alex Romanov] (29:47 - 29:57)
+Not exactly a mixer in a regular sense, but what it allows to do is to obscure and make the reconstruction of the transaction graph much more difficult.
+
+[Alexander Zaidelson] (29:57 - 30:49)
+It's similar to Tor in some way. So the transaction is not immediately broadcast, but it goes through a series of nodes, and only one of them just sends it out to the wild. So it's very hard to trace the origin.
+
+Now, in addition to that, every node actually merges all the transactions that are coming to it to make it look like one big transaction. And if there's not enough transactions coming to it, it just, in our case, this is also different from Grin, we add what we call decoy outputs. So as the transaction is travelling on this stem of this Dandelion flower, it gets bigger, so it makes it hard to detect the original address or the source IP address.
+
+But also it kind of makes it much bigger with adding decoy outputs or other outputs, so it becomes harder to trace.
+
+[Anna Rose] (30:49 - 31:03)
+Kind of as you describe a lot of these features, all of it is towards more privacy. Do you see Beam and Membo-Wembo in general as just being purely privacy driven, or is there other benefits that come from this protocol?
+
+[Alexander Zaidelson] (31:04 - 31:07)
+I would say this protocol brings in privacy and scalability together.
+
+[Anna Rose] (31:07 - 31:07)
+I see.
+
+[Alexander Zaidelson] (31:08 - 31:53)
+Okay, so it's a very healthy combination of privacy and scalability, although we're working to further improve both of them. So we've just recently announced our work on a protocol called Lelantis. That's a very new protocol developed by a cryptographer named Aram Jivanyan, who's working with Zcoin, exactly.
+
+So we got fascinated with this technology, and we actually adapted it and published how it can be adapted to Membo-Wembo. And we're looking to implement it to further improve privacy. And we're also looking for ways to improve the scalability as well.
+
+So again, Membo-Wembo is both privacy and scalability, and at Beam, we're trying to push the envelope even further.
+
+[Anna Rose] (31:54 - 32:24)
+I want to ask sort of one more question on Grin. The reason I think that there is a lot of... I mean, in this episode, we've talked a lot about Grin.
+
+I think it's because, at least from where I was sitting over in Berlin, Grin somehow was more visible early on. And so I wonder, do you work a lot with Grin? Do you work together?
+
+Did you work together early on? I'm just curious about what the relationship is between the two groups.
+
+[Alexander Zaidelson] (32:25 - 33:49)
+So I think we have established a very good, healthy working relationship. It's not that we are developing in parallel or working together on a specific project. But we do have several groups and several discussion groups that are both...
+
+part of them are public, part of them are in Telegram. We are sharing ideas and asking questions. And it's been working very well, at least for us, and hopefully for them.
+
+In some cases where there is some issue with a protocol or something we need to discuss, then it's because arguably those are only the two best teams in the world that understand MimbleWimble. So we share a lot of information and we share some future ideas. And I think overall, we've built a very good and healthy relationship with Grin.
+
+So of course, there is a certain competition because we are two coins on the same protocol. But it's not a zero-sum game. And we think there is space for two or maybe even more currencies.
+
+But right now there are two major implementations. And we find it very beneficial, the opportunity to talk to... And the guys there, most of them are brilliant developers.
+
+So it's really a pleasure and it's very useful and it's good for all sides.
+
+[Anna Rose] (33:50 - 33:54)
+What would a fork even look like in something like MimbleWimble?
+
+[Alexander Zaidelson] (33:55 - 33:58)
+A fork, you mean like a blockchain fork?
+
+[Anna Rose] (33:58 - 34:04)
+Yeah, like a hard fork. But say somebody wanted to fork one of these projects.
+
+[Alexander Zaidelson] (34:04 - 34:53)
+So there are two senses, right? So when you say fork, you can mean that somebody takes the source code and creates a new project, right? So this has already happened.
+
+There are, I think, about 10 different forks, most of them Grin's forks, but also a couple of Beam forks. There is Bitgrin, which is Grin with Captain Mission. There is Grim, which is a Beam fork.
+
+And there are a bunch of others. And hopefully, there will be more because again, this tells us that there's something interesting in this protocol. But none of them has reached the stage that Beam or Grin are at.
+
+They're not that significant yet. And this can be done, like, anyone can do that. It's all open source, obviously.
+
+So it's not different from any other protocol.
+
+[Anna Rose] (34:53 - 34:56)
+And that's a Genesis fork. So you start from scratch.
+
+[Alexander Zaidelson] (34:56 - 35:23)
+Yes, yes. So you take the code and start a new project. Now, if we're talking about a hard fork, that's something different.
+
+That's when you release a new piece of software that breaks the consensus. And then you want all the community to adopt this new software, because if they don't, then the network splits. Now, both Grin and Beam have done that exactly this summer.
+
+[Anna Rose] (35:24 - 35:25)
+A hard fork.
+
+[Alexander Zaidelson] (35:25 - 35:59)
+Yeah, they did their own in July, I think, and we did ours in August. In both cases, it was the change of the mining algorithm that was the most important. And I guess some other stuff.
+
+And it went well, because both of those forks were not contentious forks, right? They didn't hurt anyone. But we know that in some cases in history, some forks, if some people don't like it, then the network splits.
+
+So we were lucky and everyone we know or we see converted to the new version.
+
+[Anna Rose] (35:59 - 36:01)
+What is the miner community like in Beam?
+
+[Alexander Zaidelson] (36:03 - 37:00)
+Well, in my view, miners are very professional people who calculate meticulously and just mine coins that make sense to mine. Although there is sometimes sentiment towards a specific coin. So we know that some of the miners are not just mining and selling immediately, but also holding.
+
+Alex, maybe you can correct me, but I don't think our miners are different from other miners. They might be different a little bit because we are a GPU-mineable coin, right? It's not ASIC.
+
+So it's kind of probably different scale of companies. So our miners are a little bit smaller. There is much more pools and much more people who are mining at home through a pool.
+
+So it's a little bit more democratic. But in that respect, it's probably similar to any GPU-mineable coin.
+
+[Anna Rose] (37:00 - 37:06)
+Got it. Sonny, I don't think we've ever done like a full episode just on miners. Might be something worth doing.
+
+[Alex Romanov] (37:06 - 38:21)
+So mining is an exciting topic, which is very rich with a lot of details and nuances. And these people are highly technical, both in hardware and software. And as Alexander said, it's all about calculating the profits and the margins and the CAPEX and the OPEX and all the other parameters.
+
+Of course, the electricity costs. And I know that some of our miners, they are dedicated BIM miners, but a very large part of them are mining Ethereum or like different coins as well that are GPU-mineable and switch whenever it's profitable. So far, BIM has been, I think, pretty profitable to mine according to the mining sites that calculate all these rewards.
+
+So yeah, we have a very steady and rising hash rate. During the last hard fork in August, we have improved the mining algorithm that we're using and made it more efficient by about 25% to 30%. So it means that you can mine more blocks and have higher hash rate with the same equipment.
+
+So it was also a very good improvement.
+
+[Anna Rose] (38:21 - 38:28)
+Are you worried about or do you want to encourage ASIC use? Can there be ASICs for BIM?
+
+[Alex Romanov] (38:28 - 38:37)
+Yeah. So theoretically, yes. However, we have from the beginning announced that we're going to do two scheduled hard forks to avoid the ASICs.
+
+[Anna Rose] (38:37 - 38:39)
+Oh, you want to avoid them in this case?
+
+[Alex Romanov] (38:39 - 39:25)
+Yes. So basically two hard forks, it means that at least for a year and a half, it would not be economically profitable to create an ASIC. But after that, the foundation will determine whether it goes, you know, where this goes.
+
+The current algorithm we're using, Equihash, it's very memory intensive. It requires a lot of memory. So it's not very simple and cheap to create an ASIC to mine that.
+
+But I think it mostly depends on the success of the coin, because if BIM is hugely successful, I think eventually it might become really profitable to create a dedicated ASIC for it. But as I know, currently, there are no such efforts, but it might change in the future.
+
+[Alexander Zaidelson] (39:26 - 39:48)
+Yeah. So the idea behind the two forks was to signal ASICs developers that it's not worth even to start working, because it usually takes like about six months to develop an ASIC. And if the thing changed, it kind of becomes obsolete.
+
+So after the second hard fork, you know, but then if it makes economic sense, then developers will start working on that.
+
+[Anna Rose] (39:48 - 40:01)
+Is there any sort of, I don't even know if this is possible, but could you have anything like lightning or any off-chain connection with MimbleWimble, or is that crazy? I'm getting an eye roll from you.
+
+[Alexander Zaidelson] (40:01 - 40:02)
+Excellent question.
+
+[Alex Romanov] (40:03 - 40:49)
+Coincidentally, during the last fork, we have introduced the relative time locks, which is the mechanism that allows exactly that to create payment channels, which are an essential building block for lightning networks. So first of all, you can create a channel between the two wallets, lock some coins and then have instant transactions off-chain. And then as a next step, you basically add routing, which allows you to pay someone, even if you don't have a direct channel to this person, just by going through several hopes of large enough funded channels.
+
+So yes, basically, we have created a demo, which was, I think, released today.
+
+[Anna Rose] (40:49 - 40:50)
+Oh my gosh.
+
+[Alex Romanov] (40:50 - 41:05)
+Yeah. Actually, today, September 18th, we have aired a YouTube video that is demonstrating the use of the Lightning Networks, kind of Lightning Network payment channels between the wallets. We call it the LaserBeam.
+
+[Anna Rose] (41:05 - 41:05)
+Nice.
+
+[Alex Romanov] (41:06 - 41:20)
+It's very cool. It's very interesting technology, very complicated, and we're very proud of it. So the demo is currently only in command line wallet, but we're thinking about incorporating it into our product line of desktop and mobile wallets as well.
+
+[Anna Rose] (41:20 - 41:30)
+But the only kind of thing with Lightning specifically is like, if you're doing that, you kind of do lose the privacy. Like you're going, or can you make Lightning in this case?
+
+[Alex Romanov] (41:30 - 41:52)
+Yeah, not at all. Like all the transactions are still completely private because when eventually they're settled on chain, after you have like a series of back and forth between the two wallets, it follows the same bimbo-wimbo protocol and it basically just creates new TXOs according to the last settlement, which is completely private.
+
+[Anna Rose] (41:52 - 42:00)
+Oh, I see. Okay. In that case, I mean, so what it makes me think of, though, is like one of these protocols like Bolt.
+
+Would you need to use Bolt in that case?
+
+[Alex Romanov] (42:00 - 42:17)
+So I'm not really deeply familiar with Bolt, but one of the key differences between Beam and, for example, Bitcoin in this sense of adding Lightning, in our case, it's not a second layer solution. It's a first layer. It's inside the node.
+
+[Anna Rose] (42:18 - 42:18)
+Oh, wow.
+
+[Alex Romanov] (42:18 - 42:32)
+So you don't, yeah. So one of the reasons a lot of things work as they do in Bitcoin is because it tries to build on top of the existing infrastructure while we can still change the infrastructure and make it work from inside. So it has a lot of benefits.
+
+[Anna Rose] (42:32 - 42:33)
+Okay.
+
+[Alex Romanov] (42:33 - 42:37)
+This way, yeah. You don't have to go through a large series of compromises.
+
+[Anna Rose] (42:37 - 42:47)
+Then, but then the other question is, is there a way for other chains to do it, like to interoperate with mimbo-wimbo? Like, could you have something outside interacting inside?
+
+[Alex Romanov] (42:47 - 43:24)
+Well, yet another excellent question here. So yeah, there are a lot of ways. First of all, it's the atomic swap, which basically we have launched in the command line.
+
+I think it was July. Yeah. And now we're working hard on building it into our desktop and mobile wallets, which allows you to have a completely trustless swap without any centralised authority.
+
+Like you don't need an exchange to trade, let's say Bitcoin or Litecoin for Beam in a way that none of the parties can cheat the other one.
+
+[Anna Rose] (43:24 - 43:29)
+How do you deal with price though, like price oracles and like figuring out what the value is on each side?
+
+[Alex Romanov] (43:29 - 43:56)
+We have added something that we called an atomic swap offers. It's like a screen that allows you to publish your proposal for a swap, which indicates the going rate that you are willing to swap your Bitcoin or Litecoin for Beam or vice versa. And if somebody accepts your swap, you initiate the swap on the conditions that were published.
+
+So we don't really rely on external oracles. But of course, obviously people will need to monitor the price to understand whether this specific swap is profitable or not.
+
+[Anna Rose] (43:56 - 44:00)
+I see. And they wouldn't, they'd have to be monitoring this somewhere else, like basically on their own.
+
+[Alex Romanov] (44:00 - 44:10)
+Yes, we are planning to add this feature into the wallet that will show you the price, the actual price from the exchange directly, but it's still in the works and it will probably release a little bit later.
+
+[Anna Rose] (44:11 - 44:32)
+Do you imagine like, so now there's a lot of, at least there's attempts by some of the privacy tokens to get themselves into existing wallets or existing platforms. Do you think something like Beam, MimbleWimble in general, is that possible? Or is it like you have to have the bespoke, like specified technology?
+
+[Alex Romanov] (44:33 - 45:04)
+Yeah, so we have been talking with quite a lot of different wallets. And one of the biggest challenges there is that the difference between the way how we're used to do things in Bitcoin or Litecoin or most other cryptocurrencies due to the interactive nature of MimbleWimble. So in MimbleWimble, we have to involve both wallets in the process of creating a transaction.
+
+You can't just know someone's address and send him the coins because addresses are not stored in the blockchain.
+
+[Anna Rose] (45:04 - 45:11)
+Yeah, as I understood it, it's interactive, meaning you're going to do like a send and receive. They don't have to be online at the same time, but they have to be like willing to accept this.
+
+[Alex Romanov] (45:11 - 46:05)
+Exactly. So using the SBBS system, you don't have to be online in exactly the same moment. But yes, you do have one round trip of send and back to the sender in order to create the transaction, which makes it very difficult to integrate with existing wallets because almost all of them are using this existing model of having an address, signing the transaction offline, and then just sending it to the chain.
+
+That said, we have some interesting cooperations that might happen in the near future of wallets that do will to do some extra work and extend their model and integrate us into some existing wallet ecosystem. I think it will be great. We're very excited about it and looking forward to such cooperations.
+
+But once again, yes, it's much more difficult than just adding another ERC20 token or another coin that works in a similar fashion.
+
+[Anna Rose] (46:05 - 46:23)
+I have a little bit of a question for like the user experience here. Would it be, say down the line or even maybe in the wallets that you've created, would it be like I send a token and then it just says pending for a while? And it could be like pending for a day or a week?
+
+[Alexander Zaidelson] (46:23 - 47:18)
+Yeah, that's exactly how it works. It shows pending, even with that very wording, I think, or waiting for a receiver, say something like that. But there is a limit to how long it will keep it in that way.
+
+And right now the limit is 12 hours. So if I send you, if you give me your address, which is like one, actually an address in Beam is a one-time communication token in essence. So your wallet creates this kind of a token.
+
+You send it to me. It's called the address just to make the experience similar to all the other cryptocurrencies. And then my wallet starts to post a message for your wallet and waits for your wallet to answer.
+
+So if your wallet is not online, it would wait for 12 hours and then it would just cancel the transaction. So if the two wallets are online, the experience is very, very seamless. Or if the second wallet comes online after a certain period of time, which is not too much, then it's also kind of seamless.
+
+[Anna Rose] (47:18 - 47:21)
+How fast could it be if both were online and really staring at their wallets?
+
+[Alexander Zaidelson] (47:21 - 47:36)
+Less than a minute, I think. It's pretty quick. It's pretty quick.
+
+And then it's a two-way communication. And then the sender actually pushes a transaction to a node. And then it gets into the block.
+
+[Anna Rose] (47:37 - 47:44)
+Is there any sort of data field in MimbleWimble? Can you also send other things along the way?
+
+[Alexander Zaidelson] (47:46 - 48:33)
+Well, right now we're not sending anything. But in principle, you could use this messaging system to send additional stuff. And we actually have plans to do that.
+
+Because when we're talking about the future auditability features, we can include collateral documents into the transaction. I might send you money, but then you can say, OK, I might offer. Because what my wallet does when it sends something, it says, OK, Anna, my wallet wants to send you 100 BIM.
+
+And it can say, but I want an invoice from you or some sort of an ID or whatever. So you can extend this system. Absolutely.
+
+And also, remember, we talked about the kernels. So a transaction might have multiple kernels. And the additional kernels might contain additional information that can be used in the future.
+
+[Alex Romanov] (48:33 - 48:45)
+For example, the offer board for the atomic swaps, it's using the SBBS system as an extension. So we are already using this infrastructure for more than just creating transactions.
+
+[Anna Rose] (48:46 - 49:19)
+Cool. Could you ever... So one of the topics that's sort of become interesting to me is this mixture of total privacy, but with compliance, like actually allowing for, I don't know, taxes to be paid automatically, legally.
+
+You can check the science, you can check the technology to be sure that it was done correctly. However, no other information is revealed. And it maybe is only revealed to one source.
+
+Is there any way for a system like that to be built in MimbleWimble or using MimbleWimble?
+
+[Alexander Zaidelson] (49:19 - 50:25)
+Yes, that's exactly what our vision is, to build a system like this where you are private, meaning that nobody else can see your transactions or your history unless you let them. Okay? Because the real privacy is, it also includes the ability to share information in a provable way, right?
+
+So that's eventually what we're building. And MimbleWimble is actually pretty, kind of seems pretty good for that because it has this extensibility, but privacy is built in. So the vision is that all this additional information will be stored off-chain, but with kind of links to the blockchain itself, you know, through storing hashes of all this additional information in kernels or something like this.
+
+Again, we're still kind of debating on the exact implementation. We have quite a lot of ideas. And then you come to a system where, as a user, you are, on the one hand, fully confidential, which is not true for Ethereum, Bitcoin, and a lot of most other currencies.
+
+[Anna Rose] (50:25 - 50:28)
+But would be very useful for any sort of business cases. Exactly.
+
+[Alexander Zaidelson] (50:28 - 51:07)
+But for a business case, a business would not use something that is not reportable or not, cannot pass AML controls, not auditable in certain ways. So the trick here is to define the exact amount of information that can be revealed and to who without hurting the privacy. And we think we have a pretty good idea of how to do that.
+
+So we want a system where every user chooses their level of privacy, like in cash. I could be either fully confidential with my cash when I spend it. But the businesses that, for example, accept it, they need to issue some sort of paper and then need to report it.
+
+[Anna Rose] (51:07 - 51:07)
+Got it.
+
+[Alexander Zaidelson] (51:07 - 51:10)
+So we want to build something that mimics that use case.
+
+[Anna Rose] (51:12 - 51:22)
+All right. So what's next for Beam then? What's the future of Beam?
+
+Other than really cool, like more cool names using Beam, having Beam in it.
+
+[Alexander Zaidelson] (51:22 - 52:00)
+So I'll talk about the product side. And Alex, maybe we'll add something about technology. So product-wise, our near future includes this Atomic Swaps marketplace.
+
+And we're also starting to work on something called confidential assets, where the idea is to bring additional kinds of assets of tokens, for that matter, from other blockchains, from Ethereum, bring tokens to Beam. Not the tokens themselves, but lock your DAI coins on Ethereum and mint a Beam DAI on Beam and trade in full confidentiality.
+
+[Anna Rose] (52:01 - 52:01)
+Wow.
+
+[Alexander Zaidelson] (52:01 - 52:23)
+So that's the next big offering. And further down the road, it will be auditability. So these are the big product milestones.
+
+It will take time. Some of that might take months. So we're just starting.
+
+And then there is a technology roadmap.
+
+[Alex Romanov] (52:24 - 53:32)
+So we have several general directions of development that are currently actually in different phases. So as Alexander mentioned, confidential assets is an ability to create new tokens on Beam and immediately they have all the privacy features of Beam built in. It's a very important feature, which I think will be very useful for many different applications.
+
+There is a lot of technological development involved in this, building these assets on top of MimbleWimble, building the bridges that allow to move them from different chains and to trade them in confidentially. There is a lot of product there as well. Lelantus has a possible and very interesting improvement on the confidentiality.
+
+We're also starting research into other very interesting technologies. There is a lot of development going on right now in snarks, specifically trustless, snarks without trusted setup, which would be a huge thing. There is a lot of work by different organisations and we are constantly monitoring the situation there because I think some of that might be relevant to us as well going forward.
+
+[Anna Rose] (53:33 - 53:40)
+And that was actually another one of my questions is like, will there be zero knowledge in this protocol? And it sounds like, if possible, yeah.
+
+[Alex Romanov] (53:41 - 54:40)
+Today, we have a small piece of zero knowledge called Bulletproofs, which we use to prove that the UTXO value is actually positive. So we have some of that. But I think Lelantus also makes use of zero knowledge proofs, which are extended a little bit.
+
+But I think in the next couple of years, we will see a lot of developments in this field. Judging by previous experience, this field just exploded with interest from both practitioners and scientists. It's going to be fascinating, I think.
+
+So we are monitoring that. And of course, there is the usual technological roadmap adding features like TOR and I2P integration. And we have a lot of plans on improving the wallets even further.
+
+We have to make the system more robust in the future, maybe extending these atomic swap functionality to support more coins. So yeah, a lot of things are waiting for us in the next year, I think.
+
+[Anna Rose] (54:40 - 54:45)
+Very cool. All right. Well, listen, thank you so much for sitting down with me to do this interview.
+
+[Alexander Zaidelson] (54:46 - 54:50)
+Thank you very much. Thanks a lot. It was a real pleasure.
+
+Great questions. Thanks for coming.
+
+[Anna Rose] (54:50 - 54:56)
+I'm curious to hear where this goes in the future. So thank you again. And to our listeners, thanks for listening.
