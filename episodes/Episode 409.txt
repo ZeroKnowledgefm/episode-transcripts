@@ -1,0 +1,997 @@
+﻿[Anna Rose] (0:05 - 1:33)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, I catch up with Richard Liang from Peer, a project formerly known as ZKP2P. ZKP2P initially came out of an event that we hosted called ZK Hack Lisbon, and we last caught up on the show about two years ago. In this episode, Richard walks me through how the product has been iterated and expanded since we last spoke, starting with ZK email proofs on Venmo receipts, moving to ZK TLS, and most recently, their switch to TEEs.
+
+
+We discuss the reasoning behind each shift, including the trade-offs around privacy, trust assumptions, speed, and the idea that some use cases only need short-term privacy rather than permanent guarantees. We cover the rebrand from ZKP2P to Peer, the state of ZK adoption more broadly, and how the team is using AI internally today. Hope you enjoy.
+
+
+Now, here is my interview with Richard Liang from Peer. Today, I'm here with Richard Liang from Peer, a project that was formerly called ZKP2P. Welcome back to the show, Richard.
+
+
+[Richard Liang] (1:34 - 1:37)
+Richard Liang Thanks for having me, Anna. Excited for round two.
+
+
+[Anna Rose] (1:37 - 2:40)
+Anna Abe Yeah, so we actually had you on the show two years ago. We were talking about ZKP2P. I'll add the link to that in the show notes.
+
+
+We knew you, actually, as one of the projects that came out of ZK Hack Lisbon. I think in that episode, we talked a lot about, you know, forming the company, forming the project. We talked a lot about the forming of the team, the ideas that you had, building it out, and sort of your first iterations.
+
+
+Back then, you were primarily using ZK email and I think mainly the Venmo system. I became an investor soon after that episode, I think. I feel like we have a good snapshot that I'm going to share in the show notes, but I would love to use this interview to catch up with you.
+
+
+I know that you've gone through a bunch of different iterations with the product. You've done a rebrand. So yeah, I'm excited to start.
+
+
+I think maybe a good starting point would be to like to go back in time a little bit to that product. What has happened since? You know, what was your thinking back then and how has that evolved?
+
+
+[Richard Liang] (2:40 - 3:28)
+What were the different iterations you took along the way? Yeah, a lot of things have definitely happened since then. Back then, in 2024, we were running a lot of experiments and trying to push the frontiers of what we could build with ZK in like consumer kind of applications.
+
+
+And yeah, back then we were proving that you have actually sent a Venmo payment and received an email confirming you've sent a payment to someone else and using the DKIM signature of the email and using ZK to prove that and then submit that on-chain in order to do some action. And in our case is to release some USDC. So effectively, it's kind of like an on-ramp transaction.
+
+
+[Anna Rose] (3:29 - 3:46)
+Yeah, I remember it was sort of like this two-way transaction, right? Like so on the sort of traditional side, you were sending money like money was being transferred over Venmo. And then on the on-chain, money was being transferred in the other direction on-chain.
+
+
+And it was all connected through this ZK email glue.
+
+
+[Richard Liang] (3:47 - 4:16)
+Exactly. Yeah. So the first step was a seller of USDC on-chain wanted to receive something in fiat and Venmo.
+
+
+So they locked some USDC into a smart contract. And then later on, a buyer comes in and basically says, hey, I want to on-ramp. So how the buyer does it is they pay the seller directly on Venmo and use a receipt of the email as proof to unlock the smart contract directly.
+
+
+[Anna Rose] (4:17 - 4:37)
+Yeah. And back then, I mean, you talked about, I don't know if we had ZK email on before or after. I can also take up that episode with Ayush, but it was brittle.
+
+
+Like it was cool, but it was like, I just remember the conversation being something like if Venmo changes the format of their email, your system breaks, which is problematic, right?
+
+
+[Richard Liang] (4:37 - 4:49)
+Exactly. It actually did happen. Oh, really?
+
+
+I don't know how soon after the episode came out back then, but yeah, that happened. But luckily, I think we were moving into alternative methods. Yeah.
+
+
+[Anna Rose] (4:49 - 5:01)
+So what happened next? Like, where did you go after the ZK email? Did you end up just sort of shelving that and being like, this is cool, but we need something more sturdy?
+
+
+Do you still use it somewhere?
+
+
+[Richard Liang] (5:01 - 5:24)
+We're looking at the other kind of provenance-proving, authenticity-proving kind of solutions out there at the time. In particular, we're looking at TLS notary and a lot of the proxy, ZK proxy work that reclaim, I think, Opacity, Pluto back then we're working on as well, because we knew that one day, yeah, ZK email could break.
+
+
+[Anna Rose] (5:24 - 5:42)
+Yeah. And did, apparently. So talk about that transition over to the ZK TLS stuff, because we've also, you know, over the years covered that quite extensively.
+
+
+So what, you're kind of like a user of that technology. How did it work? How did it not work?
+
+
+Like what happened with ZK TLS?
+
+
+[Richard Liang] (5:42 - 6:32)
+So the main brittleness came from the email template changing and we needed to move to a more stable kind of solution. And the solution was basically to prove API responses instead of emails and API responses, especially private ones that like Venmo, whatever, Cash App, all these FinTech platforms have are way more stable and they don't change. So that fixes a lot of the brittleness issues that we're running into while building kind of a consumer application.
+
+
+And in particular, I guess, ZK TLS used, yeah, a lot of the privacy preserving techniques that ZK email has that we liked. And it was a new technology that came out back then. So we were really excited to test it out and push the frontiers on that as well.
+
+
+[Anna Rose] (6:32 - 6:49)
+What did you use it for? Like, where was it used in your product and with which payment providers basically? Yeah.
+
+
+Because like, yeah, all I knew back then, I think it was Venmo and USDC. And then it was also, what was it, UPI?
+
+
+[Richard Liang] (6:49 - 6:53)
+Yeah, UPI. It was the Indian INR payment rails.
+
+
+[Anna Rose] (6:53 - 6:58)
+Yeah. Okay. So once you started playing with ZK TLS, what happened?
+
+
+Like where was it being used?
+
+
+[Richard Liang] (6:58 - 7:55)
+It was used as a replacement for ZK email for us. So instead of the user providing a receipt of a DKM like signed email from Venmo, it was still Venmo, but the user now generates a client side, I guess, proof that I did call this Venmo API, got a response on it and able to prove that the response contain like certain fields, like the amount, the recipient, the timestamp, stuff that is required to unlock the USDC in the smart contract. And did it work?
+
+
+Yes, it worked better than Venmo. There were still obviously some hiccups with new tech, but yeah, switching to API responses, definitely a lot more stable. But at the same time, it was still using, I guess, client side ZK proofs.
+
+
+So Groth16 running in your browser. And then that could differ quite a lot depending on how powerful your laptop is.
+
+
+[Anna Rose] (7:55 - 8:01)
+Did you feel like was there a flow down? Like was there noticeable UX issues because of that?
+
+
+[Richard Liang] (8:01 - 8:26)
+It actually improved off of ZK email. If we were proving ZK email client side, I think how long that took was like nine minutes to prove the email circuit directly in browser. So when we were back using ZK email, we were proving it server side, which was kind of cheap.
+
+
+That took 20 seconds. And with ZK TLS, it was probably around that interval too.
+
+
+[Anna Rose] (8:26 - 8:29)
+I see. But you were actually doing it on device.
+
+
+[Richard Liang] (8:30 - 8:31)
+Yeah, exactly. That was the change.
+
+
+[Anna Rose] (8:32 - 8:38)
+Nice. Okay, but then are you still using ZK TLS today with some systems?
+
+
+[Richard Liang] (8:38 - 8:42)
+No, that's a, I guess, another time junk in our journey.
+
+
+[Anna Rose] (8:43 - 8:52)
+Okay, maybe tell me what happened in between. Feel free to just like go chronologically if you want. But yeah, I'm really curious where that sort of gets also swapped out and why.
+
+
+[Richard Liang] (8:53 - 9:26)
+So we stuck with ZK TLS from basically the start of 2025 to, I guess, a couple months ago. So a year and a half, I would say. And yeah, we were able to add a lot of different payment providers powered by this exact mechanism.
+
+
+But yeah, at a certain point, like up until a few months ago, felt that we needed to get a lot more reliable. If we were to get a lot more non, I guess, crypto native users using us. And that's kind of where the switch came in.
+
+
+[Anna Rose] (9:27 - 9:31)
+Where did you switch to? What did you switch to rather?
+
+
+[Richard Liang] (9:32 - 9:43)
+I don't know if I can mention on this podcast, but we did make a switch to DEs that we currently deploy ourselves. So it's entirely our own infrastructure now.
+
+
+[Anna Rose] (9:43 - 9:53)
+So is this no longer client side? I'm trying to picture what the flow looks like now. Should we still use Venmo as the example?
+
+
+I don't know if there's a more relevant one.
+
+
+[Richard Liang] (9:54 - 9:56)
+Yeah, Venmo is probably the best one.
+
+
+[Anna Rose] (9:56 - 10:18)
+So somebody has funds on Venmo and they're going to send it somewhere in order to get USDC on-chain. What is happening? Because I do remember, and I will again recommend that listeners who haven't listened to the first episode, please do, because we do go into more detail about ZK email exactly.
+
+
+Can you walk us through the sort of user path in the new system?
+
+
+[Richard Liang] (10:19 - 10:48)
+Yeah, but before I do that, I'll mention one nuance about ZKTLS as well. We did talk about the user still generating client side ZK proofs, but in ZKTLS, those proofs are actually not being sent directly on-chain to unlock the USDC and the smart contracts. They are actually, as well as all the ZKTLS systems, the proofs are being forwarded to a tester proxy in the middle.
+
+
+[Anna Rose] (10:48 - 10:48)
+Oh yes, I remember this.
+
+
+[Richard Liang] (10:48 - 11:26)
+And then the proxy actually verifies the proofs and attaches, I guess, a signature on top that then can be verified on-chain. And yeah, I guess the reason for the tester in the middle in ZKTLS and also in TEs that I'll go into is that there has to be like a intermediary, I guess a proxy in the middle to attest to the Web2 kind of like the off-chain API call. And that is not possible without like someone, yeah, like a service in the middle, because there are no signatures on API responses.
+
+
+And yeah, that's true for ZKTLS and TEs.
+
+
+[Anna Rose] (11:26 - 11:39)
+So yeah, let's do that flow maybe. Like let's use TEs because, and I know we're maybe skipping over the way that ZKTLS worked with it, but I'd be curious, I'm just curious to hear how you're doing it today.
+
+
+[Richard Liang] (11:39 - 12:24)
+So in the TE flow that we have, the Venmo, I guess, buyer of USDC, they come in, they make the payment, still the same as all the previous flows. But now they basically log in to Venmo to intercept the, I guess, the API response. And with that session material, they encrypt that session material with the tester or the TE's upload key that only the TE holds.
+
+
+And once that session material is forwarded to the TE, the TE decrypts it, validates the authenticity of that connection by replaying it, and then lastly, it attaches a signature and sends it back to the user that can be used to unlock USDC.
+
+
+[Anna Rose] (12:24 - 12:35)
+I see. And I guess, I mean, the question I did have was like, is there, is ZK completely stripped out? And it sounds like it is?
+
+
+Like, is there a proof anymore?
+
+
+[Richard Liang] (12:35 - 12:41)
+Yeah, there's no ZK proof anymore. There is an attestation, which is the only thing remaining.
+
+
+[Anna Rose] (12:41 - 12:55)
+How does the user actually intercept this Venmo session material? Like, are they using your interface that's like behind the scenes Venmo? Or are they in Venmo specifically, and they're actually active in there?
+
+
+[Richard Liang] (12:56 - 13:26)
+So in our case, they directly use Venmo. But on desktop, that requires installing, I guess, the peer extension plugin. And in the extension, there is that ability to intercept incoming, I guess, web requests and be able to offer a much better UX for the user.
+
+
+The other alternative is the user basically has to inspect like Chrome developer tools directly and copy and paste it, which is probably no good.
+
+
+[Anna Rose] (13:26 - 13:41)
+But wait, so is peer then like a new, is it like within the Venmo ecosystem? Is it something that like a Venmo user can see and like can find in a store or like sort of a, yeah, how do they get it? Or do they have to like manually instal it?
+
+
+[Richard Liang] (13:42 - 14:09)
+No. So basically what we're able to do with peer is not work with any of the underlying payment platforms in order to generate proofs. And it's all user-driven in that the user instals, I guess, the peer extension.
+
+
+The user initiates a login to their own Venmo account on web with the extension. And then the user generates that attestation or calls that attestation themselves. Okay.
+
+
+[Anna Rose] (14:09 - 14:19)
+So like the extension is kind of grabbing what you need in order to like unlock it, but like for the user, would the flow feel quite easy once that extension's installed?
+
+
+[Richard Liang] (14:19 - 14:43)
+Yeah. So the extension is purely, I guess, on client side for the user to give them better UX. So we do try to do a lot of things that basically after you instal the extension, you don't need to care about it anymore and see it anymore.
+
+
+And it's entirely headless. So further, like second, third, fourth on ramps, the user doesn't even need to know the extension exists.
+
+
+[Anna Rose] (14:44 - 15:09)
+Oh, cool. Okay. So that's kind of describing the way that the T is now incorporated.
+
+
+I do want to ask kind of like what's gained and what's lost. Like, have you lost privacy? You know, you no longer have the ZK proof.
+
+
+I don't know, like maybe it wasn't so private before either, but can you talk a little bit about like that trade off space and like, what do you feel you like lost? What did you gain?
+
+
+[Richard Liang] (15:09 - 15:20)
+So the main difference is that now the user basically has to trust the T to preserve privacy for the end users, like session, demo session.
+
+
+[Anna Rose] (15:20 - 15:29)
+They're trusting your T's, right? Like T's that your server, like you're running them. It's not like the T on the user's device.
+
+
+[Richard Liang] (15:29 - 15:37)
+Yeah, yeah, exactly. It's, we're using AWS Nitro. So you're basically trusting AWS to protect their T's.
+
+
+[Anna Rose] (15:37 - 15:50)
+Got it. Okay. So the trade, that's sort of the negative, like now we're T's, the hardcore cryptography, ZK people won't like that because T's get broken sometimes.
+
+
+And, but what do you gain? Like why do that?
+
+
+[Richard Liang] (15:51 - 16:11)
+Your underlying, I guess, privacy assumption changes, but the same privacy still exists where no one else can see your session material except for, I guess, the third party box. But we do gain a speed in that we go from like 20 seconds to generate ZKTLS proof to like 300 milliseconds, essentially.
+
+
+[Anna Rose] (16:12 - 16:12)
+Okay.
+
+
+[Richard Liang] (16:12 - 16:21)
+And we also gain a lot of programmability that you can talk about more in that you can do cool new flows with T's that are not possible.
+
+
+[Anna Rose] (16:21 - 16:22)
+In ZK.
+
+
+[Richard Liang] (16:22 - 16:23)
+Yeah. ZK. Yeah.
+
+
+[Anna Rose] (16:24 - 16:29)
+Where does the attester live? Does the attester live in the TEE that you run?
+
+
+[Richard Liang] (16:30 - 16:34)
+Yeah. The attester lives entirely, I guess, in the TEE.
+
+
+[Anna Rose] (16:34 - 16:53)
+Okay. And what, what is it? So I'm just trying to picture, like, what is it doing?
+
+
+Is it sort of like getting this session material from the user and then checking it or doing something with it and then sending something back to the user? Or does it go directly on chain? Yeah.
+
+
+I don't fully know what that attester looks like.
+
+
+[Richard Liang] (16:53 - 17:13)
+So it does the same things as a ZKTLS attester in that it receives that material. But within the TEE, since it has the private key to decrypt, it decrypts that material, sees entire plain text, I guess, and then replays, I guess, that API call into like Venmo servers.
+
+
+[Anna Rose] (17:13 - 17:13)
+Okay.
+
+
+[Richard Liang] (17:13 - 17:36)
+So the TEE will know that, hey, like this connection is authentic. Um, and then we'll also like kind of redact like a lot of the response, response stuff and attach a signature to it. So it only signs on like amount recipient, timestamp, stuff like that to ensure like we have enough stuff to, that the user can then submit the signature directly into the smart contracts.
+
+
+[Anna Rose] (17:36 - 17:39)
+Does the attester send something back to the user?
+
+
+[Richard Liang] (17:39 - 17:41)
+Yeah. Yeah. It attaches a signature.
+
+
+[Anna Rose] (17:42 - 17:42)
+Okay.
+
+
+[Richard Liang] (17:42 - 17:47)
+I think it's just ECDSA, something that is easily verified.
+
+
+[Anna Rose] (17:47 - 18:08)
+And then that signature is passed by the user on chain to unlock a smart contract or to create an action of some kind. Yep. Cool.
+
+
+Okay. So the only trade-off you shared for the TEEs is like, it's a TEE. But in rebuilding it, like, was it a tonne of work to do?
+
+
+Did you have to rethink a lot of the architecture?
+
+
+[Richard Liang] (18:09 - 18:33)
+So the architecture is actually simpler than a proxy, like with ZK attached. You shift a lot of the assumptions from like cryptographic primitives to like the actual, yeah, the hardware, how you're securing it. But the actual programming of it is actually simplified.
+
+
+So we're actually more confident that there's less bugs in the TEE. Cool.
+
+
+[Anna Rose] (18:34 - 18:50)
+But was it hard for you guys as a company to let go of ZK? I'm just kind of curious what went through, like what kind of conversation was happening? I mean, your founding story definitely had ZK in it and you sort of were on the ZK train.
+
+
+So yeah, was it hard to do?
+
+
+[Richard Liang] (18:51 - 19:27)
+Yeah, we were all in on ZK and ZK primitives for basically the first two years. But I think as ZK primitives and proving time get faster, it's actually very easy for us to switch and use a different primitive. We're already like very primitive agnostic in our like smart contracts.
+
+
+And we basically used all the primitives out there today. And I think it's just a matter of like, can we offer the same UX to our end customers and users and without like sacrificing a lot of the trade-offs that ZK has today?
+
+
+[Anna Rose] (19:27 - 19:53)
+Do you feel like, I mean, just in the industry, there's been like this shift towards the users, towards making things easier, like kind of at times at the expense of sort of a decentralised system or at the expense of privacy. What are the pressures that you guys were experiencing? And I'm not saying because I do think you still have some of those things.
+
+
+You still have privacy. But like, yeah, are you, did you start to sort of change your philosophy somewhere along this journey?
+
+
+[Richard Liang] (19:54 - 20:51)
+We're like, we've always been pretty practical on, hey, like what's available today and how we can maximise like what we have today into serving our users. Like when we made the trade-off and switched over to TEs, or I guess when we switched over to TEs, we felt like the trade-off wasn't that big for our users. A lot of our existing users were like, I guess, transacting like $500 or less, not like securing like billions on a ZK blockchain, for example.
+
+
+And furthermore, with our exact flow, users are like, just need ephemeral privacy. So none of like the, like a long, like serving kind of permanent, like privacy, like guarantees are like stored directly in the TE. You basically only need like one second of privacy to ensure that like the vemo endpoint is attested, for example.
+
+
+And we felt like the trade-offs were like really not that big at all.
+
+
+[Anna Rose] (20:51 - 21:53)
+Yeah, I've heard about that where it's like, I feel like we have covered this on the show before, this idea that if you are doing sort of like a very short-term private action, something where it's like in and out of a system, you're not really worried if like down the line that information gets leaked. Because whatever you needed that privacy for, it's kind of finished. Whereas if you have these like long-term privacy kind of items, like ID or your balance on a blockchain or, yeah, I don't know, like how much you paid your employees, like these things that if they were discovered even in the future, it would be bad.
+
+
+You don't want the, and like there's a record, there's like a trace that could be seen. Yeah, in those cases, I feel like these more ZK, like full privacy, like no exception. I feel like people really have a strong case.
+
+
+But in those examples where it's short, I feel like a lot of the TE cases that we've spoken to people about end up having a bit that feature, that they're a little bit more about like that. What did you, did you say this or?
+
+
+[Richard Liang] (21:53 - 21:54)
+Ephemeral.
+
+
+[Anna Rose] (21:54 - 21:56)
+Ephemeral privacy. Yeah.
+
+
+[Richard Liang] (21:56 - 22:46)
+Yeah, yeah. So what we're approving is basically the session again. So the session with the session cookie, with the request headers, they only last like traditionally in like these banking websites, probably like 10 minutes.
+
+
+So as long as someone is not next to the TE listening for that exact like one second of like request replay in the TE, then we're pretty safe. As well as like a lot of the stuff that we do are like traditional, I guess, like APIs, which have their own session limits, rate limits, and also protection. Whereas like a lot of the, I guess, ZK in crypto are like, yeah, like blockchain securing large balances that are not reversible at all.
+
+
+So I guess the traditional like side channel attacks in TEs don't really apply to, I guess, what we're doing.
+
+
+[Anna Rose] (22:46 - 23:01)
+So like, let's theoretically say they're like, TEs are completely broken open and someone is able to look inside during that one minute window. What would they do? Like, what would it do?
+
+
+Could they get the attestation output?
+
+
+[Richard Liang] (23:02 - 23:35)
+One thing they could do, which they're able to do is read, I guess, exactly what we're proving, which is, hey, I can see you're like, you transfer like this guy 500 euros, for example, on Revolut. Typically, I guess, in these banking fintechs, like the right endpoints is secured by like an OTP or a 2FA. So even if they took the session material, they can't really transfer funds out.
+
+
+And even if they could, then I guess it is like off-chain fiat. So you can just call your bank to reverse the transaction.
+
+
+[Anna Rose] (23:36 - 23:47)
+True. But could they theoretically intercept the attestation or the attester's output? Do you know what I mean?
+
+
+Like the thing that the user needs in order to unlock on-chain.
+
+
+[Richard Liang] (23:47 - 23:57)
+It would be in memory. So they would have to be able to inspect directly what's in flight as like none of the attestations or signatures are stored anywhere.
+
+
+[Anna Rose] (23:57 - 23:57)
+OK.
+
+
+[Richard Liang] (23:57 - 24:14)
+But yeah, they would be able to, I guess, use that signature to unlock. But everything that we've kind of built within the protocol is that, like it's committed to during like when you start the order. So the actual signature would just, I guess, unlock funds for the user.
+
+
+[Anna Rose] (24:14 - 24:46)
+Is the on-chain stuff still on Ethereum? Do you still feel like part of the Ethereum community? Or do you feel like you've stepped much more into the banking land?
+
+
+Because it really, I mean, to me, Peer, especially with the rebrand, it has this much more like agnostic, like Web 3 agnostic or Web 2 agnostic. It sort of seems like it can live in both worlds. So I guess there's two questions in there.
+
+
+One is, yeah, is it still USDC on Ethereum? And two, like, do you agree that you are sort of starting to sort of shift focus?
+
+
+[Richard Liang] (24:47 - 25:14)
+Yeah, so it is USDC on a layer two. We're on base right now. And yeah, we, Peer, is kind of the bridge between traditional like fiat land and also crypto Ethereum.
+
+
+But we are very much, I guess, crypto like ethos aligned, though. Like the stuff that we're building is very subversive, kind of cypherpunk-y. Like you're going directly on-chain and directly off-chain without a middleman at all.
+
+
+[Anna Rose] (25:14 - 25:25)
+Yeah, except for this attester, but the attester is sort of a dumb middleman. It's not like a, it's not like an exchange where everything's visible. And yeah, it's like this sort of private actor.
+
+
+[Richard Liang] (25:26 - 25:49)
+Yeah, exactly. And I guess there are also ways we could potentially, I guess, decentralise the need to have a single attester. That could be coming.
+
+
+And yeah, a lot of like the extra, like, edit-indy, like stuff you have to give to like an exchange in order to KYC. If they store your basically KYC in plain text, all that is eliminated. It's kept private between the two parties.
+
+
+[Anna Rose] (25:50 - 25:50)
+Yeah.
+
+
+[Richard Liang] (25:50 - 25:52)
+Kind of interacting on the protocol.
+
+
+[Anna Rose] (25:52 - 26:09)
+Although, don't you sort of like benefit from it being interfaced with Revolut, Venmo, like those companies have sort of done their own checking of some kind for certain amounts. So like any user of those, have they already sort of passed some of those tests so you don't have to do it?
+
+
+[Richard Liang] (26:10 - 26:32)
+Yeah, exactly. So we don't do any additional, I guess, extra identity checks because yeah, the Venmo users, the Revolut users, they've already passed their like pretty strict KYC. And all of the transfers within our system are kind of within their ecosystems.
+
+
+So it's very closed looped. And as a result, we don't need to do anything extra.
+
+
+[Anna Rose] (26:32 - 26:42)
+Yeah. What are all the platforms you actually like that you work with? So we just mentioned Venmo and Revolut, UPI.
+
+
+Did you end up continuing that or did you stop that?
+
+
+[Richard Liang] (26:42 - 26:47)
+We stopped UPI, but we will, I guess, re-enable it at some point.
+
+
+[Anna Rose] (26:47 - 26:47)
+Okay.
+
+
+[Richard Liang] (26:47 - 26:51)
+UPI was also built on ZK email back in the day.
+
+
+[Anna Rose] (26:51 - 26:51)
+Yeah, yeah, yeah.
+
+
+[Richard Liang] (26:51 - 27:16)
+We just haven't enabled it for APIs. But yeah, other platforms like we're still mostly EU and US, I guess, centric with we have like Zelle, PayPal, like Chime, Cash App. And then in EU we have or UK as well.
+
+
+We have Monzo, N26, Revolut, obviously. And yeah, just a couple more. AYs, I guess.
+
+
+[Anna Rose] (27:16 - 27:19)
+Are they mostly, is it mostly banks then? It's like banks or money transfer.
+
+
+[Richard Liang] (27:20 - 27:25)
+Yeah, it's like fintechs, neobanks, where you can make like peer-to-peer transfers with each other.
+
+
+[Anna Rose] (27:25 - 27:34)
+Are there other, like you sort of hinted at some sort of programme programmability because of this TE? What can you do with peer?
+
+
+[Richard Liang] (27:35 - 28:21)
+The one thing that we've added into the protocol since we've launched TEs is that sellers, like the people who lock the USDC into a smart contract, they can also encrypt their like session material or their like fintech API keys and have the TE read from their balances or their transaction history. So what that unlocks is the buyer comes in, they make the payment to the seller just as before on Venmo, for example. But instead of them needing to download extension, logging in to their Venmo account, they just hit the seller's past transaction history via the attestation or attester in the middle.
+
+
+And as a result, there's no buyer proof needed.
+
+
+[Anna Rose] (28:21 - 28:28)
+OK, so the seller basically does the proving because it's received the funds on Venmo. Yeah. OK.
+
+
+[Richard Liang] (28:28 - 28:29)
+Yeah, exactly.
+
+
+[Anna Rose] (28:29 - 28:37)
+What is the difference between these two players? Like, who are they? Are the sellers, for example, are they more like market makers?
+
+
+Are they like professionals?
+
+
+[Richard Liang] (28:37 - 28:40)
+Both sides are, I would say, like retail.
+
+
+[Anna Rose] (28:40 - 28:40)
+OK.
+
+
+[Richard Liang] (28:41 - 29:10)
+The sellers are either trying to off-ramp fast into their direct directly into their fintech account or they're like trying to set a small premium and earn like a small spread when they like off-ramp or like sell their USDC. And then buyers are obviously they want to on-ramp to crypto or they like are just making kind of a payment as part of like a checkout flow that we built. And then the merchant basically receives the USDC on the other end.
+
+
+[Anna Rose] (29:10 - 29:19)
+Do the payment platforms, do they see anything? Do they get any info as well about like what's been executed on the other side? Is there anything that's sent back?
+
+
+[Richard Liang] (29:19 - 29:26)
+So the platforms can definitely just see the transfers between the buyer and seller.
+
+
+[Anna Rose] (29:26 - 29:26)
+Yeah.
+
+
+[Richard Liang] (29:26 - 29:37)
+But they to them, they just see that, hey, it's just a traditional like peer-to-peer a transfer. But they could, in theory, match that transfer, look on chain.
+
+
+[Anna Rose] (29:37 - 29:38)
+Oh, yeah.
+
+
+[Richard Liang] (29:38 - 29:44)
+Yeah. Do some like timing analysis to see that, hey, this like these two people transferred this amount.
+
+
+[Anna Rose] (29:45 - 29:54)
+What kind of amounts do people actually use peer for? Like you sort of mentioned, it's like usually around 500. Is it mostly small stuff or smaller amounts?
+
+
+[Richard Liang] (29:54 - 30:00)
+Yeah. The average transaction size is, I think, 200 right now. So very small.
+
+
+[Anna Rose] (30:00 - 30:05)
+Do you have a maximum limit? Like, do you kind of limit how much you could off-board here?
+
+
+[Richard Liang] (30:06 - 30:12)
+So on the smart contracts, the protocol layer, it's all up to the seller or the depositor of the USDC.
+
+
+[Anna Rose] (30:12 - 30:13)
+OK.
+
+
+[Richard Liang] (30:13 - 30:21)
+So they could set a upper limit or set a lower limit. Typically, all the transactions have been under $5,000 per transfer.
+
+
+[Anna Rose] (30:22 - 30:24)
+Why don't people use it for bigger amounts, do you think?
+
+
+[Richard Liang] (30:24 - 30:38)
+One is definitely the fintech accounts just don't allow larger transfers. They're like not wires, for example. I think Venmo has like a $2,500 limit per user per day.
+
+
+[Anna Rose] (30:39 - 30:43)
+But like why is you can do pretty big transfers on that?
+
+
+[Richard Liang] (30:43 - 30:45)
+Yeah, that's right. Yeah. It really depends on the platform.
+
+
+[Anna Rose] (30:46 - 30:48)
+Do you want to kind of cap it? Do you want to keep it small?
+
+
+[Richard Liang] (30:49 - 30:57)
+I think what we're best used for are like these like medium to smaller amounts, because you can instantly, 30 seconds, get money somewhere.
+
+
+[Anna Rose] (30:57 - 30:57)
+Yeah.
+
+
+[Richard Liang] (30:58 - 31:08)
+Whereas like if you're transferring like $50,000, $100,000, like millions, like you're probably OK waiting like a day with a wire to like a centralised intermediary.
+
+
+[Anna Rose] (31:08 - 32:27)
+Yeah. So like a few years ago, we had these very active groups like PSE. ZK email was sort of like rolling out a lot and being used a lot at ZKTLS.
+
+
+But in the last few years, like really in the last year or so, we've seen a lot of shifts. I mean, PSE, I don't know exactly its state, but I feel like it got renamed and then it got reorged again. So it has felt like a bit of a contraction, right?
+
+
+Like it felt like the institutes, the organisations, as well as some of the companies, they've sort of like shifted or pivoted. They've sort of changed direction. Some of them are still doing ZK, but they also maybe shrank.
+
+
+Like they just sort of like made a smaller team. But at the same time, this is something I talked about in episode 399 of the show where we asked like, is ZK dead? We also are seeing equal or more interest in the research.
+
+
+So like tonnes of research papers coming out around ZK. The actual use of ZK is expanding. Like Google's using it and the EU is using it.
+
+
+And it's like in mainstream, you know, Web 2 stacks or whatever. Like it's in all of the major, it's kind of like just a tool in the toolset. So yeah, it's kind of a weird moment where it feels like some of the OG or some of the like ZK energy from the builders that we knew is less.
+
+
+And at the same time, it's actually more used than ever.
+
+
+[Richard Liang] (32:28 - 33:06)
+Yeah, I think from our perspective, we kind of see this as a positive within ZK. Like a lot of the OG kind of ZK primitives have kind of matured. Like they're out there.
+
+
+We can just use them now without like needing to like publicly talk about it. Yeah, it's kind of just in the background now, which is great. And people can build applications, consumer experiences on top of these OG primitives without needing to run into the same issues that we did kind of back in the day.
+
+
+And yeah, also great to see like stuff like Zcash as well. Like the mechanisms, the primitives have matured now. Yeah, and now it's finally being like adopted kind of.
+
+
+[Anna Rose] (33:06 - 33:06)
+In a bigger way.
+
+
+[Richard Liang] (33:06 - 33:07)
+In mainstream.
+
+
+[Anna Rose] (33:07 - 33:07)
+Yeah, yeah.
+
+
+[Richard Liang] (33:08 - 33:08)
+Yeah.
+
+
+[Anna Rose] (33:08 - 33:34)
+Totally. What about crypto itself, the blockchain side of things? So like the ZK side, like we just said, sort of it's like it's sort of twofold, right?
+
+
+Like it's it's grown in interest and use, but maybe some of the companies have pivoted or changed. But in crypto itself, like we I mean, in the last few years, we've had these like incredible hopeful moments and then these very tough troughs. Where are you guys at?
+
+
+[Richard Liang] (33:34 - 34:35)
+I think within crypto kind of see that while stablecoins are not going to zero, like they're just going to be used by everyone now. And there's a lot of different use cases that are unlocked by stablecoins. A lot of people are talking about like institutional adoption and everything.
+
+
+But for us, we're mostly interested in like the still more like a subversive. Yeah. Underserved areas where we can apply stablecoins.
+
+
+In particular, like what we're doing up here is serving a lot of the cross border, like different regions of the world where they don't have like good banking rails. They can they have to rely on P2P or like kind of merchants who can't get like processor relationships with like traditional like the traditional PayPal, Stripes, etc. Or in general, like there's like just a lot of different industries that just can't get these kind of relationships and must rely on P2P systems.
+
+
+And so, yeah, we're kind of interested in that with like stablecoins.
+
+
+[Anna Rose] (34:36 - 35:26)
+I do feel like so this is also coming, maybe becoming more apparent, but like a lot of these AI companies and obviously there's these insane moves happening on that side of but they're like I find it pretty amazing when I like open router, you can log in with your ETH address or something like that. Like it's interesting to see these companies that are definitely in the headlines tapping into the things we always wanted companies to tap into in the past. Right.
+
+
+Like this is what we wanted. We'd always hoped like, oh, yeah, like MetaMask would let you get into your Google account. Like never, probably never going to happen.
+
+
+But some of these emerging companies, yeah, they're experimenting with it. I also think of something like Noose Research, which is coming out of crypto land, but now is like an agent and then obviously has like a bit of this like blockchain legacy. I do wonder if we're going to not see more of that like overlap.
+
+
+[Richard Liang] (35:26 - 35:44)
+It's been, yeah, a lot of like interest in agentic kind of payment use cases. We've been looking into it a little bit. We actually did like a little side project with like Andrew on our team did, where you can kind of sell your surplus kind of AI tokens for like fiat.
+
+
+[Anna Rose] (35:45 - 35:54)
+Oh, yeah, that's so crazy. Wait, what is it? So you're like, so your monthly budget of tokens, whatever, like whatever your plan gives you, you can sell it for crypto tokens?
+
+
+[Richard Liang] (35:54 - 36:18)
+Yeah, I think so. The project is, was in collaboration with this like project called Surplus on Base. It's a marketplace where users can basically offer their API key on an open AI, open router, all these different services, Venice as well.
+
+
+And yeah, sell your excess kind of budget. That's cool. For like 90% discount.
+
+
+And people will buy it because it's so cheap.
+
+
+[Anna Rose] (36:19 - 36:20)
+Yeah, yeah, yeah.
+
+
+[Richard Liang] (36:20 - 36:21)
+To get access to tokens.
+
+
+[Anna Rose] (36:21 - 36:23)
+Huh, is it using Peer somewhere?
+
+
+[Richard Liang] (36:24 - 36:31)
+Or is it just like a cool... So it uses Peer for the caching, I guess, in and out of the tokens directly to your fiat account.
+
+
+[Anna Rose] (36:31 - 36:36)
+Does that mean, did you have to interface then with the APIs of like the Frontier Labs?
+
+
+[Richard Liang] (36:36 - 36:46)
+We just did the caching out, caching in kind of service around it. The other project built the marketplace interfaces with the API keys.
+
+
+[Anna Rose] (36:47 - 37:05)
+What about you guys? So I have a question about you as a team. How big are you today?
+
+
+And yeah, what does development look like for you today? Like, has this year been insane? Actually, everyone I speak to has kind of just like rethought everything about the way they engineer the last year.
+
+
+Yeah.
+
+
+[Richard Liang] (37:05 - 37:11)
+Yeah, we're like six people right now. So two more than when we started.
+
+
+[Anna Rose] (37:11 - 37:15)
+Are you the same people? Is it still the same team? Or has it changed?
+
+
+[Richard Liang] (37:15 - 37:40)
+No, no, different. Me and Sachin are still on team. And then we have four other people who joined later on.
+
+
+But yeah, it is. It is crazy because we went from four to six people, but we felt like we like 10x'ed our output with all the AI tooling and everything that's been going on. Yeah, we use AI very much internally.
+
+
+[Anna Rose] (37:41 - 37:52)
+Are you using it primarily as security checks? Are you using it to be your sub-engineers? Are you concerned about external actors using it against you?
+
+
+I guess all of the above, probably.
+
+
+[Richard Liang] (37:53 - 38:30)
+All of the above, yeah. During the development stack life cycle, do security reviews with it. And scatter all across our product layer as well.
+
+
+We built a bunch of AI stuff. And I think we're thinking a lot about how we can apply AI to directly more protocol level stuff with all the different kind of platforms that we could integrate. Because the bottleneck is that I only have a Venmo account.
+
+
+I can only integrate Venmo. But with AI, there's a path to really scale up how many platforms we can support.
+
+
+[Anna Rose] (38:31 - 38:44)
+And when you say platforms, do you primarily look at the traditional payment apps? Or are you also looking at different blockchain environments? You just said you're on base with USDC.
+
+
+Would you expand in that direction too?
+
+
+[Richard Liang] (38:44 - 39:12)
+Yeah, I think we primarily look at the off-chain side, the payment apps that we can integrate and verify the authenticity of. On the on-chain side, we actually think it's pretty solved. There's a lot of really good bridges, like Relay, for example.
+
+
+You can abstract basically what asset you're using. So our users don't even know you're using base or you're even using USDC. There's a lot of good experiences that we can build there already.
+
+
+[Anna Rose] (39:12 - 39:22)
+Oh, interesting. That's so funny because I still think very much in those L2s and where it lives. Yeah.
+
+
+What are some new projects that are on the horizon?
+
+
+[Richard Liang] (39:23 - 40:02)
+One project that might be released before this episode comes out is our Pay product. It's basically our checkout interface built on top of our existing work that allows merchants to accept USDC or any kind of crypto payments where their customers of the merchants still pay with everyday fiat platforms like Venmo, Cash AppZelle. So the end user does not even need to know, hey, they're paying.
+
+
+There's crypto in the back end. They're just paying fiat for goods and service that the merchant is offering. And we're able to do a lot of those things with kind of the tech stack that we built.
+
+
+[Anna Rose] (40:02 - 40:03)
+Cool. What's it called?
+
+
+[Richard Liang] (40:03 - 40:04)
+It'll be called PurePay.
+
+
+[Anna Rose] (40:05 - 40:09)
+What is PureCash? Is that a thing? Is that live?
+
+
+[Richard Liang] (40:09 - 40:35)
+Yeah, yeah. That's how we branded our SDK and our flow for cashing out of crypto back into fiat. So it still uses the same kind of mechanism that we built on the protocol, but we just branded it differently so we can get a lot more kind of these DeFi teams.
+
+
+Zcash teams have integrated it already to be able to cash out, I guess, Zcash directly into fiat privately in a few clicks.
+
+
+[Anna Rose] (40:35 - 40:47)
+Just before, when I asked you about how you're using AI internally, you talked a bit about how you could use it to build. But could your users be agents as well? What does that look like?
+
+
+[Richard Liang] (40:48 - 41:05)
+Yes. A lot of users within Pure can actually just on-off ramp to their agents. So a user can use Pure, fund their agent.
+
+
+Their agents do stablecoin, crypto stuff on-chain. And then when it's time, they can cash out back through Pure.
+
+
+[Anna Rose] (41:05 - 41:06)
+Interesting.
+
+
+[Richard Liang] (41:06 - 41:08)
+Into their fintech accounts.
+
+
+[Anna Rose] (41:08 - 41:18)
+So in this case, it's not that an AI agent is really a user of Pure. It's just that the owner of the agent can use Pure to get it in there to give it some access.
+
+
+[Richard Liang] (41:18 - 41:23)
+Yeah, yeah. Unless you could also give access to the agent, your vemo account.
+
+
+[Anna Rose] (41:23 - 41:24)
+Oh yeah, I guess so.
+
+
+[Richard Liang] (41:24 - 41:27)
+Yeah, then it's a full end-to-end flow.
+
+
+[Anna Rose] (41:27 - 41:30)
+Maybe not the smartest move still. I don't know.
+
+
+[Richard Liang] (41:30 - 41:32)
+Yeah, it's a little scary.
+
+
+[Anna Rose] (41:32 - 41:56)
+Are people fully abandoning all of their private... I mean, actually, we have seen in our Telegram channel, we've seen some real users with their handle where they've clearly given it over to an agent and it's acting insane. I don't recommend that.
+
+
+It's very weird for your reputation with people you actually know.
+
+
+[Richard Liang] (41:56 - 42:01)
+Yeah, there's definitely a lot of slop out there these days.
+
+
+[Anna Rose] (42:01 - 42:25)
+So I said this in the question around AI, but it's about security and actually AI attacking your system. How are you thinking about that? Does AI pose a threat, not necessarily to breaking the T, but forging some of the attestations?
+
+
+Could it reverse engineer what's happening in that T? Yeah, I'm just trying to figure out if you have any thoughts on the risk from the outside.
+
+
+[Richard Liang] (42:25 - 43:34)
+I think we try to keep our systems that we built very, I guess, modular and kind of isolated. In the TE itself, it's only doing one thing. It's making a call to the Web2 API, getting a response, and then transforming that response into a signature.
+
+
+So it's actually a very 1-2-3 kind of thing, like steps 1-2-3 and that's it. We don't push all the complexity over onto the product layer as much as possible. Do see, I guess, AI definitely as a risk.
+
+
+We do run a lot of security reviews and stuff like that from time to time. And yeah, I think one other benefit, I guess, of us switching from more of these OG, kind of like ZK email, for example, is that we're able to move a lot faster and react to in case there's a security incident or whatever. Whereas if we use traditional, I guess, a ZK circuit, we would have to, I guess, create a new circuit, run the trusted ceremony, and then deploy that again.
+
+
+And then if anything changes, we have to do that whole process over again, where it introduces latency.
+
+
+[Anna Rose] (43:35 - 43:53)
+Is there any way for an outside actor, though, would they ever be able to reverse engineer what's in the TE? So it's not like break the TE, but get whatever is in there somehow. I guess only if they break signatures or something like that, right?
+
+
+It sounds like you'd have to break some pretty heavy cryptography to do that.
+
+
+[Richard Liang] (43:53 - 44:01)
+Yeah, maybe. ECDSA. Or you can hack into Amazon's data centre somehow.
+
+
+[Anna Rose] (44:02 - 44:11)
+Are you hopeful or worried about the pace and the impact of AI? It sounds like you're kind of excited about it because you're using it a lot.
+
+
+[Richard Liang] (44:12 - 44:46)
+Yeah, there is obviously trade-offs, but yeah, as a whole, we're definitely excited. It allows us to move 10x faster on our roadmap and kind of see what our users get like real-time, basically, feedback on what we build. And yeah, we're able to do a lot of cool experiments as well that wouldn't have been possible if we were without AI.
+
+
+And it kind of also takes us back to our initial roots where we were basically running experiments, building a lot of proof concepts back in the day. But now we're able to just do that in one hour instead of like two weeks, three weeks.
+
+
+[Anna Rose] (44:46 - 44:55)
+Yeah, yeah, yeah. You sort of, you talked about pure pay, but do you have other app ideas or like this sort of like using the programmability that the TE enables?
+
+
+[Richard Liang] (44:55 - 45:27)
+I think we're, yeah, definitely focused on that bridge between fiat, the payment platforms and on-chain like stablecoins still. And we do have like ideas we could potentially build around like this flow. Yeah, of course, like one is pure pay with our merchant checkout solution.
+
+
+But yeah, overall, we're like still very interested in, hey, like let's get a lot more platforms, different countries that could use our flow, really want to be able to support like every currency, every fintech account in the world.
+
+
+[Anna Rose] (45:28 - 45:43)
+Cool. Well, yeah, congrats on sort of going through these different iterations, the rebranding, which we didn't actually talk about. But to me, it seemed like a maturing moment, like it's sort of like levelled you guys up a little bit.
+
+
+So, yeah, congrats on that and excited to see what's coming next for Pure.
+
+
+[Richard Liang] (45:43 - 45:45)
+Of course. Yeah. Thanks for the chat.
+
+
+[Anna Rose] (45:45 - 45:52)
+Cool. All right. I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners.
+
+
+Thanks for listening.
