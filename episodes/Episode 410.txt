@@ -1,0 +1,1048 @@
+﻿[Anna Rose] (0:05 - 1:49)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Kobi and I catch up with Ron Rothblum, professor at Technion and researcher at Succinct.
+
+
+We last caught up with Ron on the show back in 2023. And in this episode, we had a lot to cover with him. We discussed the Fiat-Shamir attack he worked on, his polynomial commitment work with Blaze, TensorSwitch, and Bolt, as well as Veil, a native hash-based way to add zero knowledge back to Succinct proofs.
+
+
+We covered his most recent work on Flock, including its role in the Ethereum Foundation's move away from Poseidon. We then explore SNARK.fast, a collaboration with Eigenlabs, Succinct, the EF, and Espresso. This open competition holds the Flock verifier fixed and challenges the wider community to use their AI agents to build a faster prover.
+
+
+And the results have been well beyond what he expected. We close on where he wants to take this next, with Flock v2 and a binary field ZKVM, as well as his longstanding goal to get ZKProving to be as fast as computing, and what a world of fully verifiable computation might look like. Hope you enjoy.
+
+
+Now, here's our interview with Ron Rothblum. Today, Kobi and I are here with Ron Rothblum, professor of computer science at Technion. He has also been working at Succinct since 2024.
+
+
+Welcome back to the show, Ron.
+
+
+[Ron Rothblum] (1:49 - 1:50)
+Thank you. Great to be here.
+
+
+[Anna Rose] (1:51 - 2:26)
+Hey, Kobi. How are you doing? 
+
+
+[Kobi Gurkan] 
+Hello. I'm good. 
+
+
+[Anna Rose]
+This episode came together a bit because of the phenomenon of SNARK.fast, something I had been seeing a lot about. I was talking to Kobi about this.
+
+
+And we realised that, Ron, you're behind this, you're working on this. And we also hadn't spoken to you in a long time. So we thought this was a great opportunity to bring you back.
+
+
+But then in planning this, we realised, yes, hopefully we get to SNARK.fast, but there's a lot of other work that we should cover before. Maybe you can share with us a little bit of what you've been up to since you were on the show last, back in 2023.
+
+
+[Ron Rothblum] (2:27 - 3:26)
+Yeah. So I think something that was personally exciting for me back in 2023, I was kind of like very much a theoretician, but starting to look at questions that were becoming sort of like increasingly motivated by practice and seemed to be potentially of influence to practise. And back in 2024, I thought, you know, this thing might be useful.
+
+
+Let's sort of put my money where my mouth is and try to see whether it is actually useful. And I ended up joining Succinct, working with them on building the ZKVM SP1 and trying to both like see whether my kind of ideas coming out of theory can help in the design of ZKVMs. Also for me personally, to learn more about what happens in practice, try to use that to get like more interesting questions to work on. And I've had a blast been working with Succinct and amazing people at Succinct since then.
+
+
+[Anna Rose] (3:26 - 3:38)
+Now I'm curious what the difference is like. I mean, when you talk about these problems coming up, do you feel like it's, is it a faster iteration? Do you find problems quicker?
+
+
+Are there different kind of problems that you're finding?
+
+
+[Ron Rothblum] (3:39 - 4:34)
+So both are different and it makes the articulation of what is important much more clear. Because when you have someone who is actually running something, they very immediately tell you what is, what the issues are with it. And that kind of very directly says what are the most important problems for them.
+
+
+And then for me as a researcher, if I can articulate it as a clean problem and try to deal with it with the tools that that I know or can try to reason about it, that makes it much better rather than a theoretician's perspective, which is sort of to invent a new problem, which with a nice story around it, which is great. I have zero objection to that. I mean, zero knowledge, the notion of zero knowledge came out of doing stuff like that.
+
+
+For sure. But it makes life easier a little bit when someone comes along and, you know, says, here are my issues with your proof system. Can you make it better?
+
+
+That is like super concrete and you can immediately start to think of the solution.
+
+
+[Anna Rose] (4:34 - 4:45)
+When you were more on the theoretical side, did you find you sometimes went down paths that like really actually led to nowhere? Like that's sort of what I could picture could happen if you're not getting that constant feedback loop.
+
+
+[Ron Rothblum] (4:46 - 5:52)
+So it really depends on the notion of nowhere. So, so a lot of lines of research that I did in theory, I think, led to what I think is like nice and beautiful theory, but not necessarily to something that was deployed in practice. But I don't think that should be the definition of especially for theoretical work, whether it like immediately become something practical is not the right lens by which to view it.
+
+
+Because going back to this example of zero knowledge, if that's the lens with which you were to view it, then, you know, it would be a grand failure from the 80s until until now. And I don't think that that's right. So I would say that, you know, some of the theory work just led to like theory that I liked and papers that I think I find interesting.
+
+
+Maybe others do as well. Then there's other parts where you kind of like you invent a new problem, you fail to solve it, and then you're kind of like sad. But then mainly you then like kind of pivot.
+
+
+You kind of find a different twist on the problem and try to solve that. That is sort of a big flexibility that you have as a theoretician that you don't have as practitioner, where you cannot really change the rules of the game.
+
+
+[Anna Rose] (5:52 - 6:09)
+Once you made that shift over to working at Succinct, what was some of the first work you focused on? Were you already there when you worked on the Fiat-Shamir stuff or had that been work from before that just came to a conclusion while you were working like by chance at Succinct?
+
+
+[Ron Rothblum] (6:10 - 6:35)
+Yeah. So OK, so the Fiat-Shamir stuff I had done for many years, actually touched on it even in the previous episode. So both finding ways to securely deploy Fiat-Shamir and attack it.
+
+
+So trying to pull that from both ends. So those are questions that I've worked on basically since my Ph.D. for a good decade plus, and that continued when working at Succinct.
+
+
+[Kobi Gurkan] (6:36 - 6:57)
+I think one work that you've done in Succinct early on was the work on jagged polynomial commitments, which is very motivated by the kind of structure that exists in ZKVMs and specifically how SP1 is structured. So that's probably something that you might have not worked on before.
+
+
+[Ron Rothblum] (6:57 - 7:53)
+Yeah, absolutely. That was something that I think the way that happened is kind of so when I joined Succinct, SP1 already existed, like a previous version of SP1 existed, and it was based on kind of like traditional Stark univariate techniques. And like my theoretical research was much more based on what's known as multilinear polynomials.
+
+
+So there's two main classes of polynomials that people like to use are either univariate polynomials or multilinear polynomials. I would say that my work even before joining Succinct was very much in the multilinear regime, but Succinct was kind of working with these like traditional univariate ones. And they were telling me sort of the problems that they run into.
+
+
+And every problem that they described, they were saying, oh, if we were using multilinear instead, I have five different solutions to it. And this was kind of like repeating again and again, like multiple times. But it's hard to convince, you know, they were very invested into univariate techniques.
+
+
+[Kobi Gurkan] (7:53 - 7:55)
+A lot of the field was, yeah.
+
+
+[Ron Rothblum] (7:55 - 9:13)
+A lot of the field, right. So like all ZKVMs back then were using univariate techniques. So that was kind of the state of the art two years ago.
+
+
+Everyone was, all the ZKVMs were using univariate techniques. And there was only like initial, there was kind of a feeling that maybe multilinear is the next thing, but it was only a feeling. The tipping point, I think, where I managed to convince them is when we, and this was in collaboration with like wonderful people at Succinct, we came up with this jagged polynomial commitment scheme, which is a way to kind of like redesign or like change the layout in a sense of how the computation trace is encoded in a ZKVM.
+
+
+So in a traditional like ZKVM design, you sort of have like, it's really useful to think of it as an analogy to like an actual chip or processor. So you have different parts of the chip devoted to addition, a different part of the chip devoted to multiplication and so on to the different instructions. And kind of the traditional design in some sense encoded each one of them separately.
+
+
+And what we did with the jagged polynomial commitment scheme for which like the multilinear techniques were an enabler is in some sense to lump up all the chips together, if you like sort of like package them into like one thing jointly, which just makes things much more efficient.
+
+
+[Anna Rose] (9:14 - 9:22)
+The univariate work, was that like the Starks chain of thought? Where does Binius and stuff like that fall? Were they also univariate?
+
+
+[Ron Rothblum] (9:22 - 9:56)
+So Binius, their kind of like novelty was sort of switching to binary fields. Historically, their novelty was, which were used in a lot of theory work by Eli Ben-Sasson and myself and so on. In practice, I think Eli had also done some work in practical binary fields, but kind of people had kind of ditched that and they were pioneers in that sense of like pushing binary fields.
+
+
+I think initially in their first version, they were still working with binary fields and univariate. And it took them a little bit of time to switch over to binary fields multilinear.
+
+
+[Anna Rose] (9:56 - 10:00)
+Was it around the same time that you worked on the jagged polynomial commitments, do you think?
+
+
+[Ron Rothblum] (10:00 - 10:05)
+I think that's the right ballpark, but I think it was done sort of independently.
+
+
+[Anna Rose] (10:05 - 10:45)
+I want to go a little back to the Fiat-Shamir work because I don't know that we've ever, I don't know if we've covered it on the show properly. And I feel like it was quite, it created quite a shakeup, I feel. I feel like we've probably mentioned its existence, but I don't think we've done a deep dive.
+
+
+Hopefully we can do at least a short one here because I feel like it had such an impact on our ecosystem when it came out. So what was that work, Fiat-Shamir? You did mention this, you sort of said this, you had mentioned this in the previous episode that you sort of had a hunch that there was a way to do something, an attack, but you didn't actually do it at that point.
+
+
+So, yeah, tell us a little bit about how that came together.
+
+
+[Ron Rothblum] (10:46 - 12:11)
+Yeah, so maybe it's worth like quickly recapping what Fiat-Shamir is and then like describing the attack. So Fiat-Shamir is this way, kind of amazing way to compile an interactive protocol and make it non-interactive, which is extremely important, especially in the blockchain usages where you want to kind of like just post the proof and forget about it. You don't want to be online in order to prove stuff to people.
+
+
+But on the other hand, when we design protocols, it's really, really, really powerful and useful to design them as interactive protocols. So the idea is the following. So you have an interactive protocol and it's an interactive protocol that has the feature where the prover sends a message and the verifier's responses are just like tossing some random coins and reporting their value.
+
+
+So no like smart messages from the verifier. And what the Fiat-Shamir transform is saying is that instead of actually letting the verifier toss random coins, the verifier will just be replaced by computing, by evaluating a hash function. So the prover sends a message rather than waiting for a response from the verifier.
+
+
+We just like run the prover's message through a hash function, get the verifier's message through that so we don't actually need to wait and can continue and generate like all the prover messages in one shot. So that's the Fiat-Shamir transform. And the question that has been kind of quite open for decades now is whether this thing is secure.
+
+
+There has been sort of both positive and negative evidence, but it's very much still open in general.
+
+
+[Anna Rose] (12:12 - 12:20)
+But I think it was the work you did specifically on when you add recursion and what the impact is on Fiat-Shamir once you do that?
+
+
+[Ron Rothblum] (12:21 - 15:08)
+So not quite. So let me talk a little bit about the negative evidence, because I think maybe prior to our work, people weren't super aware of this. But for quite a while before, even before our work with this, I'm referring to work from last year with Lev Sukhanov and Dmitry Korotovych.
+
+
+So even before that, we know of examples of secure interactive protocols that have the feature or bug that if you apply Fiat-Shamir to them, the result is totally broken. Oh, OK. So we had examples of such protocols, but they came from theoreticians and I think were very highly contrived.
+
+
+So these were examples of protocols that people sort of intentionally came up with just for the purpose of showing that Fiat-Shamir doesn't always work. And when I told people about this, their typical response was, you know, our actual protocols don't do this stupid stuff that would make them break. And that was kind of like people's feeling, I think, previously.
+
+
+I think I already like, so like the last episode that I was on was 2023. I was very much in a mindset that this is a concern. And in particular, I had a work from a few years before that showing an example of a sort of half-contrived protocol where it's a natural protocol, but one of the components in it is contrived.
+
+
+Oh, OK. And that let me sort of be very wary of the fact whether it is actually secure or not. Anyway, that was sort of my state of mind prior to this work with Lev and Dimitri.
+
+
+What happened, I think this was like maybe the end of 2024, is that actually the Ethereum Foundation was interested in like studying the security of Poseidon. Maybe we'll touch about Poseidon later on again, but they had this bug bounty that they wanted to kind of show attacks against Poseidon. And there was, you know, like you got some bounty for finding the collisions in Poseidon, some other bounty for some other thing.
+
+
+And then the very last field was like, find an attack against Fiat-Shamir using Poseidon for any protocol of your choice. And I was like, you know, I have contrived protocols that I can break. I can make a lot of money.
+
+
+But being a nice guy, I didn't try to make the money. Instead, I just told them, hey, you know, you might want to like change your bug bounty from protocol of your choice to non-contrived protocol of your choice. Something in production.
+
+
+Yeah, or even something like less contrived in some sense. I was actually happy to see their response, which was, you know, they weren't really aware, I think, so much of the contrived examples and they really wanted to understand these things better. And that sort of started my collaboration with Lev and Dimitri, where we started to look at actual protocols that are deployed and sort of realised that this major one that's based on GKR is actually insecure.
+
+
+[Anna Rose] (15:08 - 15:12)
+It was insecure when used with Fiat-Shamir.
+
+
+[Ron Rothblum] (15:12 - 15:23)
+Yes, exactly. So it's an interactive protocol, very natural one. One that was actually, there were a bunch of research papers on optimising it.
+
+
+There's Polyhedra who had a system called Expander that uses it.
+
+
+[Anna Rose] (15:24 - 15:25)
+What was the name of the system?
+
+
+[Ron Rothblum] (15:25 - 15:26)
+GKR.
+
+
+[Anna Rose] (15:26 - 15:27)
+Oh, just GKR. Okay. Yeah, yeah.
+
+
+[Ron Rothblum] (15:27 - 15:40)
+GKR. And R happens to be another off-blown guy who is my brother. So it's not quite the textbook GKR, but it is sort of the way that GKR is viewed nowadays in practice.
+
+
+[Kobi Gurkan] (15:40 - 15:47)
+Yeah, and GKR is used everywhere. So it's definitely, you know, if you demonstrate an attack there, it's very, very important.
+
+
+[Anna Rose] (15:48 - 16:16)
+I feel like when this came out, though, for me, like sometimes these cryptanalysis papers come out and I just don't actually understand how dangerous this is. Like how threatening is this to existing systems? And I think this fell in a similar one where like it sort of, through ripples through our ecosystem, but like, did it force change or was this also in a way like theoretically something could happen, but because these systems and the way they're built, they're still safe.
+
+
+[Kobi Gurkan] (16:16 - 16:22)
+So, I mean, Elron, you can say more, but like it was serious enough that people had to make changes in their implementation. Yes.
+
+
+[Anna Rose] (16:23 - 16:27)
+But what changes could they make? Because aren't you saying like Fiat-Shamir doesn't work with GKR?
+
+
+[Ron Rothblum] (16:28 - 16:57)
+Right. So I should say like Polyhedra had their system that uses it. They made a change.
+
+
+They were even nice enough to give us a bounty. So certainly they took it seriously. In terms of the change, one thing that the attack relies on, so GKR is a protocol that sort of like it's for proving correctness of a circuit of a certain bounded depth.
+
+
+And in our attack, it is crucial that the depth of the circuit for which you're proving stuff should be at least as much as the hash function with which you're using Fiat-Shamir.
+
+
+[Anna Rose] (16:57 - 16:58)
+Okay.
+
+
+[Ron Rothblum] (16:59 - 17:19)
+And the way it was like implemented, there was no restriction on that. But one way that sort of like a mitigation, if you like, for which like if you introduce it, then we don't know how to attack is if you ensure that the depth, that the hash function is kind of deeper than the depth of the circuit that you have. So that's what they did.
+
+
+They just like forced the hash function to be kind of deeper than the circuit that they're proving.
+
+
+[Anna Rose] (17:19 - 17:31)
+Can you choose the depth or do like hash functions automatically have a depth? Like you were talking about Poseidon and stuff like could you change a parameter in Poseidon so you could still use Poseidon and it would be secure?
+
+
+[Ron Rothblum] (17:31 - 18:02)
+So the easy heuristic for increasing the depth is just to chain a bunch of the hashes. So like do a Poseidon of a Poseidon of a Poseidon and you would expect that the depth, if you do like 10 Poseidons in sequence, you would expect the depth. So of course, like the natural way to do it makes the circuit 10x deeper.
+
+
+And the hope is that there is no like way to like clever way to avoid that. So, but I should say that this is very much just like a mitigation so that we don't, we can't show an attack, but we also don't know that an attack does not exist.
+
+
+[Anna Rose] (18:04 - 18:08)
+What actually broke? Like what between GKR and Fiat-Shamir was breaking?
+
+
+[Ron Rothblum] (18:08 - 18:35)
+What was, what did it do wrong? It's the interaction between them. It's kind of, the attack leverages really a feature, a clear feature of GKR.
+
+
+So the reason why people want to use GKR is that it enables you to commit to less data. Okay. So it's kind of like you commit to less data, but you implicitly commit to it, but you don't have to actually commit to it.
+
+
+And that is the feature of GKR. That's the reason you want to use GKR. And that feature is also what enabled our attack.
+
+
+[Anna Rose] (18:35 - 18:38)
+Wow. What did your brother say about your attack?
+
+
+[Ron Rothblum] (18:40 - 21:53)
+He was super happy. Okay. I mean, so, and it's really using GKR in a way that you kind of really shouldn't.
+
+
+Okay. But I don't think it was obvious in hindsight. It was sort of not obvious back then that you shouldn't.
+
+
+Interesting. So I want to give an example of protocol that is extremely contrived. It is secure, kind of in an interactive sense, but if you apply Fiat-Shamir, it's broken.
+
+
+I think that gives sort of a flavour of what's going on. And I think like simple enough that I might be able to describe it in like a few minutes here. So again, super weird and contrived protocol, but it's going to be a secure one until we break it.
+
+
+So here's the protocol. There's a prover and there's a verifier. And in the protocol, forget, it's not even important what we're trying to prove, but in the protocol, the prover is going to be sending a message.
+
+
+This message, let's call this message M for message. And we interpret this message as the code of a programme. Okay.
+
+
+So code in your favourite language, let's say Rust or whatever. The verifier receives this message M and it's code, right? So it runs it.
+
+
+And not only does it run it, sort of when the programme starts running, it expects an input and we're going to feed as an input to this programme M itself. Okay. So we are running M on input M.
+
+
+Weird, but why not? No, it's a legitimate thing you might want to do if you're coming up with a contrived protocol. So we run M on M.
+
+
+We wait for it to sort of terminate. And at the end, it prints out a string. The string should be a hundred bits long.
+
+
+We take the string and additionally, we sort of toss a hundred random coins and we see whether our hundred random coins exactly match the output of the M of M. If so, we accept, if not, we reject. That's the entire protocol.
+
+
+And we want to say that it's sort of, in this protocol, it is extremely unlikely that you will ever accept. And the reason is that sort of M of M is a weird thing, but it's determined. Once you're right, once M, once the prover sends M, M of M is fully determined.
+
+
+And now there's just like a fixed string of a hundred bits. You compare it to like a hundred random coin tosses. The probability that they're the same is two to the minus a hundred, extremely unlikely.
+
+
+So this is a secure protocol in the sense that you would never accept. But let's think what happens when you do Fiat-Shamir, right? So the idea in Fiat-Shamir is that instead of tossing coins, you replace the coins by a hash function.
+
+
+So how will we derive our hundred random coins? Let's call them R, it's a hundred bits long. How do we derive R?
+
+
+We apply a hash. To what do we apply a hash? To the previous thing the prover sent, which is M.
+
+
+So R is now just equal to H of M. Now to make the verifier accept, all the prover needs to do is find the message M so that M of M, which is what the verifier does, is equal to R, but R is H of M. So we need to find M so that M of M is equal to H of M.
+
+
+Can you think of an M that satisfies this? It's going to be like zero or one or something like that? I think Kobi might have an idea.
+
+
+[Kobi Gurkan] (21:54 - 22:02)
+I've seen the presentation in this form already, so I won't spoil the answer. No, no, you have to. Okay, so I'll spoil the answer.
+
+
+[Ron Rothblum] (22:03 - 22:38)
+It could be H itself. So think of if M is H itself, then M of M is just H of H, and H of M is also H of H. So they're the same.
+
+
+And the verifier will always accept. This type of technique is called, it's very much related to technique known as diagonalisation, which is sort of like you're forcing a programme into itself in some sense. So that's what happens here.
+
+
+As you can see, it's a super weird contrived protocol that you wouldn't expect to happen, which I think really contributed to why people thought that, you know, it's not a concern. Crazy.
+
+
+[Anna Rose] (22:38 - 22:49)
+What would it actually allow, what would the attack allow a user to do, though, in this case? Like, does it halt the system? Does it have full access?
+
+
+It can do whatever it wants under the hood? Yeah.
+
+
+[Ron Rothblum] (22:49 - 23:19)
+It lets you do like the worst possible thing you can think of as someone who's into proof systems, which is to prove that a false statement is true. Therefore, totally broken. So you make a false statement, I claim that, you know, it's night outside, even though it's day.
+
+
+And I can provide you with the proof that my false statement is true. Wow. And you're going to accept it with probability one.
+
+
+Yeah. If you were to use it in the context of a blockchain, I can prove to you that, you know, I'm a multi-trillionaire and you would believe me.
+
+
+[Kobi Gurkan] (23:20 - 23:48)
+Maybe one thing that it's important to note, you know, maybe obvious to most listeners, but this is very distinct from what we see around Fiat-Shamir breaking all the time, which is usually just the wrong way to use Fiat-Shamir in practice. For example, when people forget to put some inputs in Fiat-Shamir because you need to include all the different messages the prover has sent, like this is an attack on Fiat-Shamir itself.
+
+
+[Ron Rothblum] (23:48 - 24:16)
+Wow. Right. So this is, you're sort of using Fiat-Shamir as advertised as you're supposed to, or as we thought you were supposed to, and nevertheless, it's insecure.
+
+
+And it does like cast a doubt about, you know, the fact that we're still using Fiat-Shamir throughout. We should be somewhat worried about that. I think just very recently, there's new work by Giacomo on further extending our attack to more settings.
+
+
+So in general, this is a topic of concern.
+
+
+[Anna Rose] (24:17 - 24:18)
+What could be used instead of Fiat-Shamir?
+
+
+[Ron Rothblum] (24:19 - 24:35)
+So one option is to use Fiat-Shamir, but use it securely. So there's been a large body of work that I also worked on, which is to do Fiat-Shamir, but use it in a particular way and using particular hashes for which we can prove that it is secure.
+
+
+[Anna Rose] (24:36 - 24:36)
+Okay.
+
+
+[Ron Rothblum] (24:36 - 25:12)
+Rather than, you know, a heuristic usage, which is very common in practise, there is a huge body of work and theory saying, you know, we're unhappy with the heuristics. We want to prove that Fiat-Shamir works under concrete assumptions, say learning with errors or stuff like that. We've made tremendous progress on this.
+
+
+It is still quite far from being practical, I think. But that should be that should be noted. Beyond that, we don't have we don't have a lot, unfortunately.
+
+
+So one option is to switch to interactive protocols. Yeah, that would suck big time.
+
+
+[Anna Rose] (25:13 - 25:13)
+Yeah.
+
+
+[Ron Rothblum] (25:13 - 25:26)
+So really, this field really relies heavily on Fiat-Shamir. And I think I hope to see much more research dedicated to either breaking it or trying to get more confidence in its security.
+
+
+[Anna Rose] (25:26 - 25:36)
+Actually, just maybe for our listeners, can you list some of the work and the names of the papers that you just talked about? Like, so the initial Fiat-Shamir and anything that's come since?
+
+
+[Ron Rothblum] (25:36 - 25:55)
+So the Fiat-Shamir attack, which was about a year and a half ago, was with Lev Sukhanov and Dmitry Kovratovych. Previously, I think like this entire, like, diagonalisation idea came from really super influential work by Ron Canetti, Oded Godrike and Shai Halevi, I think originally from 1994.
+
+
+[Anna Rose] (25:55 - 25:56)
+Oh, cool.
+
+
+[Ron Rothblum] (25:56 - 26:30)
+It was considered quite controversial. It's called the Random Oracle Revisited. So there's this heuristic called the Random Oracle, which is saying that, you know, our hash functions are so good, we should just treat them as though they're purely random, even though they're not.
+
+
+And that heuristic has been very useful on the one hand. On the other hand, what this CGH paper back then, it's been 30 years now, showed is that there are examples of protocols which are secure in the Random Oracle model, but become insecure once you instantiate it. OK.
+
+
+And this entire line of, like, Fiat-Shamir attacks are all instances of that. Cool.
+
+
+[Anna Rose] (26:31 - 27:01)
+All right, we should shift gear because there's so much work we wanted to cover. I just found out before this that you were one of the co-authors of Blaze, which we had mentioned in — we did sort of a survey of all the, you know, major ZK work that's come out. And yeah, that one was in there.
+
+
+TensorSwitch Bolt that you actually worked on with Kobi. You also presented Veil. So maybe we can do a quick run through of those and maybe share which, like, what's the grouping there?
+
+
+What's the line of work and what's kind of different?
+
+
+[Ron Rothblum] (27:01 - 27:46)
+Yeah, I think Blaze, TensorSwitch and Bolt are quite related to each other. So maybe let's start by discussing those and then we can talk about the other ones. So all three of them are — you can think of them as what's known as a polynomial commitment scheme or a hash-based polynomial commitment scheme, which are ways to commit.
+
+
+I'm sure this has been covered multiple times on the show, but this is a way to take a really large polynomial or data encoded using a polynomial, commit it using a tiny commitment so that later you can prove evaluations of this polynomial. And these kind of, like, polynomial commitment schemes or PCSs form a really important component in essentially, like, all SNARK constructions. So getting them to be more efficient is extremely, extremely important.
+
+
+[Kobi Gurkan] (27:47 - 28:06)
+Yeah, I think, like, even more than, like, being very important, it kind of became the standard of how you construct stuff. Like, before they came around, sometimes SNARK were kind of intermingled components together, but at some point there was this abstraction of polynomial commitments that just became kind of the standard. So, yeah.
+
+
+[Anna Rose] (28:06 - 28:12)
+I'm blanking. Just one, one question. WUR and STIR and all of those, are those also polynomial commitment schemes?
+
+
+[Ron Rothblum] (28:13 - 28:14)
+Absolutely. And FRY.
+
+
+[Anna Rose] (28:14 - 28:16)
+Do they come after? And FRY was before.
+
+
+[Ron Rothblum] (28:17 - 28:25)
+I think maybe Blaze was maybe concurrent to WUR, if I'm not mistaken. I think STIR may have been somewhat before that. Okay, cool.
+
+
+[Anna Rose] (28:26 - 28:31)
+Yeah, just to help us sort of frame that. Are they using very different techniques? I'd love to hear the comparison there.
+
+
+[Ron Rothblum] (28:32 - 29:13)
+I think the main source of comparison, and that maybe touches on, like, stuff we discussed also in the previous episode, is sort of all the hash-based polynomial commitment schemes rely on error-correcting codes. And the thing that is sort of common to FRY and STIR and WUR is their reliance on the Reed-Solomon code. So all of them are polynomial commitment schemes built around the Reed-Solomon code, and the Reed-Solomon code is fantastic, big fan, but there are other codes that in some senses are better.
+
+
+And these three works that I've worked on, Blaze and TensorSwitch and Bolt, all come from this, like, trying to use better error-correcting codes to get better PCSs.
+
+
+[Anna Rose] (29:14 - 29:18)
+Kobi, I feel like you should step in here since you are one of the co-authors of Bolt as well.
+
+
+[Kobi Gurkan] (29:19 - 30:15)
+Oh, yeah. I think, like, it's super interesting. I mean, we are also a big fan of Reed-Solomon codes, and we can even talk a bit about what's being done to make them even better today.
+
+
+But yeah, it's super interesting to see what are the trade-offs you can take. I think, you know, some codes are better in some respects, so we can talk about, like, maybe proving time getting much better. Maybe you pay in proof size.
+
+
+And that's something that is sometimes sufficient or even favourable. In some other settings, there are settings like the blockchain space where maybe you want to minimise proof size because everyone has to read it. But there are some settings that maybe you just want to send the proof to a number of parties of chain.
+
+
+So in those situations, proving time might be much more important. And there are codes like, for example, the one we used in Bolt that are much more suitable for something like that.
+
+
+[Ron Rothblum] (30:16 - 31:47)
+What was the code? So it's kind of a code that we came up with, even though it's, like, heavily influenced by prior work from coding theory. We called it a sketched code.
+
+
+In a few words, the idea, so it actually relies on Reed-Solomon, but as a component, the idea is that in some sense you take your message, eventually you want to encode the message, but what you'll do is first you take your message, you kind of like hash it down, but not in a cryptographic sense, but think of it just creating like a shorter digest of the code in some way. And encoding just that digest, your overall code will now be the encoding of the digest, but also the original message itself. At a very, like, high level, why does this work as a good code?
+
+
+You can think, so what is a good code even? So good code should have the property that if you take any two distinct messages, even if they're just like a little bit different, they differ only maybe on one bit, you want their encodings to be extremely different. That is kind of a key property that you want for error correction.
+
+
+So why does the sketch code work well? Well, let's think of like two messages. If from the start they are very different from one another, since we are releasing them as part of the overall code word, then we're fine, we don't need to worry about anything, they're different, everything is good.
+
+
+So the other extreme case is when they're very, very similar. What you can show is that for two messages that are extremely similar, you want to set up so that the sketch or digest that we talked about before should also be distinct. It doesn't have to be like super distinct, but just like not be the same.
+
+
+[Anna Rose] (31:48 - 31:52)
+Do you have to amplify the distinction or it's okay if it remains close?
+
+
+[Ron Rothblum] (31:52 - 32:48)
+It's amplified in the sense that the digest is smaller. So you took like two messages that are different from one another. For each one, you separately sort of compute its digest, which is smaller.
+
+
+It should be like much smaller, maybe like a tenth of the size or so. And you just want to say that, you know, the difference is preserved. So if they were different before, they're still different, even though some information was lost, right?
+
+
+Because it's smaller, but you want to have the property that if originally they were just a little bit different, then that difference is still maintained when you compute their sketch. And if that difference is indeed holds, once you apply your good error correcting code, read Solomon or whatever, that distance will be amplified. And the nice thing here is that you're using read Solomon code on something that is much smaller.
+
+
+So let's say a tenth the size of the original message. So you're paying like the Reed Solomon cost is 10 X smaller.
+
+
+[Kobi Gurkan] (32:49 - 32:58)
+You can just execute it much faster. Reed Solomon on a bigger message is naturally smaller. And that's what you see in Frye and Weir and other constructions.
+
+
+[Ron Rothblum] (32:59 - 34:07)
+Yeah. So maybe like also a good way to like think of comparison between the, the word line of work versus ours is where you want to put the emphasis on prover efficiency or verifier efficiency. Okay.
+
+
+So it's a line of work that uses sort of these like fancier error correcting codes is really about prover efficiency. You want codes that have a faster encoding time than read Solomon, like the sketch codes that we did with, with Coby, by the way, this is a joint work with the amazing Andrea Novikovic as well, big shout out. So that line of work is emphasising the encoding time and prover speed.
+
+
+Whereas the word line of work is saying, you know what, we're going to be encoding using read Solomon code, but we want to make verification and proof size as, as good as possible. The, the nice thing is that these two lines of work can really like live together in harmony via this idea of proof composition, because when we're doing the proof composition, you might start off with a proof that is, you know, has like a bold type of proof that has a really good prover, but only in like an okay verifier, but then rather than actually using that verifier, you, you recurse or you prove that verifier using something like Weir.
+
+
+[Anna Rose] (34:07 - 34:07)
+Cool.
+
+
+[Ron Rothblum] (34:07 - 34:13)
+So you, you inherit the super fast proving from Bolt, but the good verification from Weir.
+
+
+[Anna Rose] (34:13 - 34:22)
+So when, when Blaze, Weir or Bolt stir, like what's the Frankenstein combination of these?
+
+
+[Ron Rothblum] (34:22 - 34:35)
+Yeah, I think I would really love to see that deployed in practice. We do in the Bolt benchmarks, we saw very good performance. I think it's very promising.
+
+
+And I think it's sort of like super exciting to try to see that actually deployed.
+
+
+[Kobi Gurkan] (34:35 - 34:46)
+Yeah, I think it's like, it's a very practical thing. I, I'm very happy with the results that we got there in the sense that, you know, I said, maybe proofs can be larger, but they're not that much larger.
+
+
+[Ron Rothblum] (34:47 - 34:56)
+It's also raising new questions about proximity gaps that I find really exciting. So I also hope people will look at that on that as well. So proximity gaps for codes beyond retail and code.
+
+
+[Anna Rose] (34:56 - 35:08)
+So like another work that I just mentioned before, but you're saying it's quite distinct from the Blaze TensorSwitch Bolt is Veil. You presented Veil at the most recent DK Summit. Tell us a little bit about that.
+
+
+[Ron Rothblum] (35:08 - 35:28)
+Yeah, so Veil is this also like really exciting project that I worked on with friends from, from Succinct. It's sort of like a way to turn your favourite hash-based proof system of some particular form to be what's known as ZKZK. Really hate that term, even though it's amusing.
+
+
+But so I'll try to stick with just zero knowledge.
+
+
+[Anna Rose] (35:28 - 35:31)
+AKA private, right? Like adding the privacy back.
+
+
+[Ron Rothblum] (35:32 - 36:26)
+Exactly, exactly. Adding privacy back. So usually when you don't have it, you only have succinctness.
+
+
+So you have short proofs. But in a lot of settings, we actually want to have very strong privacy guarantees and zero knowledge is kind of like the, the, the strongest one. Traditionally in say SP1, the way we would get zero knowledge is by taking our succinct proof and then recursing or composing it with something like raw 16 to get zero knowledge that way.
+
+
+That comes with some caveats. Maybe one of the most notable ones is that raw 16 is not a post-quantum. So we wanted to have sort of like a native hash-based zero knowledge solution.
+
+
+And that's, that's kind of what Veil does. So we have a proof of concept showing what sort of like that overhead is kind of quite small, both in terms of like prover time, proof size. And so we're looking at Succinct to kind of deploy that and really in test SP1 as well.
+
+
+Cool.
+
+
+[Anna Rose] (36:27 - 37:17)
+We should talk about Flock. This is something we did cover on our episode with Benedict. We went into some detail about how Flock came about.
+
+
+I feel this summer, I think it came out in June, but this summer there was a lot of conversation about it. Also, I think you listed, you know, the AI, the AIs you were using as coauthors almost or like helpers, which I think is quite novel for a research paper. Most people are not saying, even though it's clear that it's being used, they're not necessarily overtly including them.
+
+
+We did go into detail on that, so I will add a link in the show notes to Flock. But that episode came out in June, I think, or July. It was quite a, like it was a few months ago.
+
+
+So I'd love to hear what's happened since and if there's new work or, you know, what, what have you discovered about it since it's been released?
+
+
+[Ron Rothblum] (37:18 - 39:17)
+So I don't think we actually listed the AI as a coauthor. Maybe we should have. Maybe it wasn't allowed to do it.
+
+
+Yeah, I don't know. But we certainly, so I hadn't done coding for like coding in the sense of like programming in a very long time. I think Benedikt may have done a tiny bit, but we went like this, like extremely assisted by AI implementation for Flock.
+
+
+So certainly lots of credit to AI with Flock. Flock was discussed in the episode with Benedikt, I think just very recently, but it's kind of like a proof system for batch proving of Boolean computations. I think this was actually maybe also like a future mirror was kind of foreshadowed a bit in the previous episode that I was on, where I talked about my interest in proving Boolean circuits, which was really coming out of a theory perspective.
+
+
+But then with, with Benedikt, we started looking and with his amazing student, William Wang, we started looking and trying to see, you know, looks like trying to look at the theory work and making it practical is useful. Let's try to look at that as well. And that sort of led, led to the Flock project, which I think has sort of like gotten, yeah, has been maybe like well received and drawn a lot of attention.
+
+
+And even like much more importantly than that, I think it has really generated a lot of like new ideas and follow up work that I'm super excited about. And, and I feel like kind of re-energised the field a little bit. So that's been a lot of fun to see.
+
+
+And maybe so we can discuss the follow up work, but one of the like really cool things that happened very recently, which I think Flock was a contributor to is that Ethereum Foundation decided to switch from Poseidon to one of the Boolean hashes, I think prior to Flock, it was kind of unclear that we could have like sufficient, like we could do this efficiently enough. And I think Flock and also a lot of influence, previous influence from, from Binius showed that this is indeed possible. And this is sort of a gigantic shift, which I'm happy that Flock contributed to.
+
+
+[Anna Rose] (39:17 - 39:38)
+Oh, interesting. I didn't realise that. I mean, I, I thought that the switch had to do more with like the worry about Poseidon, but that I guess what you're saying here is that there's like, there's an alternative proposed already, or it was shown that you could use these like existing hashes in a fast enough way.
+
+
+So therefore switching away from Poseidon was even an option. Is that true?
+
+
+[Ron Rothblum] (39:38 - 40:00)
+Yeah. So I think it sort of happened more or less at the same time that because of some new attacks, people's confidence in Poseidon started to be a little bit shaken. That was on the one hand.
+
+
+And the other hand, we saw that like something that I think was very unexpected a year ago, maybe, is that we could use traditional hash functions and proofs and make it performant enough.
+
+
+[Anna Rose] (40:01 - 40:01)
+Yeah.
+
+
+[Ron Rothblum] (40:01 - 40:10)
+So the combination of, you know, we are kind of like worried about Poseidon plus seems like the other alternatives are good enough is really what enabled this change.
+
+
+[Anna Rose] (40:11 - 40:45)
+Crazy. At the same time, you have, this is something we've wanted to talk to you, that kind of what prompted this, snark.fast, like this sounds like a, and I really do need this to be explained to me, but what it sort of looks like from the outside, it's like, it's a challenge. You're sort of saying, hey, can you improve this system even more?
+
+
+What are you trying to do with it? And like, why do you need to do that? If you've already created Flock and this is usable, like what, what parts of Flock are you trying to optimise?
+
+
+And maybe I, maybe I don't even understand what snark.fast is. So maybe you should explain what that is first.
+
+
+[Ron Rothblum] (40:45 - 41:04)
+Yeah. So snark.fast is a collaboration between us at Succinct together with Eigenlabs was really leading it, Ethereum Foundation and Espresso. Espresso is where Benedict is at.
+
+
+And the idea sort of, I think they were also kind of excited to see Flock and the very positive reaction that it had. And they were interested to see, you know, can we further improve Flock?
+
+
+[Anna Rose] (41:05 - 41:09)
+But like on what level, like just making it faster or making it safer?
+
+
+[Ron Rothblum] (41:10 - 41:10)
+Faster, faster.
+
+
+[Anna Rose] (41:10 - 41:11)
+Just faster.
+
+
+[Ron Rothblum] (41:11 - 43:14)
+So I've like been very, very, very focused on this question of getting extremely efficient proving. I think I find it like super exciting. It's been on my agenda from like theoretical works and like 2020 and even before, so I'm extremely interested in the, the, the cost of proving, I think.
+
+
+Even back in 2020, I had this paper called proving as fast as computing. And that has been sort of my agenda ever since. Yeah, to get to that.
+
+
+And with Flock, we made a lot of headway. We got like very efficient proofs, but I don't see myself ever being satisfied with how efficient proving is. And the point is really, so it's.
+
+
+There's one question of, you know, how efficient can you make it as a basic scientific question that I'm really interested in moreover, though, I think that even if you make it, you know, fast enough for Ethereum, fantastic, super happy for Ethereum, but if you can make it even faster, maybe it enables new applications that we can't even dream about because, you know, we think, you know, that it's inherent that there is whatever overhead to proving, which maybe we don't actually need, and maybe with some new breakthroughs we can get rid of and enable things that we could not even imagine before. So I would not say that Flock is definitely not the end of the road.
+
+
+It's very much the beginning. And the question is, you know, what more can we squeeze out? And snark.fast is sort of an AI focused way of trying to improve that. ZK-Golf is as well. Let me say maybe a few words about the snark.fast idea. So what they were saying is, you know, so Flock is a proof system, right?
+
+
+There's a prover algorithm and there's a verifier algorithm and it's, you know, pretty performant or quite performant. But let's say, you know, let's keep the verifier fixed because the verifier is what guarantees your sort of like your completeness and your soundness, which are the key properties. Can we, you know, replace the prover from Flock with a new prover that's even faster, that still convinces the verifier, you know, of true statements?
+
+
+And because Flock is sound, you know, it's not going to be proving false statements, hopefully, right? So the point is, you know, just think of the Flock prover as an algorithm. Can you make that algorithm faster?
+
+
+[Anna Rose] (43:15 - 43:33)
+Yeah, that's that was sort of the question that that this brings up, though, is like, why wouldn't, like, could you get something very fast, but somewhere under the hood it's broken? Or is just the structure of Flock such that you wouldn't be able to actually like convince the verifier if it's wrong or if it's insecure?
+
+
+[Ron Rothblum] (43:33 - 44:08)
+So it really depends on what broken means. And I want to separate here between completeness and soundness. So soundness of Flock or in general, what it says, as if if you're holding a false statement, no one should be able to convince you to accept it, right?
+
+
+In particular, not a snark.fast prover, not a snark.faster, not snark.fastest. No one should be able to convince you of something that is false. So that is doesn't matter, you know, what like faster prover you come up with. It will fail.
+
+
+False statements should not be provable. Okay. It will fail.
+
+
+So in that sense, there is no like question of security.
+
+
+[Anna Rose] (44:08 - 44:08)
+Yeah.
+
+
+[Ron Rothblum] (44:08 - 46:25)
+With snark.fast or anything, as long as the verifier is fixed, there's no question of soundness, there is no question of completeness. So completeness means, for example, that true statements should be provable. And there it's a little bit more, more difficult to guarantee this.
+
+
+With snark.fast, what we guarantee is that that's sort of like for random inputs, you can still accept. Something more ambitious you could try to do is have, prove that the changes you made don't change the input output behaviour of the prover. And that is, I think in ZK Golf, Kobe and others were targeting that.
+
+
+So they have like stronger completeness guarantees. Another thing that I'm a little bit worried about is that these like crazy fully AI led projects without so much supervision is, you know, there's a potential for our AI overlords to insert malicious code into the prover. So that's like another concern that you should have.
+
+
+Having said that, the results there were really breathtaking, I think. I thought it was like pretty clear that they would get like using like this like crowdsourced massive AI. For sure there's better engineering than what we did with our, you know, our agent and like small amount of tokens.
+
+
+And I was expecting, you know, a 10, a 20% stuff like that. They actually got to, I think two and a half or three X. Oh, wow.
+
+
+So this is like pure engineering. There's no change to the protocol. So pure engineering, two and a half to three X.
+
+
+I think initially like one of the, something really interesting that happened there is that pretty early on the AIs noticed that, so we were running the benchmarks on Macs and pretty early on, they noticed that the Macs have the GPU that we weren't utilising, not because we, not because we didn't know they're there, but more of like when we tried to experiment with them a little bit, they didn't work well, turns out the AI knew how to utilise them much more.
+
+
+And that was, that contributed quite, quite a lot. And I think like when people realise that they saying, ah, you know, snark that fast is really like just about that. Something that's kind of like, again, super interesting is that more recently there's been an X86, like an Intel, they snark that fast using an Intel server does not have a GPU.
+
+
+And now they're over three X better than our flaw implementation.
+
+
+[Anna Rose] (46:26 - 46:41)
+Oh, so cool. So they're finding all sorts of ways to sort of extract more speed. So that one, the one, the example you just gave with your Mac is like, there's, yeah, some untapped hardware that they could just access and you hadn't been able to sort of loop that into the, to the flow.
+
+
+[Ron Rothblum] (46:41 - 46:55)
+I mean, we tried a little bit, we got like overheating stuff. So, and like the GPU very quickly like overheated and stuff. But so a lot of the, I think the contributions on the Mac were finding like right scheduling between the CPU and GPU and stuff like that.
+
+
+[Anna Rose] (46:56 - 46:56)
+Interesting.
+
+
+[Ron Rothblum] (46:56 - 47:04)
+And that led us to think that, you know, the big part was the GPU, but then all of a sudden the Intel version without it, without a GPU managed to get that as well.
+
+
+[Anna Rose] (47:04 - 47:19)
+So where did they optimise? What was the optimisation on that front then? Was it just like, I don't actually understand what they're optimising, like what's, how do you speed this up?
+
+
+Like how, where do you achieve the speed? Like the hardware example makes total sense. That's very obvious, but like, how would you do it otherwise?
+
+
+[Ron Rothblum] (47:20 - 47:46)
+So very smart engineering. So for example, things that are very costly or they're sort of like going, scanning through your memory. So if you can find, you know, if your algorithm, your, your protocol requires you to like scan through the memory once, do something, then scan again, do something else, if you can find a way to just like go through it once and do both at the same time, that's going to save you a lot of work.
+
+
+Of course we were aware of this. We tried to do it. The AI just does it much, much better.
+
+
+[Kobi Gurkan] (47:47 - 48:41)
+Yeah. I think like the AI is just allowed to experiment much more. So I think when we, when we were talking with Benedict, we discussed this a bit around this, you know, what are the anchors that you can have that will allow you to experiment while making sure things are still fine.
+
+
+So Verify is an amazing anchor because you can basically experiment with almost everything and making sure that the system is still secure. And I think modern computers just have a lot of components inside them that you can use that it's just very hard to experiment with, especially when you have other things going on and there are caches, there are GPUs, there are different ways to like schedule tasks between them and AIs can just experiment with all of these different ideas that you have just much more broadly.
+
+
+[Ron Rothblum] (48:41 - 48:44)
+And just like the infinite patience is very, very powerful.
+
+
+[Anna Rose] (48:45 - 48:59)
+Who's behind these agents? Like, are they different labs? Are they different companies?
+
+
+Are they individuals that are like, and like, what is, what are those individuals actually doing? Like, could I just do it? Cause it seems like I, it should, you should need some expertise though.
+
+
+Right?
+
+
+[Ron Rothblum] (49:00 - 49:13)
+No. So the expertise is going to snark.fast. There's a link there. Copy paste this to your agent and let the agent run.
+
+
+And I mean, that, yeah, that's one way, but I think, isn't that like what most people are doing?
+
+
+[Kobi Gurkan] (49:13 - 49:25)
+I think so, but I know that there are definitely some people that are trying to bring some of their knowledge or some of their like list of resources and expertise, but you know, just add it to the prompt.
+
+
+[Anna Rose] (49:25 - 49:40)
+I feel like the expertise would potentially help get the agent there faster, which is not what you're testing. You're trying to get snark.fast. It's not about how fast the agent figures it out. It's how fast they can make the Flock protocol work.
+
+
+[Ron Rothblum] (49:41 - 49:50)
+But, but in terms of like a utility of your, of your tokens, you kind of want to, potentially pointing in the right direction could help, but also the AI can come up with its own directions.
+
+
+[Kobi Gurkan] (49:50 - 50:19)
+Yeah. By the way, one cool thing about snark.fast that I've seen that was happening where people were optimising is that, you know, snark.fast is for specific hardware, and I don't remember exactly what they're targeting, probably like an M3 processor, and some people don't have access to that specific processor. So there was one of the AIs that built a simulator of the processor so that they can participate and see that they have a submission that would be accepted.
+
+
+Wow.
+
+
+[Ron Rothblum] (50:20 - 50:28)
+I was actually worried that maybe one of the AIs somehow got control of the snark.fast website and is just like reporting false numbers, because you know, that's what it's optimised to do.
+
+
+[Anna Rose] (50:29 - 50:39)
+That's what, yeah. I mean, how, that was, my question is a little bit like, how do you actually judge, how is this competition being judged? What, how, how is a leaderboard put together?
+
+
+[Ron Rothblum] (50:39 - 51:14)
+Right. So, so actually that's like a nice feature of, in terms of like trying to do like AI assisted, like engineering and speed ups, is that for approved systems is a good use case, because what happens is basically someone comes along and says, you know what, I have a better prover. Now you can test it.
+
+
+You can just see, you know, I'll run it on random inputs and see whether it makes the original fluct verifier from June accept on, you know, many, many random inputs. If so, we accept it as a valid prover. And, you know, we measured how much, how, how much time it takes over many experiments.
+
+
+We see that it's faster. You get to be the new leader.
+
+
+[Anna Rose] (51:14 - 51:20)
+Who's measuring it though? Is it you guys? Is there like submissions and there's like a person doing this or is it also all automated?
+
+
+[Ron Rothblum] (51:21 - 51:24)
+And I'm sure it's automated, but Eigenlabs is kind of running that part. Okay.
+
+
+[Anna Rose] (51:24 - 51:38)
+And this is on their platform Yukon, I think. Yeah. Okay.
+
+
+I feel like I kind of want to explore what Yukon actually is, because I don't really get what that environment is that it's possible to do this. Is ZK-Golf also there, Kobi?
+
+
+[Kobi Gurkan] (51:38 - 51:44)
+So yeah, ZK-Golf is about optimising, let's say, circuits.
+
+
+[Anna Rose] (51:44 - 51:45)
+Okay.
+
+
+[Kobi Gurkan] (51:45 - 53:46)
+So you have a description of a circuit. You have a specification, let's say of some function of a hash, and you know what is the correct way to write the function when you write it as a, as an algorithm. And now the question is, how do you make sure that the circuit that you're writing is still safe?
+
+
+It's still sound, still complete. And there is this language, a lean-based DSL that ZQ Security has worked on for some time called clean that allows you to express the circuits in that way and express what it means for them to be sound and complete. So one thing that both Tamir and Ron messaged us when they saw ZK-Golf is that they said, Hey, okay, you guys launched ZK-Golf with circuits over prime fields.
+
+
+And that's nice. You can optimise some stuff there. We already like saw a lot of really great results from the AIs optimising circuits there.
+
+
+What about binary fields? And what about the circuits that are Flock shaped? They have like a specific shape that needs to be satisfied.
+
+
+So, yeah, we, we also added a couple of circuits that have that, that are over binary fields with a Flock shape and that already got nice results as well. So I'm sure that you guys spent a lot of time already optimising with AIs the circuits that you guys put in the Flock paper and some people pointed their AIs maybe with some knowledge. I think, I think actually this is the instance where I've seen some people try to put their expertise inside as well.
+
+
+And yeah, there were like tonnes of percentages of improvements over the circuit, the circuit descriptions that were already in the paper, which was nice. So that's like another way to improve the, the Flock proving performance, not by the engineering of the prover itself, not like the field operations, but actually just changing the circuits themselves on some specific problems.
+
+
+[Anna Rose] (53:46 - 53:51)
+Are these like complimentary competitions then? These ones, yes. Okay.
+
+
+[Ron Rothblum] (53:51 - 53:55)
+And we're going to incorporate both of them into the new version of Flock.
+
+
+[Anna Rose] (53:55 - 54:14)
+Oh, cool. In that episode back in 2023, you did leave us quite a few Easter eggs for research and ideas, things that you were excited about. And I'm curious, like, yeah, what do you have for us this time?
+
+
+What are you thinking about? What is, what is on your mind? What do you think might like breakthroughs that we might see in the next few years?
+
+
+[Ron Rothblum] (54:14 - 55:49)
+Yeah. So, so Easter eggs may sound like it's sort of intentional that I know all the stuff that's coming. I didn't, but I sort of like maybe have like some good, some, some good hunches.
+
+
+So I'm not sure I'm going to do as well, but I can tell you the things that I'm excited about now. So one thing is sort of like, where do we go on with Flock from, from here? And we're actually working on a Flock V2 and it's all kind of like open source and you can see.
+
+
+Listeners can follow the development, but we're trying to kind of like get more functionality out of flux. So the original Flock was just about proving a bunch of hashes. We'd like to do be able to do much more.
+
+
+So proving a bunch of hashes is kind of a, a lot of like, what is the interesting stuff that we want to do in many applications, but there's also a lot of like other logic that we need to support and Flock currently only supports very limited logic. We want to do much more support recursion and Flock, and we can kind of already do that in this upcoming V2, maybe things like a signature aggregation that Ethereum is really interested in and in general sort of seems like any post quantum hash-based future should rely on. So that's something pretty immediate that we want to, we want to do with Flock.
+
+
+A bit more long-term, something I'm really excited about is doing kind of a Flock-based ZKVM. And actually at the sync, that's exactly what we're planning with the, an upcoming version of SP1. So probably like V7 of SP1 will be kind of binary field and Flock-based, which kind of all of the lessons we learned both from the prime fields and from Flock incorporated into ZKVM, which I think can be extremely performant.
+
+
+So that's something I'm really excited about.
+
+
+[Anna Rose] (55:50 - 56:02)
+Every time I hear binary fields, I think of Binius and this makes me kind of wonder, what is the connection point here? Like, are you extending Binius? Is it different?
+
+
+Are you combining something that they've done as well?
+
+
+[Ron Rothblum] (56:02 - 56:48)
+So we are very much following in their footsteps and the usage of binary fields, but I think adding to that sort of like our expertise in arithmetization, new ideas and overall, you know, their ideas are fantastic. We're, we're building on them and trying to, to do even better. One thing that I think is exciting and an enabler is the fact that NVIDIA recently added support under GPUs for binary fields, is something that did not exist before.
+
+
+I think it was released in May of this year. And prior to that, that was kind of the showstopper. And I think a key reason why binary fields were not adopted for ZKVMs, now that they have it, plus we've seen the amazing performance of binary fields that I think that's sort of like where we want to go.
+
+
+[Anna Rose] (56:48 - 57:00)
+Wow. It's like the ZK GPU idea or the ASICs that we had been talking about years ago, it kind of has been dropped a little bit as a narrative, but it's like now maybe we don't need one. This'll be the equivalent.
+
+
+[Ron Rothblum] (57:01 - 57:17)
+Yeah. I mean, probably an ASIC would be even faster than, than a GPU, but it takes like such an effort to, to build it. And you can, based on the market demand, maybe that will happen, but just, just based on like the performance we're seeing on binary field GPUs, I think it would be really, really good.
+
+
+That's cool.
+
+
+[Kobi Gurkan] (57:17 - 57:19)
+Yeah. Any other prophecies?
+
+
+[Ron Rothblum] (57:19 - 58:32)
+So I'm not sure about prophecies, but like the other sort of the Flock SP1 is like a very concrete kind of like engineering and applied question. A bit on the more like scientific thing and just about it before I have this sort of like, I've been very passionate about this question of proving as fast as computing, and I think you can attack this question from different angles, like a bit more theoretical, a bit more practical with Flocking was very practical. We were looking at, you know, what is the wall clock time for proving a bunch of hashes versus computing them.
+
+
+And we got it down to like ballpark of like 200 X. So proving hashes is like 200 X is only 200 X. Slower than just computing them, which is may sound like a lot, but it's like way, way faster than what we had thought previously about what we could target.
+
+
+And I think it's super interesting. I should say that this number, you have to be careful about what exactly it means, but let's not, not, not, not do that here. And it would be like very cool to, to, to improve that using, you know, that number is even like before it's not that fast in ZK-Golf and new ideas that we have in Flock V2, so trying to push that idea further would be like super, super exciting, I think.
+
+
+[Anna Rose] (58:32 - 58:40)
+So if there's a 200 X overhead, you are, I guess your aim is to bring that down to like one, one X or parity.
+
+
+[Ron Rothblum] (58:41 - 59:05)
+Yep. Yeah. Yeah.
+
+
+So get it down as much as possible. Yeah. Maybe there's an inherent limit of the universe that proving cannot be exactly as fast as computing, showing that would also be cool.
+
+
+But otherwise, you know, full steam ahead, let's, let's just make our proofs like extremely, extremely fast. And I think this can enable just like new applications that are hard to even like imagine right now.
+
+
+[Anna Rose] (59:05 - 59:18)
+What could that do though? Like, so if you have, like, it, would it almost just be like the minute you send any operation, there's a, there's a proof there's, or there's like a ZK element to it and like, what does that even do? What would that open up?
+
+
+[Ron Rothblum] (59:18 - 1:00:00)
+Yeah. So taking the things to really to an extreme, if you can get it down to like one, in the sense that as you're computing stuff for free, you can also generate a proof of what you computed, which is very much a dream scenario, but let's go with the dream. It means that all computation in the world is verifiable.
+
+
+Anything that anyone, your agent, anyone else's agent, anything that anyone does, you can compare it to like, if you have a baseline, verify very, very cheaply that it was done correctly. And this could include like machine learning, training and inference and, you know, any computation. So I think like getting this overhead down will really just like open up like brand new use cases that are beyond our imagination.
+
+
+Crazy.
+
+
+[Anna Rose] (1:00:01 - 1:00:18)
+Yeah. I guess this, I mean, this does sort of make me realise how much of computation is not verifiable right now, that like we're relying on these sort of external tools and like, this would be a total game changer if you could actually map back everything, especially because we also now have the tools.
+
+
+[Ron Rothblum] (1:00:18 - 1:00:35)
+External tools and just like general, general trust, you know, we're getting software from big companies, small companies, we're running them, seem to work okay, but, but kind of, who knows? And if we could get like assurances, especially as like more and more of the software generated as by agents, I think that's really interesting.
+
+
+[Anna Rose] (1:00:35 - 1:00:40)
+Also, cause humans can't verify that so well. So this, you almost like, you're going to need something.
+
+
+[Kobi Gurkan] (1:00:40 - 1:00:57)
+Yeah. And especially when things become even more formally verifiable, like you mentioned in the, like in a recent episode with Alex Ozdemir, like the overhead of proving Lean Theorems in Snark is very far from 1x, but if we get there, that will, that will definitely be a different world, so.
+
+
+[Anna Rose] (1:00:59 - 1:01:16)
+Ron, thank you so much for coming on the show, sharing with us sort of your updates since our 2023 episode, your move to Succinct, your work on polynomial commitment schemes, all the way to Flock and Snark.fast. I'm so glad we got a chance to cover all of that. Yeah. Thanks so much.
+
+
+[Ron Rothblum] (1:01:16 - 1:01:17)
+Thank you so much for having me guys.
+
+
+[Kobi Gurkan] (1:01:18 - 1:01:31)
+Yeah. And thanks for, for joining us for this episode. I, I always really enjoy working with you and your work has been so influential on this space, it was great that we could talk about at least some of it.
+
+
+Cool.
+
+
+[Ron Rothblum] (1:01:31 - 1:01:33)
+Oh, thank you so much. That means a lot. Thank you.
+
+
+[Anna Rose] (1:01:34 - 1:01:40)
+All right. I want to say thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners, thanks for listening.
