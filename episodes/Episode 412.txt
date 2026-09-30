@@ -1,0 +1,1073 @@
+﻿[Anna Rose] (0:05 - 1:27)
+Welcome to Zero Knowledge. I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online.
+
+
+This week, Tarun, Nico, and I catch up with JP Aumasson, co-designer of BLAKE3 and author of Serious Cryptography. JP is now working at Cloudflare after years working in Web3. He shares his updated take on the quantum risk to cryptography and his thoughts on how AI is changing cryptographic security, specifically why he thinks symmetric primitives are safe from LLMs, while the asymmetric side is already seeing real AI-assisted breaks.
+
+
+We touch on Poseidon and some of the security work that's come out recently around that, China's new NGCC competition and the speed at which AI is breaking the candidates, and how AI is changing the way that cryptographic systems get built, allowing famously cautious cryptographers to be less conservative with security margins. He also shares news about a new hash function bounty project he's working on and why he would like to see BLAKE3 everywhere and more. Hope you enjoy.
+
+
+Now, Tanya will share a little bit about this week's sponsor.
+
+
+[Tanya] (1:28 - 2:18)
+Today's episode is sponsored by Sovright. Sovright builds the critical infrastructure that preserves your right to choose. Sovright has built two products, Argos and the Sovright Mining Pool.
+
+
+Argos is a free tool that lets anyone with ZEC stranded in an old, unmaintained wallet client recover their funds. Enter your seed phrase, generate a new address, and your money is yours again. No fees, no complexity.
+
+
+The Sovright Mining Pool is Zcash-native and built on Stratum V2, where miners choose their own transactions. Every block carries a verifiable signed attestation, and payouts arrive in fully shielded ZEC. Two essential problems that have been overlooked, finally solved.
+
+
+Discover more at Sovright.com. So thanks again, Sovright. And now, here's our episode.
+
+
+[Anna Rose] (2:21 - 2:35)
+Today, Tarun, Nico, and I are here with JP Aumasson. He is the co-designer of BLAKE3, the author of the book Serious Cryptography, and he is now a cryptography engineer at Cloudflare. Welcome back to the show, JP.
+
+
+[JP Aumasson] (2:35 - 2:37)
+Thank you, Anna. Thank you for having me.
+
+
+[Anna Rose] (2:37 - 2:38)
+Hey, Nico. Hey, Tarun.
+
+
+[Nico Mohnblatt] (2:39 - 2:39)
+Hey. 
+
+
+[Tarun Chitra]
+Hello, hello.
+
+
+[Anna Rose] (2:40 - 2:50)
+JP, we've had a few touchpoints over the last few years. I want to just share a rundown of some of these. You spoke at zkSummit.
+
+
+I think it was zkSummit7?
+
+
+[JP Aumasson] (2:51 - 2:53)
+7 or 8, yeah.
+
+
+[Anna Rose] (2:53 - 2:53)
+Yeah.
+
+
+[JP Aumasson] (2:54 - 2:58)
+I don't even remember. I know it was about security auditing of ZK proof systems.
+
+
+[Anna Rose] (2:59 - 3:30)
+Cool. You were a guest on the show, in which we mostly talked about hash functions, and you explained them to us. And then you came back, and more recently, you were actually one of the experts that we had on the ZK whiteboard sessions, also looking at hash functions.
+
+
+And I feel like that's, I mean, that came out about a year ago. And yeah, it's just, it's really great to get a chance to catch up once again. I feel like since we last spoke, you've made sort of a pretty big shift in your career.
+
+
+Do you want to share a little bit about what you've been up to?
+
+
+[JP Aumasson] (3:31 - 4:41)
+Yes, indeed. I've been for the last 6, 7, 8 years, contributing to the so-called Web3 ecosystem from a, let's say, institutional banking regulated perspective, working in a company where I was chief security officer. And now I joined Cloudflare, which many of you likely know.
+
+
+I joined three weeks ago, at the start of September. And it's a very different experience, because I wanted to change for a variety of reasons. And I realised that what I love doing, what I do well, I assume, is cryptography, cryptography engineering, security, in a sense of managing security in an organisation.
+
+
+But in the space where I was, it was very highly compliance-driven, which I realised is not what I enjoy the most and not where I'm the best. So that's some of the elements that brought me to Cloudflare. So when I had this opportunity to join, it's kind of an offer you cannot refuse, given the sheer scale of Torus and the quality of their engineering.
+
+
+[Anna Rose] (4:41 - 4:59)
+Very cool. I feel like in what you're doing, too, you're going to be basically interacting with technology that's touching a lot of the internet. Is that a shift from what you were doing before?
+
+
+You were creating very, very important hash functions before, too. But does it feel like a different engineering scale?
+
+
+[JP Aumasson] (5:00 - 5:45)
+Yeah. I'm joking with some of my colleagues that I want Cloudflare to adopt Lexray, which would probably improve the performance of my systems. I really enjoy my first weeks here, the company, the people.
+
+
+And to be honest, it's quite refreshing to be in a different space than the Web3 blockchain space, which has people who know me, who see me on Twitter, know that I've been very sceptical of some Web3 projects. And we see how it's evolving. And we see that the best projects survive from a technology perspective, from a business perspective.
+
+
+But I wanted to see something different. So here we are.
+
+
+[Anna Rose] (5:45 - 5:53)
+You feel you've left crypto, but I feel like crypto's going to find you again. Or crypto's seen. Web3 is going to find you again.
+
+
+[Tarun Chitra] (5:53 - 6:00)
+You didn't go far enough, JP. I don't know. There are hash functions everywhere.
+
+
+Yeah. Also, isn't Cloudflare building a blockchain?
+
+
+[JP Aumasson] (6:01 - 6:49)
+Yeah. I don't know. Don't expect that to happen.
+
+
+But, you know, sometimes I'm good at prediction, but sometimes the world surprises me. Like you mentioned that hash functions before the ZK podcast. And I mean, 10 years ago, I really thought that hashing is a solved problem.
+
+
+We don't need anything more or better than a Keccak, Blake, the easiest thing to design. And now I see. So we have all those debates about which hash functions to use in post-crypto signatures, which do a lot of hashing.
+
+
+And is Poseidon secure enough? Is Poseidon secure enough? What do we need for ZK circuits?
+
+
+So that's interesting, but I don't want to spend my life working on hash functions.
+
+
+[Anna Rose] (6:50 - 7:47)
+You want to do other things. So, yeah, one of the reasons I first reached out to you. Actually, I've been trying to have you on the show for about six months, I think.
+
+
+And I had a really hard time getting in touch. And I'm really glad I got a chance to. But one of the things that had prompted me reaching out was actually your take on quantum computers and the advancements that have been announced maybe around like March, April, specifically with the Google paper, but also just generally the conversation that was going around on that.
+
+
+So this is something that I definitely want to cover with you. Just to give maybe a rundown of some of the other things, I want to talk about AI and how AI and cryptography are working together, how AI is like breaking cryptography, the newly announced Chinese crypto competition and some of the standards that have been presented. I want to hear about your thoughts on Poseidon.
+
+
+You sort of hinted at that. Yeah. So these are the things we're going to hopefully get a chance to talk about today.
+
+
+Let's maybe start on that quantum front.
+
+
+[Nico Mohnblatt] (7:48 - 7:52)
+I feel like scepticism is going to be a key word in today's interview.
+
+
+[JP Aumasson] (7:54 - 8:14)
+Well, I like to be held accountable. And two years ago, I think I tweeted, posted the following opinion. And I also repeated it in a multitude of public presentations.
+
+
+I was saying at the time that I don't believe that I'm going to see a quantum computer breaking RSA-2048 in my lifetime.
+
+
+[Anna Rose] (8:15 - 8:15)
+Yes.
+
+
+[JP Aumasson] (8:15 - 10:11)
+So I'm going to turn 44 in a few weeks. I'm healthy. And the question is, do I still believe that?
+
+
+There was a big fuss in March this year when Google announced something and when Google announced that people paid a lot of attention. And my experience was that the last couple of years in my industry was warning people against the quantum risk, treating it like any low probability, high impact risk in terms of risk management. And it was often not really dismissed.
+
+
+But you know, when people don't read about it in the news, they don't take you necessarily very seriously. And rightfully so, I get it. But once Google made the announcement, it was a major change.
+
+
+Suddenly you had a million of articles that were like, oh, Google believes that a quantum computer will be out there in 29. Whereas the reality is that it's not. It's not the reality.
+
+
+What Google rightfully assumes is that the risk is high enough, maybe one over a thousand, one over 10,000. I don't know. The risk is high enough for Google to justify their upgrading all their systems by 29.
+
+
+And some of the progress was, I don't know, maybe unexpected, you know, in terms of the size of the circuits. But what Google announced in itself was, to be fair, an incremental improvement compared to what researchers published a few months before. I think it was a team of French researchers.
+
+
+And at the same time, we had the Oratomic launch and the claim that a quantum computer with neutral atoms would need way fewer qubits to break RSA. But in terms of probability, I don't think it really materially increased the risk. It's like a friend of mine was joking that blockchain has been the future of finance for five, for 15 years.
+
+
+And likewise, a quantum computer has been perpetually five years away for the last 15 years.
+
+
+[Tarun Chitra] (10:12 - 10:20)
+I think that's been true then more than 15 years. But I think like since Feynman kind of did the talk in the 80s, that's been true.
+
+
+[JP Aumasson] (10:20 - 10:55)
+So yeah, there's a lot of investment, but we see also a lot of investment in AI because the returns are more obvious. So I don't know, I'm maybe less sceptical, you know. And again, as a true man, my personal opinion, you know, of course, not speaking for my employer, but like we say in security, you know, POC, GTFO, let's see what IBM achieves relative to their roadmap.
+
+
+Let's see what the Google labs deliver. Let's see what those companies listed in the U.S. NASDAQ deliver. And then maybe we'll be surprised and maybe I will be, oh, damn, I was wrong.
+
+
+[Nico Mohnblatt] (10:57 - 11:02)
+So has the chance gone from no chance of seeing one in your lifetime to maybe a small chance?
+
+
+[JP Aumasson] (11:02 - 11:13)
+Let's say I've adjusted my priors, as we say in bias and probability. Nah. Maybe instead of 90% certainty, I've raised it down to, I don't know, 75%.
+
+
+[Nico Mohnblatt] (11:13 - 11:14)
+Okay.
+
+
+[JP Aumasson] (11:14 - 11:14)
+Okay.
+
+
+[Nico Mohnblatt] (11:15 - 11:16)
+That's substantial.
+
+
+[Tarun Chitra] (11:16 - 12:48)
+I do kind of agree that unfortunately, for better or worse, we're now in this era where like research breakthroughs are better as marketing than as research breakthroughs. So people are always kind of overhyping something, even though there's oftentimes very real truth. The real truth, you know, in every good lie or every good ad, there's always a kernel of truth.
+
+
+I feel like, and in some sense of that, it feels like the Google thing was the beginning of the era where like every company is like kind of suddenly gaslighting you a little bit with this where it's like, there is really a discovery, but like, I don't think it's like, as you know, it's assumed it assumes it's completely de novo, didn't use other people's work, whatever. And like, in reality, it's kind of like more mixed. I also think the fact of the matter is like, we haven't really executed any quantum circuits beyond like trivial gates yet, right?
+
+
+If so, let's zoom out a little bit, like how large is the largest circuit we've executed? Not that big, right? Like, even though we're getting these order of magnitude decreases and theoretical circuit size, it's like, we still have a long way to go.
+
+
+And I think the incentives in quantum computing right now are obviously to be like, oh yeah, it's going to happen in one year. You need to give me $10 billion tomorrow. And I think like, I don't blame people in quantum computing, right?
+
+
+And I almost did a PhD in it. And I would say they've had many rough years where like everyone got wiped out and like everyone in the field quit and did something else. And like right now they have a bit of, there's a little bit of a good light shining on them.
+
+
+[Anna Rose] (12:49 - 13:17)
+Tarun, I want to ask about this actually, like what you are saying, like the Google and subsequent actually ECDSA.fail work has really improved the algorithms that interface with the actual quantum computer, right? But how far away are they? What you're saying is like, you can't actually build very big circuits.
+
+
+And so, yeah, I've actually never seen that. Like, it would be interesting to see that on a graph, like how far away have we gotten? Or yeah, have we gotten?
+
+
+[Tarun Chitra] (13:17 - 14:18)
+Yeah, let's make the ZK analogy, right? Like in ZK, this would be as if I told you in pre-Gentry, like 2012 paper that like I've shrunk the circuit sizes of like, I don't know, every hashing algorithm you need by a thousand X. And it's like, great.
+
+
+But there's still thousands, millions of gates. And then you say like, what's the largest ZK circuit that's ever been executed? And you're like, well, additive homomorphic encryption, plus like maybe a couple of gates.
+
+
+It's like under 10 gates pre that era. And so it's sort of like, okay, there's still this order of magnitude gap that it's like, it's like we shrunk, we have two limits. We have an upper bound and a lower bound and they've gotten a lot closer.
+
+
+They're not overlapping yet, right? And like, I think the speed at which people are telling you they're closing is like a little bit more marketing than truth. They are moving closer, right?
+
+
+But the speed at which they're moving closer, I think is where the marketing comes in. Yeah, I agree with that.
+
+
+[Anna Rose] (14:19 - 14:29)
+That's a good insight. You just sort of mentioned like, would quantum computers break? What was it?
+
+
+RSA to, was it 2048?
+
+
+[JP Aumasson] (14:30 - 14:32)
+Oh yeah, I know what you're getting at.
+
+
+[Anna Rose] (14:32 - 14:58)
+You know what I'm going to say, right? So you're worried about quantum computers doing it, but like, let's maybe shift gears and talk a bit about the AI side of things, because I do feel like there's like two guns. I've kind of been looking for like a meme for this, but like two guns pointed at the same place and like, we don't know which one's going to get there first.
+
+
+You know what I mean? Like, yeah.
+
+
+[JP Aumasson] (14:58 - 17:06)
+So I think also for the audience, the context here is that RSA, which is one of the most famous public key cryptosystem, has what we call challenges. Like for RSA of a certain key size, we have this public key, which has been out there maybe, I don't know, for more than 20 years. They were published by the RSA company back in the days.
+
+
+And a way to measure cryptanalytic progress is to see which of those challenges are broken. So we have RSA with a small key size, a longer key size, a longer, longer key size, up to production type key size, like 2048. And earlier that year, someone posted on Twitter.
+
+
+So it's going to get very confusing. They posted the factors, so the solution of RSA-260, they're like, oh, that's a damn small key. Well, no, that's 260 bytes, which is equivalent to, I believe, around 862 bits.
+
+
+And what was funny is that this person, I think it's at Penlu on Twitter, they just posted, oh, here's a factor of RSA-260. And everybody was like, what the hell? How did they find that?
+
+
+And turned out it was an employee, I believe from, I forgot the name, some AI company. Cognition. Yeah.
+
+
+And then some people are like, oh, but did they use AI? So the reality from my understanding is that they use the state-of-the-art cryptanalytic techniques, which is the general number field sieve, GNFS. And they use the complete infrastructure of that AI company.
+
+
+So mostly based on GPUs and allegedly using AI optimisations. And I think it was last week that Steve Weiss from Anthropic published the factors of RSA-896, which is slightly bigger than the previous one. And then again, he really explained how he did it.
+
+
+He used the Anthropic GPU infrastructure using the ideal idle GPU time. So then again, it's an AI company, but it's not AI breaking RSA. And there's a huge gap between those challenges and RSA, even RSA-1024.
+
+
+[Anna Rose] (17:07 - 17:07)
+Okay, okay.
+
+
+[Nico Mohnblatt] (17:08 - 17:17)
+It is interesting to me that this was idle GPU time, because it means like these companies that have amassed a lot of GPUs, if they put all their effort into it, they could break something much bigger, right?
+
+
+[Tarun Chitra] (17:17 - 17:23)
+But I mean, it's not as profitable on a cost-adjusted basis.
+
+
+[JP Aumasson] (17:23 - 17:40)
+Yeah, we don't know how to evaluate the cost. But I think I've seen some channel, it was on Twitter, someone stated that to break RSA-1024, the CPU-GPU dollar cost was estimated to around 10 million, which is a lot, but which is not a lot at the same time.
+
+
+[Tarun Chitra] (17:41 - 17:47)
+That's less than what was spent on the Navier-Stokes solution, right? Which was like 15 million. Right.
+
+
+[Nico Mohnblatt] (17:47 - 17:53)
+But it's a lot more than my backend count. So if you're going to break my TLS session, it's not profitable.
+
+
+[JP Aumasson] (17:53 - 18:23)
+Yeah, and it's just one key. And the question is, that's legitimate to ask, you know, you mentioned Navier-Stokes and the other math problems. And we don't really know where factoring exactly stands in the polynomial hierarchy, in the computational complexity class infrastructure.
+
+
+I think it's widely believed that it's not easy to solve as in polynomial time on a classical computer. But, you know, who knows? Maybe some AI can improve GNFS, make it slightly more efficient.
+
+
+[Tarun Chitra] (18:24 - 19:19)
+I mean, I do think, yeah, one thing that is... The two things I would say that are worth considering is that a lot of the number sieve algorithms were like, hey, we chose a particular class field, which has a particular ideal that happened to be easy to write the code for that we would scan across, right? So like, you know, you write the number field, you look at the class elements, you like do the kind of standard quadratic residue stuff.
+
+
+But it could be true that like the parameters people have been using a lot of these algorithms were like kind of not that great. Like you could have found a weirder set of ideals, a weirder kind of embedding that works better. So that part I could totally believe AI could find a better thing.
+
+
+And the other thing is the implementations of these things could probably be optimised for different hardware platforms a lot better. And I think those two things probably are really what, if anyone breaks 1024, it's going to come from those two things.
+
+
+[JP Aumasson] (19:20 - 19:27)
+Yeah, I mean, better way to parallelise it, as you mentioned, optimisations for the CPUs we have.
+
+
+[Anna Rose] (19:28 - 19:52)
+I mean, from what I gather, it's like, and this is kind of a joke that you've been playing with the fact that because these less secure versions of RSA were broken, that it would be like immediately all of these other ones. But do you like you are seeing the acceleration of AI? Do you actually think that things that we do know and love could be broken very quickly?
+
+
+Like, you know, maybe? Yeah, I'm just curious what you think on the on the breaking front.
+
+
+[JP Aumasson] (19:52 - 21:29)
+Okay, it's really good that you mentioned this. I have a blog post, bfswa.blog. And a couple of months ago, I published a post titled why AI, why LLMs are not going to break a symmetric cryptography. So why the AI models, even the front-end models, even the super AGI, from my perspective, are not going to break things like AES, like SHA-3, like BLAKE3, just because they are mathematically secure, they are as hard as, as NP-hard problems, let's say, it's a rough approximation.
+
+
+And I tried to articulate why I don't think we'll get a breakthrough in terms of, you know, AES attacks or SHA-3 attacks, because it's not, if we mention again the Navier-Stokes or any math problem, it's a space where you have, you work with mathematical structures when they're complexity and they're all intertwined, and it's really hard to figure out. But the point of symmetric crypto is to eliminate any sort of math structure that could be used. That's why, for example, in a function like Blake, we combine the XOR operation, which is addition on GF2, with the addition on larger number on the 32-bit numbers.
+
+
+So combining those two, in addition with the bit shift, breaks any math structure so that you can't really make any mathematical sense of that. It's just, you know, random, so to speak, you know, major speech marks. And since there is no structure to analyse, there is no structure for LLMs to exploit and make sense of.
+
+
+Because the high level...
+
+
+[Tarun Chitra] (21:29 - 21:35)
+Unless they solve P is not equal to NP and finds a trapdoor function for you. Which could be very fun.
+
+
+[Anna Rose] (21:38 - 21:48)
+Can you give some examples of the symmetric cryptography? And then I want to also talk about asymmetric cryptography, because maybe you have a different opinion there. But give me some examples of that.
+
+
+[JP Aumasson] (21:48 - 23:30)
+So I think it's time to mention the P word, Poseidon. And Poseidon is actually interesting in the sense that it's a hash function that is optimised for ZK circuits and other types of crypto schemes. And Poseidon is really trying to have the best of both.
+
+
+So on the one hand, it has a very clear, well-defined mathematical structure. It's operating on field elements and it's doing field operations, linear algebra. So things that are really clean from a math perspective.
+
+
+But the problem is that if you only have that, you can describe the hash function as a list of equations. And then breaking the hash is essentially boiling down to solving those equations. And to avoid that, what Poseidon is adding, in addition to those math operations, is one small operation, which is a kind of S-box, which has nothing to do with the finite field or mathematical structure behind it.
+
+
+And because they combine this weird transformation, it's breaking the whole structure that gives you equations. And because of that, the idea is that you go from simple equations to extremely complex, dense and long equations. And the question was, well, is it secure enough?
+
+
+Having all those finite field operations and just a simple one, a small one that is not math friendly. And as you may know, there's been a lot of research, notably from people from the ETH Foundation, people like Antonio Sanso and others. And it turned out that Poseidon, especially Poseidon 2, is not as safe as many expected, me included, to be honest.
+
+
+[Anna Rose] (23:30 - 23:42)
+Can I ask you, though, is Poseidon actually a symmetric cryptography? But then there's an additional thing that is asymmetric? Or is it it's yeah, I just I'm trying to categorise it where you're...
+
+
+[JP Aumasson] (23:42 - 23:45)
+It's purely symmetric in spirit.
+
+
+[Anna Rose] (23:45 - 23:45)
+Okay.
+
+
+[JP Aumasson] (23:45 - 24:59)
+In the sense that we're not trying to develop a system with a trapdoor or backdoor, something that you can invert. And if you have some secret, for example, there's no discrete logarithm, no factoring. So it's working on typically on prime fields.
+
+
+So there's no modulus to factor. You just have the parameters and that's it. But what's interesting for people who have worked in the field of, for example, whitebox, what we call whitebox cryptography.
+
+
+And I spent part of my time when I was a researcher trying to develop backdoored symmetric cryptoschemes like a block cypher or hash function that was outwardly secure. However, if you knew some secrets and backdoor, you could break it for some definition of breaking. And when you think really hard about that, you realise that what you're trying to construct is a kind of public key scheme whereby something is easy in one direction and hard in the other.
+
+
+And there hasn't been any really convincing backdoor symmetric primitive from what I know, which also kind of dismisses the argument that AES or OSHA 3 have a backdoor, which I've heard some people saying.
+
+
+[Nico Mohnblatt] (24:59 - 25:10)
+Good conspiracies. But to your initial question, Anna, I think, so yeah, because I don't symmetric crypto, it has some structure that makes it circuit friendly. And then as JP was saying, like a tiny bit of no structure.
+
+
+[Anna Rose] (25:10 - 25:12)
+And that's where...
+
+
+[Nico Mohnblatt] (25:12 - 25:13)
+To make it secure as a hash function.
+
+
+[Anna Rose] (25:13 - 25:16)
+But where is the point? Where's the attack point then?
+
+
+[JP Aumasson] (25:16 - 25:48)
+Another reason, one benefit of Poseidon is because you have this structure, it allows you to reason about the possible attacks, about the limitation of attacks, which are mainly differential cryptosystem attacks. So you can prove that certain types of attacks could not work more easily than when your function is a complete mess of operations like Blake's 3. Yeah, and the attacks developed on Poseidon are really smart and sometimes kind of bypass the foundational security arguments of the designers.
+
+
+[Nico Mohnblatt] (25:49 - 25:56)
+Can we maybe specify what kind of attacks we're talking about? Like, is Poseidon broken or like, did we find collisions?
+
+
+[JP Aumasson] (25:56 - 27:20)
+That's a huge... It depends. Yeah, because when you look at the Poseidon paper, it's not one fixed hash function.
+
+
+So you can vary the number of rounds. And one important parameter is the underlying finite field. So I think the security margin, security level is very different whether you work on large finite fields like 300 bits or a smaller one like 33 bits.
+
+
+So the attack techniques work a little bit differently. Is Poseidon broken? I think some of the attacks were...
+
+
+So Poseidon is essentially a sponge function. So the attacks were what we call CICO cycle, Constraint Input, Constraint Output. So you fix some of the input and you fix some of the output and you should find a message.
+
+
+Your goal is to find a message that connects the two. So you can see it as a kind of preimage attack in some way. But ultimately, those attacks, they show that you can do something that you should not be able to do if the function was really structureless and insecure.
+
+
+For this very general definition of secure, which means nothing really differentiates it from a random function. However, the system that uses Poseidon, I might be wrong. So my degree of certainty is not 100%, but I don't think there's any meaningful impact on any other system that uses Poseidon today.
+
+
+But yeah, please fact check that, I'm not fully sure.
+
+
+[Nico Mohnblatt] (27:20 - 27:31)
+Okay. So the issue here is researchers are exhibiting behaviours of Poseidon that are not supposed to be there. It doesn't break the systems that use it, but it also kind of breaks our confidence in the design.
+
+
+[JP Aumasson] (27:31 - 28:13)
+Is that correct? I don't know to what extent it really invalidates the claims of the designers, but let's say many were surprised to the point that the ETH Foundation, it was to my surprise, considering a function like BLAKE3, which initially we believe was much less, you know, circuit friendly than Poseidon. But I think so you can project where they found super small BLAKE3 circuits.
+
+
+I don't know how they did, but you see really a sharp decline in their circuit size. It's about as efficient as Poseidon in some settings. And also full disclosure for the audience, I'm a co-designer of BLAKE3, so I'm very biassed, I know.
+
+
+Nico, is this the Flock work?
+
+
+[Nico Mohnblatt] (28:14 - 28:22)
+No, those are unrelated things. Okay. Flock is work about proving many hash functions fast with a sort of dedicated proof system.
+
+
+[Anna Rose] (28:22 - 28:35)
+And it doesn't matter which one? It doesn't matter which hash function? I understood that the Flock paper actually also prompted partly the move away from Poseidon, and I wondered if it was because it works better with BLAKE3 or something like that.
+
+
+[Nico Mohnblatt] (28:35 - 28:46)
+So Flock, I think, was designed for binary fields, which is, you know, bitwise operations, and which is what our like classical hash functions do, as opposed to Poseidon, which was designed for finite field operations.
+
+
+[Anna Rose] (28:46 - 28:46)
+Got it.
+
+
+[Nico Mohnblatt] (28:47 - 28:55)
+So yeah, part of the shift comes from, okay, actually, we can do proof systems that work with bitwise operations, or prove things about bitwise operations, and those are still efficient.
+
+
+[Anna Rose] (28:55 - 29:07)
+And at the same time, Poseidon and the trust in Poseidon starts to get shaky. And therefore, there's like an option that maybe didn't exist before, that like, that's why they were focused on Poseidon.
+
+
+[Nico Mohnblatt] (29:08 - 29:15)
+Justin Drake summarised it quite well at the time. He was saying, we're dropping the snark-friendly hash functions, and we're picking up hash-friendly snarks.
+
+
+[JP Aumasson] (29:15 - 30:27)
+But ETH is very conservative, I mean, in a good way, in the sense of very prudent. So like, I was reading a post this morning of someone affiliated to ETH Foundation, arguing that, oh, BLAKE3 is maybe doing too few rounds. I don't know, maybe it's not secure enough.
+
+
+But I mean, to be honest, I've been doing cryptanalysis for 20 years now, a lot of it about hash functions. And it's something where it's really hard to have an opinion. And it's very easy to have an opinion that is not really, you know, the optimal one as far as rarity is concerned.
+
+
+And because you have this feeling of security when you do a lot of rounds, you have big security parameters, like, oh, let's use RSA with 10,000 bits. And let's use AES with a Q256 instead of 128. Because what if, what if, what if?
+
+
+But I realised that cryptographers are not the best at risk management. They tend to be paranoid, which is good for security. But you can also be unhealthy-paranoid.
+
+
+And when you argue, what if, without really reasoning about the likelihood of it, it's not the best approach at security engineering.
+
+
+[Anna Rose] (30:28 - 30:31)
+You end up with sometimes very inefficient systems.
+
+
+[JP Aumasson] (30:31 - 31:34)
+You have a famous article on the topic, right? Yeah, like Shastri. So, I mean, that's one of my pet peeves.
+
+
+And I also feel kind of guilty for that. So Shastri, I'll make it very short, but Shastri is doing 24 rounds, whereas initially it was submitted with 18 rounds. And part of the reason is historically, I found an attack, AirQuartz, which is really not an attack, but a property, very artificial, but which contributed to the Keccak designers, you know, increasing the round number to 24.
+
+
+And the best attacks on Shastri are on three, four, maybe five rounds. And even then. So we're doing 24 rounds, whereas maybe 10 would be more than enough.
+
+
+And it's not just hashing. It's in ML-KEM. So the PQ, Post Quantum Cryptography, ML-KEM, MLDSA, a large share of the CPU time is spent doing hashing or random generation using Keccak.
+
+
+And we are wasting tonnes of CPU cycles. It drives me insane. But, you know, that's how it is.
+
+
+Not going away. We have to live with that.
+
+
+[Nico Mohnblatt] (31:34 - 31:44)
+So, JP, are you telling us that you designed BLAKE3, that you slowed down Keccak, and now you're joining Cloudflare to push BLAKE3 onto the world? Is this your master plan?
+
+
+[JP Aumasson] (31:44 - 31:45)
+Yes, that's the evil plan.
+
+
+[Nico Mohnblatt] (31:45 - 31:57)
+And you figured it out from the beginning. But jokes aside, you have a very nice article called Too Much Crypto that talks about this, right? How like cryptographers take too big security margins.
+
+
+[JP Aumasson] (31:58 - 31:58)
+Yeah.
+
+
+[Nico Mohnblatt] (31:58 - 32:07)
+I'm curious if the sort of AI optimisations we're seeing now, especially on RSA, make you want to revise Too Much Crypto? Not at all.
+
+
+[JP Aumasson] (32:07 - 32:12)
+I mean, this article that you mentioned, it's ePrint / 2019 / 1492.
+
+
+[JP Aumasson] (32:13 - 32:13)
+Wow.
+
+
+[JP Aumasson] (32:13 - 33:17)
+I posted it in December of 2019. I presented it at RWC (Real World Crypto) in 2020, just before COVID. Fun times.
+
+
+And yeah, I'm making the point that BLAKE2 then BLAKE3 with so few rounds is widely sufficient in terms of security. That ChaCha20, so 20 rounds, would be as secure with 8 rounds. And that Keccak doing 24 rounds would be as secure with 10 rounds.
+
+
+So I had a name for it. We call it KitTen with a K. And seven years later, history so far is proving me right, at least not wrong.
+
+
+So many people's objections were not constructive. It was just vague objections. It makes me feel nervous to have raised a number of rounds.
+
+
+Yeah, but, you know, confidence is good. But you got to look at the facts and the amount of human time, CPU time, tokens thrown on this problem of breaking those functions. And yeah, I don't think ever in humanity, in the history of humanity, we'll break AES or ChaCha20 or BLAKE3.
+
+
+[Anna Rose] (33:18 - 33:24)
+And this, I guess, goes back to your point before. Is this because they're symmetric cryptography? You just don't think that's going to happen.
+
+
+[JP Aumasson] (33:24 - 33:52)
+Ultimately, I don't like to use the word exponential because exponential is relative to asymptotic growth of a parameter. But if you see those functions as abstract problems, the cost of solving those problems really grows exponentially relative to the input size and relative to the number of rounds. So it's not a matter of solving a problem.
+
+
+It's if you put it down in equations, equations would be huge and impossible to solve.
+
+
+[Anna Rose] (33:52 - 34:21)
+Got it. I want to just go back to kind of that original point, because I had sort of asked what is symmetric cryptography? Give me some examples.
+
+
+We talked about the Poseidon case, which was a huge deal, by the way, in our telegram, big telegram chat. We got to see all the arguments. It was very exciting.
+
+
+I feel like we maybe should debrief properly on that with some of the people involved eventually this year. I had the second question, which is like, can you give some examples of asymmetric cryptography? And do you feel those are more at risk?
+
+
+[JP Aumasson] (34:22 - 35:19)
+Oh, yeah, that's where it gets more interesting. So historically, I've been more involved in asymmetric crypto. Why?
+
+
+Because I've never been very good at math. And public crypto is essentially math. But it's way, way more interesting.
+
+
+Both designing, analysing, breaking. I mean, that's really the cool part about crypto. It's all the public crypto that you find in, I don't know, in Ezekiel proofs and threshold signature and whatever.
+
+
+So the attacks are also way more, let's say, interesting from a math perspective. So in comparison, asymmetric crypto, it's mostly differential attacks. So differential attacks is very stupid.
+
+
+You take one message and you compute the algorithm and you see what output you get at the end. So differential attack is about like flipping one bit and see if the output is changing randomly or is changing with some pattern that you can expect.
+
+
+[Anna Rose] (35:19 - 35:22)
+And if you can figure out a pattern, then you can break it somehow.
+
+
+[JP Aumasson] (35:23 - 35:32)
+Essentially. So it comes in different names. So linear attack, differential attacks, rebound, whatever.
+
+
+But ultimately, the same thing.
+
+
+[Anna Rose] (35:32 - 35:32)
+It's funny.
+
+
+[JP Aumasson] (35:33 - 36:42)
+And say we were talking about AI. So there is the NIST, the U.S. Standard Agency that is running a project, a competition for standards for new PQ signature standards. So we all know the selected ML-DSA came a few years ago, 2022.
+
+
+But it's still running the competition to identify different types of algorithms. And a couple months from now, I think it was in July, Anthropyc announced that they had found, let's say, very improved attacks in one of those candidates called HAWK, H-A-W-K, which led to the designer to withdraw the submission because the attack was really superior to the state of the art, which leads us to conclude, well, on this part, at least, that AI is a great tool to find attacks on asymmetric schemes.
+
+
+And another evidence of that is if you look at the NGCC, so the Next Generation Commercial Cryptography Competition from the government of China.
+
+
+[Anna Rose] (36:43 - 36:44)
+Yes, the one that just came out recently.
+
+
+[JP Aumasson] (36:45 - 37:05)
+Yes. So, you know, China likes to copy things. You know, they're very respectful of what the Americans are doing.
+
+
+So they tend to copy their systems. It's nothing new here. So they're running a competition really based on the mechanics of the NIST competition to the point that the call for submissions was not word to word, but very, very similar to the NIST documents.
+
+
+[JP Aumasson] (37:05 - 37:05)
+OK.
+
+
+[JP Aumasson] (37:05 - 39:41)
+And a few days ago, the Chinese government announced the list of candidates. And interestingly, like NIST, it's all public. So the submissions are public, the source code, the specification.
+
+
+And now it's a lot more fun when you have AI, because I remember back in the days when we had the first competition, the first day as a student, you were so excited. Oh, let's break all these functions. You know, I want to be the first to get my paper right, to get my name.
+
+
+And it was really a rampage. But a lot of work, I bet. Yeah, it was really by using our brain, our hands and writing paper in latex like cavemen.
+
+
+And now, you know, what we did in days or weeks, it takes minutes or hours. It's exactly what some people did. So I tried it myself.
+
+
+I didn't have much time. So I opened an LLM, I think it was GPT Sol. And I have the Daybreak Blue extension, which allows us to do slightly more offensive research.
+
+
+And so I downloaded a bunch of submissions, like maybe 10, I don't know. And I asked GPT, OK, please look at those and tell me which one looked the weakest, the most fragile. And it said, oh, this one and that one.
+
+
+Then I said, OK, now break it, please. It's like, yes, sir. And 10 minutes later, it found an attack that really killed some of the submissions.
+
+
+But someone did much better than I did. Markku-Juhani O. Saarinen, who is, I mean, one of the best cryptographers that I know, because he's great at math, great at engineering. A lot of respect for Marcou.
+
+
+And so he downloaded like the entire catalogue of submissions and broke with his AI models. I don't know which one he's using, but I don't know how many he broke. A couple of hours later, he said 14, like 14 submissions out of maybe 50, 60, whatever.
+
+
+And he created a website, ngcc.dev, D-E-V, with reports of submissions of his attacks. And I'm reading it right now. Reports, 142 active findings across 81 reports, 65 information, 49 design.
+
+
+So meaning like 49 have been attacked, maybe not completely broken. And really what I find scary is that those submissions, they are created by human beings, which supposedly have access to computers and AI tools. And I'm like, okay, why didn't they ask their favourite AI model to do like a submission?
+
+
+Were they so confident in their designer?
+
+
+[Anna Rose] (39:42 - 39:49)
+I bet you it was because they had to submit it two months ago. And the models have improved fast enough that it like, I don't know.
+
+
+[JP Aumasson] (39:50 - 40:08)
+I don't know what was the deadline, by the way. And also what I was wondering about, so obviously many submissions are from China. Some of those are from researchers, including European or even American researchers.
+
+
+And I was wondering if you can get in trouble for designing a Chinese standard, but that's a different question.
+
+
+[Anna Rose] (40:08 - 40:17)
+Yeah, actually, this also made me wonder, like, how does NIST work? Like, does it have to be Americans who submit? Like, is there a rule on who's allowed?
+
+
+[JP Aumasson] (40:17 - 40:52)
+No, I think it plays very little role. Even a submission with the best in general merits would have been co-authored by a Chinese or Iranian. I don't know if it would have made a big difference.
+
+
+And also, I think even back then, not all the NIST employees were U.S. persons, because you don't need a clearance to work there. And you have, as a matter of fact, the U.S. standards, AES, SHA-3, are designed by Belgian cryptographers, which are not known to be an enemy of the U.S. But you know, these days, we never know.
+
+
+[Nico Mohnblatt] (40:53 - 41:03)
+The inside joke is that it's always the Belgians. Yeah. That someone criticised their designs and they went and broke everyone else's designs and proved theirs and said, take ours.
+
+
+[JP Aumasson] (41:03 - 41:11)
+Yeah, and we can expect, I mean, it was published like three or four days ago, all those submissions, and in a month from now.
+
+
+[Nico Mohnblatt] (41:12 - 41:19)
+It's impressive. Are the attacks confirmed? Or is it just slop and the AI is gaslighting us into thinking it has attacks?
+
+
+[JP Aumasson] (41:19 - 42:03)
+No, I think a lot of the findings are actually correct. But the downside of that is that it's really bad news for researchers, because if AI is finding all the attacks and you don't get to find it, you don't get, you know, the enjoyment, the dopamine kick of finding an attack. And it's so addictive.
+
+
+I remember back then, you know, you really get this kick of, you know, like you get an exploit working on a computer, makes you feel so good and you want to have to experience that again. And now you have all those low-hanging fruits that young PhD researchers would break back in the days. Now the AI is finding everything.
+
+
+So you don't get to do the work. You don't get to publish the paper. So what do you do with your life?
+
+
+[Anna Rose] (42:03 - 42:07)
+Oh, God. This is interesting.
+
+
+[Tarun Chitra] (42:07 - 42:12)
+I don't think this is a question that's only true for cryptographers, for what it's worth. Yeah, it's an emotional problem.
+
+
+[Anna Rose] (42:13 - 42:25)
+I feel like it's so funny. I'm so used to hearing builders and like engineers and software engineers specifically being like, what's the point of my job now? But I didn't know that the hackers would also be like, what's the point of my job now?
+
+
+[Tarun Chitra] (42:26 - 42:37)
+Well, it's just more that everyone's a script kitty. There's no, you know, that's how you have to view it. Everyone's an operator.
+
+
+You're just like a factory operator rather than, you know, like an artisan.
+
+
+[JP Aumasson] (42:37 - 42:47)
+I think one of the hardest problems from my perspective in computer science was designing web applications. I couldn't do that for my life. And now I just suck it.
+
+
+Do that. Enter, enter, enter.
+
+
+[Anna Rose] (42:48 - 42:55)
+As a non-developer, it's become incredibly fun to be able to build the things I always wanted and couldn't. And now I'm just like, oh.
+
+
+[Nico Mohnblatt] (42:55 - 43:04)
+People call me slob, but I don't care. So JB, have you been doing more experiments with breaking things with AI besides the Chinese competition?
+
+
+[JP Aumasson] (43:04 - 45:19)
+So once I got the Daybreak Blue access to GPT, I think anyone can request it. And I got it in, I don't know, a few hours. I did something completely stupid.
+
+
+I asked it, okay, go to Eprint, the IACR, Eprint, the preprint server. Go find some obscure cyphers for submitting in the last few months. And tell me about it.
+
+
+And he first gave me a list, I don't know, 20. And he said, oh, he said, oh, it said whatever. Oh, this one looks a bit fishy.
+
+
+I'm like, okay, go break it, go break it. And something really weird happened. There was this paper, 200 pages.
+
+
+I kid you not, 200 pages. And there was a huge cryptanalytic flow. I had to verify it myself to do the math by hand to verify that the AI was correct.
+
+
+And it was total break of the cypher. I think it was a block cypher. Really stupid.
+
+
+You know, in very short, when you have a cypher, you encrypt and then decrypt, right? With this cypher, there were some ciphertexts that you could not decrypt, that you could create by encrypting, but not decrypting. And what I was really wondering is, okay, the researchers, they use, it was very clear, they use AI to generate a lot of the text.
+
+
+But for some reason, they did not ask the AI, is my cypher secure? Which is the first thing, the only thing you want to ask. It's very interesting that people are not doing that.
+
+
+So the first time I was like, okay, it's really cool. Let's do a blog post about it. And I broke a bunch of others.
+
+
+I just emailed the authors. And one was also designed by, I'm not giving the name, but it was based on some very simple, well understood construction, you know, LFSR, Linear Feedback Shift Register (LFSR). And it was designed by a really author that looks very legit, very expert in their field.
+
+
+And there was a huge flow. Then again, the feedback polynomial was not primitive. It was not even irreducible, which is the very first security criteria you want to check when you do that kind of thing.
+
+
+So when the AI gave me the attack, I'm like, come on, you're hallucinating. It can't be that stupid. Do the math again by hand and factor the polynomial.
+
+
+So yeah, a lot of fun.
+
+
+[Anna Rose] (45:20 - 45:53)
+But... SONIA DARA So far, we've talked quite a bit about the AI slash cryptography and the breaking front, like how it's showing vulnerabilities, it's speeding up the process from like publishing something and then have it be broken. It used to be a little bit more time in between.
+
+
+But what about the other side, which is like building with this stuff? We have recently had an episode on with Yukon, and this auto research is really emerging quickly, like really since, you know, March, May. Like it's a very fresh thing.
+
+
+But have you been playing around with that? Is this something interesting to you?
+
+
+[JP Aumasson] (45:53 - 46:00)
+FRANCESC CAMPOY Do you really believe that an AI can do something better than BLAKE3? I don't. SONIA DARA Have you asked?
+
+
+FRANCESC CAMPOY No.
+
+
+[Anna Rose] (46:02 - 46:04)
+SONIA DARA Use Daybreak Blue.
+
+
+[JP Aumasson] (46:05 - 47:25)
+FRANCESC CAMPOY But I use Daybreak Blue to try to find better attacks on BLAKE3. But I didn't find any. But like I said, it's probably not the best use case of finding symmetric attacks, because many attacks are really based on empirical findings on statistics and getting those statistics to run for a while.
+
+
+But yeah, to answer your question, I have not. I think two or three years ago, they were really at the start of the GPT-4. I asked to design a cypher and it was not really doing a great job.
+
+
+But I believe that now. So I don't think that it would do a better job than a top 5% cryptographer. It would do a better job than maybe a top, I don't know, a top 50%.
+
+
+It would do a better job than the average cryptographer, but not as good because a lot of the ingenuity and quality is really in the details and some choices that are here for a good reason. And also based on experiments, because it's engineering. So it's a trade-off.
+
+
+You're not trying to do the fastest. You're not trying to do the most secure. You're trying to find a sweet spot.
+
+
+And also in terms of simplicity, it's really hard for an AI to wait to appreciate those trade-offs. So I'm not saying that BLAKE3 is the best trade-off. It's one trade-off among others.
+
+
+But yeah, really appreciating those nuances and also the sheer beauty of it. It has to look cool, to look simple.
+
+
+[Anna Rose] (47:26 - 47:31)
+Yeah. And in your world, you don't see it replacing kind of what you guys do yet.
+
+
+[JP Aumasson] (47:31 - 49:01)
+But there's nothing to replace anymore. I don't think, again, I might be wrong, but I don't think we'll need many more new hash functions, many more symmetric cyphers. I mean, you have AES, you have ChaCha.
+
+
+And then from this point, it's really diminishing returns. But yeah, again, for asymmetric crypto, I think AI can be more helpful by helping us find the... Also on the building front?
+
+
+Also on the building front. And also to better understand the limits of the attacks. Because when you don't know what you're doing, when you're not really confident in your design, you tend to be conservative because you never know what's the best tax.
+
+
+So instead of spending three, four, five, six years, with thousands of human hours, even more than that of human hour time of cryptanalysis, we can probably really shrink the timeline to assess the security of a new cypher and to maybe improve it. Because the problem with those competitions is that you cannot really modify the cyphers. After five years, you've learned a lot about what works, what doesn't work.
+
+
+But you're not entitled to learn from that. You can't say, okay, now I know that I only need 10 rounds of Keccak, so I'm going to standardise Keccak with 10 rounds. I'm going to make this small tweak.
+
+
+So I don't know what the Chinese will be doing, and I don't think they will do that. But it would be much wiser in terms of engineering to, as you learn from the attacks, as you learn from the AI findings, and also human findings, try to converge toward this sweet spot of security, efficiency, and simplicity.
+
+
+[Anna Rose] (49:03 - 49:10)
+I don't know if you've heard about the term, and this is really just starting to bubble up in our community, but like generative cryptography. Have you heard that?
+
+
+[JP Aumasson] (49:11 - 49:13)
+Yeah, but not in a good sense.
+
+
+[Anna Rose] (49:13 - 49:14)
+Not in a good way?
+
+
+[JP Aumasson] (49:15 - 49:15)
+Yeah, I don't know.
+
+
+[Anna Rose] (49:17 - 49:25)
+Yeah, I'm curious what you make of it, because what you just described sort of sounds like that though, right? Like it's like you're building, attacking, building, attacking.
+
+
+[JP Aumasson] (49:25 - 49:30)
+Does it stand for crypto designed by AI, like crypto results?
+
+
+[Anna Rose] (49:30 - 49:56)
+I think it's both. So I will probably do an episode or two on this coming up. And so I am not in a position right now to talk about, to explain it, because I actually don't exactly know the definition.
+
+
+It's been sort of floated as this idea of having the build and the break happening really quickly together. And so you're almost like you're constantly creating new cryptography. Like you're constantly building and breaking and building and breaking.
+
+
+[JP Aumasson] (49:56 - 50:39)
+Yeah, it's such a waste of tokens. But along those lines, what we're doing, I'll say we, but I'm not doing much of the work, had this idea with Zucco from Zcash of doing a project similar to the, you know, you mentioned Yukon before, like zk.golf, ECDSA.fail. And what we wanted to do is something similar, but for hash function attacks. Motivated in part by, you know, proving to the world that no AI can break Blake Street or Kitsack for that matter.
+
+
+So we were working with, with EigenLabs on that. And I don't know when the podcast will be released, but probably around the same time we're going to announce the project. Cool.
+
+
+[Anna Rose] (50:40 - 50:42)
+But that's more of a bounty, isn't it?
+
+
+[Nico Mohnblatt] (50:42 - 50:46)
+I think our co-host Kovi is also on HashMove, right? I believe he is.
+
+
+[Anna Rose] (50:47 - 50:49)
+Yeah. Oh, cool. Nice, nice.
+
+
+[JP Aumasson] (50:49 - 51:09)
+Yeah. Yeah, I don't know. I think I expect the unexpected.
+
+
+Also the AI models, we haven't seen the end of it. The models are getting better and better. And something that we did not mention, but it's also really important.
+
+
+There's two ways to break a cypher. You can break the math, the specs, how it ought to behave. Or you can break the software.
+
+
+[JP Aumasson] (51:10 - 51:10)
+Oh, yeah.
+
+
+[JP Aumasson] (51:10 - 51:37)
+So AI is really good to find bugs in software and exploit them. So, yeah, maybe we'll see more and more attacks. And many of those submissions are broken either on paper, on software or both.
+
+
+And I'm looking at Mark with this right now, and some of the submissions are broken in three ways, like on paper, implementation, and also side channel in terms of cost and time, cost and timeliness.
+
+
+[Nico Mohnblatt] (51:37 - 51:44)
+Actually, mentioning this paper and implementation link, a lot of people have been looking at formal verification these days. Have you at all?
+
+
+[JP Aumasson] (51:45 - 53:35)
+Not really. I know relatively little about formal verification. And for a long time, my view was that, you know, in the process of quality assurance of software, you had different levels of testing.
+
+
+So you need testing, integration testing, different ways to test stuff. And that formal verification is really at the end of the curve, where you get the missing returns, but where you need this level of assurance for certain types of software, for example, critical infrastructure, avionics and whatnot. For cryptography, I don't feel that it's been extremely useful because I think it's been most useful when proving properties of protocols, rather than proving that one implementation of AES is actually correct and equivalent to other AES implementation.
+
+
+You can also prove that certain classes of software bugs are not present. But I mean, if you have a buffer in your AES implementation, you're already having the wrong job. However, and maybe the reason why you mentioned that is Lean, Lean 4.
+
+
+So one idea that I had was to formalise hash functions as Lean statements and try to describe attacks as, you know, Lean results. And likewise, try to automate that process, finding new attacks that could be proven in Lean. But it turned out, this is not impossible, you know, everything is possible in theory.
+
+
+But empirically, the type of attack, differential attacks, seem to be pretty hard to, well, again, to automate and to formalise in Lean for a variety of reasons. So I'm not the only one. I'm not the smartest one in that space.
+
+
+I wouldn't be surprised if some people have very interesting results. But I don't think Symmetry Crypto is the best use case for Lean. I suppose, again, to asymmetric.
+
+
+[Tarun Chitra] (53:35 - 54:22)
+Cool. I mean, I think the only thing I can really say is like, formal verification used to be cheap. It's now 10,000 times cheaper.
+
+
+So there's going to be something that previously was not, everyone was like, that's not worth doing because it's just like too expensive or too nuanced or whatever. And now it's like, okay, well, I can spend an afternoon and get a prototype. So maybe, maybe it's like, it will find a way.
+
+
+I think, obviously, certainly in like proving protocol hacks, it's like been clearly very useful. I think like, for instance, just like, I don't know, there's just like a million ZK papers and probably 95% of them are wrong or broken based on my very tiny sample of trying to reproduce Lean proofs for like 30. Almost everyone has had some type of issue.
+
+
+[JP Aumasson] (54:22 - 54:33)
+And related to that also, try to use AI to verify the proofs of your crypt papers. And it found small mistakes. That I'm not surprised.
+
+
+A human reader can find those as well.
+
+
+[Nico Mohnblatt] (54:34 - 54:34)
+Yeah.
+
+
+[JP Aumasson] (54:34 - 54:37)
+I mean, the product is also so hard in crypto, so it's really hard to get right.
+
+
+[Nico Mohnblatt] (54:37 - 54:42)
+But most of the times these are like, okay, someone slightly misread the math, but we know what they meant.
+
+
+[JP Aumasson] (54:43 - 54:48)
+And if we put in a bit of effort, the result is not correct. Just the proof is not fully consistent.
+
+
+[Nico Mohnblatt] (54:49 - 54:49)
+Cool.
+
+
+[JP Aumasson] (54:50 - 54:55)
+Interesting. Speaking of which, Eurocrypt, that's crazy. They received around 1000 submissions.
+
+
+[Anna Rose] (54:57 - 55:16)
+Well, that's like the research that we're seeing for ZK Mesh as well. It's so much easier to produce papers at this point. But all it does is as a curator, you just have more to go through.
+
+
+And then you're trying to use tools to help you go through because there's more. And so it becomes this funny setup.
+
+
+[Nico Mohnblatt] (55:16 - 55:28)
+Although if everyone is submitting, generating text with AI, but not even checking if the construction is secure with AI, then we have an easy AI reviewer, check that it's secure and kick it out the other ways.
+
+
+[Tarun Chitra] (55:28 - 56:36)
+I think the bigger thing to me was more just like the mapping from the paper to implementation was the type of thing I was trying to verify. Like, does this code match what the paper says? And like that was very, you know, giving in all this extra stuff of like the RAM model might be weird.
+
+
+They might have re, you know, the exact sequence of the protocol might not be what you use in practise because it's inefficient, whatever, fine. But even then there were like some tiny errors where it was like finding certain things that like overflowed without gates, finding like, like I was actually surprised by how many, you know, kind of papers that had like, you know, one academic implementation randomly on GitHub, how much they actually did differ from the paper. Like I thought kind of people in these like first implementations literally just tried to transcribe the paper and it was not even close.
+
+
+Like I was like, I was like surprised by that. So it was like a good experiment for, again, something before I would have been like, oh, this is going to, this is like a whole month's project. Why would I do this?
+
+
+It's just for intellectual exercise. Whereas now it's like, I can do it in 10 minutes.
+
+
+[Anna Rose] (56:36 - 57:03)
+All right, cool. All right. I think we are at time.
+
+
+JP, I feel like we could continue talking for a long time. There's always kind of interesting ideas and perspectives coming from your corner. So I'm so glad you came back on the show.
+
+
+Thank you for covering with us sort of your take and maybe updated take on quantum computers and their threat. And obviously like the changing tides with all of the AI, both on the attack front and the building front. Yeah.
+
+
+Thanks so much for that.
+
+
+[Tarun Chitra] (57:03 - 57:09)
+Thank you, Hannah. Thank you all. Thanks, JP.
+
+
+Great chatting. Thanks for having me. It was really great chatting with you, JP.
+
+
+Thank you.
+
+
+[JP Aumasson] (57:09 - 57:10)
+It was a really fun discussion.
+
+
+[Tarun Chitra] (57:10 - 57:10)
+Nice.
+
+
+[Anna Rose] (57:11 - 57:18)
+I want to say thank you to the podcast team, Henrik, Rachel and Tanya, and to our listeners. Thanks for listening.
