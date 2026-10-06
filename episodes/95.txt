@@ -1,0 +1,472 @@
+[Anna Rose] (0:06 - 0:18)
+Welcome to Zero Knowledge, a podcast where we explore the latest in blockchain technology and the decentralised web. The show is hosted by me, Anna, and me, Frederick.
+
+[Frederik] (0:26 - 0:34)
+In this episode, we sit down with Oleg from Stellar to talk about the ZKVM protocol, and we explore what that protocol is.
+
+[Anna Rose] (0:44 - 1:46)
+Before we start, we want to say thank you to this sponsor, Apograph. Apograph's open access research paper platform is designed to break down barriers, reward researchers, and promote open science. Institutions and for-profit publications put a high price tag on much of the world's best research, even when that research is funded by the public.
+
+This hinders professional communication, it constrains data analysis, and it slows the rate of scientific progress as a whole. To counter this, Apograph has built an extensive collection of open access research papers, including some on cryptography, distributed computer systems, and blockchain. If you are a researcher or a learner who'd be interested in such a system, do check out their website, welcome.apograph.io. So thank you again, Apograph. Now here is our interview with Oleg from ZKVM. So today we're sitting with Oleg, who is the inventor of ZKVM, a protocol architect at Stellar, and also, I just learned recently, a crypto anarchy historian. Welcome to the show, Oleg.
+
+[Oleg Andreev] (1:46 - 1:47)
+Thank you for having me.
+
+[Anna Rose] (1:48 - 2:13)
+And before we jump in, this episode will probably have a lot of topics that people may want to brush up on. For example, it'd be really great if you listened to our episode on Zexi with Pratush, our episode on Bulletproofs with Benedikt Buntz. I'll put all the links to this in the show notes.
+
+There might be some others that come up as we go. Anyway, can you tell us a little bit more about yourself? What is your background?
+
+What have you been working on?
+
+[Oleg Andreev] (2:13 - 2:36)
+So I'm Russian. I was born and lived in St. Petersburg for quite a long time. Later, I moved to Paris and lived eight years in France.
+
+And recently, I've been to the United States for a few years, where I've been working on this problem of blockchains. Why do we need them? What do we mean?
+
+How to make them?
+
+[Anna Rose] (2:38 - 2:40)
+So you're working right now at Stellar?
+
+[Oleg Andreev] (2:41 - 2:42)
+That's correct.
+
+[Anna Rose] (2:42 - 2:50)
+What is Stellar? We've actually never talked about Stellar, I don't think, on this podcast. So if you can tell us, what is Stellar in a nutshell?
+
+[Oleg Andreev] (2:51 - 4:02)
+So when you say, I'm working on blockchains, people immediately think you're a total scammer. So Stellar is one of those few companies that are doing something reasonable. Here's the thing.
+
+When Bitcoin happened, it was solving a very narrow, very important problem. And when it became a little bit bigger, people were wondering, how do I use this for my own things, like for stocks, for currencies, for coupons, whatever. And there were a lot of interesting answers.
+
+But the common theme was that we need this environment, not for digital gold, but for issued assets, where individuals, organisations, for-profit companies, whoever could issue their own assets and have them exist in some shared common medium. That's what Stellar is doing. This is what I was also doing before Stellar, when I was working at Chain.
+
+So that's a big problem. And Stellar succeeded at deploying a complete protocol a few years back with a pretty interesting consensus algorithm designed just for that.
+
+[Frederik] (4:02 - 4:05)
+What is the relationship between ZKVM and Stellar?
+
+[Oleg Andreev] (4:06 - 5:00)
+Great question. So ZKVM is a result of mostly my work at Chain on designing the multi-asset blockchain architecture with confidentiality, with smart contracts, and with efficiency and scalability in mind. And recently, Chain was purchased by Lightyear.
+
+At the same time, I, with my team, Catherine, Henri de Valence, and other folks at Chain and Interstellar, we came up with a complete solution to combine all the latest confidentiality improvements with our work on smart contracts and blockchain design in general under this new name, ZKVM, that was effectively a new experimental design to see how much further we could take Stellar. And so I joined Stellar with this project.
+
+[Anna Rose] (5:01 - 5:03)
+What was the project before? You keep saying, is it Chain?
+
+[Oleg Andreev] (5:03 - 6:04)
+Chain started in 2014 as a developer API for Bitcoin developers. And pretty soon, they realised that there was a lot to do in this sphere of multi-asset blockchains. Folks from NASDAQ and Visa were very interested in building the infrastructure, blockchain infrastructure for their needs.
+
+I was a protocol architect during this time, figuring out this design. And effectively, at the same time, Stellar was trying to solve virtually the same problem, kind of coming from the other angle. Instead of creating a consortium of companies working in the financial industry, Stellar proposed a novel consensus protocol and a complete design, and they launched the actual network.
+
+And then we're seeking cooperation from players in the financial field. And then Chain and Stellar sort of found each other. And that's why there was a merger between Delight here and Chain.
+
+[Anna Rose] (6:04 - 6:10)
+But the project, the ZKVM project, did that start before? Was that already called ZKVM before?
+
+[Oleg Andreev] (6:10 - 7:08)
+Well, the ZKVM is actually a step in the evolution of several sub-projects. So on one hand, it's an evolution of TXVM that we did at Chain almost two years ago. On the other hand, it brings the latest innovation that we did with Bulletproofs.
+
+And so ZKVM is effectively a combination of Bulletproofs and TXVM. And Bulletproofs we're also working on at Chain and Interstellar. So yeah, ZKVM on one hand is pretty recent, just got started last December, I think.
+
+But behind it, it's this kind of years of accumulated experience. And it's not only the work that I was doing in the folks at Chain, but a lot of ideas from the rest of the field came into it. So to a bigger degree, it's an editorial work of composing the very best ideas of other people in a kind of an elegant solution.
+
+[Frederik] (7:08 - 7:41)
+So maybe we start talking about ZKVM and start talking about what a VM is. So we've talked about the EVM before quite a lot. And I think we've talked about Wasm a bit here and there.
+
+And there are these different virtual machines. But we've never really dug into what the different aspects of a VM for a blockchain is, or what design requirements or what they look like for blockchains. Maybe we start there.
+
+What is a VM for a blockchain?
+
+[Oleg Andreev] (7:42 - 10:05)
+Great question. So let's kind of scroll back 10 years ago when Bitcoin started. Turns out Bitcoin already had a VM.
+
+So what Bitcoin is, is you have the state machine that is called UTXOSAT. And when you receive a block, you verify transactions and apply them to this state. So you insert new outputs, you delete the old spent outputs.
+
+The interesting design was that instead of just checking validity of transaction by checking some signatures in the outputs, you would have little programmes in each output. So every time you verify a transaction for each input that links to corresponding output from the previous transaction, you would instantiate a little miniature VM that has some instructions set. And this VM is only limited to verifying whether this output can be spent or not.
+
+So in the simplest case, it has one instruction saying, please check the signature. In the more complex case, it could be please check multiple signatures, or please check some time lock or some other conditions. And you would be instantiating this miniature VM for each input, running it.
+
+If it returns OK, then the input is well spent. And if it returns error, then the transaction was ill-formed and you discard it. So this existed from day one in Bitcoin.
+
+The interesting idea implemented in Ethereum is let's unify the state, transaction format, and the VM all in one. So your state is sort of like one single replicated computer. And each transaction is simply a programme that does some changes to this state.
+
+And they had a notion of smart contracts, where it's an object in the state with which you can interact. And this object decides capabilities. So this object could be some sort of account or multi-signature account, or some, think of this as like object-orientated programming, some object with more complex capabilities, up to the ill-themed DAO.
+
+This unification is what was cool about Ethereum. So to go back to the ZKVM, what we learned from Bitcoin and Ethereum is that there is a tension between flexibility, safety, and scalability.
+
+[Anna Rose] (10:06 - 10:07)
+So quick question, does Stellar have a VM?
+
+[Oleg Andreev] (10:10 - 12:43)
+So Stellar doesn't have the VM in the common sense, but it does have operations. So each transaction is a list of high-level operations. And in this sense, it's very similar to ZKVM, because operations in ZKVM, they're also high-level.
+
+It's not like x86 CPU instruction set, where you do some bit manipulation. And it's also way higher level than Ethereum, where you have to just build up tiny databases inside the Ethereum state machine. So it's high level in the sense that you operate on high-level concepts, like where this value should go, or should I issue this asset, or should I retire it?
+
+I want to check the time conditions, stuff like that. Stellar is very similar to ZKVM in the sense of these operations. But in Stellar, they're implemented as just enumeration of things that you could do in the transaction.
+
+And it's less like a programming language, while in ZKVM it's more like a Bitcoin-like stack programming language. So the cool thing about ZKVM is that it combines the good ideas from Bitcoin and good ideas from Ethereum without sacrificing safety or scalability. So in ZKVM, you have a transaction that is mostly defined by a programme, which is similar to Ethereum, but you also have the UTXO set as a state in the state machine, like in Bitcoin.
+
+So what happens is the transaction expresses the connection of inputs to outputs, says I am claiming this output, but the outputs are actually objects that are instantiated and could be frozen, that contain data and financial values. And those data and financial values are sort of protected by another programme, like a sub-programme. So in ZKVM transaction, you have this one single programme that connects inputs and outputs, interacts with these contracts, and as a result, creates new outputs so that you get full flexibility of expressing arbitrary conditions.
+
+You can move values around, you can have conditions covering multiple values. But at the same time, all this validation is local to this particular transaction. So once you've done validating it, the only side effects that it has is a list of consumed outputs and created new outputs, just like in Bitcoin.
+
+This means that you can verify multiple transactions in parallel and then resolve any conflicts at very simple UTXO set operations.
+
+[Frederik] (12:43 - 12:53)
+So you said ZKVM comes a little bit from TXVM. So what's that history and what is TXVM and sort of what's the change to ZKVM?
+
+[Oleg Andreev] (12:54 - 15:13)
+So TXVM is something we came up for the chains version of the multi-asset blockchain protocol with Dan Robinson, Keith Rarick, Bob Glickstein, and Cathy Yun and myself. And before TXVM, what we had is something like a Bitcoin-like data model and transaction format to which we were trying to bolt on confidential assets protocol. So confidential assets is a generalisation of confidential transactions invented by Gregory Maxwell, Adam Beck, and other folks at Boxstream.
+
+So confidential transactions is simply about encrypting financial values in the transaction and checking that inputs and outputs balance. And confidential assets is a generalisation that was produced independently and pretty similarly by Blockstream and Chain in 2017, where you generalise this to multi-asseted blockchain and Blockstream implemented it for liquid systems that they have. So in confidential assets, you keep the same logic, like the inputs must balance with outputs.
+
+There is an extra twist that this balance equation should work for individual asset types. So if you have a couple of currencies, you should not be able to transmute dollars into euros, and dollars themselves should balance and euros should balance. So we were experimenting with this, also trying to bolt it into our data structure, which turned out to be pretty complicated.
+
+At some point, we even had a little graph with sort of like a little directed acyclic graph as a transaction format, which was a little bit crazy, until Dan and Keith came up with a cool idea of expressing all the movement of the values inside the transaction, not as pieces of a graph or some, you know, static data envelopes or data structures, but simply as items on a stack in a stack machine and expressing all the logic of moving things around directly in the programming language.
+
+So the big difference would be that all those predicates and conditions would not be confined inside the outputs, but would be available in this kind of flat at the transaction level. So that was the innovation, and we called it TXVM, stands for Transaction Virtual Machine.
+
+[Anna Rose] (15:14 - 15:23)
+Okay, so how does the EVM, or how does TXVM compare to the EVM? Is it similar at all?
+
+[Oleg Andreev] (15:23 - 17:11)
+So there are some similarities, but conceptually, they're very different. So the similarity is that your transaction is mostly defined by a programme that does things. The difference is what these programmes are doing.
+
+So in EVM, you have a global state of various contracts, and you can do arbitrary changes throughout the whole global state of the system. So contracts can call out the contracts, and you can use the whole state as sort of a library of functionality and contracts. Also, the EVM is, to a big degree, focused on giving you computational capabilities, like you can literally compute things and arrange data.
+
+So you can build, if you want to do the custom asset, like those ERC20 tokens, you have to build something like a little bank inside the contracts. You still have to write this little table and have this list of accounts and balances and do this, like, withdrawal, deposit actions in it. While in TXVM, you have a kind of higher level instruction set where issuance and movement of assets is a first class operation.
+
+You don't have to kind of synthesise it. And the goal is not to compute things, but to be able to express common financial contracts. So if you have a need to have an asset that has some conditions on who can move them and how they can be traded or to create an order book, then you have enough tools to express just that, but you're operating on a higher level.
+
+So the assets are your first class citizens, not the numbers.
+
+[Anna Rose] (17:12 - 17:25)
+The TXVM is so that it can't handle any sort of computation. You wouldn't be able to run anything past value transfer on it. There's no zero value transactions in the TXVM, is there?
+
+[Oleg Andreev] (17:25 - 18:13)
+Technically, you can do that, but it's not designed and optimised just for that. And if you're doing things that it's designed for, they would be efficient and straightforward. So you normally want to compute something like whether some combination of parameters and inputs is satisfying certain formulas and so allows an unlock of the value, you can totally describe this in TXVM.
+
+But if your goal is to have a complicated state machine that has some long algorithm to compute stuff with a bunch of data to process, then it could be either impossible or could be possible, but very suboptimal.
+
+[Anna Rose] (18:13 - 18:15)
+Messy. Okay, suboptimal. Got it.
+
+[Frederik] (18:15 - 18:22)
+So is the TXVM Turing complete? Can I do whatever I want in it or not?
+
+[Oleg Andreev] (18:23 - 20:14)
+So TXVM is Turing complete. It has loops and jumps and has a run limit that is our version of saying the gas limit. However, I mean, that's the thing.
+
+It's kind of more high level than Ethereum, but if you really want to create a custom logic of walking the miracle path and proving some inclusion of something somewhere, you can do this and it would be efficiently computed. And TXVM would still guarantee you that there's no hard to track down side effects throughout the whole system happening because everything's confined to the UTXOs that you're spending. You can do some singletons like a single UTXO that is a super smart contract that people interact with.
+
+And the cool thing that all the race conditions and conflicts in accessing this singleton would be resolved by people off chain. So the nodes that verify transactions, they would just have very localised logic to process. So that's the cool thing if you want to do something kind of crazy complex with TXVM, which you can.
+
+In ZKVM, some of those things were revisited. So ZKVM was even higher level than TXVM. It's not Turing complete.
+
+It doesn't have run limit or gas. If you look at what is happening while you execute ZKVM transaction, it's more like operation of a parser. So there are no loops.
+
+There is only one direction. And in return, you get even better safety, better performance guarantees, and it all works nice with confidentiality features.
+
+[Frederik] (20:15 - 21:17)
+So yeah, I'm not a big fan of promoting the idea of Turing completeness because it's one of those things that gets thrown around a lot as an important thing or as a thing that you can talk about. But I always come back to this joke that CSS is Turing complete and doesn't mean that you actually want to programme in it. It's interesting though, once you go non-Turing complete, usually people go there with a very specific use case in mind.
+
+So if you look at Proof Assistance, they go to non-Turing completeness because they need to be able to statically guarantee runtime execution time or having bound computation time and not having to solve the halting problem and various other aspects like that. In ZKVM, when you go to non-Turing completeness, what's the use case that's in mind? Why go there?
+
+What's the intention that you should be able to programme?
+
+[Oleg Andreev] (21:18 - 23:30)
+To put it short, the use case is the financial contracts with blockchain acting as a court. This concept actually, blockchain as a court, belongs to Gregory Maxwell, and he probably was explaining this at Bitcoin events. So the idea is the blockchain is not a replicated computer to compute things.
+
+Because even in Ethereum, you can and you do compute things off-chain anyway. You don't really need other people to recompute this again for you. The goal of the blockchain is to get the security out of computation.
+
+So the most that you need is the proof that things were computed correctly. The simplest example is a digital signature. No one is computing the digital signature on-chain.
+
+It is computed completely in private with your secret key. But what you get on-chain is the signature that can be verified in public. And the idea of ZKVM, just like Bitcoin, is around public verification of private computation.
+
+So to loop it back to the contracts and all this custom logic, what's its place there? Well, in financial relationships, you may have some relationships that have formalised conditions for resolution, right? So if you, let's say, have a loan, there could be a collateral, there could be conditions for unlocking this collateral by either party.
+
+And when you can formalise some of these conditions, you can put them and encode them directly into the smart contracts on the blockchain that would sort of protect the collateral or money that you loaned. And this is why you use the blockchain for.
+
+[Anna Rose] (23:31 - 23:58)
+So the way you just described this, it reminds me a lot of some of these other zero-knowledge projects, usually on Ethereum. Things like Rollup, what Matterlabs is working on. These are like ZK proofs as like check-in points using plasma-like structures, but having the zero-knowledge to prove the validity.
+
+But in that case, it's not private. And I'm curious, in your case, it's both? So it's like proving the validity, but at the same time, keeping it all private.
+
+[Oleg Andreev] (24:00 - 24:58)
+So ZKVM stands somewhere in the middle between kind of low-tech Bitcoin and high-tech things like Coda with recursive ZKSnarks and Zegze. That also uses one-level recursion for proving the computation. So all of these ideas have this common sense that we want to somehow express the conditions, commit to them on the blockchain, which effectively locks up funds.
+
+And then we can unlock those funds, satisfying those conditions. And then we somehow prove that we satisfy them. So in case of Bitcoin, it's happening all completely in the public.
+
+In case of ZKVM, data parameters and financial values are encrypted. And in Zegze, for instance, the logic that we commit to is fully encrypted as well.
+
+[Anna Rose] (24:58 - 25:26)
+And private. Fully private. Yeah.
+
+So yours is... Okay, I see. So it's somewhere between.
+
+So it's not... It's like the way I've understood Zegze through our conversation. We've done an episode on that.
+
+It was that it was baked into it. Like the exact way the transactions happen is all made in very, very private ways. And everything...
+
+Like the privacy is part of its actual function. In your case, is it more like added on top of?
+
+[Oleg Andreev] (25:26 - 28:35)
+So in ZKVM, your logic that you put into your transaction is optionally revealed. So the transaction itself is a programme which you reveal like in Ethereum or Bitcoin scripts. However, if you lock the value with some condition, you can pack this condition in a single public key through the taproot protocol.
+
+And when you want to unlock the value, you have two ways to do that. Again, remember that blockchain is a core. So how to do that?
+
+If you have a cooperation between all the parties to a contract, then what they would effectively do is compress the contract logic in a single multi-party public key, which represents a multi-signature condition. And here we're talking about n out of n conditions. So all the parties have to agree mutually.
+
+And in this case, they can produce a single signature to unlock this value and do something in the transaction. And the original logic of the contract would never be revealed. And the cool part is that once you spend or unlock this value this way, it is indistinguishable from an ordinary single key account.
+
+So it looks exactly like just transferring money from a personal wallet. So if that's the common scenario where people cooperatively unlock the funds, then custom contracts are indistinguishable from just individual accounts. So the whole blockchain consists normally of transfers from a public key to public key.
+
+So that's pretty cool from privacy perspective. However, if you have a disagreement, if we have a contract between ourselves and it times out, for instance, the loan times out, and I'm a debtor, I don't show up in time, and you want to move on, then you can open up the contract and show to the network a Merkle branch in this, maybe a big tree of different options, and show that there is one condition there just for you that allows you to unlock this value. So you reveal it and it protects some of my interests. So it, for instance, checks the timeout actually occurred.
+
+So you don't just take my collateral. You actually have waited a proper amount of time. And what happens is you reveal some part of the logic on the blockchain, provide the necessary data in the transaction to satisfy it, and the network verifies this logic and allows you to publish this transaction.
+
+So here you have this reveal of the, let's say, the formula. But in ZKVM, you don't have to reveal the data and the actual financial values that are taking part in this formula. So if you have some specific timeout amount or you have some specific price or type of asset or amount of asset, all of these remain encrypted.
+
+[Anna Rose] (28:36 - 28:49)
+Okay. All right. So how does, like, now I'm really curious, how does ZKVM compare to something like Zcash?
+
+Because there's a few things that you just mentioned that sound similar to a Zcash. Construction.
+
+[Oleg Andreev] (28:50 - 29:35)
+Yeah. So Zcash is strongly focused on protecting privacy of transactions. So the main focus in Zcash is to keep the transfers confidential and anonymised.
+
+So whenever you make a transaction, it's not linked in any way to the previous transactions that you might have made, which is very different from many other blockchains how they work, because they explicitly link inputs and outputs or some state changes like in Ethereum. So Zcash breaks this link. And it does that at expense of all the other considerations.
+
+So for instance, if you want to have some custom contracts, you have to do a transparent transaction. You cannot use the special type of...
+
+[Anna Rose] (29:35 - 29:36)
+Shielded account.
+
+[Oleg Andreev] (29:36 - 30:06)
+Shielded, yeah. Private transaction where you simply prove that the coins were moved correctly without being counterfeited, but you don't have any room to insert any custom conditions on this movement. So that's one thing.
+
+And ZKVM is trying to protect the confidentiality of data and draws the line right before approaching the anonymity. So in ZKVM, inputs and outputs are directly linked, just like in Bitcoin.
+
+[Anna Rose] (30:06 - 30:09)
+Okay. So which part is private exactly then?
+
+[Oleg Andreev] (30:10 - 32:52)
+So what is private is data. So think of this as similar to Tor versus TLS. So TLS protects the contents of your connection, but doesn't give you any anonymity guarantees.
+
+So when you connect to google.com, you send the packets from your computer to google.com, although those are encrypted. And if you want extra anonymity, you have to do extra work. So you have to connect through Tor or through VPN or have some layers of interaction.
+
+This is similar to how, you know, you would do this in Bitcoin. You would have to do multiple transactions, pass them through the mixers or use coin join or use some sort of protocols outside of the core protocol to improve anonymity of your transfers. And for starters, for instance, you use one-time public keys.
+
+So every time you receive money, you receive a different public key. That's just a basic thing. And then you have to do like extra steps.
+
+So Zcash is designed to not require those extra steps. It's just baked in a special sort of accumulator in the protocol from which you can take the money out, put the money in, and those links are broken. So the reason why ZKVM is not doing that is the scalability.
+
+It turns out whenever you break the link between the input and the output, whether it's Zcash or it's done like in Monero, where it's not as good as in Zcash because you don't have this global anonymity set. You have a handful of kind of fake outputs mixed in by your choice inside the transaction. So in either case, you don't have an explicit check on which outputs are already spent.
+
+So you have to introduce additional mechanism for preventing double spending. And in both Zcash and Monero, it's done through a set, so-called set of nullifiers. So nullifier in Zcash and key images in Monero.
+
+So what happens is every time you try to spend a coin, you have to show this unique string of numbers that was not supposed to be used before. So everyone in the network has to remember all of those strings of numbers and check that your newly created transaction doesn't use one from this set. And this is very different from the UTXO set because in UTXO set, you only have a set of unspent things, which grows kind of moderately.
+
+For instance, in Bitcoin, the whole blockchain is like over 100 gigabytes, but the UTXO set is only three gigs. It kind of grows proportionally to the user base.
+
+[Anna Rose] (32:52 - 32:59)
+You've sort of mentioned it, but like, so you keep these transaction, you keep the... So it's not anonymous.
+
+[Oleg Andreev] (33:00 - 33:37)
+Yeah, it's not anonymous at the base layer. So at the base layer, you have pseudonymous addresses. Like in Bitcoin, you have this single use public keys.
+
+You have direct link between inputs and outputs. And to anonymise those transfers, you have to do all the same things that you would have to do in Bitcoin. So you would have to do coin join to cooperate with other nodes in the network to combine multiple payments in one to increase the anonymity set.
+
+Or you would use mixers or you would use multiple layers of those things.
+
+[Frederik] (33:38 - 33:56)
+So we understand the model of accounts now. And tying back into your previous thing, you said that what you get private is the data. So what is the data in that case that is private?
+
+[Oleg Andreev] (33:59 - 34:41)
+Yeah, so ZKVM is like TLS without Tor. So you protect the data, which is all the contract parameters and all the financial values that are flowing through the system. So if you have a transfer of some amount of certain asset, like five issued dollars, you would have the type of this asset, like for instance, the type of currency encrypted, and you would have its quantity also encrypted.
+
+And if you have some additional parameters in the contract, let's say time interval or price or some counters, you can keep those encrypted too.
+
+[Anna Rose] (34:41 - 34:42)
+Okay.
+
+[Oleg Andreev] (34:42 - 35:13)
+And what you would expose is a transaction graph, and you would expose the minimum required logic to satisfy the predicates. So if you have some formula that you have to satisfy to unlock some money, like that you paid back the loan with interest, then you would have to show the formula. It will be executed as a plain programme, but the variables on which it will operate would be all encrypted.
+
+[Frederik] (35:15 - 35:18)
+That's interesting. So the contract itself is in plain sight?
+
+[Oleg Andreev] (35:19 - 35:55)
+Yes, except it's only one branch, and only if you have to reveal it. So if parties cooperate, they would never have to reveal the contract, just like in a court. Like if you have cooperation, you would not go to a court, you would resolve it in private.
+
+But if you don't cooperate, then you go to the court, like to a public network, and show the necessary contract details. You don't have to show the whole contract, just one branch, and say, okay, this is a security branch that protects my interests. I want to invoke it.
+
+Here's my proof, and here's my transaction.
+
+[Frederik] (35:56 - 36:13)
+So as an analogy, like if you had CryptoKitties, the contract itself might be public, but you don't reveal which kitties you've traded. You just reveal that person A sold a kitty to person B, but they don't know which or for how much. Exactly.
+
+[Anna Rose] (36:13 - 36:16)
+Okay, that's the part of it that you hide.
+
+[Oleg Andreev] (36:17 - 36:54)
+Yeah, so it may seem like not such a big deal, but it's one of the most important parts. And another important part is to keep the whole system actually scalable, to, you know, great to use by a lot of people. And if you want to protect your transfers even further, you can do this with like add-on protocols, not at the consensus layer, where it's hard to scale, but outside it.
+
+So you can do CoinJoin, like mixers are like VPNs of blockchains. CoinJoin is sort of interactive anonymisation tool.
+
+[Frederik] (36:54 - 37:06)
+So a question on, you said that if both parties are cooperating, you don't need to reveal the contract. That sounds to me like both parties actually need to be online when the transaction is made.
+
+[Oleg Andreev] (37:07 - 37:41)
+Yes. So it depends on what you mean by online. So if they have to construct a transaction, they have to do this one after another, like it's a multi-step process, but it's not like they actually have to be in the same time zone, sitting in the same room.
+
+They could do this step-by-step in turns. So I can initiate my transaction, send necessary pieces to you, and then go home. And then you will complete it next morning.
+
+And then when everything is signed, then it can be published.
+
+[Frederik] (37:42 - 38:00)
+Right. So they don't need to connect to each other, but basically person A sends out a transaction with the relevant encrypted pieces. Person B can then download that, sync that through the network.
+
+Do their part of it and send their part of it back.
+
+[Oleg Andreev] (38:01 - 38:02)
+That's exactly right.
+
+[Anna Rose] (38:03 - 38:20)
+Okay. So I think this is... I actually have to say the comparison from Zcash to ZKBM has been really helpful to dig into this.
+
+So then let's actually try to do the same thing for the Zexi protocol. How do you see yourself comparing to or being different from the Zexi protocol?
+
+[Oleg Andreev] (38:21 - 39:15)
+So Zexi is trying to hide the actual computation. So the idea is you want to have a custom contract that protects the funds, but you don't want to reveal the logic of this contract. So for doing this, Zexi is using ZKSNARKS as a zero-knowledge proof system.
+
+And it's using it recursively, kind of one-level dip, so that you prove in zero-knowledge that you have proven in zero-knowledge the computation of this contract. So ZKBM doesn't do any of those things. So ZKBM says, all right, so if you have some custom logic, you just dump it on the chain and people will run it as is.
+
+So there is no encapsulation in this opaque kind of size proof.
+
+[Anna Rose] (39:16 - 39:21)
+And also ZKBM doesn't use SNARKS either, right? So that's the other big difference.
+
+[Oleg Andreev] (39:21 - 41:26)
+Yes, it does not. ZKBM is instead based on bulletproofs. So there is a very interesting contrast between SNARKS and bulletproofs.
+
+These are very different. And the difference in them really influences the design. So it almost never makes any sense to just swap one for another.
+
+So it's not like it's just one is faster and the other one is better in some other way. They're so different that they heavily influence how you design the whole system. And a system that makes sense to be built on one doesn't make any sense to be built on another, and vice versa.
+
+So for instance, if you have something like Zcash or ZegZ where you have a lot of computation that you want to do in zero-knowledge, you want something that gives you a compact proof with short verification time. So ZKSNARK stands for succinct non-interactive argument of knowledge. And succinct stands for this compactness no matter how much complexity you have.
+
+So this allows you to pack a lot of complexity. And this is why it enables ZegZ and Zcash. Those don't make much sense on bulletproofs.
+
+Because bulletproofs give you a logarithmically sized proof and linear complexity in terms of time that you spend for verifying it. So bulletproofs make sense for shorter statements, smaller computation sizes. But the other important difference between them is that SNARKs require a trusted setup and bulletproofs do not.
+
+And the key part is actually not the trusted part, but the setup part. So if you have a setup, it means that you lose a lot of flexibility. You have to figure out the logic, the formula that you want to verify up front.
+
+You have to build a system that verifies the proofs about this logic and deploy it. And only after that you can use it.
+
+[Frederik] (41:26 - 41:39)
+But in ZKVM, we walk away from all of this all together, where you don't even have to have this multi-party thing between the parties interacting with each other. You can just generate them without setups at all.
+
+[Oleg Andreev] (41:41 - 43:31)
+Yeah, you may still need, like if you have a bulletproofs proof between multiple parties, you would still need to cooperate to construct it. But bulletproofs allows you to do all of this on the fly. So the whole network would construct the proof structure or the constraint system right on the fly from the instructions in the transaction.
+
+So your transaction would say, I want this to be in this condition. I want this formula to be true. I want this Boolean formula.
+
+Out of all of these instructions, ZKVM builds a constraint system inside bulletproofs on the fly. And this is what every node does when they verify a transaction. And then they apply this proof that is attached to a transaction to that constraint system to verify it.
+
+And then the constraint system is thrown away, and the VM is destroyed once the transaction is verified. This permits you to use, first of all, way more robust cryptography, kind of more like time-tested because it's way simpler than SNARKs or any like curves that use pairings. And it allows you to build in a more simple fashion those custom ad hoc conditions right on the fly.
+
+And it performs pretty well. So since it's all very narrowed down to concrete, high-level conditions for financial contracts, the logic of the contracts is not having a lot of moving parts. So the cost of bulletproofs, this linear cost is not bad.
+
+It's actually pretty low together with all the other things that have to be verified in zero knowledge. So you could do like a payment in one or two milliseconds.
+
+[Frederik] (43:31 - 43:55)
+We've talked about the zero knowledge part being sort of protecting the data that goes into a transaction. But what about the scalability part? Does the zero knowledge part play into that?
+
+Where does the scalability come from? To me, it sounds more like that is a property of having non-global states and being able to parallelise transactions.
+
+[Oleg Andreev] (43:56 - 46:22)
+Yeah. So the main part of scalability is to having a reasonable state model. So you can verify things in parallel and you don't have any sort of like time bombs where you accumulate more and more data with every transaction that you have to scan, which has nothing to do with zero knowledge.
+
+It's just a choice of how you design your state model. Well, actually, I'm not correct. It has to do with zero knowledge because, for instance, for Zcash anonymity feature, you have to have this, you know, accumulator of nullifiers so it can affect your state.
+
+So if you don't provide anonymity, then you don't have to make the trade-off. So you can have a very small state. And then you can go even further and compress the state with Merkle trees in the U3XO scheme.
+
+So it takes virtually constant space, like around kilobyte. But the other part is that... So ZKVM uses the scriptography stack that we worked on with Henry de Valence and Kathy Yun at Chain.
+
+So it starts with the Curve25519 Dalek that implements Edward's Curve25519 that is pretty famous. It's one of the fastest curves available for people to use. And it's not the same curve as Bitcoin uses, because it's a different shape.
+
+And on top of that, it's implemented purely in Rust. And on top of that, Henry developed the Ristretto prime order group. There's a restricted version of DCAF, which was created by Mike Hamburg, that kind of turns the symmetric non-prime order curve into a prime order group, which is what you need for all sorts of cryptographic protocols.
+
+So it gives you the correct abstraction. So now we have this stack written in Rust. And why do we use this curve?
+
+Well, because it allows very efficient parallel implementation. So you can use CMD instructions and parallelise computation of various elliptic curve operations very efficiently in hardware. And he was able to demonstrate significant performance improvements over anything else out there.
+
+So it's almost three times better than highly optimised Bitcoin curve implementation in C, for instance.
+
+[Anna Rose] (46:24 - 46:29)
+Is there any other things that are happening to make the scaling side better?
+
+[Oleg Andreev] (46:29 - 47:28)
+Like you've just listed two, right? So it's the design of the state. It's the high-speed cryptography.
+
+And this cryptography is also batchable. So if you have a lot of things to compute when you have aggregation of multiple zero knowledge proofs, and for instance, the signatures are all batched together. All of this, if you have a lot of load to compute, then you can do it even faster when you do this in a batch.
+
+So you can save a lot of CPU time. Also, Bulletproofs are scaling logarithmically. So if you aggregate multiple transactions in one, which you would, for instance, want for privacy, like you have a coin join where 10 people just mix inputs and outputs in one place, they could produce a single Bulletproofs proof that would cost us virtually as much as their individual proofs.
+
+So they save on bandwidth significantly.
+
+[Anna Rose] (47:29 - 47:40)
+What is ZKVM then? Do you imagine it actually acting as its own system? Does it sit on Stellar?
+
+Does it work with Stellar?
+
+[Oleg Andreev] (47:40 - 48:18)
+So ZKVM is a new experimental design. It's very different from Stellar. It is not connected to anything yet.
+
+So things like consensus protocol or how it integrates with Stellar are not done yet. We have experimented with a sidechain between TXVM and Stellar as a kind of proof of concept. It's in our repository.
+
+We're right now at the stage where we're still figuring out some design aspects of ZKVM before we can move on and decide on what is the best way to put it in the hands of the people to try it out.
+
+[Anna Rose] (48:18 - 48:30)
+Could ZKVM be implemented separately or included in other chains? Is it Stellar-specific or is it just a new piece of research that anybody could use?
+
+[Oleg Andreev] (48:30 - 49:07)
+It's more like the latter. It's an open source project. You're free to go and try to do something with it.
+
+You can make an absolutely awesome private blockchain out of it if you want. But it's very similar to Stellar in its goals. The question is how to make a reasonable design for a multi-asset environment where you don't longer have this peer-to-peer relationships with a bank-like system, but you have this common environment for where assets could leave.
+
+So issues just put them there and then people can trade them and you have this place.
+
+[Frederik] (49:08 - 49:35)
+Cool. To wrap up, you touched on this a little bit already, but what state is it in? How much is built?
+
+Like you mentioned, you could build a private blockchain out of this, but do you have networking built out? Do you have the core blockchain? You already said consensus algorithm isn't really connected.
+
+So what states is it actually in? How is this designed?
+
+[Oleg Andreev] (49:37 - 50:41)
+So the core design is pretty much figured out. We're still hashing out some things about the API and some little details. But the general consensus critical parts are done and some of the service functions, like how you compose transactions, are sorted out.
+
+But there is no consensus algorithm. There is no networking state. I've only recently started working on a simple demo where you have this private blockchain to play with.
+
+And it's still on GitHub, so it's under development. So the idea is to approach it as a full stack thing. So to have a feedback from higher level APIs on the design of the system to see if things make sense.
+
+So if we have some unnecessary features or unnecessary complexity, we could hash it out before it's too late. So we don't just figure out some low level thing, fix it in stone, and then later learn that it's not good enough. So we're kind of taking the full stack blockchain development approach.
+
+[Anna Rose] (50:41 - 50:48)
+So thank you for coming on the show and sharing with us the ZKVM protocol. Yeah, and I guess good luck with the project.
+
+[Oleg Andreev] (50:49 - 50:50)
+Thank you so much for having me.
+
+[Frederik] (50:50 - 50:51)
+Thank you.
+
+[Anna Rose] (50:51 - 50:53)
+And to our listeners, thanks for listening.
+
+[Frederik] (50:53 - 50:54)
+Thanks for listening.

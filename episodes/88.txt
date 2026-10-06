@@ -1,0 +1,565 @@
+[Anna Rose] (0:06 - 0:18)
+Welcome to Zero Knowledge, a podcast where we explore the latest in blockchain technology and the decentralised web. The show is hosted by me, Anna, and me, Frederick.
+
+[Frederik] (0:24 - 0:36)
+In this week's episode, we sit down with Ben Fisch to talk about his recent work in RSA accumulators. We dig into those, Merkle trees, vector commitments, and their applications to stateless clients.
+
+[Anna Rose] (0:44 - 2:26)
+Before we start, we want to say thank you to this week's sponsor, Starkware. Starkware will be putting on the Starkware Sessions in Tel Aviv on September 16th. The event will be bringing together the brightest minds in the field of zero-knowledge proofs from both the academic and application arenas.
+
+Topics include self-custodial trading, Starks for Layer 1, Stark-friendly hash functions, and other cool things you can do with Stark proofs. Fun fact, I will actually be hosting one of the stages. So if you're interested in this exciting, cutting-edge tech, do join the Starkware Sessions, or come a day early for the Stark 101 workshop where you can actually build a Stark prover from scratch.
+
+Use the code zkpodcast to get 20% off any ticket. We have about 50 of these available, so get it fast. As always, info will be in the show notes.
+
+So again, thank you Starkware for supporting this podcast. And now here's our interview with Ben Fisch. So today we're sitting with Ben Fisch, who's a PhD student at Stanford and part of Dan Boneh's Applied Cryptography group.
+
+Hi, Ben. Hi, Anna. And as always, we're with Frederick.
+
+Hello. Today we're going to be talking about accumulators and hopefully get a touch on Ben's work working on the RSA accumulator paper and project. We have recorded a few episodes, one on Merkle trees, one on MPCs.
+
+Those might be worth listening to before you listen to this episode, just because we're going to be touching on those topics. But I think before we start in on that, we should probably have a bit of an intro to you and find out a little bit about what got you excited about cryptography in the first place.
+
+[Ben Fisch] (2:27 - 3:00)
+Sure. That goes back quite a while. I was a junior in college and I was studying math and dabbling a little bit in computer science as well.
+
+And I did an internship at the Weizmann Institute in Israel with this cryptographer, Monina Orb, just to do some kind of applied math research over the summer. And he happened to be a cryptographer. And I guess I was hooked on cryptography as a research topic ever since.
+
+So, yeah, that was already seven years ago.
+
+[Frederik] (3:01 - 3:12)
+How did you bridge from working on cryptography and just being in this world to being in the blockchain space, which you kind of are, kind of not?
+
+[Ben Fisch] (3:13 - 5:27)
+Right. So, yeah, I would say right now I'm very much in the blockchain space because even now all my research seems to be centred around applications to blockchain. But it did take a while going in and out.
+
+In fact, in that first internship I did doing research in cryptography, we were looking into Bitcoin as a potential research topic. And this was back in 2012 when few researchers were actually looking at Bitcoin. We did some analysis there.
+
+We were looking at some graph analysis of the Bitcoin network. But I really ended up focussing on other problems in that internship and didn't really return to ever looking at Bitcoin again until I started doing work on Bitcoin mining pools. That was when I was living in New York.
+
+I was working with Rafael Paz from Cornell Tech and Abhishalat and we were looking at basically trying to explain what is the optimal mining pool. There's so many different mining pool strategies in Bitcoin. What can you say about what, you know, given some assumptions about the risk profile of a miner, what mining pool strategy should they take?
+
+And I guess that was my gateway back into working on research on blockchains. And here at Stanford, Dan Bonez's group does a lot of work on, you know, specifically cryptography tools that can be applied in the blockchain space. And that was when I started working on verifiable delay functions, which became a big thing.
+
+I got involved with Filecoin because I was working on proofs of space and proofs of replication, useful proofs of space, proofs of space that you can use to actually store useful data, which is the basis of Filecoin. And from there, I just kept on working on more topics in cryptography as applied to blockchain. And right now I'm more interested in using zero knowledge to balance privacy and transparency in blockchains.
+
+[Anna Rose] (5:28 - 5:43)
+Before we go more into these projects, I still want to go back to that original question of what is it about cryptography that got you excited? Because I think this is a great bio of how you got into it, but what was it? Was it just because it was challenging?
+
+[Ben Fisch] (5:44 - 7:10)
+It's a good question. To be brutally honest, I think that when I first got into cryptography, it was more about the challenge. And then that's often the case for researchers.
+
+I was a math student, and this seemed like a cool application of math. And it wasn't really anything more than that. I think the reason why I stayed in cryptography was because I enjoyed or found higher meaning in the projects that I was working on.
+
+And I think I was also drawn to the fact that there seems to be such a gap between how much of the cryptography that we have developed in research is actually used. And when I was working on research back in 2012, this was before blockchain started using a lot of fancy cryptography. And so there weren't really any at least well-known applications of zero knowledge.
+
+And yet it just seems like such a powerful concept, the idea that you can prove anything without revealing details beyond what exactly you want to prove. And so there's these really kind of beautiful concepts that seem to be very powerful and useful, but weren't being used. And there was something exciting about that being I suspected that in short time, within, you know, my own career, a lot of the things that cryptographers were working on would start being used increasingly more.
+
+And that actually came true.
+
+[Frederik] (7:10 - 7:49)
+So as usual, with guests that do a lot of cool stuff, it's hard to talk about one thing. We have the same problem with Benedict, where I want him back every week to talk about a different thing. But we can't really do that.
+
+We have to define something to talk about. And in this episode, I wanted to dig into accumulators. And this is something that Anna has, you know, done a study group on before.
+
+And it's something that we've touched on just barely in various previous episodes. Maybe we just start out with a simple quote, unquote, question. What is an accumulator?
+
+[Ben Fisch] (7:49 - 8:37)
+Well, an accumulator is a compact representation of a set. The easiest way to think of it is, if you know what a hash function is, right, then a hash function is kind of gives a fingerprint for a much larger file. And it's a commitment.
+
+It's also called a commitment to the file. It's binding in the sense that if I give you the file, after giving you the hash, there's only one unique file that I can give you that will match that hash, that fingerprint. An accumulator allows you to go further than that and be able to give you individual items in a set.
+
+And you would be able to verify that those items match that small fingerprint that you were given. You don't have to be given all the items in a set at once in order to verify that.
+
+[Anna Rose] (8:38 - 8:47)
+And that's the general sort of definition of accumulator. But it also sounds a lot like a definition that a lot of our listeners will know, which is that of a Merkle tree.
+
+[Ben Fisch] (8:47 - 8:48)
+Absolutely.
+
+[Anna Rose] (8:48 - 8:50)
+So is a Merkle tree an accumulator?
+
+[Ben Fisch] (8:51 - 9:33)
+A Merkle tree is definitely an example of an accumulator. There's one, you know, minor nitpicky definitional thing that if you talk to cryptographers or look at the literature on accumulators, accumulators are sometimes defined to have constant size witnesses, okay? And Merkle trees have logarithmic size witnesses.
+
+But I would say in a more flexible view of accumulators, Merkle trees are definitely an accumulator, just with slightly larger, and we can get into what these different terms are called, but they have slightly larger what's called a witness than, say, other types of accumulators like RSA accumulators.
+
+[Anna Rose] (9:34 - 9:49)
+So they're sort of like related in the same family. But when you use the term accumulators, are you actually kind of talking about something else? Do accumulators also have their own, like you just said, it needs to have a constant size witness?
+
+[Ben Fisch] (9:49 - 11:00)
+Yeah. So the witness, going back to my very basic explanation of what an accumulator is, when I claim that after giving you what's called the accumulator state commitment, which in the case of Merkle trees is the Merkle tree root, okay, then I can give you an item which is in the set and a witness, which is a proof that that item is actually consistent with the state commitment that I gave you. So Merkle trees will be giving you a Merkle branch, which is the witness for a leaf of the Merkle tree, and you can verify that against the Merkle root.
+
+Merkle trees are examples of accumulators. The only reason why we use the term accumulator is because it explains a more general potential space of, you know, of constructions of this abstract concept. And so there are accumulators that have smaller witnesses, mainly constant size witnesses, whereas Merkle trees have logarithmic size witnesses.
+
+Merkle trees are actually more than accumulators, they're vector commitments, and we can talk about that too.
+
+[Frederik] (11:01 - 11:42)
+Yeah, I'm curious, we should get back to this point of the different like properties like witness size, commitment size, storage size, like how they differ, why you would want to use one or the other, because I think that sort of clarifies what the difference is, or when you would want one or the other. Going back a little bit to definitions and literature, like when you read on this topic, you will come across things like dynamic accumulators, universal accumulators, batching, aggregating, proofs, witnesses. Let's maybe start, like, what's the difference between a dynamic and universal accumulator?
+
+[Ben Fisch] (11:43 - 12:54)
+Well, dynamic, I mean, a dynamic accumulator is a subset of universal accumulators. So dynamic refers to the ability to update the set that the accumulator commits to. So this could be adding elements to that set, and then updating the state commitment that you're given, right?
+
+So then it's always easy to go back to a concrete example. So in the Merkle tree example, if you have the root of a Merkle tree, and I add an element to the Merkle tree, is there a way for me to have you, you know, can I, for you to be able to update the root of the Merkle tree on your own? A trivial way to make an accumulator dynamic would be to just redo the entire computation of the root.
+
+That would not be considered a dynamic accumulator. A dynamic accumulator specifically means that, you know, there's some way that you holding only the root of the accumulator can perform an efficient update without having to redo all the work that you did in the first place, building the accumulator from scratch.
+
+[Anna Rose] (12:55 - 13:00)
+Is that usually, that change, is that usually like changing the value of one of the leafs, or is it changing the path?
+
+[Ben Fisch] (13:01 - 13:08)
+Changing the value of one of the leafs could be viewed as an addition and deletion of an element.
+
+[Anna Rose] (13:08 - 13:13)
+So that would be, you would need a dynamic, or it would sort of fall under the dynamic accumulator.
+
+[Ben Fisch] (13:13 - 13:42)
+Right, in any specific example of a accumulator, Merkle trees, by the way, can be made dynamic. Depending on your particular instantiation of the accumulator, there may be a much more efficient way to update a particular element in the set than performing an add and then a delete. But the definition of dynamic accumulator is just saying that, okay, we can form adds, we can form deletes, that handles the case of updates as well, at least in a theoretical sense.
+
+[Frederik] (13:43 - 13:45)
+And a universal one is what?
+
+[Ben Fisch] (13:46 - 14:29)
+Right, so universal accumulators are dynamic, but they also support both membership and non-membership witnesses. So this is another thing we've been talking about. Membership witnesses, which are Merkle branches that prove that a leaf element is in the Merkle tree, you also might want to give a proof that something is not in your set, right, not in your Merkle tree.
+
+And that's called a non-membership proof. Accumulators which allow for both non-membership and membership proofs and are dynamic are basically universal. They do everything.
+
+That's why they're called universal.
+
+[Frederik] (14:30 - 14:58)
+Yeah, I originally, my background as a developer on like blockchain software, I come very much from like the Merkle tree world and I knew Merkle trees intimately. And then when I started reading and studying accumulators and found out that like non-membership proofs are a thing, I was like, wait, really? You can have that?
+
+You can have something that where you can prove like non-existence? And I think that's pretty cool.
+
+[Ben Fisch] (14:58 - 15:37)
+Yeah, you can even do it with basically Merkle trees. The typical way of doing it with a Merkle tree is maintaining a Merkle tree of sorted elements at the leaves. Then being able to, you can prove that something is not in the set by basically showing that you find two elements which are both greater and lesser than the element that you're trying to prove is not in the set.
+
+You prove that both of them are in the tree and adjacent. That shows that as long as there's this invariant that all of the elements at the leaves are maintained in the right order, then you do have the capability of giving non-membership proofs.
+
+[Frederik] (15:38 - 15:40)
+That's cool. How do you prove that they're adjacent?
+
+[Ben Fisch] (15:40 - 15:46)
+Well, all the leaves of the Merkle tree have indices. This is the other thing that Merkle trees are actually...
+
+[Frederik] (15:46 - 15:49)
+So you're actually laying out the paths. Yeah.
+
+[Ben Fisch] (15:49 - 16:11)
+This is why Merkle trees, I said, are actually more powerful than your average accumulator. They're vector commitments because they not only are binding to the set, they're binding to the position of elements within the set. You can show that this is an element in the set at this particular position.
+
+In other words, this is the i-th element of this vector.
+
+[Anna Rose] (16:12 - 16:21)
+This actually gives the quality of, at least in certain contexts, being able to define a non-member witness. You were able to actually... Yeah, that's cool.
+
+[Ben Fisch] (16:21 - 16:44)
+That's right. But it's not necessary to be a vector commitment in order to support non-membership witnesses. RSA accumulators are not vector commitments.
+
+They're not position-binding accumulators. However, it is possible to give non-membership proofs and membership proofs with RSA accumulators. It all depends on the particulars of the construction.
+
+[Anna Rose] (16:45 - 16:56)
+We've just talked about the dynamic accumulators being a subset of the universal, but I'm guessing there's also the opposite, right? What's an accumulator that isn't universal?
+
+[Ben Fisch] (16:58 - 17:26)
+Universal is, I guess, an inclusive term. Accumulators which are not universal might be really good at one of these things, like really good at membership proofs or non-membership proofs, but don't support both. Or they are dynamic in the sense that they support ads, but they don't support deletes.
+
+There may be good reason to construct a non-universal accumulator that's really good at one of these things, but doesn't do all of them at once.
+
+[Frederik] (17:27 - 17:51)
+Last two things that I just want to touch on before we talk a little bit more specifics is the concepts of batching and aggregating, because that's sort of relevant to your paper that we will talk about later, and it's also a little bit maybe on the more forefront of research-y topics in how accumulators work. So what is batching and aggregating proofs?
+
+[Ben Fisch] (17:51 - 19:20)
+I think the best way to explain this is maybe to go again back to the concrete example of a do not batch or aggregate. When you prove that a particular element is committed in the Merkle tree, you give a Merkle branch for that element, or a Merkle proof. And if you want to prove that two different elements are in the Merkle tree, then you'll have to give two different Merkle branches as proofs, and so on and so forth.
+
+If you're proving 100 elements are in the tree, then you have to give 100 different Merkle proofs, and the size of this proof basically grows linearly. Now you might observe that if the elements in the Merkle tree are very close to each other, then some of these proofs overlap. So you may get some minor savings, right?
+
+Let's say that you're proving inclusion of the elements at the leaves of some subtree, say like the first 100 elements, then you do get some amortisation effects, where you're not giving a proof which is exactly 100 times the size of proving that one element is in there. But in general, these Merkle proofs, you can observe, do not aggregate very well. So aggregation is basically saying that we can take a bunch of individual proofs of a given size and combine them together into a more compact single proof that covers all the original proofs, right?
+
+[Anna Rose] (19:21 - 19:23)
+Are batching and aggregating the same term here then?
+
+[Ben Fisch] (19:23 - 20:25)
+So to be precise, they are not. There's different uses of, you know, batching and aggregation, and I guess different researchers have different strong opinions on when you should use the term batching and when you should use the term aggregation. But generally, like aggregation refers to taking a bunch of existing proofs and combining them into a smaller proof, whereas batching could refer to the action of generating a large set of proofs more efficiently, or verifying a large set of proofs more efficiently, or even creating, and I would say this is maybe where I would defer from other researchers, but I think that batching can be used to refer to the action of creating from scratch a single proof for proving a whole bunch of, you know, smaller proofs that is more efficient, not only in the action of generating it, so the computational efficiency, but also perhaps in the size of the proof that you end up with at the end.
+
+[Frederik] (20:26 - 20:46)
+That was my understanding as well, but maybe that's because I've read mostly your research. But yeah, so batching being, I want to prove membership of these hundred items, and here's one proof, like you generate that one proof for those hundred items, whereas aggregating is you generate a hundred proofs.
+
+[Ben Fisch] (20:46 - 21:30)
+And then after the fact, you combine them. Although, yeah, although some researchers would say that aggregation should, batching should only be used for referring to efficiency, that you create a hundred proofs in the end, but you just create them more efficiently in this batch generation process. Intuitively to me, I like the idea that aggregation is taking existing things and combining them, and batching is saying that from scratch, being able to say, I want to prove these a hundred different things.
+
+I don't need to give you a hundred different proofs. I can give you a super efficient proof that I can say either create more efficiently or make it smaller, but I'm doing it from scratch and that I would call batching other than aggregation.
+
+[Anna Rose] (21:31 - 21:50)
+I think you've, like in your description of Merkle trees, you just sort of mentioned, you basically used a term that is the same term as membership witness, but there you called it the Merkle branch. Is that what we call it? Like the Merkle branch is a membership witness?
+
+Yeah, well- In a Merkle tree?
+
+[Ben Fisch] (21:50 - 22:27)
+It's sometimes referred to as that. Yeah. I mean, basically the actual proof of a given leaf at the item is constructed by following the branch that extends from the root to that leaf.
+
+And then also, actually you don't provide the nodes on that path from root to leaf. You provide the adjacent nodes to each of those nodes, right? But that collection of items that you give could be referred to as a Merkle branch.
+
+[Anna Rose] (22:28 - 22:29)
+Or a membership witness.
+
+[Ben Fisch] (22:29 - 22:30)
+Or a membership witness.
+
+[Anna Rose] (22:30 - 22:31)
+Of a Merkle tree.
+
+[Frederik] (22:31 - 22:50)
+So the last point of definition that I want to cover, because this also pops up kind of everywhere when we're talking about accumulators, particularly RSA accumulators, and that is groups of unknown order. What are groups of unknown order? It sounds like a very mystical term.
+
+[Ben Fisch] (22:51 - 25:43)
+They're groups for which you do not know their order. No, so- Very literal term here. So first, you have a finite group and basically, I mean, groups have a mathematical definition.
+
+We don't need to get into the full definition of a group. I think it's more useful to talk about examples of finite groups, right? So one of the key properties of a group is that you have some operation that you perform on the elements of the group and the group is closed under that operation.
+
+There's other properties as well, such as inversion. So let's talk about a good example, like integers. The integers are a group under addition.
+
+You take any two integers, you can add them together, you get another integer. There's an inverse operation to that, which is subtraction. And the integers are not a finite group.
+
+They're an infinitely large group. There's infinitely many integers. If you keep adding integers to each other, you could get ever larger integers.
+
+Now, if you look at the integers modulo n, and you talk about addition modulo n, now you're in a finite group. Pick a number n, then there's exactly n elements in the integers modulo n. We know the order of that group kind of by construction.
+
+You can talk about slightly different groups, such as multiplication modulo n. So now we're not looking at adding numbers together and finding the remainder mod n. We're talking about multiplying integers together and then reducing mod n.
+
+And the size of that group depends very much on the n that you pick. So if n is prime, then there's exactly p minus 1 elements in this group. But if you choose n differently, then in general, the size of the group will be phi of n.
+
+Phi of n is something that you can compute knowing the factorisation of n. So if n is equal to, for example, if n is equal to a product of two primes, if n is equal to p times q, then phi of n will be p minus 1 times q minus 1. If you don't know the factorisation of n, it's very hard to compute phi of n.
+
+Or at least it's as hard as computing the factorisation of n. RSA works in groups of unknown order because it works in a group of where, you're doing integer multiplication mod n and the factorisation of n is not known.
+
+[Frederik] (25:44 - 26:18)
+So yeah, the order of the group is how many elements are in that group. Is that right? Yes, that's right.
+
+And in the case of multiplication modulo n, it depends on these two primes. And I think anyone who's looked into RSA Krypton is familiar with this as it's part of their like trapdoor function stuff. And so is this why they're called RSA accumulators?
+
+Because they're based on the same assumption of multiplication of two primes?
+
+[Ben Fisch] (26:19 - 26:49)
+Yes, they're called RSA accumulators because typically they're instantiated using the RSA group as the group of unknown order. But one of the points that we discuss in our paper is that you could use other groups of unknown order as well. You don't need to restrict yourself to the RSA group.
+
+And in fact, in other groups of unknown order, there's benefits such as not having to do a trusset setup. But we can get into that a little bit later.
+
+[Anna Rose] (26:50 - 26:51)
+What does RSA stand for?
+
+[Ben Fisch] (26:52 - 26:58)
+The authors of RSA. So Ron Rivest, Adi Chanir, Leonard Adleman.
+
+[Frederik] (26:59 - 27:13)
+Yeah. This was a point of trivia that I didn't actually know. There is this thing called RSA Laboratories.
+
+Right. I don't actually know what RSA Laboratories is or does. Is it a company that they started?
+
+[Ben Fisch] (27:14 - 27:32)
+I think so. Yeah. So there was a company RSA, you know, that that was that was I think and they were involved in the founding of this company as well that pushed forward the industry adoption of RSA encryption.
+
+Is RSA Laboratories the same as the RSA company? I'm not sure.
+
+[Frederik] (27:32 - 27:48)
+I'm not entirely sure either. I couldn't say. But it is this company that publishes these RSA groups that you mentioned.
+
+So you kind of need to trust this company if you're using these groups or you construct your own.
+
+[Ben Fisch] (27:48 - 28:08)
+Right. I mean, there is we know ways around this. You can construct an RSA group.
+
+We're using multi-party computation the same way that Zcash use a multi-party computation for their trusted setup. You could use a multi-party computation to establish the RSA group.
+
+[Frederik] (28:08 - 28:22)
+Before we dig too deep into RSA accumulators, particularly, maybe we cover just slightly what are vector commitments? We've mentioned these already. How do they fit into this story?
+
+[Ben Fisch] (28:22 - 28:54)
+So vector commitments are similar to accumulators, but they're positional commitments, meaning that I have a list of items and then I can prove that the ith item of this list was committed to by the vector commitment state commitment. So it's very, very similar to accumulator. We have state commitment, but the state commitment, I can give you vector commitment opening proofs.
+
+And it proves that a particular item is at a particular position of the vector.
+
+[Frederik] (28:55 - 29:07)
+So a Merkle tree could be a vector commitment as well if it's sorted, but like the Ethereum Merkle tree wouldn't be. It would still be an accumulator, but not a vector commitment because it's not sorted.
+
+[Ben Fisch] (29:07 - 29:32)
+No, actually, the Merkle tree is just a vector commitment already without having the leaves sorted because I can prove to you that the ith leaf has this value. So it doesn't matter that the leaves are sorted according to some ordering criterion, right? It just matters that I can prove to you what is the leaf at any given position of the tree.
+
+So that makes it a vector commitment.
+
+[Frederik] (29:32 - 29:37)
+I see. What would be an example of other vector commitments?
+
+[Ben Fisch] (29:38 - 32:17)
+So we actually construct a different kind of vector commitment in our paper. There were other vector... I mean, there's other vector commitments I think would be a little bit challenging to go into the details of how they work over the podcast, but I think that actually maybe the easiest vector commitment to explain is the one that we do in our paper because it's basically using an accumulator to construct a vector commitment.
+
+Think first about just a vector where all the elements are just 0 or 1. So like a bit vector, right? And I want to be able to prove to you that the ith bit of this bit vector is 0 or I want to be able to prove to you that it's 1, right?
+
+And you have some kind of state commitment to this bit vector. So what we can do is we can say that, well, let's build an accumulator that accumulates all the indices that are 1. Then if we are able to give inclusion proofs and non-inclusion proofs in that accumulator, then basically telling you whether the ith bit of this vector is either 0 or 1 is the same as telling you whether the ith index is included in the accumulator that commits to all the indices which are 1 or not included in the accumulator, right?
+
+If it's a 1, then it should be included in the accumulator. And if it's a 0, then that ith index should not be included in the accumulator. That wouldn't really give you an efficient vector commitment if you wanted to build vector commitments where the values at each index are larger than 1, right?
+
+So let's say you wanted to have vector commitments where you could have like a 256-bit value at any given index. Then I'd have to give you 256 individual inclusion and non-inclusion proofs of each of those bits if I did it bitwise. The beautiful thing about the batching and aggregation techniques of our paper, in fact, the main theoretical motivation was to be able to build this vector commitment which allows you to prove those 256 different bits all in one compact proof.
+
+So I give you basically a compact proof of all the bits that are set to 0 in this 256-bit value and a compact proof of all these bits that are set to 1 in this 256-bit value. And then you have a constant size proof that this is the value of this index of the vector commitment.
+
+[Frederik] (32:17 - 32:34)
+So speaking a little bit about RSA accumulators, we haven't really defined them but I don't think we have to go into the mathematical definition of it. But generally, how do RSA accumulators work? How do they compare to Merkle trees?
+
+Why would you use one or the other?
+
+[Ben Fisch] (32:34 - 33:29)
+Well, yeah, so RSA accumulators are able to achieve smaller membership proofs asymptotically than Merkle trees can. But really, if you're just using an RSA accumulator for proving inclusion of a single item, it's not significantly better than a Merkle tree accumulator unless the number of items that are being accumulated is insanely large. I think why our work gives renewed interest in RSA accumulators is because we were able to achieve aggregation and batching of membership proofs.
+
+The ability to give us a single constant size membership proof for arbitrarily many items in the RSA accumulator at once, it's something that you can't do with a Merkle tree.
+
+[Frederik] (33:30 - 34:14)
+That's really interesting. If we take Ethereum as an example, it kind of suffers from both problems where if we want to realise the goal of every human has an Ethereum account, then there will be billions of members of this Merkle tree, which is probably prohibitive. When we make a client request and say, please give me the state of these contracts or execute this call for me and give me the proofs that all these things were done correctly, we are generating a tonne of Merkle proofs and sending that back.
+
+So in that sense, maybe accumulating them would also be good.
+
+[Ben Fisch] (34:15 - 34:32)
+Right. So the RSA accumulators could be used to end up sending in a transaction or in a message to a Lite client, a smaller compact message that summarises what is being proved.
+
+[Anna Rose] (34:32 - 34:43)
+But I mean, could you actually use the RSA accumulator in an Ethereum-like setup? Because I always understood it sort of in the context of a UTXO model. Could it actually also be used in an account-based system?
+
+[Ben Fisch] (34:44 - 35:17)
+So in an account-based system, you need vector commitments. Actually, what you really want is a sparse vector commitment or a key value commitment. So I can be able to give you the item at this key, right?
+
+And an account is basically a key value store. And sparse vector commitments give you that. So sparse Merkle trees, for example, are sparse vector commitments.
+
+And we can also construct sparse vector commitments from RSA accumulators as well.
+
+[Frederik] (35:17 - 35:30)
+So what exactly is it that your paper introduces? Is it a new type of accumulator, a new type of vector commitment, or modifications or new techniques on RSA accumulators?
+
+[Ben Fisch] (35:30 - 36:59)
+So it has improvements on the RSA accumulator to be able to achieve the batching and aggregation I was talking about. And it gives a new kind of vector commitment that's constructed directly from the RSA accumulator techniques and is basically able to achieve the same batching and aggregation properties, but for vector commitments. So I could open, say, many...
+
+I could prove to you that many different accounts are consistent with the state commitment to the Ethereum blockchain with a single constant size proof. There are trade-offs of using our constructions in terms of computational efficiency. You know, the devil's always in the details in terms of whether this is actually going to be appropriate for any of the systems.
+
+And nobody's quite experimented to see if they work better than Merkle trees or Patricia trees. You know, for the tasks that those are used for in systems like Ethereum and Bitcoin, there are trade-offs for using something which is able to achieve massive efficiency gains in terms of the size of information that's communicated, but then ends up putting much higher computational burdens on the parties that are trying to generate the proofs in the first place.
+
+[Frederik] (36:59 - 37:09)
+Speaking about experimenting with this stuff, is there any code accompanied with the paper? Like, have you guys implemented all of this? And is it, you know, open source anywhere?
+
+[Ben Fisch] (37:10 - 37:35)
+So we did it directly along with the paper. However, there now is an open source library that implements all the things that we do in our paper. It was put out by this company Cambrian Labs.
+
+So it's an open source project. And we did help them understand the details of our paper when they were developing that.
+
+[Frederik] (37:36 - 38:15)
+Nice. Do you know what language it's written in? Rust.
+
+Nice. And I can go play with it. Go play with it.
+
+A problem with RSA accumulators that we've already touched on, they need some sort of trusted setup. And there's a way to solve this, if I understand correctly. But I don't really understand what it is or what the problem with it is.
+
+So there are these things called class groups. You already mentioned them. There's a competition by Chia to be able to construct these sufficiently.
+
+Do class groups not exist? Are they not constructed yet? Or is it just a matter of constructing them quickly?
+
+Or what's the deal with class groups?
+
+[Ben Fisch] (38:15 - 39:37)
+Right. Class groups do exist. In general, there are these groups that are defined over any algebraic number field.
+
+And it's believed that if chosen under some particular parameterisation, basically, if it has what's called a large discriminant, then it's very difficult to compute the order, the number of elements in the class group. We just don't have efficient algorithms for doing that. And you can define the class group and operate on elements in the class group without first specifying its order.
+
+Unlike RSA groups, which by construction know the order, that's not the case with class groups. The competitions are more about trying to see how efficiently people can try to operate on elements within the class group. There's an interest in making class group operations more efficient.
+
+RSA group operations are pretty straightforward. It's integer multiplication, mod n. We know that very well and know how to optimise it in hardware more so than we say know how to optimise class group operations.
+
+There's also a competition surrounding the problem that we believe is hard, which is how efficiently can you figure out the order of a class group once you specify it.
+
+[Frederik] (39:37 - 39:43)
+Right. So instead of using a group of unknown order, we use a group where the order is extremely hard to compute.
+
+[Ben Fisch] (39:43 - 40:09)
+Oh, sorry. That is a group of unknown order. So we know that it's a finite group.
+
+It's hard to compute its order. The difference with RSA groups is that whoever constructed the RSA group knows its order and presumably nobody else does because that secret information wasn't shared with them. I see.
+
+Whereas with class groups, we can specify the group.
+
+[Frederik] (40:09 - 40:11)
+The secret stuff never existed.
+
+[Ben Fisch] (40:11 - 40:16)
+You don't need to compute the order of the group in order to specify the group, basically.
+
+[Frederik] (40:16 - 40:32)
+And the competition stuff is more around operations of that group, not the construction of the group. Right. I think I get it.
+
+So that's also the downside then of class groups and why I suppose people aren't using it as much is because they're not as efficient. Not yet, yes.
+
+[Anna Rose] (40:33 - 40:46)
+So let's move into these questions of stateless clients. Frederik, I know this was a question you were really excited about. What is the relationship here between stateless clients and all of this stuff that we're talking about?
+
+[Frederik] (40:47 - 42:02)
+Well, I mean, I'm excited about stateless clients in general. It's obviously a topic in the paper and I think, Ben, you presented very well in your presentations of this paper of the motivation behind why we want stateless clients and what they are. We have this problem in Bitcoin's Merkle tree is pretty localised or just proved like we're doing simple payment verification stuff and just kind of simple stuff.
+
+But in Ethereum, a lot of people are trying to do more and more complex things with the Merkle tree. Particularly, people are trying to do off-chain computation and then like prove, like submit the Merkle proof on-chain so that it's verified on-chain, but these proofs are massive. And so you can't actually fit the proof in one block anymore.
+
+And you run into all of these sorts of problems. And I think accumulators solve that by saying our proof is no longer 100 megabytes or 10 megabytes or whatever it may be. It's constant sites or it's linear insights or whatever it may be.
+
+So maybe, Ben, can you talk a little bit about what stateless clients are and how accumulators play a role?
+
+[Ben Fisch] (42:03 - 42:16)
+Yeah, so the basic idea of a stateless client and unfortunately, stateless is, at least to me, sounds slightly misleading because you're not actually getting rid of any state.
+
+[Frederik] (42:17 - 42:18)
+It's just someone else storing it.
+
+[Ben Fisch] (42:19 - 44:28)
+Well, more specifically, so let's first say what stateless clients refer to. Stateless clients refer to basically making a blockchain node which only needs to remember some small state commitment. It doesn't need to store all the entire state which includes, say in Ethereum, the balances in all accounts or the state values in all smart contracts, right?
+
+They would just need to store some kind of state commitment and then verify transactions against that state commitment when presented with proofs against that state commitment that the transaction correctly references information in the states. Like every transaction basically has information that can be locally verified and then references something and it needs to be referencing account balances correctly with respect to the current state of the blockchain. And on top of that, these stateless clients need to be able to update the state after each transaction as well.
+
+So after processing a transaction, they need to be able to update the state commitment to get the next state commitment so they can verify transactions from there. It's not a stateless system because, you know, in the true sense of the word stateless because they do need to maintain this state commitment they can't basically experience a power outage and completely lose all memory of the state commitment and come online a while later and be able to continue participating without trying to figure out what happened in between, right? That would be the true notion of stateless.
+
+But they do have very minimal state storage requirements, right? It's basically down to this compact state commitment rather than gigabytes or terabytes of storage.
+
+[Anna Rose] (44:28 - 44:33)
+How do they relate to like clients then? Are like clients stateless clients? Is there any connection here?
+
+[Ben Fisch] (44:33 - 45:33)
+Yeah, so again, I guess these are just terms that are used and also some people might confuse the terms a bit when using them within the blockchain space. These don't have like academically defined definitions. But from my understanding, like clients generally refer to a client that is trying to synchronise, not participate in validation of blockchain transactions, but synchronise with the current state of the blockchain and be able to, you know, again, download and sync efficiently and then be able to, you know, query the blockchain in an authentic way.
+
+So it's more about being able to synchronise or query the blockchain without having to participate. And there it's actually stateless. You could forget everything or join the system from scratch and be able to sync efficiently as a like client.
+
+But you're trusting that the system operated correctly.
+
+[Anna Rose] (45:33 - 45:42)
+You're not participating in the actual validation. Got it. And a stateless client, like the sort of umbrella term suggests that you still would be able to interact with it.
+
+[Ben Fisch] (45:44 - 46:27)
+The stateless client idea is basically saying that, you know, it can be summarised as this. So like clients need to connect to a full node now that they trust. And the full node needs to be a full-blown blockchain node.
+
+They need to store the entire state of the blockchain and participate in, you know, blockchain validation. Like clients need to trust the full node and then be able to sync with it quickly. A stateless client would be more like a stateless validator or stateless full node that can continue to participate in validating and determining that every transaction is correct without actually storing the entire state of the blockchain.
+
+[Frederik] (46:28 - 47:40)
+In your talk, you present this as sort of separation of states and consensus. And I like that description of it, where if I'm just running a mining node, I don't actually want to store anything. I just want to be able to progress, like choose which transactions to include and progress to the next block.
+
+Exactly. I think where it gets interesting then is for a user who's not like a miner, but they have some interest in storing the state because they have contracts they want to interact with or they want to see their balance or some of the other stuff. But they don't necessarily need to participate in consensus.
+
+So it makes perfect sense to separate these two concerns. Yes. I think a question for me, though, is if we're constructing an RSA accumulator over the states, as a user, what state do I need to store?
+
+Can I store just my own balance and still be able to provide proofs that I'm doing the right thing when I'm like sending something to another address?
+
+[Ben Fisch] (47:40 - 49:03)
+So unfortunately not. If the validators participating in consensus no longer store the entire state, then they need to be provided with proofs along with the transactions that those transactions correctly reference stateful information. So if this is, in a theory, when people are referencing a balance in a particular account, there needs to be a vector commitment-based proof that the balance is correctly referenced in the transaction.
+
+Now, either the users need to be able to store information to generate those proofs, or there need to be services that do this. I see that as a more realistic outcome, that there will be services whose, you know, like you could call them data provider nodes, whose sole business is to basically create membership proofs for accumulators, or be able to provide information to users that they need in order to open the vector commitment on their account. And that can be a competitive market.
+
+You're not trusting anyone that anybody can provide that service. It's just a different, say, role than is necessary for participating in blockchain consensus.
+
+[Frederik] (49:03 - 49:32)
+Yeah. If you have a Merkle tree, and I have a balance, I want to send something to another person, I need to be able to prove what my own balance started at and what the other person's balance ended at. And those are the Merkle proofs I need to include to convince someone that I'm doing this correctly.
+
+And...
+
+[Ben Fisch] (49:32 - 50:00)
+Well, slight modification. So when the transaction is going to propose an update, but the transaction can be validated as long as it correctly references the current account balances of both your account and the recipient account, right? So you need to prove, you need to basically give membership proofs, or I mean, in this case, we're talking about account balances, vector commitment openings of your account balance and the recipient account balance inside the transaction.
+
+[Frederik] (50:01 - 50:11)
+So on my side, I actually only need to store my own balance and the recipient's balance, and I don't need to store any other states.
+
+[Ben Fisch] (50:12 - 50:18)
+That's right. But you need to store, you need to be able to generate the vector commitment proofs.
+
+[Frederik] (50:18 - 50:37)
+So I need the rest of the Merkle tree, sort of, but not the leaves. But in an RSA accumulator world, is there such an equivalent that I can store these intermediary states of a Merkle tree without necessarily storing all of the leaves?
+
+[Ben Fisch] (50:37 - 51:55)
+So actually, I mean, you don't even need to... Storing the whole internal state in the Merkle tree would be quite large. You just need to store a few Merkle branches that are relevant to your account and the recipient account.
+
+In an RSA accumulator, again, you need to just store the membership witnesses. The problem is that every time new transactions are approved by the blockchain, the state commitment changes, right? The Merkle root will change, or in the RSA accumulator case, the RSA accumulator state commitment will change.
+
+And when that happens, sometimes the proofs also need to be updated, right? So that means that you as a user, if you're just maintaining your own membership witness, you need to be listening to the blockchain and updating it as new transactions are appended to the ledger. And that's a lot to ask from users to basically remain in sync and keep updating the proofs that they're maintaining, which is why I think that that will become a data service that people will do for users.
+
+And it doesn't require any trust. It just requires somebody else to perform the computation for you.
+
+[Frederik] (51:55 - 52:38)
+Yeah. I mean, as much as I love the idea of stateless clients, I have yet to see an actual practical proposal because they all sort of break down on this point that either I need to stay online all the time or there's other problems such as requiring huge bandwidth. If I say that I don't stay online and just when I come online, I sync up with the rest of the network what the current state of the Merkle tree is.
+
+Well, that can actually be pretty large still, even if you're just maintaining some branches because realistically, you're not just maintaining your own balance. You're probably maintaining a few things of like what you want to interact with and so forth. So usually like huge bandwidth requirements.
+
+[Ben Fisch] (52:39 - 53:43)
+Right. Like in our paper where, I mean, we explain how these RSA accumulator witnesses can basically be updated just by looking at the sequence of transactions. And so if I am listening to the blockchain, I can continue to update my RSA accumulator witness.
+
+If the problem, of course, is if I go offline for some time, then I need to download the sequence of transactions that happened since I was last listening. But we also explain how if you're trying to maintain many witnesses at once, so say, again, one of these data service providers I was talking about, we would maintain many membership witnesses on behalf of a whole set of clients. There are amortisation benefits to that.
+
+So there's ways of, we call it batch generation of membership witnesses that can be done more efficiently than just maintaining and updating an individual one.
+
+[Frederik] (53:44 - 54:02)
+In the model that you think about, would all of the proofs be included in the blocks? So like, would you include the transactions and all of the proofs for that transaction in the block that's being produced? Or would you get rid of the proofs and just say, I trust that the miner did this correctly?
+
+[Ben Fisch] (54:03 - 54:44)
+Well, I think that's more of a matter of opinion of, I mean, anyone who wants to be able to verify that the transactions were validated correctly would still need those proofs. But there could be further aggregation of those proofs or even, I mean, and this is getting into how people use snarks for stateless verification where a single succinct proof of knowledge could summarise all of blockchain history until now. And that's a different direction of research than ours.
+
+[Frederik] (54:44 - 55:37)
+Yeah, it's an interesting thing to think about because like one of the pitfalls of stateless clients that I've seen is the Merkle tree version of it. Like the Merkle paths get so large that you can't actually include all the proofs with all the transactions in a block because the block would end up being huge. And if you have an RSA accumulator or something like it, not only like is the individual proof smaller, but your point to like, you could actually aggregate them as well.
+
+It kind of changes the dynamic. One final question that just popped into my mind, what is the size of the accumulator? Like the Merkle tree grows pretty large because it has so many hashes, like all the way up the tree.
+
+How large does an RSA accumulator get?
+
+[Ben Fisch] (55:37 - 56:17)
+So similarly, it's linear, right? Both Merkle trees and RSA accumulators, the storage of all the internal information of the accumulator is linear in the number of items that are accumulated. Of course, the Merkle tree root is constant size.
+
+Similarly, the state commitment in the RSA accumulator is constant size. But in order to be able to generate membership witnesses from scratch, you need to be storing the entire internal state unless you already have a membership witness for a particular item and are just interested in updating that.
+
+[Anna Rose] (56:17 - 56:22)
+Are one of these two things faster? Like is there a speed up?
+
+[Ben Fisch] (56:22 - 57:36)
+So in general, Merkle trees are just faster because hashing is fast. So with RSA accumulators, verifying proofs can be very fast. And so if you, for example, compare verifying hundreds of Merkle proofs compared to verifying a single aggregate inclusion proof of a hundred different items in RSA accumulator using our techniques, you can start to get faster because you're just verifying a hundred items but the complexity of verifying a single proof doesn't grow with the number of items that a proof accounts for.
+
+We also use these tricks called proofs of exponentiation that speed this up. It's related to techniques that were actually used to verify delay functions. It's fun how all these different primitives start borrowing techniques, but the proofs of exponentiation make the verification of the proofs very fast.
+
+But Merkle trees, in terms of the computational efficiency of generating proofs or generating the tree even, they're much, much faster. It is the downside to RSA accumulators.
+
+[Frederik] (57:36 - 58:02)
+As a final note on this topic and the accumulator stuff, your paper is talking about batching techniques and we're talking about performance. Are there other big areas or big improvements that you see that are necessary for all of this to become really practical or where if we just solve this one thing, it's a no-brainer that it'll be used everywhere?
+
+[Ben Fisch] (58:03 - 59:14)
+I think I've sort of already hinted at what needs to be improved, for example, with RSA accumulators. Obviously, RSA accumulators in our work achieve this improvement in communication, reducing the amount of information that would be sent in a stateless blockchain or stateless client design, but then increases the computational burden quite significantly. And so further developments there would, I think, be pretty necessary for making this practical.
+
+One thing to note is that because RSA accumulators share some of the same technical building blocks as verifiable delay functions, Ethereum is investing in hardware to make the operations in RSA groups extremely fast. So once that is developed, it will be interesting to see if that makes RSA accumulators much, much faster. That would really change the game as well.
+
+Hashing is super fast because it's also been optimised in hardware, right? So that will be really interesting to experiment with once that hardware is ready.
+
+[Anna Rose] (59:15 - 59:16)
+That's really cool.
+
+[Ben Fisch] (59:16 - 59:17)
+Cool.
+
+[Anna Rose] (59:17 - 59:33)
+This has been a really great conversation. I feel like there's probably so many more things that we could talk about. Maybe just briefly, what are some upcoming research or projects that you're getting excited about these days?
+
+Or maybe something you're working on?
+
+[Ben Fisch] (59:35 - 1:01:12)
+Right. So as I said at the beginning, right now I'm very excited about working on applications of zero knowledge to balancing transparency and the confidentiality in blockchain systems. I see sort of transparency as one of the main benefits that blockchains can bring to financial transactions.
+
+And yet we also want to retain privacy, confidentiality, so in a private system, what can you prove? So for example, I have this work that I'm doing right now, which will come out soon on zero knowledge taxes, being able to basically prove that you're tax compliant if you're receiving payments over an anonymous payment system like C-cash. And also some of the techniques that I'm working on in research, applying at the company that I helped found called Fandora, which is all about balancing transparency and confidentiality in financial services that could then run over a blockchain.
+
+So you can imagine a future where a hedge fund is running its operation over a blockchain in a very transparent way so that it can't run a Ponzi scheme or embezzle funds without users detecting that, but yet it still can retain its basic confidentiality, basic private balance sheet.
+
+[Frederik] (1:01:13 - 1:01:16)
+Thank you so much for being on the show. It was a fascinating conversation.
+
+[Ben Fisch] (1:01:16 - 1:01:18)
+Yeah. Thank you for having me.
+
+[Frederik] (1:01:18 - 1:01:21)
+It's really a pleasure. Hope to be back sometime.
+
+[Anna Rose] (1:01:21 - 1:01:25)
+I think that would be really cool. Yeah. And to our listeners, thanks for listening.
+
+[Frederik] (1:01:26 - 1:01:26)
+Thanks for listening.
