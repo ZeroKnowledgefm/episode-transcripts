@@ -1,0 +1,1212 @@
+﻿[Anna Rose] (0:05 - 2:51)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Nico Kobi and I speak with Mathias and Giorgio from zkSecurity.
+
+
+The throughline of the episode was the topic of zkGolf, a competition set up by zkSecurity that challenges people and their agents to build the most efficient circuits possible, formally verified and lean. We start with a bit of history, looking back at the ZK HACK puzzles, and how CTFs and challenges like these have long been a way for people to learn, get recognised, and potentially get hired. But, with AI tools being as powerful as they are, these competitions have basically been made obsolete.
+
+
+And so, we need new types of competitions, like zkGolf. From there, we dig into Clean, zkSecurity's framework for writing ZK circuits in lean and formally proving that they match a specification. Mathias and Giorgio share how an experiment, where they asked an AI to write and prove a circuit, then put it through a loop to drive down its cost, ended up producing the best SHA-256 circuit they'd ever seen.
+
+
+That experiment evolved into zkGolf, an open competition where anyone can submit a circuit as long as they can prove it's correct and prove how efficient it is. We talk about how zkGolf compares to the Yukon competition we covered recently on the show, and what this could mean for how circuits get written and audited in the future. So hope you enjoy.
+
+
+Now, Tanya will share a little bit about this week's sponsor. 
+
+
+[Tanya Karsou]
+Today's episode is sponsored by Sovright. Sovright builds the critical infrastructure that preserves your right to choose.
+
+
+Sovright has built two products, Argos and the Sovright Mining Pool. Argos is a free tool that lets anyone with ZEC stranded in an old, unmaintained wallet client recover their funds. 
+
+
+Enter your seed phrase, generate a new address, and your money is yours again.
+
+
+No fees, no complexity. The Sovright Mining Pool is Zcash native and built on Stratum V2, where miners choose their own transactions. Every block carries a verifiable signed attestation, and payouts arrive in fully shielded ZEC.
+
+
+Two essential problems that have been overlooked, finally solved. Discover more at Sovright.com. So thanks again, Sovright.
+
+
+And now, here's our episode. 
+
+
+[Anna Rose]
+Today, I'm here with Nico, Kobi, and two of their colleagues from zkSecurity, Giorgio and Mathias. Hi, Nico.
+
+
+Hi, Kobi.
+
+
+[Nico Mohnblatt] (2:51 - 2:52)
+Hello, everyone.
+
+
+[Anna Rose] (2:52 - 3:35)
+Hello. Hi, Giorgio. Hi, Mathias.
+
+
+[Mathias Hall-Andersen]
+Hello, everyone. Hello. All right.
+
+
+So I want, with this episode, to explore the topic of zkGolf. I recently did an episode on Yukon, on the platform where they're running a lot of these competitions. I feel like zkGolf fits sort of in that category, but I haven't quite understood the distinction between these two initiatives.
+
+
+So I'm hoping we get to dive into that with this episode. But maybe before we do that, Giorgio, Mathias, you are new to our audience. So why don't we find out a little bit about you?
+
+
+Mathias, can you start? Share with us a little bit of your origin story and, yeah, how zkSecurity came about.
+
+
+[Mathias Hall-Andersen] (3:35 - 4:11)
+Yeah, so I'm one of the co-founders of zkSecurity, and I have a PhD in cryptography. I work on cryptography at zkSecurity, not surprisingly. Originally, I met David back at NCC Group.
+
+
+I worked together during audits back in like 2018. And then he went and joined first Meta and then Mina. And while he was busy doing that, I was busy doing a PhD.
+
+
+And then eventually, when I was wrapping up my PhD, we did some audits together. And he suggested that I come on board and do this thing together with him and Gregor and Brandon at the time.
+
+
+[Anna Rose] (4:12 - 4:17)
+In your PhD work, were you touching ZK stuff? Like, what kind of cryptography were you working on?
+
+
+[Mathias Hall-Andersen] (4:18 - 4:21)
+Yeah, it's almost exclusively ZK and MPC.
+
+
+[Anna Rose] (4:22 - 4:24)
+Okay. What did you like about those paradigms?
+
+
+[Mathias Hall-Andersen] (4:25 - 4:51)
+I've always been amazed by cryptography because it seems like magic, frankly. Like, you do things that seem very counterintuitive to the average person. Perhaps even somebody with a computer science degree could argue is impossible.
+
+
+And I think ZK is probably the best example of this, especially succinct proofs. I'm very interested in. They're essentially magic.
+
+
+To the outside observer, it's actually surprising that this is even possible.
+
+
+[Anna Rose] (4:52 - 5:07)
+So you did ZK and MPC. Do you feel like MPC has also developed as much as ZK? Or do you feel like it's a different...
+
+
+I don't know. Like, does it seem to be going at a different pace? I'm curious if you're really observing both of those, what you make of the distinction.
+
+
+[Mathias Hall-Andersen] (5:08 - 5:22)
+First and foremost, there's a rich connection between the two, right? Obviously, you can use zero-knowledge proofs in MPC protocols, for instance, to make them maliciously secure. And there's also something called the ICOS compiler that takes any MPC protocol and turns it into a zero-knowledge proof.
+
+
+[Nico Mohnblatt] (5:23 - 5:23)
+Okay.
+
+
+[Mathias Hall-Andersen] (5:23 - 5:41)
+Which has been used for, for instance, build post-quantum signatures. So there's a big connection. In terms of applications, MPC hasn't taken off in the same way in practical applications.
+
+
+I think the only real deployments of MPC are really key management.
+
+
+[Anna Rose] (5:41 - 5:55)
+Why is that? Is it just like that is the use case where it best fits? Or has there not been as much mindshare focused on it?
+
+
+Is it because it didn't blend as well with blockchain or something? It's still relatively slower. Okay.
+
+
+[Mathias Hall-Andersen] (5:55 - 6:20)
+And it's also oftentimes hard to find parties to compute with. I think it's actually the biggest issue for MPC. In addition to being slow, it's like, what are you trying to compute?
+
+
+And what are you trying to compute this with? The setting for MPC sort of relatively rarely comes up. And I think the more practical version of MPC in a lot of cases turns out to be a fully homomorphic encryption, like threshold encryption.
+
+
+[Nico Mohnblatt] (6:21 - 6:30)
+And very concretely, MPC requires interaction, right? Whereas ZK, we have our nice non-interactive proofs. I send you my proof and I move on with my life and you do whatever you want.
+
+
+[Anna Rose] (6:31 - 6:37)
+And I guess there is no way to make an MPC non-interactive because you need this like multi-parties in the name.
+
+
+[Mathias Hall-Andersen] (6:39 - 6:58)
+Technically, there is something called like a non-interactive MPC, but obviously it's subject to something called the residue problem. Essentially, you send something to one party and they can sort of compute the result. But obviously they can compute any additional, like they can change their own input and compute whatever other function they want.
+
+
+So it's very limited what you can do.
+
+
+[Anna Rose] (6:58 - 7:12)
+Got it. Okay, so you joined zkSecurity with David. You co-founded that.
+
+
+Has that been a big shift to like go, because you're kind of back in industry now, away from academia. What's that shift been like?
+
+
+[Mathias Hall-Andersen] (7:12 - 7:15)
+It doesn't feel that much like industry.
+
+
+[Anna Rose] (7:15 - 7:15)
+No?
+
+
+[Mathias Hall-Andersen] (7:15 - 7:36)
+Like I'm not looking at TLS implementations, right? Like I have the fortune to basically, like a large fraction of our customers are extremely intelligent people who have designed extremely complicated systems for me to take a look at. So it doesn't really feel that much like industry.
+
+
+It's the softest possible landing.
+
+
+[Anna Rose] (7:36 - 7:44)
+Nice. Cool. All right, Giorgio, let's learn a little bit about your background and what you do at zkSecurity.
+
+
+[Giorgio Dell'Immagine] (7:45 - 8:30)
+Sure. So I became interested in cryptography, I would say three or four years ago. I was doing CTFs at the time.
+
+
+I was also doing my master's. And then there was this, you know, one of the categories of CTFs usually is cryptography. And then at some point, I don't know when exactly, but at some point I decided, okay, maybe I can take this seriously.
+
+
+And then I started like studying a lot. Oh, cool. And I met zkSecurity because they had a challenge, like a hiring challenge, but I didn't know it was a hiring challenge.
+
+
+Oh, you just thought it was a puzzle? I did it for the, yes. So I did it just for the fun.
+
+
+But then, okay, I messaged David. And then he was like, oh, are you free? And then, you know, I joined.
+
+
+[Nico Mohnblatt] (8:30 - 8:32)
+I love this accidental hiring situation.
+
+
+[Mathias Hall-Andersen] (8:34 - 8:40)
+It's actually not too dissimilar to how I met David originally. So he had a blog, this was back in like 2016 or something.
+
+
+[Anna Rose] (8:40 - 8:41)
+Oh, yeah.
+
+
+[Mathias Hall-Andersen] (8:41 - 8:51)
+And he posted like a challenge, a hiring challenge for NCC Group. And I solved it. But I'm not interested in a job.
+
+
+I just like want to flex that I solved this thing.
+
+
+[Kobi Gurkan] (8:54 - 9:02)
+Nice. Yeah, that continues the line that we see, I guess, in this industry where puzzles lead to amazing hires.
+
+
+[Anna Rose] (9:02 - 9:52)
+Totally. And I mean, this in a way leads us to what we're going to be talking about, which is zkGolf. I want to mention something that Kobi and I were doing back in 2021, all the way to 2024-25, which was the ZK Hack online competitions.
+
+
+And the reason I want to mention that is basically your story, Giorgio, and what you described, Mathias, about finding your way into an ecosystem or into a company through participating in what is maybe seems more like a fun challenge at the beginning. Back in 2021, Kobi had this idea for these ZK Hack puzzles. Kobi, do you want to just, I mean, I think most of the audience is familiar with it.
+
+
+I tend to work it into all conversations lately around auto research. But maybe you want to just define what the initial idea was and kind of what we did with it.
+
+
+[Kobi Gurkan] (9:52 - 11:42)
+Yeah, so the initial idea, first, I thought it would be fun because there weren't so much puzzles around advanced cryptography I've been seeing around me, especially around Snarks, ZK, and this kind of protocols that we touch in this part of this industry. And one thing that I found useful, both for myself and people around me, is that one of the best ways to learn something deeply is to try to break it and to see what goes wrong and what needs to be done for it to go right. And that was one of the main reasons that I thought ZK Hack puzzles would be useful.
+
+
+So it ended up being a really nice tool for people to learn about these protocols. And initially, we tried to take puzzles of protocols and problems that we've seen. So actual protocols, things that would have an impact in real life if they were to break in that way, which is sometimes different than what you would see in an academic course, which seems a bit artificial.
+
+
+And I think also the ZK security challenges are of that form, which is nice. And yeah, I think one of the things that we've seen when we ran the puzzles is that it got a few new people into the field that they were trying to find a way to kind of have a foot in the door. And they became experts and top people in the field, which is great.
+
+
+And also, I guess, well, personally or team-wise, it was nice for me because I managed to hire people that I've seen there. So, for example, in geometry research, that was one way that we found good people.
+
+
+[Nico Mohnblatt] (11:43 - 11:46)
+Yeah, ZK Hack 1 is how I got in. So cool.
+
+
+[Anna Rose] (11:46 - 12:40)
+I sort of wanted to throw ZK Hack out there because that was, for me at least, that was the first time that I saw that phenomenon of like, you put up challenges, they're just for fun, and then people break them. And then you can see those people enter into the ecosystem, maybe get hired. You start working with them or, you know, we have some folks who participated in that first one.
+
+
+And then ended up presenting at like the third one or something. Like they started to become the educators for the next batch. But I also kind of mentioned this, Koby, a little bit as like a, like I feel like the ZK Hack online puzzles as they existed no longer work.
+
+
+Because, and I think even the last edition we did, we started to see that because LLMs were really coming online and being capable, it was harder to tell what a person was doing versus an AI. Yeah, I think that's true.
+
+
+[Kobi Gurkan] (12:41 - 13:50)
+I don't remember exactly, but I do remember that when we were reviewing the submissions part of the write-ups where, so we had the puzzles where people have to solve problems, but we also had the write-ups where people would write about what was the issue, what was the solution, what was the problem, and so on. And I think there we've started seeing that people were using AI more heavily to write about it. And sometimes it didn't make a lot of sense.
+
+
+Sometimes it did. We still, you know, our goal was to choose the best one. So that's okay.
+
+
+That was still our job to curate it. But yeah, we started seeing that. And I think since the last one we've ran, we've seen this big explosion of how productive these tools can be, both in productive work, but also in exploit world.
+
+
+And that is exactly what ZK HACK puzzles look like. So probably it would be much, much harder to design puzzles in that same form, yes.
+
+
+[Anna Rose] (13:51 - 13:58)
+Giorgio, you mentioned you were doing a lot of CTFs. I actually wonder, the CTFs that you used to participate in, are those still around?
+
+
+[Giorgio Dell'Immagine] (14:00 - 14:04)
+Well, they're still around, but there's basically nobody playing them anymore.
+
+
+[Anna Rose] (14:04 - 14:04)
+Oh, really?
+
+
+[Giorgio Dell'Immagine] (14:05 - 14:06)
+Because it doesn't really make sense.
+
+
+[Anna Rose] (14:06 - 14:06)
+Wow.
+
+
+[Giorgio Dell'Immagine] (14:07 - 14:13)
+Yeah. It's kind of sad that CTF scene has been dying since, I think, six months.
+
+
+[Anna Rose] (14:14 - 14:14)
+Yeah.
+
+
+[Giorgio Dell'Immagine] (14:14 - 14:27)
+Basically after GPT 5.5 came out, every challenge was solvable by just ask an agent to solve it. And so even hard ones.
+
+
+[Anna Rose] (14:27 - 14:27)
+Yeah.
+
+
+[Giorgio Dell'Immagine] (14:28 - 14:29)
+And so that was kind of sad.
+
+
+[Nico Mohnblatt] (14:30 - 14:36)
+What you can do these days for fun is bring up the ePrint queue and ask an agent, break one of these papers.
+
+
+[Anna Rose] (14:37 - 14:37)
+Yep.
+
+
+[Nico Mohnblatt] (14:38 - 14:39)
+That's the new CTFs.
+
+
+[Anna Rose] (14:39 - 15:07)
+That's the new CTF. We had JP almost on the show recently, and he was talking about how the NIST standards would come out and all the PhD students would try to break, or the NIST candidates or whatever, they'd come out and then people would try to break them. But now that's sort of lost its fun too, because they're getting broken too quickly.
+
+
+Like if there's something to break, it will be broken quickly by an LLM, and there's no time for the PhD student to spend time digging through and figuring it out.
+
+
+[Mathias Hall-Andersen] (15:08 - 15:13)
+And what puzzles me the most is that the authors submitted those candidates without feeding them to an LLM first.
+
+
+[Anna Rose] (15:14 - 16:40)
+My thinking on that, I mean, we were talking about the Chinese standardisation competition, and my thinking was, like, why are they all getting broken? And maybe it's that they had to submit it a few months ago or something like that, and the models have caught up. Like the models that they were testing it on weren't as, you know, effective as the ones that are available today.
+
+
+Another kind of rest in peace moment for ZK hack I want to mention on the show, because we haven't really talked about this either, is hackathons. I think we did in total five in-person three-day hackathons around the ZK hack concept, right as ZK products and tooling were, like, they became usable. And so people could now build with them, and so we did these hackathons.
+
+
+And the last one we did was in Berlin last year, and it was a really kind of beautiful moment because LLMs were, they had come online a little, which meant that, like, the project submissions were beautiful, but you could still identify what was, like, made by a human and made by an LLM. So you could also see if something was just kind of fluffy or if it was, like, actually interesting. But I really wonder if there's a future for hackathons in the way that we've known them, because I think judging hackathons will become, I mean, are already almost impossible to do.
+
+
+I don't know if anyone here ever participated in hackathons. I know, Nico, you judged a couple. Kobi, I think you judged one too, right?
+
+
+Yeah, across the years.
+
+
+[Nico Mohnblatt] (16:42 - 17:06)
+I actually judged and participated in some of the ZK hacks, but I never went for, like, the pretty projects. Like, I would go for the chewing glass kind of thing that you have in ZKHack, where you implement nasty cryptographic primitives, and the judges are impressed and reward you for it. But again, I think today that's also over.
+
+
+And we'll talk about this a bit more later, I think, but LLMs are good at implementing cryptography.
+
+
+[Anna Rose] (17:07 - 17:24)
+For sure. I think this is a really good moment to switch over to ZKGolf. I think we've given a little bit of the history.
+
+
+And yeah, I want to understand, what is ZKGolf? Where does the idea for ZKGolf come from? Like, is it inspired by the puzzles of ZKHack?
+
+
+Is it inspired by something else? Where did it start?
+
+
+[Mathias Hall-Andersen] (17:25 - 19:34)
+Yeah, so it started with this work, which Giorgio was more involved in originally than me, together with Gregor, where we wrote a framework called Clean for formally verifying circuits. So essentially, you can prove that your ZK circuit satisfies certain properties or is equivalent to some other definition. And we did this last year.
+
+
+So all the circuits were mostly written by humans, and all the proofs were mostly written by humans, because the LLMs were not very good at writing proofs at that point. And I think even last year, we even tried to get Claude, like last spring, spring 2025, we tried to get Claude to write even basic proofs, and he was spinning forever and didn't manage to apply reflexivity, I think. So we didn't manage to prove that A is equal to A, basically.
+
+
+So that experience, it sort of left us to discount LLMs in this domain for a while. But then around, I guess, March, I suggested to Giorgio that he's writing a specification for a hash function called the hash function SHA-256. And I suggested, you know, maybe you should just try and ask an LLM to write the circuit and ask it to prove that the circuit is secure.
+
+
+And surprisingly, this, I guess, surprisingly to Giorgio, at the time, it succeeded. I suggested this because I've been playing a little bit with LLMs, and Dina this time, mostly because I was like learning Lean at the time, and it's a great learning tool. Essentially, you can get it to write things for you, and explain things for you.
+
+
+And then, you know, instead of having to climb this immense hurdle of like, starting from nothing, you essentially have a tutor, right? And I was like, very impressed with that. So I figured that they could probably also write these proofs.
+
+
+For context, these are not, you know, mind-blowing proofs of Navier-Stokes or anything, right? Like these are extremely banal proofs about like equivalences of like, you know, this is a byte and it's equivalent to like eight bits, right? Like these are like really, really banal proofs.
+
+
+So yeah, at that point, it was sort of like right at the cusp where LLMs could write these proofs.
+
+
+[Giorgio Dell'Immagine] (19:35 - 21:33)
+We were discussing a lot of this like futuristic idea of letting LLMs write stuff for us. And the main point is that, how do you ensure that what the LLM has written is actually what you wanted? And so we were kind of discussing of this idea that maybe if the LLMs can prove that what it wrote was what you wanted, then you could trust the implementation.
+
+
+And so you could only focus on higher-level properties or like what you want or like, you know, some brain-computer interface of like ideas. But yeah, it was this idea that all the details, you know, you figure it out and I want to only talk about very abstract, very high-level objects. And this is kind of what we do with compilers, right?
+
+
+So we have high-level languages and nobody looks at the assembly because the compiler takes care of all the details. And one trust assumption we have when we write in high-level languages is that the compiler is correct, while we are taking like the other approach, which is like, let's also write the low-level language, but let's prove that it's equivalent to the high-level programme or the specification, whatever you want to call it. Yeah, and so we were like, okay, let's just write a SHA-256 implementation in Lean and let's just ask an LLM to provide a circuit which is probably equivalent to this SHA-256 implementation.
+
+
+But yeah, and it ran, I think, for, I don't know, four or five days. It was still in the moments where you had to babysit kind of the agent to do its stuff. So you could say like, yeah, try this, try that.
+
+
+And the first circuit was not good. It was all at the bit level. The gates were all the naive ones, but you know, it worked.
+
+
+And so we were like, okay, let's just push it to the library of Clean.
+
+
+[Anna Rose] (21:34 - 21:43)
+But this was just you internally running this, right? This was like an experiment. You hadn't like published this externally yet.
+
+
+You weren't talking about this with the community.
+
+
+[Giorgio Dell'Immagine] (21:43 - 21:52)
+No, I think I pushed the PR on Clean. Okay. And so the circuit was there.
+
+
+But yeah, we didn't really talk about it publicly.
+
+
+[Anna Rose] (21:52 - 22:03)
+So let's talk about Clean. Clean, I guess. What is it?
+
+
+Is it CircuitLean? What is it? What's the C for?
+
+
+I honestly don't know, or I don't remember.
+
+
+[Giorgio Dell'Immagine] (22:05 - 22:09)
+What was the reason? Yeah, probably CircuitLean. Mathias, do you know?
+
+
+[Mathias Hall-Andersen] (22:09 - 22:13)
+Yeah, it's CircuitLean. Okay, it is, okay. I think Gregor told me at one point that it's CircuitLean.
+
+
+[Giorgio Dell'Immagine] (22:13 - 23:44)
+Okay, yeah. So Clean is a framework to write circuits in Lean. So it's a mini DSL for representing circuits.
+
+
+So the way to think about Lean from first principles is that there are very beautiful theoretical results that link logic, so mathematics, and type theory. And so whenever you write a programme, you can actually show that every programme is isomorphic to a proof, and every type is isomorphic to a proposition. And the act of checking a proof to be a valid proof for some proposition is actually equivalent to the act of type checking.
+
+
+So Lean is, in some sense, both a programming language and a proof assistant, meaning that you can encode logic into types, but then you can also use types in computation like a normal programming language. And so it is this very beautiful idea that you can encode mathematical objects and propositions into types. And then the Lean kernel basically does type checking in a type system, which is kind of crazy.
+
+
+So it's, you know, it's not the usual type system we are used to, for example, in Rust or in C. But it turns out that these very complex, very rich type systems can encode a lot of logic, a lot of propositions.
+
+
+[Nico Mohnblatt] (23:44 - 23:52)
+And so within that, Clean is a way to express circuits as types. Like, can you explain a bit more how Clean fits into the picture?
+
+
+[Giorgio Dell'Immagine] (23:53 - 25:37)
+Yeah, so Clean is a way, basically, it's a framework to write circuits. And what Clean does, it basically provides what does it mean to write a circuit. So, for example, in Clean, you can say Assert 0 and some expression.
+
+
+And, you know, Clean says, okay, this assertion enforces that this expression is equal to 0. And so you can write circuits and then you can reason about them because you know what it means, for example, to enforce constraints. So in Clean, for example, we have mainly two properties that we care about circuits.
+
+
+You can extend it to prove other properties, but the main two properties are soundness and completeness. And we always reason about circuits and what's called a specification. So a specification is nothing more than a programme or a high-level programme.
+
+
+And improving soundness, you're proving that your circuits, for every satisfiable assignment to the circuit, the same assignment passed the specification. And in completeness, you're proving that you can actually find a satisfiable assignment to your circuit. So soundness basically rules out under-constrained circuits and completeness rules out over-constrained circuits.
+
+
+And so the combination of both let us say that the circuit is probably equivalent to the specification in this kind of, well, we can make it a bit more precise with soundness and completeness, but it can be abstracted away and said saying that this circuit implements this function and the function is given in the specification. Okay.
+
+
+[Nico Mohnblatt] (25:38 - 25:46)
+Does that mean that Clean is inherently bug-free? Like, can I not introduce bugs by using Clean? Trick question, by the way.
+
+
+[Giorgio Dell'Immagine] (25:47 - 26:25)
+Yes, there is still a trusted base. Well, first of all, I mean, the obvious trust assumption that we are using is that Lean is correct. There are no kernel bugs.
+
+
+And in particular, the kernel does not have the logic of Lean is consistent. And so you cannot prove faults. But that's kind of, we are not really interested in soundness bugs.
+
+
+We are more interested in, you know, if what we are actually enforcing with Clean is what we meant. So Clean gives you a way to check and to prove that your circuit and specification are equivalent. There could be also bugs in the specification.
+
+
+[Nico Mohnblatt] (26:26 - 26:26)
+Yeah.
+
+
+[Giorgio Dell'Immagine] (26:26 - 27:26)
+So the specification is just another programme. And so, for example, one of the things for which it doesn't really make sense to formally verify software is if your specification is roughly the same complexity as your implementation. All right.
+
+
+So if I just rewrite my programme and the circuit was 100 lines and the specification is 100 lines and the logic is the same. Right. I'm just proving that, you know, those are equivalent, but I'm not really taking advantage of this.
+
+
+Because I still need to review the specification. And so why don't I just review the circuit, right? If it's the same complexity.
+
+
+But one of the challenges we have in zkGolf, and maybe we can talk about, we haven't really talked about what is zkGolf, is RSA signature verification. And the specification is basically one line. And the circuit is, I don't know, 10,000, 20,000 lines of code.
+
+
+But you need only to review that one line of code. Well, I've oversimplified. It's not one line.
+
+
+It's like 200, but...
+
+
+[Anna Rose] (27:26 - 27:53)
+Maybe before we dive into zkGolf, though, just to further dig into Clean. Kobi, in the context of what we described before with the puzzles, could you have ever used something like Clean with those puzzles to find the issue? Or would you have had to have a perfect system output like, yes, this works?
+
+
+Like, does it actually identify what's wrong? Or does it need everything to work for it to sort of say, yes, this is correct?
+
+
+[Kobi Gurkan] (27:54 - 28:17)
+Yeah, that's a very good detail to go into. So I think in the puzzles that we had, we had a few different kinds. If I'm correct, we did have at least one that is about under-constrained circuits.
+
+
+So if the specification is written correctly, then Clean would not say it's sound. It would just output false?
+
+
+[Anna Rose] (28:17 - 28:21)
+What is it? It will not compile. It won't compile.
+
+
+OK.
+
+
+[Kobi Gurkan] (28:21 - 28:27)
+You will not be able to create a soundless proof for this circuit or this specification.
+
+
+[Anna Rose] (28:27 - 28:33)
+Does it help you identify where the issue is? Or is that other tools that you need to use to actually find the problem?
+
+
+[Mathias Hall-Andersen] (28:34 - 29:03)
+It gives you a compiler error, right? Just like compiling Rust code. Like when you're compiling a Rust code where the types don't match, like you're trying to add a number to a boolean.
+
+
+And that way it will tell you that this is not right, right? Like there's an error here. And it's essentially the same that happens in Dean.
+
+
+It's just a way more complicated type system, but it will also just tell you, hey, there's a type error. The thing doesn't combine. And the process of compiling, as Jojo said, that corresponds to checking all of these proofs.
+
+
+[Kobi Gurkan] (29:03 - 29:32)
+I think there were some probably other puzzles where you maybe were more in the line of the specification is not correct. And that's something that Clean would not find because this is the responsibility of the person that writes the circuit or the specification of a circuit. If the specification is incorrect and talks about the wrong thing, then you're done.
+
+
+It works. Like it's sound. It's complete.
+
+
+[Anna Rose] (29:32 - 29:59)
+But it's the wrong thing. So it's Clean that is looking for engineering problems, implementation issues. From spec to code, it's supposed to match up.
+
+
+And if there's a discrepancy in the coding, in the actual building of the spec, it'll flag it. But if the spec is weird, you can build exactly the correct version of that spec. It still won't work the way it's supposed to because there's a problem with the spec.
+
+
+[Mathias Hall-Andersen] (29:59 - 30:00)
+Exactly.
+
+
+[Anna Rose] (30:00 - 30:03)
+But Clean or Lean will just say it's fine.
+
+
+[Mathias Hall-Andersen] (30:03 - 30:40)
+You're proving equivalence. Obviously, if the thing you're running is equivalent to something that's buggy, then that doesn't help you. But as Giorgio pointed out, the advantage is that the spec can be a lot more readable.
+
+
+It can look like regular code. Insofar as Lean looks like regular code. But it can have loops and bitwise operations and all of these nice high-level things.
+
+
+Operations and integers of arbitrary size. All of this nice stuff. So for instance, you can write a SHA-2 spec in a couple hundred lines maybe.
+
+
+But when you go to implement the circuit, that's much, much bigger. Especially if you want a nice optimised one. Got it.
+
+
+[Nico Mohnblatt] (30:40 - 30:57)
+I was going to say, keep in mind, people have been tinkering with polynomial constraints one by one. Literally touching the polynomials instead of writing code. So especially if you're doing like a ZKVM, for example.
+
+
+So these circuits are super complex. And it makes sense to want to read something that's a lot smaller.
+
+
+[Kobi Gurkan] (30:57 - 31:45)
+Yeah. And not only that they're super complex, they're super complex not just because people like to make things complex. It's because efficiency in Snarks depends a lot on the number of constraints.
+
+
+And you sometimes also want to use this non-determinism aspects of our proving systems. And that is not usually the natural way that you would write programmes. And writing circuits is much lower level than writing assembly.
+
+
+And even assembly is hard for people. Yeah, this is where this asymmetry that you guys described is really nice. Because your specification can look like a programme.
+
+
+And that is what we are used to write as engineers.
+
+
+[Mathias Hall-Andersen] (31:46 - 32:22)
+And other advantages that, I mean, a specification is just some description of behaviour. And maybe you don't need to write it yourself. Maybe you can find somebody else who has already written a specification.
+
+
+Or you can prove your specification equivalent to their specification. So a big example is, for instance, there is a specification for the RISC-V CPU. Right, so you don't need to write a specification for RISC-V.
+
+
+There already exists one. You can just take that one and prove that your ZKVM, the very complicated circuits that it uses, that those are equivalent to this specification. That a lot of people have already looked at.
+
+
+So then you don't need to look at all these circuits, right? You just look at this high level specification.
+
+
+[Anna Rose] (32:22 - 32:49)
+Let's continue on the sort of story of zkGolf. We now are more familiar with Clean, your sort of extra DSL on Lean that focusses on circuit, sort of proving circuits are correctly implemented. Where then is the zkGolf part?
+
+
+Where's the competition? Like, yeah, I'm kind of, now I'm like, oh, this is a cool tool. But I still don't know what zkGolf is.
+
+
+[Mathias Hall-Andersen] (32:49 - 33:50)
+Yeah, so zkGolf then happened because, so once an LLM can write a circuit, maybe it can also write a better circuit. So I had this idea that I would ask the LLM to also prove that the circuit it comes up with is R1CS. So in Clean, a circuit is just arbitrary equations that must be zero, all of them.
+
+
+So they can have arbitrary form. So I restrict it to R1CS and I have the LLM also prove that the complete circuit is coming up with R1CS. And I have it prove how many constraints it is.
+
+
+So I asked the LLM to like tell me how many constraints is this circuit that you're building? And also by the way, prove that there's a number of constraints that it is. And then I tell it, this is how you measure cost.
+
+
+You measure cost by taking the number of like witness cells and constraints and summing them up. And that's the cost measure that I use. And then I put Claude in a goal loop for two days and told it to drive that cost down without changing any of the central definitions.
+
+
+Okay.
+
+
+[Anna Rose] (33:50 - 33:58)
+Is like the LLM using Clean or is it coding? And then you're running Clean on it to see how good it is.
+
+
+[Mathias Hall-Andersen] (33:58 - 35:13)
+So I'm fixing the definitions. So it can't change the definitions. It can't change what it's supposed to do.
+
+
+But that basically just means that I'm fixing some files in a project. And then I'm asking it to write a bunch of Lean code using Clean. Okay.
+
+
+As a library. Yeah. So that's how it works.
+
+
+And I'm asking it to drive down this theorem that tells you how to measure the cost of a circuit. When you say definitions, do you mean like the spec of the circuit we care about? Yes.
+
+
+So the spec is fixed and the definition of what R1CS is. So it needs to prove that the circuit is equivalent to the SHA2 spec. So basically what Georgia's example had already proven.
+
+
+And then it also needs to prove that the circuit is actually R1CS. So I think originally Georgia was just inspecting the circuit and checking that it was R1CS indeed. Now I'm going to ask an LLM to write the circuit.
+
+
+So I can't really trust it to not screw with me. So I'm going to have it prove that it doesn't do some sort of high degree constraints. And then I'm going to have it prove that whatever cost it's telling me that this circuit has, it is actually the cost that it has.
+
+
+I'm asking it to grade its own homework, but I'm going to verify that it graded correctly. It's going to prove that it graded correctly.
+
+
+[Anna Rose] (35:14 - 35:45)
+So then what is the competition though? Is it individuals trying to reduce the cost of the Clean code? Like that's the part that I'm a bit confused about.
+
+
+Like I get that you, so you've identified there's a cost associated with, I don't know if it's the compiling of a circuit or like the action of a circuit, and you're trying to reduce that somehow. But I'm sort of not clear on how like writing formal, like how formalising it by using Clean, like somehow is connected to cost.
+
+
+[Mathias Hall-Andersen] (35:46 - 36:11)
+So when you write a circuit in Clean, right, you're writing a bunch of constraints. And I'm just asking it to prove like how many constraints there are, basically. And like how many witness cells there are.
+
+
+That's all. Like it comes up with a circuit and I would like to measure it. But if I need to run my circuit, then it requires me to run lean code.
+
+
+And you generally don't actually really run lean code. You just compile lean code.
+
+
+[Anna Rose] (36:11 - 36:11)
+Okay.
+
+
+[Mathias Hall-Andersen] (36:11 - 36:25)
+So instead, I'm going to have it prove what the cost would be. But essentially, I'm just measuring the cost of a circuit. This is prior to zkGolf, by the way.
+
+
+And it was kind of like a dumb idea. And I think Giorgio didn't expect it to work. I kind of didn't expect it to work.
+
+
+[Kobi Gurkan] (36:26 - 36:45)
+So in some sense, people or AIs, I guess, do two jobs. They both write circuits, which the circuits themselves are usable outside, but they also write the proofs of correctness. So are these circuits that are written in Clean directly transferable to other places?
+
+
+[Mathias Hall-Andersen] (36:45 - 37:03)
+I mean, they wouldn't be transferable if they were not R1CS, right? So that's exactly why we need to restrict it a bit so that it's not using it. So a circuit is, as I said, just a bunch of constraints of like any degree, right?
+
+
+So we want to restrict it to be like degree two and factor into two linear combinations.
+
+
+[Nico Mohnblatt] (37:03 - 37:07)
+And then you can export these constraints and prove it with whatever prover you like.
+
+
+[Mathias Hall-Andersen] (37:07 - 37:17)
+Yeah, we're kind of getting ahead of ourselves, but there is now a way to basically just like export the circuits out and get a Groth16 proof or something like this.
+
+
+[Anna Rose] (37:18 - 37:25)
+So have we actually explained zkGolf now or is there another stage or step to make it a competition?
+
+
+[Mathias Hall-Andersen] (37:26 - 37:56)
+This is a dumb experiment where I ran this for a couple of days and then expecting it to spin and do nothing. But then when it came back, it actually produced at that time the best SHA-2 circuit, R1CS SHA-2 circuit. And that was like very surprising for us at the time.
+
+
+And I think that was kind of like when the penny dropped. It's like, okay, not only can these LLMs write circuits, they can also write really, really good circuits because you can just put them in a loop and ask them to drive down this measurement of cost and eventually it will succeed.
+
+
+[Anna Rose] (37:56 - 38:05)
+Did it end up writing something you actually already knew? Like did it find the solution you wanted or did it find a better solution than you expected?
+
+
+[Mathias Hall-Andersen] (38:06 - 38:17)
+It found new solutions. So it started by trolling the internet and finding all of the existing tricks and applying them all together in one implementation. And that already got it down, but then it found genuinely new techniques.
+
+
+[Anna Rose] (38:18 - 38:28)
+Oh, crazy. Okay, and then you would have seen, like you would have looked into what it did and then been like, whoa, this is not something we've seen. You don't have to, but you can.
+
+
+Okay, so is this zkGolf?
+
+
+[Mathias Hall-Andersen] (38:29 - 39:06)
+So at this point, I think Giorgio came up with this idea that like, I mean, this is out of semi-trusted, right? Like, but in practise, in theory, you don't need to trust anyone. You don't need to trust the LLM to write any of this because the circuits are untrusted, the proofs are untrusted.
+
+
+And so in theory, you could just have arbitrary people around the world supply circuits and then prove that this circuit that they supplied is better and still correct. And that is essentially the brain seed of zkGolf. It's what if anyone could write the circuits?
+
+
+[Anna Rose] (39:06 - 39:52)
+Yeah, here you do see a little echo of the Yukon org kind of type competitions, because as far as I understood theirs, it was like the goal is you have to create a very like well-posed question. It has to be quite like boxed in, like what you're trying to optimise, what you really want. Because if you make it too vague, there's all these workarounds, but you might not actually end up with the outcomes you want.
+
+
+But in your case, like you've basically made it very clear that like here's the language you're going to use. You're going to build a circuit. These are the constraints.
+
+
+You're going to find a cost associated with them. Or actually, I guess you don't give them constraints. You're just saying like there will be constraints.
+
+
+There will be a cost. You're trying to drive down that cost. But like it sounds like you've kind of boxed in the problem.
+
+
+You've like made it very specific so that you can run this stuff.
+
+
+[Nico Mohnblatt] (39:53 - 40:01)
+Yeah, it's write an R1CS circuit that matches my spec and that has low cost and prove that you match my spec and have low cost.
+
+
+[Anna Rose] (40:02 - 40:22)
+Have you seen any like any competitor's agents go rogue and like just start like breaking stuff? Like, you know, making a message board in the circuit that like shares secrets and like somehow or like I guess it would be really hard to do because you're using lean, right? Like you'd have to sort of break lean to work around it.
+
+
+[Mathias Hall-Andersen] (40:22 - 41:21)
+So we did find a couple. There was a couple of bugs in CK Golf in the relatively early days. The first one was pretty dumb.
+
+
+So it was that I was asking people to prove the cost of their circuit on a default input. So you have to prove that, you know, when I take your SHA2 circuit and I plug in, you know, zeros, then it has whatever cost it has. And then essentially somebody just submitted a circuit that branches on the input.
+
+
+So since the input is a constant, you can branch sort of at compile time, right? You can say, hey, if this constant, that is zero now, if it's this, if it's actually zero, then my circuit is the empty circuit and it just outputs, you know, constant SHA2 of zero. If the constant is not zero, then, you know, I give you an actual circuit.
+
+
+So then you can still prove soundness because you prove soundness of the actual circuit. But the cost when I go to measure it is zero. So it's not really a bug in Clean.
+
+
+It's a bug in my cost.
+
+
+[Anna Rose] (41:21 - 41:25)
+In your question, in your problem statement or your competition. Yeah.
+
+
+[Mathias Hall-Andersen] (41:25 - 41:25)
+Yeah.
+
+
+[Anna Rose] (41:26 - 41:30)
+Was that actually a user who did that or was that like an LLM who discovered it? Do you think?
+
+
+[Mathias Hall-Andersen] (41:30 - 41:34)
+I think it was a bunch of users who intentionally tried to screw with the thing.
+
+
+[Anna Rose] (41:36 - 41:42)
+But yeah, have there been any other kind of bugs found or like workarounds?
+
+
+[Giorgio Dell'Immagine] (41:42 - 42:32)
+There was another thing which was actually a bug in Clean. Oh, wow. Or actually it was like Clean was not originally intended to be used with adversarial circuits.
+
+
+And there was like an oversight in the completeness definition because, you know, in the submission you have to give a circuit which is just an object and you can just think of a circuit as like a fancy way of defining a list of constraints. And you have to provide a proof for soundness and completeness and other stuff like isR1CS and the cost. So if the soundness theorem statement fails, so that if there is a bug you can basically write a zero-cost circuit because of course you don't have to enforce anything, right?
+
+
+So it can be under constraint and so you don't enforce anything. So the number of constraints is zero.
+
+
+[Anna Rose] (42:32 - 42:32)
+Okay.
+
+
+[Giorgio Dell'Immagine] (42:33 - 44:33)
+But more subtly, if the completeness statement has a bug then suddenly the unsatisfiable circuit is sound for any specification which is kind of counterintuitive but the verifier that always rejects is sound for any specification, right? Because I don't accept any false proof because I don't accept proofs. But for every proof that is accepted, you know, it's okay.
+
+
+Yes, yes. I mean, but when you're doing formal verification you have to kind of be very precise about statements. And so there was a way to define like a self-referential or like self-contradictory witness generation function.
+
+
+So the witness generation function is like a way to prove so if you run these functions you get a satisfiable assignment. And so it's a fundamental object for completeness because completeness assumes that you run this function and if this function is like self-contradictory you get a false assumption in the theorem and then you can trivially prove completeness. And so if you can bypass completeness you can just submit the unsatisfiable circuit which is sound for any specification.
+
+
+And so there was this other break. But I want to mention that both times this was kind of a limitation of how do we check stuff because Lean again was not designed for adversarial proofs. And so it was really designed for ergonomics, really for mathematicians.
+
+
+And for example, one of the things we cannot do is run Lean code. So we cannot, for example, run tests. We cannot export the circuit.
+
+
+But if you were doing this for real, like if you were like actually developing a circuit and optimising it with LLMs you will not only do formal verification you will try to export it, you will try to run it, you will try to prove on some instances that this thing actually works and both exploits could be caught by just running a test.
+
+
+[Anna Rose] (44:34 - 44:46)
+When you discovered like each of those kind of like workarounds what did you have to do? Did you have to like change Clean? Did you have to fix something?
+
+
+Did you have to make it so it could sustain more adversarial use?
+
+
+[Mathias Hall-Andersen] (44:47 - 45:01)
+The first one was extremely simple. I don't ask you to prove the cost of your circuit for a particular input but I asked you to prove the cost of your circuit for every possible input. And yeah, that was an easy fix.
+
+
+[Anna Rose] (45:01 - 45:03)
+And for those that had to do with Clean?
+
+
+[Giorgio Dell'Immagine] (45:03 - 45:27)
+So we were actually aware in Clean that this was an issue but it was not in practise because human wrote circuits and so it was kind of a very contrived with transgeneration function that you had to write and you know it was unlikely to happen. And so now with zkGolf we require some additional property to rule out these self-contradicting with transgeneration functions.
+
+
+[Anna Rose] (45:28 - 46:06)
+Have there been, given the renewed or I guess there's been interest in Lean for a long time but really in the last six months, a year we hear about it a lot. We've actually done a few episodes on the topic. I think Wyatt Benno mentioned it and then we did an episode with Alex Ozdemir like very much about Lean so I'll link to that in the show notes but like has Lean had to be battle-tested itself?
+
+
+Like you're building on top of it but has any other kind of like maybe not only in our space but generally in the world has there been kind of some vulnerabilities found in the language? Have you had to fix things? I'm assuming it's still being worked on.
+
+
+[Mathias Hall-Andersen] (46:06 - 46:31)
+There have been a bug in the Lean kernel itself where you could prove false. So I mean if you can prove false then you can prove anything. Yeah, big bug.
+
+
+But it's kind of a rite of passage. I think Rocq also had similar bugs. It's just it's happened to many of these type checkers.
+
+
+It's like you can write one programme that miscompiles and then you fix the compiler.
+
+
+[Anna Rose] (46:31 - 46:32)
+Yeah, okay.
+
+
+[Nico Mohnblatt] (46:32 - 46:47)
+So I'm curious about the current state of zkGolf. I want to ask you guys what kind of circuits do you have up for competition? And have you seen any trends in how people compete and maybe what models they use and what results they get?
+
+
+[Mathias Hall-Andersen] (46:47 - 48:21)
+So we have SHA-2. So first of all, it's worth mentioning we started out with just prime field circuits over the BN254 curve. And we started out with SHA-2 and some Bitcoin curve operations.
+
+
+As well as Keccak. And the circuits for all of these are by far the best R1CS circuits that are out there. As in ever in the world?
+
+
+As of ever. Like I think the fixed based foreign field. So I mean it's the Bitcoin curve and you're emulating that one over the BN254 curve.
+
+
+So you have to do field emulation which is super easy also to write in your spec because you're just doing operations in some other field, right? You don't care about the field of the snark. So it's super easy to write but it's obviously super hard to implement.
+
+
+If you've ever tried implementing this foreign field emulation it's extremely complicated because you have to keep track of limbs and norm bounds and all kinds of interesting techniques like entity and CRT compositions and all kinds of tricks that people have been using to try and drive these down. So I think at the moment the fixed based scalar multiplication on the Bitcoin curve is I think seven times better than the previous state-of-the-art. So seven times less constraints.
+
+
+It's extremely optimised. It turned out that the previous state-of-the-art which was like I think it's CIRCOM ECDSA is already pretty optimised. Like it's not a naive implementation.
+
+
+It's already pretty clever but there's a lot of room for improvement.
+
+
+[Anna Rose] (48:21 - 48:30)
+I just realised when you are saying circuit it could be all kinds of circuits but like is there like a lot of ZK circuits specifically in this competition ZK golf?
+
+
+[Mathias Hall-Andersen] (48:32 - 48:51)
+So on ZK golf we have just ZK circuits and the way that ZK circuits differ from you know regular circuits is that they are non-deterministic, right? So you can witness values whereas a regular circuit is a function, right? That it takes an input and it delivers and you compute through it and delivers some outputs.
+
+
+[Anna Rose] (48:51 - 48:51)
+Okay.
+
+
+[Mathias Hall-Andersen] (48:51 - 48:59)
+So that's the primary way that these circuits differ from deterministic circuits but in principle, yeah, it could be you can do exactly the same for circuits.
+
+
+[Anna Rose] (48:59 - 49:10)
+But I don't really understand which part of a ZK like so I'm just thinking of like a ZK proving system maybe more largely. What part are you actually optimising?
+
+
+[Mathias Hall-Andersen] (49:10 - 49:12)
+The number of constraints.
+
+
+[Anna Rose] (49:12 - 49:12)
+Okay.
+
+
+[Mathias Hall-Andersen] (49:12 - 49:28)
+So we basically ask people to submit a circuit and then prove that then they tell us this is the number of constraints my circuit has a thousand constraints and it uses a thousand witness cells. So a thousand rows and a thousand columns in R1CS.
+
+
+[Anna Rose] (49:28 - 49:32)
+And by making that lower you're making it faster? Cheaper?
+
+
+[Mathias Hall-Andersen] (49:32 - 49:33)
+Yes.
+
+
+[Anna Rose] (49:33 - 49:53)
+Okay. And why are you like this is actually a question maybe for the ZK security crew here like you guys are doing a lot of audits but is this like what is the contribution here? Is this to audit?
+
+
+Is this helping with audits? Is it helping your clients? Is it your own pet projects?
+
+
+Like why are you optimising these circuits?
+
+
+[Mathias Hall-Andersen] (49:54 - 51:00)
+It's all of this. So I think in terms of contributing to the wider community obviously we get some really nice optimised circuits. I think the author of GNOC has already upstreamed a bunch of the circuits for the Bitcoin curve.
+
+
+So you get like more efficient ECDSA recovery inside your circuits. But in addition to that I think it's also very clearly the direction that authoring and auditing ZK circuits is going in. Humans are extremely bad at being extremely careful for extremely long time.
+
+
+And it turns out that that's essentially what you need to do to write a correct ZK circuit. A single missed constraint it means that the whole thing is broken. And humans are much better at like writing and reading high-level things and then asking machines to produce the very low-level implementations.
+
+
+So I think both in terms of being able to develop faster because you just write a SHA-2 implementation or take one that already exists and then you just ask an LLM to produce the circuit for you which is much faster than writing it by yourself. But also in terms of security.
+
+
+[Anna Rose] (51:01 - 51:19)
+If you were doing an audit for a company's proving system would you then include it in something like zkGolf? Like their spec and see if people could proof? Because then aren't you just doing optimisation work for that company?
+
+
+Which is cool but I don't know if that's what you're hired to do. Maybe you are, I don't know.
+
+
+[Mathias Hall-Andersen] (51:19 - 52:01)
+There's two things, right? Like if a company comes with a circuit then the first thing you ask them naturally is what does it do, right? Like what is the circuit supposed to do?
+
+
+And then as an auditor you take a look at the circuit and you verify that it does what it's supposed to do. But obviously if you can tell me formally like you tell me exactly what it's supposed to do like is this supposed to be a SHA-2 circuit? Then I can also just take a SHA-2 spec that I have or I can write one and then I can ask an LLM I just use a lot of effort to have it prove that this circuit that you brought me is equivalent to the SHA-2 spec.
+
+
+And at that point I don't need to look at any of the constraints. I just look at the SHA-2 code which is much easier to look at.
+
+
+[Anna Rose] (52:02 - 52:05)
+But here's not a competition this is just you're using Clean.
+
+
+[Mathias Hall-Andersen] (52:05 - 52:10)
+That would be an example of using it in an audit or to like formally verify a circuit that you already have.
+
+
+[Anna Rose] (52:10 - 52:10)
+Okay.
+
+
+[Nico Mohnblatt] (52:11 - 52:19)
+Or even better if customers show up with the zkGolf circuits unmodified and you know then that's done.
+
+
+[Kobi Gurkan] (52:19 - 52:38)
+Then you know. Very nice. Yeah I mean there are a lot of circuits that have been written by hand across the ecosystem and like we said it was a necessity.
+
+
+You know it doesn't have to be the case anymore and you can have them to be secure which is very nice.
+
+
+[Anna Rose] (52:38 - 52:52)
+When I covered the Yukon platform we talked about a few different competitions that they had over there. They had ECDSA.Fail, SNARK.Fast and Better.Codes. What is zkGolf similar to? Like how would you categorise it?
+
+
+[Mathias Hall-Andersen] (52:52 - 53:28)
+So zkGolf is most similar to Better.Codes which we also collaborated on because Better.Codes is also using formal verification. Essentially you're asked to write a formal proof like a lean programme and then I'm type checking it. Essentially you're grading your own homework and then I'm checking the grading.
+
+
+Whereas a bunch of the other Yukon competitions are you send me a programme and then I run the programme on some system or in an emulator and then I measure what it costs. Like in one example you give me a programme I run it the other one you tell me how good your solution is and then you have to prove that it is as good as you say it is.
+
+
+[Anna Rose] (53:28 - 54:14)
+Nice. So you also collaborated on Better.Codes. Maybe we can talk a bit about it because we covered it in the Yukon episode but we actually didn't go as in-depth with that example as we had with the other ones. So this is I know related to the Proximity Prize that was first announced by the EF last year on the show actually.
+
+
+Justin mentioned it then. And it seemed like right around that time just through my work on ZKMesh I was seeing so many papers coming out trying to solve this problem but the problem didn't seem to have been fully defined at the time. So like there was amazing research coming out but were they really in the competition for the Proximity Prize?
+
+
+It wasn't exactly clear. At this point have they formulated the question very clearly and that's why they can run something like Better.Codes?
+
+
+[Kobi Gurkan] (54:15 - 55:19)
+Yeah I think like even before going into the details of Better.Codes maybe just to even make the link of ZKGolf and Better.Codes compared to the other competition of why they are similar I think we discussed this in the episode with Benedict where we covered okay now we have AIs, LLM collaborating with us and producing stuff but how do we know it's correct? So we talked about this concept of anchors of how do you verify the result is correct and in some competitions out there or some work that people are doing you have some nice anchors okay you run this function if this function returns true you're fine, that's good. So for example a hash stays the same of something.
+
+
+So I think some of the Yukon competitions look like that right like you have StarGodFest where the verifier of flock stays the same. So if the verifier stays the same and you just keep optimising the prover then you're good.
+
+
+[Anna Rose] (55:20 - 55:35)
+Assuming that the verifier is acting correctly it will only verify a correct proof from a prover acting correctly and so you're sort of using that phenomenon to say we don't have to check actually what the prover is doing as long as it's accepted by the verifier.
+
+
+[Kobi Gurkan] (55:35 - 57:37)
+And it can do whatever you want it can use GPUs it can use like cache lookup tables whatever it wants just do it fast I don't care. You do have to check some other properties or like completeness you do have to kind of get a feeling that it is going to also for every correct input you also want it to be able to produce proofs for everything that it should be able to produce proofs but you can reason about it in other ways but the most important part is that the soundness or the verifier stays the same so that's fine. So that's like one sort of anchor that you can have.
+
+
+And the anchor here in zkGolf was more about okay, do we have formal proof of correctness? And better.code in that way like Matias said is very similar in that regard and the problem in Proximity Prize there is a paper that describes it and there is a very nice library that has been written in collaboration with I think now it's many people in the industry but spearheaded by the Ethereum Foundation which is called ArcLib which describes in lean all the ingredients and all the fundamentals that are needed to describe problems in coding theory finite fields all the different parts that are needed to describe Proximity Prize problems and now you have ArcLib you have people in the air for example Alex Hendricks that works a lot on this and you have the Proximity Prize paper that describes these grand challenges that have to be solved like can you prove something about these grand challenges?
+
+
+And you know the problem with stopping there with the paper is that okay this is nice like someone can go write a paper or say okay we improve the results about the grand challenges but that's hard that's theory it doesn't relate to some concrete problem
+
+
+[Anna Rose] (57:37 - 58:11)
+it's also not clear like at which point like is a threshold met that it would be accepted because what I was seeing with a lot of the papers was like in certain conditions they were able to either prove or disprove the things they were supposed to do but that threshold of like conditions was not defined so they could just like describe like scenario around the problem and then find ways to prove within it but yeah that wasn't quite standardised and so I'm hoping is Better.Code standardising it then?
+
+
+[Kobi Gurkan] (58:11 - 1:00:56)
+And so exactly that's I think a great point to make which is what you made which is that so what the idea was in Better.Code was that the designers of these challenges what they said is the following okay we'll take a concrete problem let's choose the finite field let's choose the size of the message let's choose the specific code that we're looking at let's choose the parameters of that code let's choose everything let's make it very concrete and let's have the solvers collaborate on improving the bounds for this specific toy problem and the hope was is that the improvements that are done for this toy problem would translate to more generic improvements for these grand challenges there was always the situation or there was always the chance that the improvements that would have been made were only specific to this toy problem and this finite field and whenever you change the finite field then that's it you're done And what has happened? Because it's running now right?
+
+
+Yeah but what we've seen is that the designers were correct and actually the results of the solvers were generalisable to more general ideas that can be applied for these challenges but it was a long road I think like for some time it has been the case that the AIs were just collaborating just to get the results formally proven for what we already know Oh which is not that helpful Yeah it's helpful like as a base you know now we have a base we can work out of maybe when someone writes a new paper they can use this as a base to write their new proofs but then it was stuck for like about I think six days the AIs were still thinking but not finding a solution until the Yukon team invited one of these top Bartosz Yeah exactly Bartosz He came by and joined and I think it was posted that he said yeah I don't think it's doable but I'll try Within a day his system managed to find an improvement that just crossed the threshold by just a bit but it crossed the threshold of what was already known in the state of the art and since then it has been improved even further by the AIs and a bunch of papers have been written already that credit their ideas or at least some of their ideas to being inspired by this small jump Wow that's so cool
+
+
+[Mathias Hall-Andersen] (1:00:56 - 1:01:13)
+We see something similar on zkGolf right like one agent will come up with a trick and then all the other agents would like take that trick and just like apply it everywhere and also try to like come up with incremental improvements so it's like there'll be like one big you know discovery from one agent and then everybody else will just pile on
+
+
+[Anna Rose] (1:01:13 - 1:01:26)
+How do you incentivise things in Seeking a Golf? Do you have sort of similar monetary gains or like monetary prizes at snapshots or is it just for the cred?
+
+
+[Mathias Hall-Andersen] (1:01:27 - 1:01:38)
+The cred there is absolutely there's absolutely no prices I see I mean except getting all of us better circuits right so I mean the circuits are widely available to anyone
+
+
+[Nico Mohnblatt] (1:01:38 - 1:01:41)
+although you never know when a challenge is a hiring challenge
+
+
+[Anna Rose] (1:01:42 - 1:01:50)
+Yeah going back to that I mean that's what we had seen kind of unexpectedly from the ZK Hack puzzles that it became a hiring funnel
+
+
+[Nico Mohnblatt] (1:01:50 - 1:01:50)
+exactly
+
+
+[Anna Rose] (1:01:50 - 1:02:03)
+and you talked about these CTFs that got you or kind of being in the CTF world and then doing a puzzle got you hired Giorgio and you as well Mathias I mean but here it's different right because it's like how good are you at taming your agent?
+
+
+[Nico Mohnblatt] (1:02:04 - 1:02:05)
+That might be the profession now who knows
+
+
+[Anna Rose] (1:02:05 - 1:02:13)
+True I think Bartosz is going to get hired he's already working I think at a university but interesting
+
+
+[Mathias Hall-Andersen] (1:02:13 - 1:02:32)
+I guess one thing I didn't mention about Seeking a Golf is that we have since added binary challenges so in particular challenges circuits that are suitable for Flock and also there we've seen some improvements especially on the SHA2 and Blake3 circuits that are much better than the existing circuits that we used in Flock
+
+
+[Anna Rose] (1:02:32 - 1:02:41)
+How many kind of circuit types competitions like are there separate competitions within zkGolf for different kinds of systems and how many are there?
+
+
+[Mathias Hall-Andersen] (1:02:42 - 1:02:44)
+Every circuit is its own little challenge
+
+
+[Anna Rose] (1:02:44 - 1:02:44)
+Okay
+
+
+[Mathias Hall-Andersen] (1:02:44 - 1:03:12)
+So you can win you know the specific circuit on the specific field So far they've filtered into two different types so they filled into the large prime field case which is the one where we've seen the most crazy tricks because of the large field you can do some crazy stuff and then we have the binary field one which is this we call it canonical R1CS so Flock is fastest if the R1CS has a specific form so yeah it's R1CS over large prime fields and it's R1CS over binary fields
+
+
+[Anna Rose] (1:03:12 - 1:03:37)
+Okay What's next for zkGolf? Like will you just continue to run this?
+
+
+Do you have plans to expand it? Will you do more collaborations? Because I was just thinking with Better.Codes wait is that also formally as formal verification as well?
+
+
+Yes Because I'm almost wondering if like the zkGolf could like be the counterpart of other existing competitions but with the formal verification
+
+
+[Mathias Hall-Andersen] (1:03:37 - 1:04:06)
+I mean for zkGolf our goal is to create a very nice standard library of circuits that are extremely optimised that anybody can just like pull down and use so if you're designing a new proof system or something and you need a SHA2 circuit you can just choose the one from zkGolf and it will always be the best one and we'll package it up in a nice way inside of Keane and then we plan to add more challenges as we go we still need to add some pairings and stuff like this so you can do you know your recursive socks
+
+
+[Anna Rose] (1:04:06 - 1:04:11)
+Do you think you'll ever actually though find the final version or will it like forever be improving?
+
+
+[Mathias Hall-Andersen] (1:04:12 - 1:04:19)
+The competition will remain open forever but I mean there is some best circuit right? It's the question is whether we will ever find it
+
+
+[Giorgio Dell'Immagine] (1:04:19 - 1:05:34)
+So there are circuits which are clearly not improvable for example like you know in R1CS or large prime fields a range check you cannot do better than witnessing the Boolean decomposition and then a final constraint a linear constraint to like reconstruct the value and this is actually provable with some effort so you can state like theorem that says for every circuit that probably matches the specification so the specification is just this value is less than two to the something for every circuit the cost of that circuit is not less than this one right so this will give a lower bound on the cost of the circuits so that's like another very interesting direction right so if I have this primitive right this range x can the lower bound on cost of range x is this my circuit I managed to prove that they require at least 25 I don't know range x then I have a lower bound on the cost and so we could have like a upper bound which is given by the best circuit and a lower bound which is given by you know you cannot improve on this but the typically the lower bound is much much harder to prove so the higher bound is just you know the best circuit we have
+
+
+[Anna Rose] (1:05:34 - 1:06:08)
+cool I think we now better understand what zkGolf is so thank you so much for like this journey you know I had to I kind of kept asking because I wanted to to get to the core of it and I think we found it but now I sort of wonder like is there something beyond zkGolf these kinds of competitions like have you been brainstorming internally for other projects have you seen other things like obviously we're tracking the Yukon stuff we're tracking zkGolf now but is there are there anything else that we should know about and is there anything else that you're thinking of building
+
+
+[Mathias Hall-Andersen] (1:06:09 - 1:06:37)
+I mean in theory you can drive down as long as you can have a measure of cost and you can define the properties that the solution needs to satisfy right you can optimise just about anything so one other possibility could be a proof system right you can say can you design me a stark in the IOP model that has this level of soundness and then ask me to drive down the number of queries so you could also be golfing on proof systems cool IOPP.golf
+
+
+[Nico Mohnblatt] (1:06:37 - 1:07:29)
+yeah exactly I think another interesting direction is understanding these results and these high scores so we're seeing it with better codes where people have been writing papers now and crediting ideas and starting to digest to use sort of a bit of slang from these days digest these ideas we could start to do the same with zkGolf or we could have sort of a reverse hackathon so I don't want you to go and create something I want you to go and explain something that's been created you know although wouldn't LLMs just do that too? not in the same satisfying way a human does it I think there is still something in getting to the core of the idea of why the circuit works better or why the specific code proof technique for the code works and I think humans will still explain this at least for the time being better than models we can revisit in a few months
+
+
+[Anna Rose] (1:07:29 - 1:07:45)
+yeah so Koby I also wonder do you think we'll ever see the zk-hack puzzles make a re-emergence?
+
+
+because they really I feel like they were so of their time but you can't really run them the same way now have you had any thoughts on that?
+
+
+[Kobi Gurkan] (1:07:46 - 1:08:06)
+yeah I think like that's a valid problem in the sense that like we said one of the main goals of zk-hack was to get people to understanding and if you remove that part it misses the goal like we want people to break the scheme so in order to understand and not just to have a check mark right?
+
+
+[Anna Rose] (1:08:06 - 1:08:09)
+yeah or to win the prize because we have like speed racing
+
+
+[Kobi Gurkan] (1:08:09 - 1:09:16)
+yeah exactly and the write-ups are the same we want people to do the write-ups so in order for them to be able to understand and maybe win a prize so I think that definitely they need to be changed because now the same kind of challenges very realistic unless they're very obscure since they're still learning tools they can be solved by the current LLMs autonomously with maybe some guidance the question is how you can design new kind of challenges that still allow you to understand and I think there might be an angle which may be interesting to explore of okay in this day and age where people write code and explanations using AI what can go wrong when you do that? and in what common ways it can go wrong and in what ways you can even fool the AIs into doing the wrong things especially in the realm of cryptography so that might be an angle to try out
+
+
+[Anna Rose] (1:09:16 - 1:09:26)
+prompt your own agent to go awry somehow like to trip over the tripwires that have somehow been set for it
+
+
+[Kobi Gurkan] (1:09:26 - 1:09:39)
+yeah and you know there is like the angle of prompt injection but maybe it would be some other angles of like cryptography vulnerability injection I don't know you can think about all these kind of things
+
+
+[Anna Rose] (1:09:40 - 1:09:46)
+yeah there's maybe there's something there for us to explore I don't know maybe one day ZK Hack will rise again
+
+
+[Kobi Gurkan] (1:09:46 - 1:09:56)
+I feel like that there is a potential future for puzzles and CTFs in different forms to rise we'll see
+
+
+[Anna Rose] (1:09:56 - 1:10:06)
+yeah I think that brings us to the end of this episode I want to say thank you so much for all of you for coming on how do people get involved with zkGolf or with Clean?
+
+
+[Mathias Hall-Andersen] (1:10:07 - 1:10:26)
+so if you're interested in hearing more about Clean we have a wonderful website which also has a great tutorial on getting started for average developers who don't know like LEAN or formal verification ahead of time so you can find that at Clean.zksecurity.xyz cool and zkGolf?
+
+
+[Anna Rose] (1:10:27 - 1:10:39)
+zkGolf is at zk.golf do you think listeners of the show should go try it out? should they participate? is it really open to anyone?
+
+
+or have all of the competitions right now been solved? like yeah how active is it?
+
+
+[Mathias Hall-Andersen] (1:10:39 - 1:11:08)
+it's still pretty active for about a month we had the challenges plateauing and then all of a sudden we saw a great influx of improvements again so just when we thought we'd hit rock bottom apparently the bottom fell out and we're taking suggestions for circuits as well so if you're interested in this you should join our telegram group and give us suggestions for what circuits you would like to see formalised and optimised on zkGolf very cool
+
+
+[Anna Rose] (1:11:08 - 1:11:15)
+all right thank you Matias and Giorgio for coming on Nico and Kobi thank you for joining yeah thank you
+
+
+[Nico Mohnblatt] (1:11:15 - 1:11:18)
+thank you all this was super fun thank you thanks a lot cool
+
+
+[Anna Rose] (1:11:18 - 1:11:25)
+i want to say thank you to the podcast team Henrik, Rachel and Tanya and to our listeners thanks for listening
