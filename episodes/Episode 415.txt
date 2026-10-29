@@ -1,0 +1,968 @@
+﻿[Anna Rose] (0:05 - 2:26)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Nico and I catch up with Srinath Setty, researcher at Microsoft.
+
+
+We explore with him the different research threads that he's been pursuing in the last few years, from his more recent folding work, like the lattice-based folding he's been working on, his new work with sumcheck, lookups, and memory checking. We then turn to Magnetar, the newly released ZKVM, built only on standard hash functions. It aims to be one of the most secure general purpose ZKVMs, and it's shown to be much faster than existing systems.
+
+
+Srinath explains how it's been put together, where the speed comes from, and what's still left to build. So I hope you'll enjoy. Now before we kick off, I want to share that we have a new report coming out called the 2026 ZK Industry Report.
+
+
+This podcast, and the team at Succinct, have joined forces to produce the report. It's a snapshot of the state of zero-knowledge cryptography today, the technology, the research, and the real-world use cases. We have been watching ZK evolve over the last few years, from pitches and proposals to genuine use cases, and it seems like a really good time to produce a check-in where we can showcase where ZK has found actual product market fit.
+
+
+Inside, we cover how ZK-proving is no longer a bottleneck in blockchains, what drives the research agenda in ZK, where ZK has seen the most use in applications, and the open questions in the field. There's a link in the show note to get access. The report is free.
+
+
+So this is something we hope you will enjoy and potentially share with the people who you think should be aware of ZK and who could appreciate the potential of this technology. It is a little more high-level and a little more accessible. It seems like a very good time to produce a report like this.
+
+
+So I hope you'll check it out. Now here is our episode with Srinath. Today Nico and I are here with Srinath Setty, a researcher at Microsoft.
+
+
+Welcome back to the show, Srinath. Thank you for having me. It's great to be back.
+
+
+Hey, Nico. 
+
+
+[Nico Mohnblatt] (2:26 - 2:27)
+Hey, Anna. Hey, Srinath.
+
+
+[Anna Rose] (2:27 - 2:38)
+So, Srinath, this is the second time you're on. And last time you were on, it was back in 2023, and we talked all about Nova. And Nico, you were also the host of that episode.
+
+
+[Nico Mohnblatt] (2:39 - 2:42)
+I was. That was actually my first hosting episode.
+
+
+[Anna Rose] (2:42 - 3:33)
+That's so crazy to think about, but that's so cool. So it's been three years. So in sort of putting together this episode, we were looking at the research that you've produced over the last three years, and there's a lot.
+
+
+A lot of your work has also been mentioned on this show many, many times. I don't know if we'll be able to cover everything, but I think it does make sense to go back to that time, to 2023. Nova had come out, and everyone was getting very excited about folding.
+
+
+But this was, I believe, very much in the elliptic curve camp. And I think in that episode, you kind of hinted at this idea of like exploring hash-based folding, but it seemed like a far-off dream, maybe, still at that time. So yeah, let's go back to 2023 and share with us a bit of what were you thinking, what was coming, what are kind of highlight works that you feel came out since then?
+
+
+[Srinath Setty] (3:33 - 5:05)
+Yes, I think at the time of the last episode, the works that we discussed were Nova, Supernova, and Hypernova. And then I think a lot happened, a lot has also changed, but some things have remained the same. So maybe on what happened, so many works, I guess, on the folding side of things, we worked on lattice-based folding, for example, NEO and SuperNEO came out.
+
+
+And then on the application side, using these folding schemes to build some concrete applications. So we worked on this Vega, which allows you to do zero-knowledge proofs of identity. So you can prove to someone without revealing all the details of your identity.
+
+
+So you can prove some statements, like someone is over 18 or 21, without sending a copy of the credential. And beyond that, I was also, even at the time of 2023, I was working on so-called monolithic SNARKs or non-recursive SNARKs. These are SNARKs that don't have recursion built in.
+
+
+Of course, because it's a snark, it's always a recursive snark, but recursion is not one of the main features. So this was SPARTAN, which came out in 2019. And then there was a sequence of works there, LASSO, JOLT, which built a ZKVM.
+
+
+And then more recently, there's Twist and Shout, which eventually led to MAGNITAR.
+
+
+[Anna Rose] (5:06 - 5:33)
+And MAGNITAR is what we're going to be talking about later on in this episode. I know it was just released, I think, as we're like the week we're recording this, right? Yeah.
+
+
+So very, very recent. Quick question. I'm so sorry.
+
+
+I didn't realise you were one of the authors of JOLT. I'm just like checking this right now. Wow.
+
+
+That's crazy. But JOLT also had this, like, as far as I know, it wasn't really focused on the folding stuff. It was, wasn't it sort of sum check related?
+
+
+[Srinath Setty] (5:33 - 6:18)
+Yes. So the original SPARTAN itself is based on the sum check protocol. So if you think about sum check, it's a proof system for proving statements that are of a particular form.
+
+
+But typically, if it's presented that way, it's hard to see how it can be used in practise. So one of the contributions of SPARTAN was to leverage the sum check protocol to prove statements that are expressed in R1CS. There are also other contributions in that work, but this is one of the contributions.
+
+
+And then it led to LASSO, which is a lookup argument. So it turns out there was a lookup argument inside SPARTAN for its own purpose. And in the LASSO paper...
+
+
+[Anna Rose] (6:19 - 6:22)
+Was it, like, sort of not teased out as a lookup argument?
+
+
+[Srinath Setty] (6:23 - 6:29)
+It was in general used for its own purpose for proving something called a sparse polynomial evaluation.
+
+
+[Anna Rose] (6:30 - 6:30)
+OK.
+
+
+[Srinath Setty] (6:30 - 6:51)
+But it wasn't factored out as a lookup argument. And this was one of the contributions of LASSO. And one nice property of this lookup argument was it applied to tables of very large size, as long as they are structured.
+
+
+And this is also one of the properties that was crucially leveraged for building a ZKVM in Jolt. Cool.
+
+
+[Anna Rose] (6:52 - 7:02)
+Yeah, sorry, I'm super aware of a lot of your other work, and somehow I missed you being the co-author on Jolt. And it's possible we did actually discuss this on the show at some point, but I, yeah, I blanked.
+
+
+[Nico Mohnblatt] (7:03 - 7:09)
+By the way, I recently realised or remembered or relearned that JOLT is an acronym for Just One Lookup Table.
+
+
+[Anna Rose] (7:09 - 7:10)
+Oh!
+
+
+[Nico Mohnblatt] (7:10 - 7:11)
+Yeah.
+
+
+[Anna Rose] (7:11 - 7:15)
+Yes. And that one lookup table is LASSO? Or what?
+
+
+[Srinath Setty] (7:15 - 7:29)
+Yeah, in the initial version, it was LASSO. So these are lookup tables of size 2 power 128 or more. Gigantic.
+
+
+And nobody needs to materialise these tables. Okay. And nobody can.
+
+
+Right? Yes. Yes.
+
+
+[Anna Rose] (7:30 - 7:33)
+Twist and Shout. Is that coming before or after the JOLT work?
+
+
+[Srinath Setty] (7:34 - 7:40)
+Twist and Shout is from 2025. So after. Beginning of 2025, yes.
+
+
+[Anna Rose] (7:40 - 7:40)
+Okay.
+
+
+[Srinath Setty] (7:41 - 7:47)
+Twist and Shout is an improvement on LASSO. It just gives a much better lookup argument. Cool.
+
+
+[Anna Rose] (7:47 - 8:12)
+I'm trying to imagine, so like with all of this research, we can kind of dive into each of these threads. But before we do that, I'm just kind of curious, like, how do you organise your own research? Are you flipping between these different categories?
+
+
+Like, are you doing lookups for one month and then you're focused on folding? Or do you feel like these findings kind of come out all together? Like are they are they woven together or are you taking time to focus on one of these channels?
+
+
+[Srinath Setty] (8:13 - 8:49)
+I think in the SNARK space, there is like so many different approaches and they're also tightly interconnected. So I think for each of these works, I think the context in which they came up was completely different. So I don't think there is a single recipe on how we approach these problems.
+
+
+But one common theme, I think in all of these works, when the work itself came up, there was some gap in how those problems were solved in the existing literature. So we wanted to address those gaps. I think this is a common theme across all the works.
+
+
+[Nico Mohnblatt] (8:49 - 8:52)
+Maybe another theme is the sum check protocol, right?
+
+
+[Srinath Setty] (8:52 - 8:54)
+Yes, exactly. I think all of these...
+
+
+[Anna Rose] (8:54 - 8:56)
+Is that really at the core of everything?
+
+
+[Srinath Setty] (8:56 - 9:14)
+Yeah, I think in all of these works, I recently wrote this blog post. In some ways, they're all connected to this one work I did in 2019, Spartan. Even the folding line of work could be thought of as stopping the Spartan early and folding the results early on.
+
+
+[Nico Mohnblatt] (9:14 - 9:22)
+Including also Hypernova, right? Stopping Spartan early, but a different point and different trade-off, etc. Exactly.
+
+
+Amazing.
+
+
+[Anna Rose] (9:22 - 9:46)
+Do you think some of this also has to do with which collaborator you're working with? Because I also, on these different works, there are kind of different people that you're collaborating with. You have Justin Thaler on Lasso, Twist and Shout, and Jolt.
+
+
+And then on the Neo work, you're working with Wilson Nguyen. So tell me a little bit about how those collaborations happen. And do you find that each of those kind of like bring out a bit of a different direction?
+
+
+[Srinath Setty] (9:47 - 9:56)
+Yeah, I think a lot of these collaborations, for example, the Neo and Super Neo work, it happened when Wilson was an intern with me at Microsoft Research.
+
+
+[Anna Rose] (9:57 - 9:57)
+Okay, nice.
+
+
+[Srinath Setty] (9:58 - 10:13)
+The same with Nova line of work, Abhiram was an intern with me, and we continued to work on this line of work even after his internship ended. And I've been working with Justin separately for a while, at least five, six years.
+
+
+[Anna Rose] (10:14 - 10:52)
+Let's talk a little bit about the Neo and Super Neo work, the lattice work. Last year, we actually had a chance to have Binyi on the show and Fadim as well, talking about lattices. We did a whiteboard session on lattices, Dan Boneh mentioned lattices in his interview as well.
+
+
+So it's like it came up a lot in 2025. Can you tell me kind of the state of lattices and folding and just generally using them? Is it some...
+
+
+Do you feel like it's kind of like a lot of work was done and then it sort of is put on a shelf for a little while? Or is it in action? I've kind of...
+
+
+I feel like in the last year or so, or like in the last six months, I haven't heard about it so much.
+
+
+[Srinath Setty] (10:53 - 11:49)
+Yeah, I think the first work I think in this piece was LatticeFold. They provided a construction that solved folding in the lattice setting and it solved a lot of problems and it provided a really good construction. But I think there were some small issues that were left open.
+
+
+One of them was how do we do this folding directly on a finite field? For example, if you look at all the group-based folding schemes like Hypernova and so on, they had constrained systems that work over a finite field, whereas LatticeFold was working over a ring and the folding scheme itself was constructed on the ring. So one question that we were asking in both NEO and SuperNEO were, can we directly take Hypernova and then construct a lattice-based version of this?
+
+
+And that's how those two works came about.
+
+
+[Anna Rose] (11:49 - 11:57)
+Are they solving that problem to the point where it could be implemented or are they sort of incrementally showing that, you know, here's the trade-offs if you do it?
+
+
+[Srinath Setty] (11:57 - 12:19)
+I think they do solve the problem. So you could implement them today. I think they have gotten better in terms of performance, but there is perhaps more room to implement and discover other concrete performance issues and then solve those.
+
+
+So that work, I think, hasn't happened yet.
+
+
+[Anna Rose] (12:20 - 12:27)
+Got it. And has there been any follow-up, though, maybe from your set, like, I don't know if it's researchers you worked with or collaborators or maybe other groups?
+
+
+[Srinath Setty] (12:28 - 12:43)
+I think there is a lot of work on lattice-based folding, but I think I haven't seen full-scale implementation of this. For example, I haven't seen a lattice-based ZKVM, for example, that's based on folding schemes.
+
+
+[Nico Mohnblatt] (12:43 - 12:49)
+So you're saying there's a hyper-Neo waiting to happen? Possibly.
+
+
+[Anna Rose] (12:50 - 12:51)
+Galactic Neo?
+
+
+[Nico Mohnblatt] (12:52 - 13:02)
+So just to clarify, you mentioned there's no ZKVM based on lattices and folding, but there is a ZKVM that uses lattices behind the hood, which is Jolt, right?
+
+
+[Srinath Setty] (13:02 - 13:23)
+Yes. Yeah, yeah. So Jolt recently released this lattice-based Jolt, which still uses a traditional recipe for constructing these snarks.
+
+
+So it combines the Jolt's polynomial IOP with a lattice-based polynomial commitment scheme. So it's a monolithic snark.
+
+
+[Anna Rose] (13:24 - 13:42)
+Nice. Let's talk a bit about the hash-based folding, because kind of going back to that 2023 era, this was still sort of an unsolved problem, right? What was the concern?
+
+
+Like, why did hash-based folding seem complicated? And what was the work that actually started to break that down?
+
+
+[Srinath Setty] (13:43 - 15:05)
+So one of the properties of the commitment scheme that folding schemes leverage is called homomorphism. So if you take two commitments, if you add them, you get a commitment to the addition of the underlying vectors. And you can do, you can take, this allows you to do random linear combination of the commitments, and then you get a random linear combination of the underlying witnesses.
+
+
+And this turns out to be easy in the context of elliptic curves. In the lattice setting, there is limited amount of homomorphism, but you could still get around that this is what lattice fold Neo, Super Neo exploit. But in the hash-based setting, it's a commitment is just a digest of some encoded vector, and there is no homomorphism.
+
+
+I think there is a sequence of works that did provide a folding scheme in the setting. I think some of these are Arc, Warp, and I think there are many others as well. They address this problem by having the prover commit to the random linear combination and showing that the new commitment represents the random linear combination of the data underneath the old commitments.
+
+
+And this allows you to construct a folding scheme. I think they do solve the problem.
+
+
+[Anna Rose] (15:06 - 15:13)
+Obviously, we're here in a large part to speak about Magnetar. But in Magnetar, you are using hashes a lot. Am I correct?
+
+
+[Srinath Setty] (15:14 - 15:14)
+Yes.
+
+
+[Anna Rose] (15:14 - 15:24)
+Are you using like hashes and folding? Or is it sort of moved away from the folding side of things? Like now I'm curious if you actually found a way to use them in an implementation.
+
+
+[Srinath Setty] (15:24 - 15:52)
+So in the current instantiation, so Magnetar is a monolithic snark. So it just takes an execution and produces a proof in one shot. But of course, if we need to scale this to larger executions, for example, the executions that don't quite fit in a single machine, we need recursion.
+
+
+I think there are two ways of doing recursion. One is brute force recursion, where I produce a proof, I produce another proof. Yeah.
+
+
+[Anna Rose] (15:52 - 15:53)
+Of the proof.
+
+
+[Srinath Setty] (15:53 - 16:15)
+Yeah, I prove that I know two valid proofs. The alternate approach is folding. So you don't quite produce the proof, you commit to some witness, and then you commit to the random linear combination and show that this is the random linear combination.
+
+
+I think there is possibility of using folding for recursion in the hash-based setting.
+
+
+[Nico Mohnblatt] (16:16 - 16:43)
+So maybe this is a good segue into Magnetar proper, because I was very surprised to see this work coming from you, especially because it kind of throws away everything I've known about Srinath Setty's work. Folding is out of the window, elliptic curves and lattices out of the window. We're doing hash functions, binary fields, monolithic snarks.
+
+
+So I'm very curious, how did this work come about? What is it? And how did you get into this?
+
+
+Okay.
+
+
+[Srinath Setty] (16:43 - 19:08)
+Yeah. So before we maybe unpack what Magnetar is and what it provides, one thing we might want to recall is a snark has two parts. One is this polynomial IOP, and then there's a polynomial commitment scheme.
+
+
+And these two can be developed separately. So for example, a lot of the work that I did in the past focused on polynomial IOPs. That could be combined with any commitment scheme.
+
+
+So in some sense, this may not be a big surprise that this is a hash-based system. But just diving deeper into what problem this addresses, right? So in some sense, if you look at the existing landscape of ZKVMs, I would categorise them into four classes.
+
+
+One of them is elliptic curve-based ZKVMs. These ZKVMs are built on elliptic curve cryptography, and of course, they're not post-quantum secure. The second one is lattice-based ZKVMs. So they use lattices, they're post-quantum, but of course, they require some assumptions about lattices. The third category, people typically call these hash-based, but I would argue that they are hash and more.
+
+
+So if you look at the existing hash-based schemes, they do use a hash-based commitment scheme. But if you look deeply inside their proving machinery, they also rely on other things. For example, for memory checking, they rely on elliptic curves.
+
+
+So there is always some additional assumptions that are used in these schemes. So I refer to these as hash and more. And then if you look at the last category, which is hash-based, let's say in this hash-based setting, we only want to rely on hashes, only standard hashes like SHA-2, SHA-3.
+
+
+Let's say we don't want to rely on any conjectures about error correcting codes. I think there's only one candidate here, which is LeanVM from Ethereum Foundation. But it targets a very specific ISA called the Lean ISA.
+
+
+So it's not general purpose. So you can't use this to compile applications from high-level language like Rust and just prove that. So there is a missing gap here.
+
+
+This is exactly the gap that Magnetar tries to address.
+
+
+[Anna Rose] (19:08 - 19:22)
+Oh, cool. Can you share a little bit of other examples in those categories, just so we kind of can understand how you're grouping that? So going back to the ECC, the hash-based plus, what projects or VMs would fall into that?
+
+
+[Srinath Setty] (19:23 - 19:48)
+Yeah, for example, I think in the elliptic curve-based ones, the original Jolt was using elliptic curves. For the lattice-based ZKVM, I think Jolt with Akita PCS is a lattice-based ZKVM. For the third category, which is hash and more, there's SP1, there is RISC0, there is ZISC.
+
+
+There are a lot more ZKVMs in this category.
+
+
+[Anna Rose] (19:49 - 19:51)
+What about Airbender? Do you know where that falls?
+
+
+[Srinath Setty] (19:51 - 20:01)
+I think so. They recently released an update. I haven't looked deeply into that update yet, but it does fall into the third category.
+
+
+At least the version that...
+
+
+[Anna Rose] (20:01 - 20:03)
+Hash-based plus? Yes. Okay.
+
+
+[Srinath Setty] (20:03 - 20:09)
+At that time, they were using Poseidon or Poseidon to make it efficient for recursion.
+
+
+[Nico Mohnblatt] (20:09 - 20:18)
+Oh, so you consider sort of these arithmetic hash functions as hash and more because they're not like your standard hash? Yes. Yes.
+
+
+Okay.
+
+
+[Srinath Setty] (20:18 - 20:33)
+I guess for hash-based, I had this line somewhere. I think we should reserve hash-based to refer to ZKVMs that only use standard hash functions. Okay.
+
+
+And nothing else. Yes.
+
+
+[Anna Rose] (20:33 - 21:04)
+You just mentioned Poseidon, and I want to go on a little tangent on this. I mean, I'm guessing Magnetar does not use Poseidon, and I'm just curious, what came into your decision not to use it? Obviously, in the last month or two, we've seen sort of like more cryptanalysis on this, and there have been some cases where Poseidon doesn't seem like it's the right fit.
+
+
+But it's also, these are, what is it, hashing schemes that were built for snarks. So why wouldn't it be the optimal?
+
+
+[Srinath Setty] (21:04 - 21:49)
+So they were designed to make proving more efficient because they have a circuit that's very small inside, for example, R1CS or other arithmetizations, but they're somewhat different from the hash functions that we use elsewhere, for example, on the internet. So this Poseidon is, I think some people refer to this as structured. I think they have some structure in them, and over time, I think there have been more studies analysing the structure to find more exploits.
+
+
+Ethereum Foundation recently announced that they don't want to use Poseidon in their LeanVM because of various results.
+
+
+[Anna Rose] (21:49 - 22:02)
+But was that something, that's pretty recent, that announcement, like, I'm assuming you were working on Magnetar before that point, or was that a big influence in you kind of not using Poseidon and sort of trying to go back to the place when you would have made that decision?
+
+
+[Srinath Setty] (22:03 - 22:11)
+I think Poseidon has always been one of the, I guess, weak points in a design. If you can avoid it, it's always good.
+
+
+[Nico Mohnblatt] (22:11 - 22:24)
+Yeah, and the Ethereum Foundation was offering bounties for Poseidon for a while. They were themselves worried about it. They had it at the centre of their design last year, but they had these worries and they were trying to push the envelope and they decided against it.
+
+
+[Srinath Setty] (22:25 - 22:39)
+Yeah, I think in some sense, if we could build a ZKVM or a ZKProof system that just relies on standard hash functions and nothing more, that's always good. Like it's a good cryptography design to just rely on fewer things.
+
+
+[Anna Rose] (22:40 - 22:55)
+Got it. Let's define Magnetar and what exactly is happening in that system. So from what you shared, it sounds like there's no folding anymore.
+
+
+Yeah, I'm curious, what is in it? Which kinds of hash functions are you actually using? Yeah, let's hear about Magnetar.
+
+
+[Srinath Setty] (22:56 - 23:20)
+Yeah, so currently it does not support recursion. But to support recursion, we might bring back folding. So currently it takes an execution and then it proves it in one shot.
+
+
+So it internally uses a standard hash function. The implementation that we use, uses SHA-256 to commit to the witness and also for Fiat-Shamir.
+
+
+[Anna Rose] (23:21 - 23:36)
+And what is Magnetar though? Is it a proving system? Is it something where you have the IOP and the polynomial commitment scheme?
+
+
+Or is it, because I read it more like a VM, like you were building like more of a implementation of this idea.
+
+
+[Srinath Setty] (23:36 - 24:13)
+Yes, yes. So it is a ZKVM, which means it's a snark for proving some virtual machine executions. For example, executions on RISC-V.
+
+
+So the snark itself is built from a polynomial IOP and a polynomial commitment scheme. And the polynomial IOP itself has multiple components. The primary component is Spartan, running over binary fields.
+
+
+And the polynomial commitment scheme that we use is Ligerito, which I think was discussed in one of the prior episodes here.
+
+
+[Nico Mohnblatt] (24:13 - 24:15)
+Absolutely. And Guillermo is one of the co-hosts.
+
+
+[Anna Rose] (24:15 - 24:17)
+Wait, is that Guillermo's work?
+
+
+[Nico Mohnblatt] (24:17 - 24:19)
+Yeah, this is Guillermo and Andrea's work.
+
+
+[Srinath Setty] (24:20 - 24:56)
+Oh, cool. And on the polynomial IOP side, we also need, so this is sufficient in theory, like we could build a ZKVM just with these components, but it's not going to be as efficient for certain operations. For example, this VM needs a random access memory.
+
+
+It needs to read and write to registers and so on. So for that, in theory, you could just use a Merkle tree, but it's going to be very inefficient. So for that, we would need a memory checking argument.
+
+
+And for memory checking, we use Twist and Shout running on binary fields.
+
+
+[Anna Rose] (24:56 - 24:57)
+Okay.
+
+
+[Nico Mohnblatt] (24:58 - 25:17)
+There's a lot I want to unpack here. One is binary fields and how heavily they feature, and maybe with a parallel to Flock. The other thing is, you mentioned Spartan.
+
+
+So is this based on R1CS? Do you have one R1CS circuit for the RISC-V ZKVM? Is that how it works?
+
+
+Yeah, exactly.
+
+
+[Srinath Setty] (25:18 - 25:44)
+Wow. So there is a universal circuit that encodes all the operations supported by RISC-V, but it's repeated in the following sense. So it's what we call SIMD R1CS, and this was defined in a work from 2021.
+
+
+You can think of this as applying the same R1CS on many witness vectors.
+
+
+[Nico Mohnblatt] (25:45 - 25:48)
+So the circuit itself has a sense of parallelisation?
+
+
+[Srinath Setty] (25:48 - 26:00)
+Yes. So this circuit is, you can think of it as a data parallel R1CS. So you have the same instruction, multiple data.
+
+
+So you're applying it on different instances of the witness.
+
+
+[Nico Mohnblatt] (26:02 - 26:18)
+So I guess this is quite uncommon or goes against what Jolt was saying of like, hey, circuits for VMs are complicated. Let's get a lookup table instead. How did you find developing this data parallel R1CS for like a whole processor?
+
+
+[Srinath Setty] (26:19 - 28:49)
+Yeah, I think maybe if we take a step back, if you look at how existing ZKVMs work prior to Magnetar, I think there are broadly two approaches to designing ZKVMs. On the one side, we have the Hash and more ZKVMs. All of them, they organise their execution across multiple witness vectors. So there is a separate witness vector or I think it's also commonly referred to as a table. So you have separate tables, and then each table is just responsible for one instruction.
+
+
+Let's say an AND instruction or an XOR instruction and so on. And they locally check these operations. So it's a table of all the instructions of a particular type.
+
+
+And then the entire execution of the ZKVM is obtained by connecting these multiple tables. And the main mechanism is a permutation argument. So permutation argument is used to connect all these different tables into a coherent execution.
+
+
+So this is one approach. The other approach was the just one lookup table approach or the Jolt approach. Here, you still use an R1CS or a SIMD R1CS.
+
+
+But that R1CS is super small, like it's only doing some small amount of glueing. And all the instructions are checked by making a lookup into this gigantic lookup table of size 2 power 128 or more. Also, if you get an AND instruction, you just make a lookup into this table and get a response.
+
+
+So as long as you prove this R1CS and you prove all the lookups were done correctly, you have a proof of correct execution. So Magnetar takes a third approach. It actually goes back to a simpler approach.
+
+
+For example, it just uses a R1CS circuit to check all the instructions like it's a single R1CS. So it differs from both of these. And there is no lookup table because in the context of binary fields, this lookup table is more expensive.
+
+
+So just to add, I think in the context of prime fields, both in elliptic curve setting and in the lattice setting, this lookup table is the most optimal approach. It gives you the best performance. But in the binary field setting, it turns out the circuit approach is much better.
+
+
+[Nico Mohnblatt] (28:50 - 28:56)
+So that's the starting point. How do you deal with the complexity of building such a circuit? Did LLMs help a lot?
+
+
+[Srinath Setty] (28:56 - 29:30)
+I think in binary fields, because a lot of the operations, so the basic operation is an XOR and an AND. So a lot of the operations of a processor can be efficiently expressed there. And of course, we can use LLMs or AI to formally verify these kind of objects.
+
+
+I think that's where I think they would be very helpful to show that the circuit is really a circuit that executes an instruction correctly. But the circuit itself is quite simple.
+
+
+[Anna Rose] (29:30 - 29:42)
+Did you, as you were building this though, did you also run lean proofs then? Like, are you doing formal verification at the same time as you're building it? Or are you using it to build it?
+
+
+Like, what's your what's your process here?
+
+
+[Srinath Setty] (29:42 - 29:54)
+Yeah, I think formal verification is definitely the gold standard for ensuring the correctness of these types of complex systems. But we haven't done that yet in this magnetar work. I see.
+
+
+[Nico Mohnblatt] (29:55 - 30:07)
+So now that we've established, OK, we can have a single circuit working over binary fields instead of the prime fields we used to use before. How do you prove it? Does it change how the proof system works?
+
+
+Yeah, that's a great question.
+
+
+[Srinath Setty] (30:08 - 31:07)
+So it turns out I had written an article a while ago that shows how flexible Spartan is. So Spartan itself is a snark. It has two components, polynomial IOP and a polynomial commitment schema.
+
+
+And you can use the same polynomial IOP, but plug in different commitment schemes. And you get completely different properties. For example, if you plug in a small field commitment scheme, you get a small field snark.
+
+
+If you plug in a binary field commitment scheme, you get a binary field snark and so on. So I think this was one of the key insights here where you can use the best in class polynomial IOPs. So for R1CS, this turns out to be Spartan.
+
+
+And for memory checking, it's Twist and Shout. Mm-hmm. And then we can combine this with a very good binary field polynomial commitment scheme.
+
+
+And then we suddenly have a snark.
+
+
+[Nico Mohnblatt] (31:08 - 31:16)
+Nice. So off-the-shelf components connected together in a smart way, new circuit, and suddenly bam, Magnetar. Is that correct?
+
+
+[Srinath Setty] (31:16 - 31:17)
+Yes, yes.
+
+
+[Nico Mohnblatt] (31:17 - 31:26)
+Yeah. Am I correct also that the article you mentioned about Spartan and binary fields is that binary Spartan? And was that in response to Flock or are they unrelated?
+
+
+Yeah.
+
+
+[Srinath Setty] (31:26 - 32:00)
+So there was one other article that I had written a while ago on HackMD. This just describes Spartan as a polynomial IOP and how it's used in various places. Some people had used this in a small field setting.
+
+
+And I had alluded to how you can also do a binary field implementation of this by combining with, for example, Binius PCS. So yes, the work that Magnetar relies on is binary Spartan which is a concrete implementation of Spartan over binary fields.
+
+
+[Nico Mohnblatt] (32:00 - 32:07)
+The second part of my question was whether binary Spartan came as a response to Flock and whether they're related at all.
+
+
+[Srinath Setty] (32:08 - 33:06)
+I think when the Flock paper came out, I was super excited to see all the results. I was also curious what one would get if you just implemented Spartan over binary fields. So what performance we can get.
+
+
+So in a way, you can look at Flock as they start with Spartan. They apply some well-known optimisations that were present before Flock. But they also created a few optimisations of their own.
+
+
+So I was curious what happens if we took Spartan and applied all the optimisations that we knew, for example, in the prime field setting or in the elliptic curve setting. So what performance we could get. Turns out I was able to get very close to Flock's performance.
+
+
+I think it was within a factor of two. And then with a few more engineering optimisations. So these are optimisations just to the implementation, no changes to the protocol, no new algorithmic innovation.
+
+
+It matches the performance of Flock.
+
+
+[Anna Rose] (33:07 - 33:31)
+So kind of in the initial framing, you put, you know, a lot of the ZKVMs in the hash-based plus category. But Magnetar, as I understand, is in the hash-based category, like just hash-based. Why do that?
+
+
+Like, what do you gain from doing that? Is there some sort of performance gain? Is it because it's only hashes?
+
+
+Or is that sort of performance coming from somewhere else?
+
+
+[Srinath Setty] (33:31 - 34:07)
+Yeah, I think one of the original motivations was to build the most secure ZKVM just by relying on hashes and be general purpose. But it turned out once the implementation came through, it was faster than existing ZKVMs, even the ones that relied on all these additional assumptions, like elliptic curves and so on. So the ones which are hash and more schemes, internally they rely on elliptic curves or Poseidon for efficient recursion.
+
+
+Magnetar is more efficient than those by more than an order of magnitude.
+
+
+[Nico Mohnblatt] (34:08 - 34:18)
+Actually, yeah. Could you share a bit more about the performance and the proof sizes? Because we've talked a lot about Magnetar, but maybe it's not a good idea, you know?
+
+
+Like, is it any good?
+
+
+[Srinath Setty] (34:19 - 34:35)
+So I think the latest numbers in the paper are 7.2 to 8.7 million RV64i cycles per second on a laptop. And there's also an optimised version that can go up to 12 million cycles per second.
+
+
+[Anna Rose] (34:35 - 34:37)
+And how does that compare to existing systems?
+
+
+[Srinath Setty] (34:37 - 34:44)
+I think it's at least an order of magnitude faster than many of the hash and more schemes.
+
+
+[Anna Rose] (34:45 - 35:12)
+That's funny. So it sounds like your focus on being hash-based was not — I mean, at least the initial push wasn't necessarily for performance. It was for security, what you just said.
+
+
+It felt safer for certain kinds of computation. But why are you getting this improvement? Where is that coming from?
+
+
+You talked about the scheme and how you could plug and play stuff. But I don't really get what part of the stack is leading to that efficiency gain.
+
+
+[Srinath Setty] (35:12 - 36:47)
+Yeah, I think there are a couple of principles that can be used to explain both performance and also the design here. One of them, I think, comes back to this exploiting repeated structure. For example, when proving the execution of a processor like RISC-V, you repeatedly do the same thing.
+
+
+So for every cycle, you fetch the instruction, you decode, and then you execute. And then you fetch the next instruction, decode, execute. So this is like the repeated execution of the same thing.
+
+
+And this is exploited by this SIMD R1CS structure. And all the protocols around it exploit this to the maximum extent possible. Also, for example, Spartan internally is modified to exploit this kind of repetition.
+
+
+And this comes from the earlier 2021 work, which showed how to use the SIMD R1CS and also prove such instances. I think that is one exploiting repetition. The second is using the best memory checking protocols.
+
+
+So if you look at the existing systems, especially the hash and more schemes, they all rely on these so-called grand products or grand sum arguments. And for doing memory checking in this setting, they end up committing to much more data than strictly necessary because it's forced by the protocol used for memory checking. By using the best-in-class memory checking arguments, we cut down commitment costs significantly, and also the proving costs.
+
+
+[Anna Rose] (36:48 - 36:50)
+What are those best-in-class? Is that the twist-and-shout?
+
+
+[Srinath Setty] (36:51 - 36:53)
+Currently, it is the twist-and-shout protocol.
+
+
+[Anna Rose] (36:53 - 37:00)
+Okay. And what's special about twist-and-shout that makes it not need this grand sum argument?
+
+
+[Srinath Setty] (37:00 - 37:36)
+This is captured by the third principle, which is commit to as little as possible. And this is embodied by both Spartan and twist-and-shout. So if you look at inside the protocol, the amount of data that they commit to, because both of these schemes are based on the sum check protocol, so they commit to as less as possible.
+
+
+They also keep a lot of the data uncommitted and keep it virtual. So they end up committing only to the necessary data, which reduces the cost incurred in the commitment scheme.
+
+
+[Anna Rose] (37:37 - 37:46)
+So what were those three again? It's exploiting repetition, using the best memory scheme in class. I don't know how you said that.
+
+
+[Nico Mohnblatt] (37:46 - 37:48)
+Best-in-class memory checking arguments.
+
+
+[Anna Rose] (37:49 - 37:51)
+The best-in-class memory checking?
+
+
+[Srinath Setty] (37:51 - 38:48)
+Yeah, exploiting repetition is the first one. The second one is using the best-in-class memory checking arguments, which also allows us to avoid proving consistency among multiple witnesses. And the third, which is also, I guess, related to the second one, is commit to as little data as possible.
+
+
+And one more I would say is, at least in the binary field context, arithmetizing over multiple fields. For example, inside Magnetar, I said we have one circuit, but in reality, we have two circuits over the exact same witness. And one circuit is a binary circuit.
+
+
+So it just values our zeros and ones, and the only operations supported there are XOR and AND. And then we also have a circuit over an extension field. Here, the values are 128 bits, and you can do more operations.
+
+
+So the processor logic is split between these two circuits.
+
+
+[Anna Rose] (38:49 - 38:57)
+And is it more efficient because a lot can be run on that binary side? And you only sometimes need to use the 128-bit side?
+
+
+[Srinath Setty] (38:57 - 39:03)
+Yes, exactly. So if you just do either one, it's less efficient than having both of them simultaneously.
+
+
+[Anna Rose] (39:04 - 39:05)
+That's cool.
+
+
+[Nico Mohnblatt] (39:06 - 39:25)
+In a way, what you're saying also takes me back to debates, if that's the right word, about R1CS versus Plonkish as arithmetizations. And one of the arguments was often that R1CS doesn't have the copy constraints, so we don't have to commit to the same value multiple times. Is that something that features here, or is it just a weird parallel?
+
+
+[Srinath Setty] (39:25 - 39:48)
+Yeah, I think so. So R1CS has these linear combinations that allow you to take, for example, products of linear combinations and check it equals another linear combination. So you don't have to commit to those intermediate values that come out of these linear combinations.
+
+
+It certainly reduces the size of the witness. That's very interesting.
+
+
+[Nico Mohnblatt] (39:49 - 39:58)
+One thing we haven't asked about is proof size. Do we have big proofs, small proofs? In a way, it's easy to have a very fast prover if I allow very big proofs.
+
+
+[Srinath Setty] (39:58 - 40:18)
+Yes, so in the current implementation that is out there, the proofs are about 600 kilobytes. But by tuning certain parameters, without changing the prover's cost significantly, we can get it to 250 to 300 kilobytes. So I think this has been shown by other works.
+
+
+[Anna Rose] (40:18 - 40:45)
+Hmm. Have you followed what was happening with snark.fast and what it's done basically to the Flock implementation? Because I'm wondering if you would look for something like this on your side.
+
+
+Would that help with Magnetar? Are you thinking of actually setting up any sort of auto research competition? Because even what you just said, if you can tweak some parameters, you can definitely get that proof size lower.
+
+
+So yeah, I'm just curious if you're looking into ways to optimise that.
+
+
+[Srinath Setty] (40:45 - 41:11)
+Yes, so this particular tweaking that I referred to does change the verifier. So these are parameters that the verifier controls. But I think the auto research competitions typically fix the verifier and they allow only changes to the prover because the checks can now be automated.
+
+
+People can submit changes to the prover. I can run the prover on a bunch of inputs. And as long as my frozen verifier accepts those proofs and...
+
+
+[Anna Rose] (41:11 - 41:12)
+Then you know it's okay.
+
+
+[Srinath Setty] (41:13 - 41:34)
+Yes, yes, exactly. I think the auto research could still be helpful in this context because a lot of these times, there are various things that the prover does. Like for example, reading things from memory and so on.
+
+
+And those could be optimised heavily by AI. And people have shown that this can give significant speed ups to the prover.
+
+
+[Nico Mohnblatt] (41:34 - 42:09)
+By the way, we can also do auto research for the verifier with what ZK Golf was doing. Where instead of checking against the fixed verifier, we check against a fixed spec written in Lean. And we also ask participants to prove that their new implementation matches the spec.
+
+
+So, you know, not all is lost. If you want verifier optimisations, we can also set up some auto research. Yes, good point.
+
+
+Nice. We mentioned earlier a few applied works like Vega, which we didn't really explain what it is. But I was wondering if now that you have Magnetar, you'd have more applied works using the ZK VM.
+
+
+[Srinath Setty] (42:09 - 42:42)
+Yeah, I think it does make building new applications easier at the cost of some performance, I think. For example, if you were to rebuild Vega on top of Magnetar, I think it's a significantly smaller effort than what was incurred to build Vega itself. So I think there are many such applications that could potentially be implemented on top of Magnetar and then optimise them.
+
+
+I think that could be a useful future work.
+
+
+[Anna Rose] (42:42 - 42:46)
+Just to check, was Vega actually implemented? It was, right?
+
+
+[Srinath Setty] (42:46 - 43:05)
+So Vega is fully implemented. There's a paper that describes this. It appeared at IEEE S&P last year.
+
+
+So this work is currently being written as a standard by some folks in the EU in service of the EU DI project.
+
+
+[Nico Mohnblatt] (43:06 - 43:14)
+Oh, cool. Actually, maybe we could explain what Vega is. We've mentioned this in passing a few times, and I think for listeners who don't know what it is, it might be unclear.
+
+
+[Srinath Setty] (43:14 - 44:22)
+So Vega is a zero-knowledge proof system that's targeting a specific class of applications. And these applications are so-called client-side proving applications. Here, you have some private data, and you want to run the prover on the client-side.
+
+
+So you really want this prover to be lightweight and then produce a zero-knowledge proof of some statement that the verifier is interested in. So in the particular implementation, we targeted proving statements over mDL, which is a standard for digital identity. So is this similar to Google's Longfellow effort?
+
+
+Yeah, I think it's very similar. The main difference is on the proving side. So Longfellow uses GKR plus Ligero, whereas in our work, we use Spartan plus some folding schemes to make...
+
+
+I think there is some difference in performance. So our prover is more efficient, proofs are smaller. But of course, our system uses elliptic curve assumptions.
+
+
+I think this assumption is fine, at least for this context, because the statement that we are proving is over ECDSA.
+
+
+[Nico Mohnblatt] (44:23 - 44:39)
+So it's relying on curves anyway. This is vintage Setty, you know? Folding, and I love it.
+
+
+Actually, one thing, this has actual zero-knowledge, right? Yes. Because we've been talking about ZKVMs, which don't have zero-knowledge, but here it's a privacy application, so...
+
+
+[Srinath Setty] (44:39 - 45:16)
+Yes, it is a privacy application. It has zero-knowledge, and we've obtained zero-knowledge again by folding. So we use folding not just for proving the statement by exploiting repetition inside the statement.
+
+
+So for example, when proving a statement over a credential, you have lots of repeated applications of the hash function. So we fold all of those. And to get zero-knowledge, we also fold a random instance.
+
+
+And this technique is called blindfold. It's used in many other places by other projects. And we show that this provides or it makes sure that the proof itself does not reveal anything about the underlying witness.
+
+
+Yeah, it's a lovely technique.
+
+
+[Anna Rose] (45:16 - 45:26)
+But if you were to re-implement something like this using the VM, I guess it would lose its privacy, right? Can you use the VM to do something like Vega?
+
+
+[Srinath Setty] (45:27 - 45:56)
+Yeah, I think it's certainly possible. But there is one aspect that you pointed out that's currently missing, which is the privacy. So we need to make these proofs zero-knowledge.
+
+
+It's possible. I think it will have low overheads to make it zero-knowledge. So once we do that, we can quickly build this type of applications on top of a VM with significantly less effort.
+
+
+I think the main cost will be performance. So it's going to be potentially slower than a hand-tuned solution.
+
+
+[Anna Rose] (45:57 - 46:05)
+Okay. Are there other kinds of applications that are sort of in your workshop that you are very excited to sort of deploy on such a VM?
+
+
+[Srinath Setty] (46:05 - 46:20)
+I think this VM opens up a lot of possibilities. I think there are many that I want to try and see if obtaining them through the VM is more practical than directly writing them as a hand-tuned circuit.
+
+
+[Anna Rose] (46:20 - 46:40)
+But I mean, given that it's a hash-based though, would you have to really rethink if they were based on like lattice structure or elliptic curve structure? I mean, Vega is an elliptic curve example. But like, yeah, I'm just wondering if you have to sort of completely rethink these applications because basically you're using a hash-based structure.
+
+
+[Srinath Setty] (46:41 - 47:04)
+Yeah, because the VM itself targets RV64. So anything that can be expressed efficiently there can be proven. So even lattice applications, like for example, if there's a lattice signature and we want to verify this, it's possible.
+
+
+Even elliptic curve signature can be verified on top of this. I think the main thing to look for is like, what's the cost of proving?
+
+
+[Anna Rose] (47:05 - 47:29)
+Got it. What about the security of the system? Sort of, you mentioned you haven't yet included formal verification, but it's kind of in the plan.
+
+
+How do you plan on battle testing it? And actually, do you need to? Like, are you planning on deploying this soon in production?
+
+
+Do you want people to use it? Yeah, just share a little bit about what your plans are to make this or if you want to make this actually ready for anyone to try.
+
+
+[Srinath Setty] (47:29 - 47:54)
+Yeah, so we have built this with careful code reviews. But of course, the gold standard is formal verification. That's, I think, to be done.
+
+
+And then there are more features to be built here. Like recursion is not there. ZK is not there.
+
+
+So there are a bunch of these features that need to be added before real applications could be built on top of this.
+
+
+[Anna Rose] (47:54 - 48:04)
+Okay. And who do you expect to deploy it? Like, do you expect maybe Ethereum to use something like this instead of what they've been building?
+
+
+Or would you imagine Microsoft having a VM?
+
+
+[Srinath Setty] (48:05 - 48:15)
+I think at the moment, this is a research advance. I think this could be potentially used in many different places. Wherever there is a need for a ZK VM, this could be that ZK VM.
+
+
+[Nico Mohnblatt] (48:16 - 48:38)
+Cool. So it sounds like recursion, ZK are still in the works. You've hinted that, you know, the idea that maybe folding can help there, but maybe you have other ways of doing it.
+
+
+I was curious also, client-side proving. You mentioned it for Vega. If we're talking about replacing things like Vega with Magnetar, do you foresee Magnetar being proven on a phone or in a browser?
+
+
+[Srinath Setty] (48:38 - 49:18)
+Yeah, I think there's more work needs to happen to make it happen to allow client-side proving. One is, of course, the missing ZK. And the other thing is to control space.
+
+
+For example, you want to make sure the space used by the prover is small enough so that it can run on a phone. I think it's for some applications, I think this is totally fine. Like, for example, if your application only has a million cycles of RISC-V or something, I think then it's possibly fine.
+
+
+But more optimisations would, I would say more engineering optimisations would be necessary to control space. So space here is memory, right?
+
+
+[Nico Mohnblatt] (49:19 - 49:20)
+Yes, yes. Concretely, yeah.
+
+
+[Anna Rose] (49:22 - 49:41)
+All right. Well, thank you, Srinath, for coming on the show and sharing with us kind of an update on your research, going over some of the papers and areas that you've been focused on, and then obviously introducing us to Magnetar, how it's been built, why it's kind of optimised, why it has these performance gains. Thank you so much for that.
+
+
+[Nico Mohnblatt] (49:41 - 49:58)
+Thank you for having me here. Yeah, congratulations, Srinath. You know, these have been three years of incredibly productive works, and every time there's a new Srinath paper coming out, I'm like, wow, they did it again.
+
+
+So really happy to see those past two years. Looking forward to the next three. Thank you so much.
+
+
+This was a great conversation.
+
+
+[Anna Rose] (49:58 - 50:05)
+Thanks. I want to say thank you to the podcast team, Henrik, Rachel, and Tanya, and to our listeners. Thanks for listening.
