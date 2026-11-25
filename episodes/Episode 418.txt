@@ -1,0 +1,973 @@
+﻿[Anna Rose] (0:05 - 2:06)
+Welcome to Zero Knowledge, I'm your host, Anna Rose. In this podcast, we will be exploring the latest in zero knowledge research and the decentralised web, as well as new paradigms that promise to change the way we interact and transact online. This week, Nico and I speak with Giacomo Fenzi and Guy Weissenberg of EPFL about FlashProve, a new proving system which was built in collaboration with Anthropic for provable inference.
+
+
+We start with a quick update on the Proximity Prize, which Giacomo spoke about the last time he was on the show. He shares how an AI-assisted submission on Better.Codes has led to a major coding theory breakthrough. We then dive into FlashProve, which is a ZK system that proves which model answered a request and that the answer was computed correctly, while keeping the model's weights and internals private.
+
+
+We cover how this compares with earlier ZKML work, why FlashProve uses a proof system tailored to the model instead of using a ZKVM, and how their use of another research contribution of theirs, ZO0K, makes adding zero knowledge nearly free. We then discuss possible use cases for FlashProve, such as contributing towards pacing, approved model audits, and protecting against weight theft. Finally, Giacomo and Guy describe what it's like to build a proof system together with Claude, how they used Lean as the guardrails, how they needed to steer or stir a stubborn collaborator, and they describe the innovative Fiat-Shamir DAG trick it came up with.
+
+
+So hope you enjoy. Now, here's our interview about FlashProve with Giacomo and Guy. Today, Nico and I are here with Giacomo Fenzi and Guy Weissenberg, both PhD students at EPFL in the Computational Security Group with Alessandro Chiesa.
+
+
+Welcome Guy and welcome back Giacomo.
+
+
+[Giacomo Fenzi] (2:06 - 2:08)
+Thank you. Thank you for having us, Anna. Always good to be back here. 
+
+
+[Anna Rose] 
+Hey, Nico.
+
+
+[Nico Mohnblatt] (2:08 - 2:14)
+Hey, Anna.
+
+
+Hey, Guy. Hey, Giacomo. Well, Guy, nice to meet you and Giacomo, nice to see you again.
+
+
+[Anna Rose] (2:14 - 2:24)
+I think as a starting point, Guy, this is the first time we're meeting you. So I think it would be great to learn a little bit about you, about what you're working on at EPFL. Yeah.
+
+
+Tell us about yourself.
+
+
+[Guy Weissenberg] (2:25 - 3:11)
+Yeah. So I'm a PhD student at EPFL, like you said, and at heart, I'm a theoretical computer scientist. So I am mainly interested in phenomena related to locality in very different aspects.
+
+
+So like, for example, you can think about it from the perspective of coding theory where you have locally decodable codes or locally testable codes, or you have algorithmic properties related to that you would want to find out locally. And most of all, I'm interested in the interactive proof system, which kind of like are the pinnacle of what locality phenomena give you. And that is what led me towards working with Alessandro.
+
+
+And recently, I've been interested in kind of finding out the interplay between interactive proofs and AI safety. And there seems to be a lot of that. And I think FlashProve is like an example of the potential that exists in the interaction between two fields.
+
+
+[Anna Rose] (3:12 - 3:12)
+Cool.
+
+
+[Nico Mohnblatt] (3:12 - 3:17)
+It's interesting. We've never had this locality angle to succinct arguments. We usually have the cryptography angle.
+
+
+[Guy Weissenberg] (3:18 - 3:41)
+I think that one is the correct one, to be honest. But I mean, from a theory perspective, I think that is what is cool about it. You know, like you take a computation, it's huge, and you can only check it in like a very small number of locations.
+
+
+That's making it like a very global property of correctness to a very local one. So yeah, so from that perspective, I think it's a locality phenomena. And also hash-based and cryptography, of course.
+
+
+[Anna Rose] (3:41 - 3:46)
+When you say locality, can you define that a little bit more for me? What do you mean exactly?
+
+
+[Guy Weissenberg] (3:47 - 4:42)
+Well, the part of the magic is that it's vague. And in every context, it means something else. But you can think about it like, let's think about it in the algorithmic setting, right?
+
+
+Let's say you have a graph and you want to learn some properties of the graph, but you don't want to read the entire graph. So you want to make some small number of queries to the graph and get some global property of it. So can you do that without reading the whole graph, right?
+
+
+So that's in the graph setting and in the proof system setting, as I mentioned before, it's kind of like the computation where you kind of take the global correctness and kind of spread out the error so that you can make it local, so you can check it locally. And in coding theory, you know, like we have locally testable codes that you take your message and you encode it into a code that you can check with, I don't know, three queries if the code word is in the code or like it's far from the code. And that is like also one of the fundamental tools that are used for interactive proofs and IOPs as well.
+
+
+[Anna Rose] (4:42 - 4:53)
+But when you're saying local here, it almost sounds like you're just sampling. Or do you mean like locally on your own device? Like this is maybe, or maybe neither of those things.
+
+
+Sorry if I'm misunderstanding the term. No, no.
+
+
+[Guy Weissenberg] (4:53 - 5:05)
+So I think it's the first one. It's the first one. It's like locally for me means like you're only you're trying to learn like global properties of a huge object by making a small number of samples or queries to the global object.
+
+
+[Anna Rose] (5:05 - 5:16)
+But isn't that just like Fast Fourier transform? Like, aren't there so many technology, like so many algorithms that are just sampling at different locations? Like, it's funny.
+
+
+I've never heard it referred to as like locality.
+
+
+[Guy Weissenberg] (5:17 - 6:23)
+Right. But think about it, right? Like if you were to give me, oh yeah, I computed your circuit correctly, right?
+
+
+And now I give you the computation trace, but I only cheat in one place and it made the whole computation kind of like incorrect. You know, how would you, how would you tell me that the computation is incorrect? You would have to, you would have to read the whole thing, right?
+
+
+And that's, that's one, one thing that you don't want to do, like as a verifier in a, in a system, like you don't want to read the whole computation trace. So what you do is you like, you do some fancy machinery involving PCPs and IOPs and hash functions and all of that. So that in the end, the verifier can only sample some number of locations, right?
+
+
+And even just sampling that, you'd still be able to find what you're looking for. Exactly. So like one thing that like, I think Irit Dinur had a proof of the PCP theorem in which he calls it like gap amplification.
+
+
+So you take a gap between correct proof versus incorrect proof that is kind of like one over the computation size and you make it within using like PCP technology so that the gap is a constant fraction. So you only need to sample like a constant number of bits to catch like an incorrect of a point in the proof.
+
+
+[Anna Rose] (6:24 - 6:27)
+Nico, are you familiar with this sort of term in this context?
+
+
+[Nico Mohnblatt] (6:27 - 6:40)
+Yeah. In this sense of sampling, it's what we do with all our like IOPs and PCPs and error correcting codes. It's just, it's rare that we refer to it in that way.
+
+
+So it's nice to have that angle. I'm really happy you brought it up.
+
+
+[Giacomo Fenzi] (6:40 - 6:45)
+Cool. Yeah, it's beautiful. Local to global, it's an incredible like trove of like beautiful things.
+
+
+[Anna Rose] (6:46 - 6:51)
+Giacomo, I want to also catch up with you. You have been on the show twice now.
+
+
+[Nico Mohnblatt] (6:51 - 6:53)
+He's our local Italian cryptographer.
+
+
+[Anna Rose] (6:54 - 7:02)
+And not only on the show, also at the Summit, we've seen you a bunch of times. So I kind of forget, was the first episode about WHIR or STIR?
+
+
+[Giacomo Fenzi] (7:03 - 7:12)
+So the first one I was here was STIR. So it was 2024, I think. So now, two years ago, maybe even three years ago, it might have been still 2023.
+
+
+[Anna Rose] (7:12 - 7:23)
+And you also gave a talk at ZK Summit on WHIR, then. That's sort of why I think I'm mixing it up. And then more recently, you also gave a talk on ZO0K.
+
+
+ZO0K? How am I saying it? Am I saying that right?
+
+
+[Guy Weissenberg] (7:24 - 7:35)
+ZO0K. ZO0K. Okay.
+
+
+Funnily enough, it only exists in our jargon, right? I don't think we ever wrote it in the paper. So yeah, just maybe people should know that it's the way we refer to this work.
+
+
+[Giacomo Fenzi] (7:35 - 8:01)
+It's actually now in the new version of the paper I put the repo. Oh, you added it. Yeah.
+
+
+But ZO0K, the funny thing is all the work that I do, like, there's never a correct pronunciation of the name. You can always pronounce it in two different ways. So not by design, I just thought it was STIR and STIR, WHIR and WHIR, ZO0K and what do you say, ZAK?
+
+
+No, something. ZO0K is what you say. Yeah.
+
+
+ZO0K?
+
+
+[Anna Rose] (8:01 - 8:02)
+I don't know.
+
+
+[Giacomo Fenzi] (8:04 - 8:06)
+Yeah. Okay. So let's take it back to where we were.
+
+
+[Anna Rose] (8:07 - 8:45)
+So we have a bunch of touch points and actually a number of links that we can add in the show notes to kind of talks or these episodes that we had with you. But I think the most recent episode you did was actually with Nico. I wasn't there.
+
+
+And it was a video episode on Lean Ethereum and the Proximity Prize. I think this is pre Better.Codes. So we know it's evolved since then. I think it might be cool to just catch up a little bit with you on that point.
+
+
+And then obviously we're going to talk a lot in this episode about FlashProve and ZO0K and all of the other work you've done since.
+
+
+[Giacomo Fenzi] (8:45 - 8:55)
+Yeah. At the time it was still when AI was starting getting good at math, but not to the point where it is now, which is kind of worrying because it was not that long ago.
+
+
+[Anna Rose] (8:55 - 8:59)
+No. February or January, I think, when you guys did that episode.
+
+
+[Giacomo Fenzi] (8:59 - 11:05)
+It must have been. And yeah, so we since then, we launched Better.Codes that has been following these like steps of like this auto research competitions. The Proximity Prize was about settling an open question in coding theory, with Reed-Solomon Codes in particular.
+
+
+And so we made this leaderboard together with the wonderful guys at Yukon, with Kobi and other people, in which you could like submit proofs that you were doing progress on this coding theoretic challenge. And what really happened, it was extremely surprising, is that it broke like a longstanding barrier in coding theory. When did this happen?
+
+
+So I know exactly it was in August. It was in August, like right when I was visiting Stanford. And at the time, me and Dan were like thinking, Gal also came by on the Proximity Prize.
+
+
+And I remember that when they went on the leaderboard, it went past 64 bits and to 64.01. I just ran to Dan's office, kind of like, Dan, have you seen this? And then we had like this like moment, we were like for like, you know, 20 minutes trying to run our agents to figure out what the hell was going on. And we did not manage to get any progress there.
+
+
+And they were like, oh, maybe it's a fluke, maybe an approximation, maybe it's something weird. And in reality, the beautiful thing is that there was a new algorithmic technique, which then a few people managed to, they wrote a paper about it, in which they showed that basically these techniques give you optimal list decoding and mutual correlated agreement of Reed–Solomon codes over prime fields up to capacity, which is incredible. Yeah, it's a huge breakthrough.
+
+
+Yeah. So cool. It's an open question that's been going on, I think, from either 60 or 40 years.
+
+
+And this origin came from like this auto research competition in which an algebraic geometer, we together with these agents managed to like find a single new trick, a single new idea. Who was it? Yes.
+
+
+So his name is Bartosz. Yay!
+
+
+[Anna Rose] (11:06 - 11:18)
+Wait, Bartosz was just on the show like two weeks ago. I was! No way!
+
+
+It's funny, I don't think he really highlighted that on the show, so I didn't realise that it was him. But that's awesome.
+
+
+[Giacomo Fenzi] (11:18 - 11:26)
+Yeah, it's incredible. I think it was Bartosz Naskręcki? I will butcher the name, let's not go with the surname in the final version.
+
+
+[Anna Rose] (11:26 - 11:32)
+I could try. I actually did practise, but it's like Bartosz Naskręcki, I think is how you say it.
+
+
+[Giacomo Fenzi] (11:32 - 11:32)
+Oh, wow.
+
+
+[Anna Rose] (11:33 - 11:33)
+Yeah.
+
+
+[Giacomo Fenzi] (11:33 - 11:34)
+I would have never guessed in a million years.
+
+
+[Anna Rose] (11:35 - 11:38)
+I hope I got that right, Bartosz. Yeah.
+
+
+[Giacomo Fenzi] (11:39 - 12:45)
+So this was incredible and I'm separately aware of some other breakthroughs in the Proximity Prize that will probably eventually be public, but it's really, really exciting. There's like a lot of progress. There's been papers.
+
+
+This particular paper that understood the trick and extended it to get the asymptotic result was submitted to STOC. I hope it gets in because it's a wonderful paper. And I think it's really exciting.
+
+
+The Proximity Prize is not solved yet. We still have like a substantial gap between like what we have proved and what we can prove is not possible. It is shrinking.
+
+
+Like with the release of 6.2 Astra, I think they made some progress now. Yes. There were some recent like progress, like actually just yesterday.
+
+
+But right now, you know, deadline is like incredible theoretical breakthrough, asymptotically the question is settled. Now for what we care for concrete proof systems, there's still like a substantial gap and there's still a lot to figure out there. So I'm really excited to see, you know, how close we can get this.
+
+
+I think it's a super good benchmark for also how good models are becoming.
+
+
+[Anna Rose] (12:45 - 13:00)
+How will it work with the prize itself? Because originally a million was put up by Ethereum Foundation. Like are you distributing this through Yukon in like a weekly fashion?
+
+
+So it's not necessarily like one big prize or is it yeah. How is it sort of designed?
+
+
+[Giacomo Fenzi] (13:00 - 13:04)
+Currently, we are in the situation where we are not committing exactly to how we will be released.
+
+
+[Anna Rose] (13:05 - 13:05)
+OK.
+
+
+[Giacomo Fenzi] (13:05 - 13:52)
+But roughly there are two prize pools. One part is we decided to allocate to the auto research competition. So at some point we will probably retroactively award it to people that were on the challenge and were in the progress.
+
+
+And on the other side, there is a discretionary fund that as judges we can decide who to award to. Cool. So I think right now things are moving very quickly and I would like for things to settle down, you know, both in like the challenge and in my life so that I have some time to figure out what happens with the prize.
+
+
+And also it's not only us. It's me, Dan, Gal, there's the Ethereum Foundation. There's a lot of stakeholders.
+
+
+So I don't want to really commit myself to more than what I said. But cool. You know, the prize will eventually be distributed.
+
+
+[Anna Rose] (13:53 - 14:09)
+This is really helpful. I feel like from the outside from it, like I've been following obviously Better.Codes, but I wasn't clear on this part of it, like how the judging is going, how you're thinking about it. But this is helpful.
+
+
+I think also maybe to the people who are participating. It's good to hear an update.
+
+
+[Giacomo Fenzi] (14:09 - 14:11)
+Yeah. Yeah. I think it's good to have it.
+
+
+[Anna Rose] (14:11 - 14:35)
+Cool. All right. So in this time since our last episode, this is sort of our update on the Proximity Prize side of things.
+
+
+But we know you've been working on something else that was recently released, and that is the FlashProve. You and Guy and a number of authors published this on the Anthropic blog. Can you share with us what is FlashProve, but maybe even like how did this come together?
+
+
+[Giacomo Fenzi] (14:36 - 15:32)
+Where does this story start? So it's a funny story because I think this originally started back when I was visiting down in Stanford. Stanford is a wonderful hub for a lot of collaborations.
+
+
+And some researchers from Anthropic came to give a talk about cryptography in the age of AI, which I think is a very pertinent topic nowadays. And we started chatting. And from there, like we got introduced about this problem that we don't really know much about of AI verification, which is roughly this whole area of figuring out how to use the hardware and software tools in order to give tools to ensure that AI development are done responsibly.
+
+
+And so we started talking with Anthropic about this. And one of the tools that seemed interesting in this area for the software part of verification was zero-knowledge proof. And this is where FlashProve kind of came about.
+
+
+[Anna Rose] (15:33 - 16:02)
+When I read it, I mean, what came up for me immediately was sort of ZKML, like the topic that we had actually been talking about back in 2023, but was, you know, at the time the proving systems, the proof systems maybe weren't there or the concept wasn't fully fleshed out. Is that where this falls or is it like different because you're focused more on like AI research itself? And maybe we should just make a distinction or kind of compare it to ZKML and what that was.
+
+
+[Guy Weissenberg] (16:03 - 16:53)
+So I think in some sense it is. So the thing is that it's not a new category. It's actually another work in this line of work of ZKML from that perspective.
+
+
+So it doesn't, yeah. So it doesn't create its own category from that perspective. But what it does is that it takes some of the ZKML work and just makes it so that it is practical in a sense, right?
+
+
+So now the scale of it was, is the new contribution of this work. So from when you, when you try to position this in the context of prior work, it belongs in this line of work of ZKML. But whereas prior work focused on maybe smaller models or more toy examples, this one seems to be unique in the sense that it is about real life, a model that people might actually use in the real world.
+
+
+[Anna Rose] (16:53 - 17:05)
+Is it based on or based within an existing model that's live today? Or is it like, does the model have to be rethought for it to have AI verification within it?
+
+
+[Giacomo Fenzi] (17:05 - 17:22)
+The model itself is a 4-bit quantised version of the Llama 4 Maverick model, which is a 400 billion parameter, a mixture of experts, a model. God, I hate machine learning people. It's a mouthful.
+
+
+So this can be on the record.
+
+
+[Nico Mohnblatt] (17:25 - 17:42)
+Like you were saying, representative of what like these large models are like today, like a lot of parameters, mixture of experts, and we try to prove things. One thing we didn't do properly is like define what we mean by AI verification or ZKML. You know, we haven't actually sat and said, what is FlashProve doing?
+
+
+[Giacomo Fenzi] (17:43 - 18:39)
+Yeah, so at a high level, the way you should think about FlashProve is this. You have some model, and this is a model that you're planning on serving. And the model is your own proprietary model.
+
+
+You have your weights. You would like to give the guarantee that when a user gives you a prompt or somebody gives you a prompt, you can show that when you run this specified model, it will give you the answer that you claim it will give you. So the interface, you should think you take the weights, your commitment, commitment in some way, which does not reveal anything about the weights.
+
+
+You publish the short commitment somewhere. And then later on, when the request comes in, you can give a proof. And the proof relative to the commitment that you published will only verify if the provider served you with the right model and the right inference.
+
+
+So this is the fall in the line of a verifiable inference that a lot of ZKML papers also try to approach.
+
+
+[Nico Mohnblatt] (18:40 - 18:49)
+This reminds me of some of Dan Boneh's work, actually, where he had functional commitments and things about committing to models and proving they were run correctly. I guess it's the same thing.
+
+
+[Giacomo Fenzi] (18:50 - 19:05)
+Exactly. You can think of that the model weights are, in a certain sense, a description of the function that you want to evaluate. The inference is the evaluation operation.
+
+
+So these are, in a certain sense, it's a functional commitment of a ML model.
+
+
+[Anna Rose] (19:05 - 19:19)
+Something I've been trying to understand, though, is who's proving what to who? Like, is the model proving to you as the user that it is correctly doing what it says it's doing? Or are you as a user of it proving to someone else that you're using that?
+
+
+[Guy Weissenberg] (19:20 - 20:09)
+So the right way to think about it is that the model is going to serve you an answer for your request. Right. So like you will get an answer to your prompt.
+
+
+And then it will also attach a proof to that, saying that the model that was committed was indeed ran to produce the response that you got. So because of the overhead that naturally occurs in this kind of system, you wouldn't expect it to be like an online thing. So you wouldn't expect for every token to be generated together with a proof.
+
+
+Right. So like what will happen is that you will aggregate many responses and then in an offline phase, you will kind of like, not in offline phase, but in like every specified number of queries, say, you will send it to like another server and ask it, can you produce a proof for this batch of requests? And then it will generate a proof for this number of requests.
+
+
+[Anna Rose] (20:09 - 20:13)
+Are you using a ZKVM for that sort of offloading, that third party?
+
+
+[Guy Weissenberg] (20:14 - 20:57)
+No, but I think what is interesting about ZKVM in this context, I think, if I understand the question correctly, is that we wouldn't want to use a ZKVM because this is a generic tool that might be too heavy for our purposes. Right. So like what we end up actually doing is we are using the structure of the computation at hand when we make a white box use of that for performance.
+
+
+Like, for example, the mixture of experts model allows us to gain some efficiency benefits because not all the parameters are being evaluated at the same time because you have to choose the right experts to evaluate. And this is something that we take advantage of in a very white box way. Whereas if you wanted to think about it in a like a black box ZKML version, then it would be more difficult to use.
+
+
+[Giacomo Fenzi] (20:58 - 21:10)
+Maybe, yeah, in addition to what Guy is saying, it's kind of, a ZKVM gives you a lot of benefits, but in that it is really, really general. But if I want to be fast, I would like my proving to be as tailored to the things that I want to prove.
+
+
+[Speaker 5] (21:11 - 21:11)
+I see.
+
+
+[Giacomo Fenzi] (21:11 - 21:34)
+So, for example, if I think of multiplying a matrix, if I do it in a general programme, then I might need to, you know, emulate each RISC-V instruction for each matrix operation. But if I know that all I want to prove is matrix multiplication, then I can design my proof system to be really tailored to that. And this allows you to have less overhead than what you would have if you had to go the fully generic route.
+
+
+[Anna Rose] (21:35 - 21:47)
+Is that then what FlashProve is? Is FlashProve the ZK part of that, like the specific bespoke proving systems that allow for this?
+
+
+[Giacomo Fenzi] (21:47 - 22:35)
+Exactly. Okay. FlashProve is this system that, you know, basically giving you the weights, the input and the output, allows you to prove an inference.
+
+
+And it's a tailored proof system, which is really tailored to the model that we were trying to build. And I mean, in addition to what Guy was saying before about the difference between ZKML and this verification landscape, what we really hope that this works helps is having a good performance open source library that shows that this particular thing can be practical for like models of, you know, reasonable concrete size. And what I find it really exciting to me, like I've been in ZK for like not too long, I think now is five years.
+
+
+And what I...
+
+
+[Anna Rose] (22:35 - 22:39)
+Pretty long in the history of ZK that we know in our era.
+
+
+[Giacomo Fenzi] (22:39 - 23:47)
+Pretty long in the history of ZK, but, you know, I was used to like seeing that the overheads of like proving in ZK over proving like native computation used to be like in order of like four or three orders of magnitudes. Here, the overhead that we get is like less than two orders of magnitude. We get roughly a 70x overhead over the native computation.
+
+
+And even that is slightly being too conservative. I think our actual overhead is lower than that. Amazing.
+
+
+And so this is really, really exciting to me that we can prove this computational like less than a two order of magnitude speed up. This is, I think, the big contribution of FlashProve. And the reason we had to do that is because we believe that AI verification is not just something which is in the pipeline of dreams.
+
+
+It is something that we probably will need soon. And it is important to have a solid solution for this thing, because through ZK, I think a lot of the verification dreams live through. So this is why, you know, Roy, which is our main point of contact at Anthropic, felt that it was a timely moment to work on ZK.
+
+
+And so I think this is the main thing that I think FlashProve contributes.
+
+
+[Nico Mohnblatt] (23:48 - 24:10)
+This is great because you've now opened up sort of three roads, three things I really wanted to talk about with you guys today is how does FlashProve work? Like look at the internals, why it's useful, like what do we want from it? And also why is Anthropic looking at this?
+
+
+So like within one answer and one sentence here, you sort of pointed to all three, which is great because like now I just let you free roll on all those things.
+
+
+[Anna Rose] (24:10 - 24:21)
+Wait, just before you do that, I just want to double check. When you said order of magnitude, I didn't get the number. Is it 0.7?
+
+
+No, 70x, 70 times. 70x.
+
+
+[Giacomo Fenzi] (24:21 - 24:21)
+Yeah.
+
+
+[Anna Rose] (24:22 - 24:23)
+Okay. And what was it before?
+
+
+[Giacomo Fenzi] (24:24 - 24:36)
+My mental model before this work was that and actually before Flock, because Flock also has similar types of overhead, would be three or four orders of magnitudes over the native computation.
+
+
+[Anna Rose] (24:37 - 24:50)
+Okay. And this is me as like maybe not deep enough in the field. But when you say 70x, why is that better than 3x?
+
+
+Like I'm confused by this comparison. Like don't you want less overhead?
+
+
+[Giacomo Fenzi] (24:50 - 25:09)
+Yes, you always want less overhead. But 70x is a two order of magnitude because an order of magnitude is like 10 to the power. So if it is two orders of magnitude, it is 100x, three orders is 1,000 and so on.
+
+
+So 70x is like two orders of magnitude.
+
+
+[Anna Rose] (25:09 - 25:11)
+Got it. Okay. Makes sense.
+
+
+[Giacomo Fenzi] (25:11 - 25:26)
+So we're very happy. Just kind of my original mental model was that proving would be roughly, you know, 1,000 on 10,000 times slower. And now we have 70, maybe we have even 50, depending on how you measure, which is super exciting to me.
+
+
+[Anna Rose] (25:27 - 25:27)
+Nice.
+
+
+[Nico Mohnblatt] (25:27 - 25:42)
+Actually, that's another thing that I wanted. I've mentioned these avenues earlier of like how it works, etc. There's another one is the role of optimisation and AI in optimising its own verifier, you know?
+
+
+Yes. We started with Flock, but I'm curious how much of a role it played here.
+
+
+[Anna Rose] (25:42 - 25:43)
+Nice.
+
+
+[Giacomo Fenzi] (25:43 - 26:01)
+Well, I can say that maybe, you know, that we wrote not a single line of code. We checked the Lean, we checked the proof system, we checked the papers, but we ourselves did not run a single line of code. And what I can say is that these models are really good at writing performance code.
+
+
+[Nico Mohnblatt] (26:02 - 26:07)
+Can I pick up on one thing? You said we checked the proof system. That means the model also came up with a proof system?
+
+
+[Giacomo Fenzi] (26:07 - 26:55)
+So the model came up with part of the proof system. Wow. We steered it along directions that we, that we thought were more interesting.
+
+
+The model started, we had like some suggestion. It came up with some prototypes. These prototypes were doing some things well, while some things they were doing, in my opinion, very suboptimally.
+
+
+So from there we started like steering it and asking it to change various parts. Is a stirring pun? Let's say it is.
+
+
+But yeah, so in the same way in which you might talk with a collaborator about designing a proof system and trying to like change parts to like different components, we add this kind of like feedback loop with the models to to develop it.
+
+
+[Nico Mohnblatt] (26:56 - 27:05)
+Super interesting. I think we're at a good point to know about how FlashProve works and what's this architecture and maybe what mistakes the model made in trying to build FlashProve.
+
+
+[Guy Weissenberg] (27:05 - 27:25)
+So I think when you think about the proof system itself that FlashProve is built with, then there are two parts of it. The first part is like the arithmetization, where you take the model and the way it works in a white box way, like, you know, the structure of the architecture. So like you try to utilise that in order to reduce it to a proximity test with linear constraint.
+
+
+[Anna Rose] (27:25 - 27:28)
+This is the quantised Llama 4 that you're talking about?
+
+
+[Guy Weissenberg] (27:28 - 28:30)
+Right, right. So like you start with, you start with that computation, which, you know, in usual proof system, like landscape, it would have been like an R1CS instance. And then what you do is like you reduce it to an, a proximity test, right?
+
+
+With linear constraints, like in WHIR or in ZO0K. But now we know the structure and we want to take advantage of that. And this is where Claude was very, very useful in trying to give ideas for how, for how to reduce the specific computation towards a proximity test with linear constraints.
+
+
+And then for, for the proximity test with linear constraints, this is where we kind of know how to do, right? Because this is where, where things are kind of well-studied and this is where we could apply, for example, ZO0K or like the zero-knowledge version of, of WHIR. So this is the high level structure of the, of the proof system.
+
+
+And the place where Claude was the most useful at was the arithmetization part, like to kind of use the white box structure of the computation and suggest how to translate it to linear constraints.
+
+
+[Nico Mohnblatt] (28:31 - 28:40)
+Does it look like anything we're used to? Does it look like R1CS? Does it look maybe like errors with, you know, permutations and lookups or is it completely different?
+
+
+[Giacomo Fenzi] (28:40 - 29:48)
+I would say that it looks relatively standard. There's a few tricks that are being used to like speed up some type of computation, but it looks similar to things that we've seen previously in the ZKML literature. So a lot of lookups, speeding up the matrix multiplication with some tricks.
+
+
+It's, but overall, I think if you're a proof system expert and you look at the FlashProve, you will not see something too out of the ordinary. Am I going to see a sumcheck in there? You will see a lot of sumchecks in there.
+
+
+Like it's very similar to the, to the many proof systems that we have, which have a multilinear arithmetization of some sort, and then we just check using sumchecks. And this for us is great because it is a battle-tested cryptography that we know a lot about. We have analysed it.
+
+
+We've written the proof many times. And, you know, one of our point of this is that there are a lot of tricks here which are different because of the setting that we're in, but the cryptography is, you know, good old battle-tested, you know, code plus IOP, hash-based SNARKs plus thumb check techniques.
+
+
+[Nico Mohnblatt] (29:48 - 30:03)
+You say good old battle-tested, but ZO0K is from last year, right? Maybe, but yeah, tell us more a bit about ZO0K and how we get zero-knowledge because we say zero-knowledge proofs and ZKML, but ZKML was never ZK, whereas here I think FlashProve needs ZK, right?
+
+
+[Giacomo Fenzi] (30:04 - 31:25)
+Yes. Yeah. So FlashProve is good, it needs ZK because we do not want the provider to leak the model weights.
+
+
+In fact, maybe eventually one might also want not to leak the model architecture. There's many notions of ZK that one can consider. And one of the workhorses that powers ZZZO0K, which is this work that we did last year together with Guy and with Ale.
+
+
+And basically the pitch of ZO0K is that it is a proof system similar to WHIR in which you aim to get zero-knowledge at the smallest possible added overhead that you can. So our pitch, let's say, is that ZK is important. There are ways to add ZK to most proof systems, but most ways to add ZK, they incur a 2x overhead in either prover time or verifier time or argument size.
+
+
+With ZO0K, we worked very hard. We designed the proof system in a different way, we engineered it in a different way, so that the overhead over the non-ZK computation is minimal. I think in the version that we put online just a couple of days ago, the overhead is always below 2%.
+
+
+So adding ZK is basically free, which in my opinion, that means that nobody should ever do ZK without ZK anymore. They should just do ZK and be proper ZK because the cost is nothing and it means ZK.
+
+
+[Nico Mohnblatt] (31:25 - 31:32)
+This is my personal feeling. So I guess that's a high level idea of FlashProve, or are we missing a big component yet?
+
+
+[Anna Rose] (31:32 - 31:55)
+Well, I wondered what it was based on. So you said like it's using a lot of the techniques that we know and love and talk about a lot on the show, but is it similar to any other proof systems? Other than like, yes, it's using ZO0K, but is it like you kind of mentioned might be similar to Flock or are there other proof systems or research kind of papers that have come out recently that you were drawing on?
+
+
+[Giacomo Fenzi] (31:55 - 32:19)
+I think most of them, to be honest, like I mean, I don't think it is similar to Flock. I think it is similar overhead to Flock, even though like, yeah, so they have similar features, but I think the approach methodology is different. But really, I think a lot of the hash-based proof systems that we now use and deploy, they follow a very similar blueprint.
+
+
+And in my opinion, FlashProve is quite similar in that.
+
+
+[Anna Rose] (32:20 - 32:30)
+Guy, earlier on, you were talking about this sort of mixture of experts, and I had meant to ask you what you meant with that because I didn't really understand where that fit.
+
+
+[Guy Weissenberg] (32:31 - 32:38)
+Right. So a mixture of experts model is a specific architecture for inference. Or for LLMs. Ah, OK.
+
+
+[Anna Rose] (32:38 - 32:40)
+Yeah, this is the AI side. I wouldn't know anything about this.
+
+
+[Guy Weissenberg] (32:41 - 33:24)
+So the idea is that you have like the structure of inference is the following. Like you have matrix multiplications, you have routing steps, and then you have nonlinearities. And what is unique to mixture of experts is that the routing steps, they kind of determine which weights are activated.
+
+
+So not all of the weights of the model are activated at all times. This is kind of like, makes it so that even though the model has like 400 billion parameters, at each inference, only like 70 billion are activated. So in terms of efficiency, when you prove something, like you wouldn't have to run the 400 billion thing at all times.
+
+
+And you can make it faster.
+
+
+[Nico Mohnblatt] (33:25 - 33:42)
+Which is funny, right? Because these mixture of experts architecture came up to speed up hardware. We're like, OK, we have limited hardware.
+
+
+I want huge models, but I don't want everything to run at the same time. So people came up with this. And it's nice to see that it's also useful for us when we try to prove this computation.
+
+
+It makes sense, I guess. Exactly. Yeah.
+
+
+[Anna Rose] (33:42 - 33:52)
+That number, kind of like what mixture of experts, like what portion actually gets used, is that variable depending on the request or depending on the type of thing?
+
+
+[Guy Weissenberg] (33:53 - 34:11)
+Yeah, definitely. So, I mean, the specific experts that's going to run depends on your request. And there is a scoring mechanism that kind of determines which experts are supposed to run.
+
+
+And this all goes through the kind of the paradigm of linearities and nonlinearities, where the choice of experts will kind of leave somewhere in between.
+
+
+[Anna Rose] (34:12 - 34:19)
+But do you prove something about that? Like, is the ZK proof coming along with this mixture of experts?
+
+
+[Guy Weissenberg] (34:19 - 34:38)
+Right. So the specific experts that is chosen for every step of the inference is also hidden. So it will be part of the computation trace, like the specific choice of experts.
+
+
+But this is also kept secret. So like the verifier would also not know which experts ran because, you know, it might reveal something about the weights.
+
+
+[Anna Rose] (34:39 - 35:07)
+And maybe this is this other side. We kind of talked about AI verification more as like proving something has been done correctly. But this is where you've introduced the privacy part back into the fold, which is saying like, you know, yes, you can prove something about it, but here's where you kind of draw the curtain so that they can't see necessarily which mixture of experts will have like you're not you don't have perfect visibility into what's actually happening under the hood, but you can prove things about it.
+
+
+[Guy Weissenberg] (35:07 - 36:41)
+Yes, that's exactly the idea. And I think what is nice about this kind of thinking is that you don't only prove just the fact that the inference was done like the result is correct with respect to the committed model, but you actually prove that the computation trace that you commit to as your first message in the interactive proof is the trace of the computation for the model, meaning that, you know, like after every linearity, every non-linearity, you kind of like commit to something and you make sure that the model was computed in the way that you expect it to be. So who are the people, right?
+
+
+Like the people that we're talking about are the companies, right? Like the labs and they would want to keep the internals of their model secrets. So, for example, you wouldn't want to leak information about your weights in any way.
+
+
+That means that you don't want to leak like something about the weights during the commitment phase. And you also don't want to leak anything about the weights during the inference. Also, the routing steps should be hidden.
+
+
+So like you hide everything about the computation trace as well. What is maybe not hidden is the architecture. So we know that the architecture that the model is using is a mixture of experts.
+
+
+And within these constraints that we know the architecture, we can hide the weights. We can hide the computation trace, meaning the internal activations at every point of the computation. This is also hidden.
+
+
+So from that perspective, you also don't learn which experts ran. This is very important in a mixture of experts because knowing which expert ran at every part of the inference might reveal something about the weights. So this is also something that is hidden in FlashProve.
+
+
+[Anna Rose] (36:41 - 36:51)
+OK. Is the thing I'm trying to ask here is like, you know, like when you're working with a model, there's sort of different levels that the model gives you.
+
+
+[Guy Weissenberg] (36:51 - 36:51)
+Right.
+
+
+[Anna Rose] (36:51 - 37:01)
+Is that also something that could be hidden? I actually don't even know what that is exactly. Like, I don't know what's controlling that.
+
+
+But is that also something that is variable and could be hidden?
+
+
+[Giacomo Fenzi] (37:02 - 37:14)
+OK, so, yeah, that's kind of not really, I think. So I'm also not familiar with this part. But from my understanding is that it's just the level of reasoning just determine how many times you run the inference.
+
+
+[Anna Rose] (37:14 - 37:15)
+Oh, OK.
+
+
+[Giacomo Fenzi] (37:15 - 37:29)
+So each model is kind of like you should think of it as a block of inference. Each inference, I get you a token, a bunch of tokens in and I get a token out. The level of reasoning kind of like determines how many times you apply this operation and in which sequence in order to get the better response.
+
+
+[Anna Rose] (37:30 - 37:32)
+OK. Is that something that you guys would also hide?
+
+
+[Giacomo Fenzi] (37:32 - 37:52)
+So I think it's kind of like we look at the building block, right, inference. If you're trying to build a bigger system or you're like trying to prove like a lot more stuff and you're trying to actually prove an entire, for example, prompt, then this is probably something that you also would want to hide. But we currently like really only look at the building block.
+
+
+[Nico Mohnblatt] (37:53 - 38:02)
+By the way, we hide the model beyond what the inference alone tells us. Exactly. Because you still have this sort of distillation attacks of you do a lot of queries and eventually...
+
+
+[Guy Weissenberg] (38:02 - 38:17)
+You could, you could ask like, OK, what if the model, what if I asked the model for the, for the weight at this location, right? And maybe the model would be just very kind and will tell me that. That is not something that we currently defend against, but I agree that it is worth, worthy of consideration.
+
+
+[Nico Mohnblatt] (38:17 - 38:42)
+Yeah. So I was wondering why would we want to hide models? OK, I have a proprietary model.
+
+
+Sure. Why would I want to convince someone that I'm running it? Right now, I think people are very happy to pay Anthropic and OpenAI.
+
+
+Their subscriptions and they trust that they're getting served the right model. Right. So I was wondering, are there applications beyond just knowing, OK, I'm paying, I'm getting what I paid for?
+
+
+And why is Anthropic looking at this?
+
+
+[Giacomo Fenzi] (38:42 - 42:13)
+Yes, to me, so checking that the model you're served is the right one is one application, but in my opinion, not the most important one. I agree. What I find really interesting is the other ones that we highlighted also in the blog post, first and foremost, to me, it's pacing or like tools for pacing.
+
+
+So just, you know, to fill people in, I don't know, sure if, so there was this letter by Dario Amodei about pacing the frontier, which basically was this concept that like labs which are at the frontier, so that they are developing the frontier models, should have plans in place to slow down AI development in order for us to do more, to have more time in order to perform AI safety tasks. So this overall concept is what is typically referred to as pacing. How might we do that?
+
+
+Well, it's hard, there's like a lot of geopolitical interest. There's a lot of game theory in all of this. But one way that it can be done is through regulators who try to make sure that AI companies do not train new and powerful models unless they maybe have like done particular safety audits, for example.
+
+
+What FlashProve can help in, it's not a full solution, of course, is in trying to give these regulators tools in which, tools in which they can try to make sure that pacing is actually being enforced. So this, for example, might be, I don't know, say that you have a list of approved models, which are the only model you're allowed to serve to customers, then auditor might ask to see every once in a while a proof that all the requests came from an approved model. So maybe a company like Anthropic and OpenAI might not release their like dangerous, scary, like historian sits like terrible model, which is known for like, you know, not liking puppies.
+
+
+And the auditor can double check that each inference will serve from like one of the approved list of models, which are actually very happy to, you know, with puppies, for example. Or, you know, this can be used in combination with other tools to try to say like, look, to show that an AI company is spending all of its compute in inference and not on training new models. So this to me is the really exciting part of verification and where ZK has like a strong role to play.
+
+
+There are also things like internal security things for like, for companies. In particular, one of the things that we highlighted in the blog post is this concept of weight exfiltration, which is basically you want to protect against attackers who might compromise an inference server, for example, and then it might try to like use it to exfiltrate information about the weights. This is both like an IP problem for the company and also both a safety problem because if you release the weight of a sufficiently powerful model, this might change whatever the dynamics of like AI development.
+
+
+The good thing is that model weights are big, they're really big, they're terabytes of data, so moving them outside of a server in a covert way is very hard. The easiest way to do it is doing through the inference channel, because if you're in an inference server and I can answer inference requests, I can like, I can put data out. What you can do, for example, with FlashProve is if I have to prove that every 10 requests is done correctly, this limits the amount of information an attacker might be able to exfiltrate before it gets detected.
+
+
+So this is an internal security kind of application for FlashProve.
+
+
+[Guy Weissenberg] (42:13 - 42:48)
+I just want to add something that I think would like connects to what we talked about before. And I think what is nice about the current strategy that FlashProve takes is that, as I mentioned, it doesn't only prove to you that the requests were like are the right one, like their answers are correct, but it also proves to you something about the computation. So like in order to come up with the proof, you actually have to construct a computation in the right way.
+
+
+So when you think about pacing and tried trying to enforce some computational structure on the provider, it gives you also some like some benefit to make sure the computation was done in the way that you expect.
+
+
+[Nico Mohnblatt] (42:49 - 43:07)
+One of the topics I really want to ask both of you about is sort of this process of writing a paper with Claude in the loop and like reading Lean. And how is it for you guys as researchers working in that way and thinking in that way? And also, I don't know, seeing the AI talk about tools that you've been developing for years and be like, well, what's happening?
+
+
+[Guy Weissenberg] (43:07 - 44:45)
+Yeah, so Claude is very smart and it was a great collaborator and it was always very insightful to read what Claude had to say. And I think what was special about the way we communicated with it is that, you know, you kind of set the guardrails of what you're expecting using Lean proofs or like Lean statements, and then you tell the model, go crazy, right? I just, I wanted to prove a proof system with these constraints, right?
+
+
+I want soundness, I want zero knowledge and I want completeness. Now, have fun. And the fun that it had like culminated in FlashProve, and it was really exciting to see the improvements.
+
+
+Of course, our input, I feel like did make a difference in the end. And we were able to stir it, as Giacomo said before, towards something that is a bit more standard because, you know, there are ways of proving things that are more structured and more believable. Like, for example, like the mindset of proving hash-based systems, the proof to prove their sound, like it has a very concrete structure that in order to feel comfortable with, especially within Oracle model, there are ways to do that, right?
+
+
+And the model might try to find some more unique or different ways to go about doing things, but what was really nice is that, you know, you can kind of tell it what you expect more or less, and then you can stir its progress. And in the end, like, I think it was both theoretical contribution in terms of the arithmetization part, but also an amazing and incredible engineering work that eventually led to the amazing performance that we see.
+
+
+[Giacomo Fenzi] (44:46 - 45:59)
+Yeah, just in addition to what Guy is saying, is that Claude is really, really smart. It is also really stubborn, and there are some things that you have to really convince them that they did the right thing to do, especially when you know it is the thing. So I think I can talk about this, that we had to fight very hard to convince him that actually, yes, using list decoding regime instead of unique decoding is fine.
+
+
+That's interesting. Yeah, because he, you know, he did not believe that that paper was actually published when in reality it was. So there are some limitations.
+
+
+I think it's really good in that he explores a lot of things, but sometimes he kind of like gets stuck in the like, let's call it the local minima, what he thinks is the optimal way of doing things. And then you have to like babysit him and getting out of the value of optimisations. So it's like, there's a few decisions that he made.
+
+
+And my mental model is that he probably starts by like getting a model of what he thinks the right abstractions of things are. And this model is based on information which sometimes is updated, sometimes is not great. Then he starts building the system and he gets convinced that this is really the right way to do it in a way that a stubborn collaborator might do.
+
+
+And then you have to tell him, no, actually, no, this is not the right way to do it. You should try to do it different.
+
+
+[Nico Mohnblatt] (46:00 - 46:09)
+I've seen people refer to this as context poisoning, where your agent will get the wrong idea and that idea gets embedded into its reasoning. And it's very hard to take it out, actually.
+
+
+[Giacomo Fenzi] (46:09 - 46:24)
+Yeah. Yeah. Especially because nowadays the modern tools, they, they leave so much memory.
+
+
+They leave so many notes to each other and you never know, you know, if there's a note to just tell, you know, don't do this because I've already thought about it. It doesn't work. In reality, maybe it does work.
+
+
+Just I've thought about it, but not enough.
+
+
+[Guy Weissenberg] (46:24 - 46:50)
+Well, it was able to give some like counterexamples of facts that were like the example is correct, but not for the right thing, you know? So like you had to kind of like steer it toward like what is the right one. But on the other hand, there were some definitions that we proposed for at several points and it found some small, tiny fixes and like counterexamples to the way we defined things.
+
+
+So like it was also kind of like a bidirectional thing that we also were corrected on some points.
+
+
+[Giacomo Fenzi] (46:50 - 48:13)
+Maybe also add that there's a very cute thing that it has done and maybe I want to highlight it because maybe it is the most relevant to other proof systems in the FlashProve thing. So we're working on kind of a constraint device in which the GPU that we're using is not big enough to hold the weights in. The weights are huge.
+
+
+The GPU memory is like relatively little. So most of the proving ends up being about proving stuff about the weights. And one trick that is found is that like in the batches, in order to amortise this across a batch, the number of like to do a single pass over the weights, it developed this way to use Fiat–Shamir, which we call the Fiat–Shamir DAG, so with a directed acyclic graph, which basically allows all the different like threads to end up using the same opening of the weights in a certain sense.
+
+
+And this enables you to amortise more effectively across computation. And this is why like when our throughput, you know, when you have more items in the batch, the throughput goes up. And this was a very cute thing.
+
+
+I think, you know, if we were asked to design a system for this, we would probably come up with it as well. It's a very natural idea, but it was very cool because we reverse engineered it from like the code and the paper and it was really cool. Then we could give a nice theoretical justification of why it's the right thing.
+
+
+So I think that was a really nice experience.
+
+
+[Guy Weissenberg] (48:14 - 48:20)
+And it is also highlighted in the blog post, by the way. So as part of like the kind of conceptual contributions, you're welcome to read about it.
+
+
+[Nico Mohnblatt] (48:21 - 48:49)
+Oh, lovely. Great. Actually, I'm curious about this sort of translating process.
+
+
+Sorry, Claude comes up with these ideas. It gives you an output, like it gives some Lean code, it gives whatever executable code as well, maybe it's the Lean directly, and it gives you texts probably saying like what it did or how it works. Did you find the text easy to read?
+
+
+Were you able to trust that the Lean and the text align? Were you able to trust that the code and the Lean align? And how'd you deal with all this?
+
+
+The text was terrible to read.
+
+
+[Giacomo Fenzi] (48:49 - 48:58)
+It was, you know, already there's an online technical paper accompanying the release. I don't recommend anybody read that one.
+
+
+[Nico Mohnblatt] (48:58 - 49:02)
+It's machine generated, right? I think the blog post is very clear about that.
+
+
+[Giacomo Fenzi] (49:02 - 49:31)
+Yeah. The two blog posts that we wrote are properly made by humans. And then the PDF, which is in the repo, is fully AI generated.
+
+
+And it is roughly 10% of like the original thing that we had. And this one is a 200 page document, I think. So you can, you can get like your numbers from there.
+
+
+But so we inspected the code and using, of course, other AI tools to kind of assist ourselves, and we manually audited all the Lean statements.
+
+
+[Anna Rose] (49:32 - 49:32)
+Okay.
+
+
+[Nico Mohnblatt] (49:32 - 49:43)
+This is what we did. Okay. And then the, the paper explanations might not match the Lean.
+
+
+I think some people were raising that for the Navier-Stokes thing. Like, could this be an issue here as well?
+
+
+[Guy Weissenberg] (49:43 - 50:05)
+Well, in theory, in theory, maybe. Okay. But what is important is that the system is proven at the high level, right?
+
+
+So like you, maybe the structure does not fully align, although we don't believe that it is the case. But you would, you can be assured that the system at high, at a high level proves what it is supposed to be proving. And that was to us like the first priority.
+
+
+[Nico Mohnblatt] (50:06 - 50:23)
+It's very interesting because these things we're mentioning, I know are pain points, you know, for myself, my colleagues, like people working with standard Claude or maybe like cyber version of the models, but it's interesting to hear that it also happens when you're working with a frontier version and it's maybe sort of a widespread issue.
+
+
+[Giacomo Fenzi] (50:23 - 50:32)
+Yeah. Claude like is very smart, is not great at talking with humans. Hey, like a very smart human.
+
+
+[Guy Weissenberg] (50:32 - 50:50)
+Yeah. Yeah. Like we, we got Ulysses version of, of FlashProve to begin with, and then we had to boil it down to something that is more readable, but it was a stream, like stream of conscious kind of, it was a very poetic, like poetic and very interesting from a literary perspective and still is.
+
+
+Like if you read the 250 pages, it still is interesting.
+
+
+[Anna Rose] (50:51 - 51:05)
+All of this was built on an open source model. You published the paper and maybe you can't say anything here, or maybe you don't know, but like would Anthropic then, like the team inside, like, do you know if they also tried this on their own systems?
+
+
+[Giacomo Fenzi] (51:06 - 51:06)
+No comment.
+
+
+[Anna Rose] (51:07 - 51:12)
+No comment. Okay, fair. Also, yeah, you're not in the company, so.
+
+
+[Nico Mohnblatt] (51:12 - 51:24)
+Maybe one thing we haven't talked about at all. You said the overhead is 70X. I'm guessing Claude did a lot of work in there.
+
+
+How big are the proofs? You know, are we Groth16 land? Are we your typical STARK?
+
+
+Where are we?
+
+
+[Giacomo Fenzi] (51:25 - 51:35)
+Think of it like a larger in your typical STARK around 20 megabytes, roughly. But we also did not really focus much on optimising the proof size.
+
+
+[Nico Mohnblatt] (51:35 - 51:38)
+Yeah, I guess it's prover first and then the rest will follow.
+
+
+[Giacomo Fenzi] (51:38 - 52:03)
+Exactly. Exactly. But there's no, I mean, most of the reason why the proof size is larger is because we are trying to be very memory efficient.
+
+
+And if we ended up actually being less memory efficient, which I don't think would actually hurt the throughput too much, it would probably actually maybe even improve it. So if you're running on a multi GPU cluster where we can do these things, then I expect the proof size to go closer to your typical STARK.
+
+
+[Anna Rose] (52:04 - 52:25)
+Cool. Guys, we are at time. So I want to say a big thank you to both of you for coming on, for sharing with us everything in the creation of FlashProve from the inception to the building, what it's for, how it's been optimised, working with that team and that those tools.
+
+
+This has been really cool to hear all about it. Thank you.
+
+
+[Nico Mohnblatt] (52:26 - 52:41)
+Thanks. Thank you for having us. It was really fun.
+
+
+Yeah. Thanks a lot for sharing it. Thanks for the candour as well about the process of working with like ultra top secret Claude.
+
+
+I mean, for all we know, it was just stable 5.0. Yeah, fair. Or it was a very good cryptographer on the other end.
+
+
+[Anna Rose] (52:41 - 52:55)
+Yeah. It was someone sitting there typing it all out, a thousand-page tome. All right.
+
+
+Thanks so much, guys. I want to say a big thank you to the podcast team, Rachel, Henrik and Tanya, and to our listeners. Thanks for listening.
